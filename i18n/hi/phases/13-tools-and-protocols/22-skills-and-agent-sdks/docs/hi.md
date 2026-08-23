@@ -192,16 +192,8 @@ npx skills remove skill-contract-reviewer
 
 एक एजेंट कौशल एक निर्देशिका है जिसका प्रवेश बिंदु है `SKILL.md`. प्रविष्टि फ़ाइल में YAML फ्रंटमैटर होता है जिसके बाद मार्कडाउन निर्देश होते हैं. निर्देशिका में संदर्भ, स्क्रिप्ट और संपत्ति भी हो सकती है।
 
-```mermaid
-flowchart TD
-  B[release-readiness bundle] --> S[SKILL.md]
-  B --> R[references]
-  R --> RP[release-policy.md]
-  R --> CF[changelog-format.md]
-  B --> C[scripts]
-  C --> IR[inspect_release.py]
-  B --> A[assets]
-  A --> RC[release-checklist.md]
+```figure
+skill-package-anatomy
 ```
 
 निर्देशिका, केवल मार्कडाउन फ़ाइल नहीं, तैनात करने योग्य इकाई है।`SKILL.md`संदर्भों की कमी के साथ एक टूटा हुआ पैकेज है भले ही इसके सामने की सामग्री को विश्लेषण किया जाए।
@@ -304,19 +296,8 @@ Use this workflow for a release candidate, not for ordinary development builds.
 
 ### कौशल जीवन चक्र
 
-```mermaid
-flowchart LR
-  D[Discover package] --> V[Validate metadata and layout]
-  V --> C[Publish catalog entry]
-  C --> S{Select?}
-  S -->|explicit user request| A[Activate]
-  S -->|implicit model match| A
-  S -->|no match| N[Leave unloaded]
-  A --> B[Load SKILL.md body]
-  B --> R[Read required resources]
-  R --> T[Request tools or run scripts]
-  T --> E[Return evidence and artifact]
-  E --> Q[Verify result]
+```figure
+skill-runtime-lifecycle
 ```
 
 प्रत्येक तीर एक सीमा है अपने स्वयं के विफलता मोड के साथ।
@@ -336,15 +317,8 @@ flowchart LR
 
 एमसीपी जवाब देता है, "इस एप्लिकेशन किस क्षमताओं को बुला सकता है, और उनकी योजनाएं क्या हैं?" एक कौशल जवाब देता है, "एजेंट को इस कार्य वर्ग के दृष्टिकोण को कैसे approach करना चाहिए? "
 
-```mermaid
-flowchart TB
-  U[User goal] --> K[Activated skill]
-  K --> P[Procedure and decision rules]
-  P --> M[MCP or local tool]
-  M --> O[Observation]
-  O --> P
-  P --> A[Artifact]
-  A --> V[Verification]
+```figure
+skill-tool-orthogonality
 ```
 
 कौशल एक उपकरण का नाम ले सकता है, लेकिन मेजबान वास्तविक क्षमता रजिस्ट्री का मालिक है। यदि उपकरण अनुपस्थित है, तो कौशल को एक विफलता या विफलता स्पष्ट रूप से बतानी चाहिए। इसका मतलब यह नहीं होना चाहिए कि किसी क्षमता का नामकरण इसे बनाता है।
@@ -400,13 +374,8 @@ python3 -m unittest discover -s code/tests -v
 
 गहन सामग्री नियमों से पहले सस्ते संरचनात्मक तथ्यों को मान्य करेंः
 
-```mermaid
-flowchart LR
-  F[Frontmatter delimiters] --> Y[Scalar metadata]
-  Y --> N[Name and directory match]
-  N --> R[Required fields]
-  R --> X[Known extensions]
-  X --> B[Body and resource rules]
+```figure
+skill-validation-order
 ```
 
 यह क्रम द्वितीयक त्रुटियों को पहले टूटे हुए अपरिवर्तनीय को अन्धकार से रोकता है।

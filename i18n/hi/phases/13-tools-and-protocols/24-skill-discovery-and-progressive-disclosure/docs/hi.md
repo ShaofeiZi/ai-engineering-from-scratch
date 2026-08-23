@@ -33,15 +33,8 @@
 
 फ़ाइल प्रणाली को स्रोत इनपुट के रूप में व्यवहार करें। कच्चे पथ सीधे मॉडल में प्रकाशित न करें।
 
-```mermaid
-flowchart LR
-  R[Configured roots] --> W[Enumerate immediate skill dirs]
-  W --> P[Find SKILL.md]
-  P --> V[Validate package]
-  V --> S[Attach scope and provenance]
-  S --> C[Resolve collisions]
-  C --> B[Apply catalog budget]
-  B --> O[Publish name, description, path]
+```figure
+skill-discovery-pipeline
 ```
 
 प्रत्येक चरण में संरचित डेटा और संरचित विफलताएं उत्पन्न होनी चाहिए। एक खोज लॉग का उत्तर देना चाहिएः
@@ -101,10 +94,8 @@ flowchart LR
 
 एजेंट कौशल विनिर्देश चरण लोड का वर्णन करता है। कुंजी यह है कि प्रत्येक स्तर का एक अलग उद्देश्य है।
 
-```mermaid
-flowchart TB
-  L1[Level 1: catalog metadata<br/>name, description, source] -->|skill selected| L2[Level 2: SKILL.md body<br/>workflow and decision map]
-  L2 -->|branch requires detail| L3[Level 3: references, scripts, assets<br/>task-specific material]
+```figure
+skill-disclosure-levels
 ```
 
 #### स्तर 1: कैटलॉग मेटाडेटा
@@ -164,12 +155,8 @@ description: Validate a release candidate and produce a readiness report. Use wh
 
 संदर्भ ग्राफ को संक्षिप्त रखें। आधिकारिक मार्गदर्शन में सीधे लिंक की सिफारिश की जाती है`SKILL.md`एक कूदने से पहुंच परीक्षण योग्य हो जाती है और यह संभावना कम हो जाती है कि आवश्यक प्रतिबंध कभी भी संदर्भ में प्रवेश नहीं करता है।
 
-```mermaid
-flowchart LR
-  S[SKILL.md] --> P[python-release.md]
-  S --> C[container-release.md]
-  S --> D[docs-release.md]
-  S --> T[report-template.md]
+```figure
+skill-reference-map
 ```
 
 ### कैटलॉग बजट और सक्रिय संदर्भ अलग-अलग बजट हैं
@@ -201,16 +188,8 @@ references/external-link -> /private/company-secrets
 
 फ़ाइल सिस्टम सेमेटिक के साथ पैकेज रूट और उम्मीदवार को हल करें, पूर्ण इनपुट को अस्वीकार करें, और सत्यापित करें कि हल किया गया उम्मीदवार हल किया गया रूट के तहत रहता है। पता लगाने से पहले यह तय करें कि क्या सिम्लिंक्स की अनुमति है। यदि अनुमति है, तो हर बार हल किए गए लक्ष्य की जांच करें।
 
-```mermaid
-flowchart LR
-  I[Requested relative path] --> A{Absolute or parent escape?}
-  A -->|yes| X[Reject]
-  A -->|no| R[Resolve against package root]
-  R --> U{Resolved path under root?}
-  U -->|no| X
-  U -->|yes| F{Expected file type?}
-  F -->|no| X
-  F -->|yes| L[Load with size limit]
+```figure
+skill-resource-containment
 ```
 
 पथ को रोकना सामग्री का विश्वास स्थापित नहीं करता है। एक वैध पैकेज में संदर्भ अभी भी दुर्भावनापूर्ण निर्देशों को शामिल कर सकता है। पाठ 26 इस खतरे को संभालता है।

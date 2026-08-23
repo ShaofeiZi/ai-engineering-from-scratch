@@ -41,17 +41,8 @@
 
 ### पांच बुलाने के चरण
 
-```mermaid
-stateDiagram-v2
-  [*] --> Discovered
-  Discovered --> Eligible: actor and policy allow
-  Eligible --> Selected: explicit name or routing match
-  Selected --> Activated: body enters context
-  Activated --> Executing: permitted tool or model step begins
-  Executing --> Completed: output verified
-  Discovered --> Denied: actor or policy blocks
-  Eligible --> NotSelected: routing threshold not met
-  Activated --> Blocked: capability or approval unavailable
+```figure
+skill-invocation-stages
 ```
 
 इन शब्दों का उपयोग सटीक रूप से करेंः
@@ -138,14 +129,8 @@ score(s, x) = capability_match + trigger_match + context_match - exclusion_match
 
 सही स्कोरिंग अंकगणित के बजाय LLM निर्णय हो सकता है। इंजीनियरिंग सिद्धांत अभी भी बरकरार हैः चयन एक सीमा और प्रतिस्पर्धी कौशल से परे होना चाहिए। जब सबूत कमजोर है, तो खुद से बचें।
 
-```mermaid
-flowchart TD
-  Q[User request] --> E[Filter by actor eligibility]
-  E --> R[Compare request with descriptions]
-  R --> M{One clear match?}
-  M -->|yes| A[Activate selected skill]
-  M -->|no, ambiguous| C[Ask or use ordinary reasoning]
-  M -->|no match| N[Do not activate]
+```figure
+skill-routing-abstention
 ```
 
 उच्च प्रभाव वाले कौशल के लिए, स्पष्ट रूप से रूटिंग एक मजबूत विवरण के साथ भी अनुचित हो सकती है। जब झूठी सकारात्मक की लागत स्वचालित चयन की सुविधा से अधिक हो तो केवल मानव नीति का उपयोग करें।
@@ -191,12 +176,8 @@ flowchart TD
 
 एक आह्वान तर्क कई सीमाओं को पार करता हैः
 
-```mermaid
-flowchart LR
-  U[User text] --> P[Host parser]
-  P --> B[Bound arguments]
-  B --> C[Skill context]
-  C --> T[Typed tool call]
+```figure
+skill-argument-boundaries
 ```
 
 प्रत्येक सीमा पर, पाठ को कोड के रूप में व्यवहार किए बिना इरादे को बनाए रखें।
@@ -214,16 +195,8 @@ flowchart LR
 
 यह रूटिंग अनिश्चितता को दूर करता है लेकिन रनटाइम एपीआई पर निर्भरता पैदा करता है। उस एडाप्टर को पोर्टेबल बॉडी के बाहर रखेंः
 
-```mermaid
-flowchart LR
-  P[Portable bundle] --> S[SKILL.md]
-  P --> R[references]
-  P --> C[scripts]
-  H[Host adapter] --> D[discovery path]
-  H --> A[explicit activation API]
-  H --> I[invocation policy]
-  H --> B[argument binding]
-  H --> P
+```figure
+skill-host-adapter
 ```
 
 एक अलग अनुपालनशील ग्राहक द्वारा खोले जाने पर कौशल को समझ में आना चाहिए।

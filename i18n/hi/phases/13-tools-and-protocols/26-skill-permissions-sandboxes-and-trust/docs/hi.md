@@ -49,17 +49,8 @@
 - एक परिणामात्मक कार्रवाई को मंजूरी देनी चाहिए;
 - परिणाम सही साबित करें।
 
-```mermaid
-flowchart LR
-  S[Activated skill] --> M[Model proposes action]
-  M --> C[Capability registry]
-  C --> P[Permission policy]
-  P --> A{Approval needed?}
-  A -->|yes, granted| X[Isolated executor]
-  A -->|no| X
-  A -->|denied| D[Stop and report]
-  X --> O[Observation]
-  O --> V[Verification gate]
+```figure
+skill-authority-chain
 ```
 
 प्रत्येक बॉक्स को स्वतंत्र रूप से कॉन्फ़िगर किया जा सकता है। एक को हटाने से एक अलग गुण कमजोर हो जाता है।
@@ -96,18 +87,8 @@ flowchart LR
 
 पथ गणना कार्यक्षेत्र से बचती है, एक ग्लोब बहुत ज्यादा मेल खाता है, एक पुनः प्रयास एक लेखन दोहराता है, या एक सफाई कदम गलत उत्पन्न निर्देशिका को हटा देता है। प्रभाव के लिए इरादा कोई मायने नहीं रखता है।
 
-```mermaid
-flowchart TB
-  P[Skill package] --> I[Model instructions]
-  R[References and assets] --> I
-  U[Untrusted task content] --> I
-  I --> Q[Requested actions]
-  SC[Scripts and dependencies] --> Q
-  Q --> H[Host tools and executor]
-  H --> F[Files]
-  H --> N[Network]
-  H --> E[Environment and credentials]
-  H --> X[External side effects]
+```figure
+skill-trust-surface
 ```
 
 प्रत्येक उच्च प्रभाव कौशल के लिए इस ग्राफ को खींचें। प्रत्येक किनारे को नियंत्रित करने वाले और किस सीमा को मान्य करने वाले को चिह्नित करें।
@@ -246,17 +227,8 @@ WORKSPACE=/workspace/project
 
 उन कार्यों के लिए अनुमोदन का उपयोग करें जिनके अधिकार सुरक्षित रूप से पहले से हस्तांतरित नहीं किए जा सकते हैं।
 
-```mermaid
-flowchart TD
-  A[Proposed action] --> R{Reversible and local?}
-  R -->|yes| S{Inside pre-approved scope?}
-  S -->|yes| E[Execute in sandbox]
-  S -->|no| P[Ask for scoped approval]
-  R -->|no| H{External, destructive, costly, or sensitive?}
-  H -->|yes| P
-  H -->|no| E
-  P -->|granted| E
-  P -->|denied| D[Stop]
+```figure
+skill-approval-decision
 ```
 
 अनुमोदन वास्तविक लक्ष्य और परिणाम को दिखाना चाहिए। "लाओ बैश? " कमजोर है। "लाओ समीक्षा की।`publish_release`संस्करण 2.4.0 को स्टेजिंग रजिस्ट्री में प्रकाशित करने के लिए उपकरण?

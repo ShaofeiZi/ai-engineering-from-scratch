@@ -63,14 +63,8 @@
 
 ### निर्धारात्मक कार्य से अलग निर्णय
 
-```mermaid
-flowchart LR
-  T[Task request] --> J1[Model: classify task and choose branch]
-  J1 --> R[Reference: load branch-specific rules]
-  R --> S[Script or tool: collect deterministic evidence]
-  S --> J2[Model: interpret evidence]
-  J2 --> A[Artifact contract]
-  A --> V[Deterministic and human verification]
+```figure
+skill-workflow-extraction
 ```
 
 वर्गीकरण, प्राथमिकता, संश्लेषण और अस्पष्टता के लिए मॉडल निर्णय का उपयोग करें। पार्सिंग, गिनती, सत्यापन, रूपांतरण, क्वेरी टाइप किए गए एपीआई और अपरिवर्तित को लागू करने के लिए स्क्रिप्ट या उपकरण का उपयोग करें।
@@ -96,14 +90,8 @@ flowchart LR
 
 ### छह मूल्यांकन परतें
 
-```mermaid
-flowchart TB
-  L1[1. Package structure] --> L2[2. Trigger routing]
-  L2 --> L3[3. Instruction and artifact behavior]
-  L3 --> L4[4. Script correctness]
-  L4 --> L5[5. Safety and authority]
-  L5 --> L6[6. Packaging and portability]
-  L6 --> G{Release gate}
+```figure
+skill-eval-layers
 ```
 
 प्रत्येक परत एक अलग प्रश्न का उत्तर देती है। एक को पारित करने से दूसरे को प्रतिस्थापित नहीं किया जा सकता है।
@@ -268,13 +256,8 @@ treatment: same model + same tools + same task, skill available
 
 एक रिलीज़ टेस्ट को एक साफ गंतव्य में स्थापित करना चाहिए, फिर स्थापित प्रति के खिलाफ सत्यापन चलाएं।
 
-```mermaid
-flowchart LR
-  S[Source bundle] --> M[Build manifest]
-  M --> I[Install complete tree]
-  I --> H[Verify hashes and paths]
-  H --> D[Discover installed skill]
-  D --> E[Run eval smoke test]
+```figure
+skill-package-install
 ```
 
 केवल स्रोत पेड़ का परीक्षण करने से इंस्टॉलर बग, खोए गए निष्पादित बिट्स, फ्लैट किए गए संदर्भ, नामों को फिर से लिखा गया है, और पुराने संस्करणों से बचे हुए पुरानी फ़ाइलें याद आती हैं।
@@ -458,23 +441,8 @@ python3 -m unittest discover -s code/tests -v
 
 प्रत्येक कौशल संशोधन के लिए इस लेखक लूप का उपयोग करेंः
 
-```mermaid
-flowchart LR
-  O[Observe real workflow] --> C[Define contract]
-  C --> P[Package procedure and helpers]
-  P --> E[Run layered evals]
-  E --> F{Failure class}
-  F -->|routing| D[Edit description or policy]
-  F -->|behavior| B[Edit body, references, or tools]
-  F -->|script| S[Fix deterministic code]
-  F -->|safety| A[Reduce authority or strengthen isolation]
-  F -->|portability| H[Add adapter, fallback, or incompatibility]
-  D --> E
-  B --> E
-  S --> E
-  A --> E
-  H --> E
-  E -->|passes gate| R[Release complete bundle]
+```figure
+skill-authoring-loop
 ```
 
 विफलता के लिए जिम्मेदार परत को बदलें। अधिक शब्द नहीं भरें।`SKILL.md`जब असली समस्या एक इंस्टॉलर है जो संदर्भों को छोड़ देता है या एक रेत बॉक्स है जो घर निर्देशिका को उजागर करता है।
