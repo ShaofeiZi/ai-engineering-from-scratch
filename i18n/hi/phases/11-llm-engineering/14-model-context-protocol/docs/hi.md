@@ -1,45 +1,129 @@
 # मॉडल संदर्भ प्रोटोकॉल (एमसीपी)
 
-> 2025 से पहले निर्मित हर एलएलएम ऐप ने अपना स्वयं का टूल स्कीमा आविष्कार किया। फिर एंथ्रोपिक ने एमसीपी भेजा, क्लाउड ने इसे अपनाया, ओपनएआई ने इसे अपनाया, और 2026 तक यह किसी भी एलएलएम को किसी भी टूल, डेटा स्रोत या एजेंट से जोड़ने के लिए डिफ़ॉल्ट वायर प्रारूप है। एक एमसीपी सर्वर लिखें और प्रत्येक मेजबान इसके लिए बात करता है।
+> एमसीपी एक एआई होस्ट को उपकरण, संसाधन और संकेतों की खोज और उन्हें कॉल करने के लिए एक प्रोटोकॉल देता है। 2026-07-28 संशोधन उस प्रोटोकॉल को स्टेटलेस बनाता हैः क्षमता और संस्करण संदर्भ प्रत्येक अनुरोध के साथ यात्रा करता है, कनेक्शन-बाउंड हैंडशैक में नहीं।
 
 **Type:** Build
 **Languages:** Python
 **Prerequisites:** Phase 11 · 09 (Function Calling), Phase 11 · 03 (Structured Outputs)
 **Time:** ~75 minutes
 
+## सीखने के लक्ष्य
+
+- एक एमसीपी होस्ट, क्लाइंट, सर्वर, परिवहन और सर्वर आदिम में अंतर करें।
+- MCP 2026-07-28 द्वारा आवश्यक मेटाडेटा के साथ JSON-RPC अनुरोध बनाएं।
+- उपयोग करें`server/discover`संस्करणों, पहचान और क्षमताओं का निरीक्षण करने के लिए।
+- टूल, संसाधनों और संकेतों से टाइप किए गए और कैश-जागरूक परिणामों को लौटाएं।
+- आधुनिक राज्यहीन MCP हाथ मिलाव युग के सर्वरों के साथ कैसे बातचीत करता है, इसका वर्णन करें।
+- सर्वर के लिए सुरक्षित राज्य, परिवहन और अनुमोदन सीमाएँ चुनें।
+
 ## समस्या
 
-आप एक चैटबॉट भेजते हैं जिसमें तीन उपकरण की आवश्यकता होती हैः एक डेटाबेस क्वेरी, एक कैलेंडर एपीआई और एक फ़ाइल रीडर। आप क्लाउड के लिए तीन जेएसओएन योजनाएं लिखते हैं। फिर बिक्री चैटजीपीटी में समान उपकरण चाहता है  आप उन्हें ओपनएआई के लिए फिर से लिखते हैं `tools`पैरामीटर. फिर आप Cursor, Zed, और Claude Code  तीन और rewrites जोड़ते हैं, प्रत्येक में सूक्ष्म रूप से अलग JSON सम्मेलनों के साथ. एक सप्ताह बाद, मानव एक नया क्षेत्र जोड़ता है; आप छह योजनाओं को अपडेट करते हैं।
+आपके आवेदन को डेटाबेस क्वेरी, कैलेंडर ऑपरेशन और फ़ाइल रीडर की आवश्यकता होती है। साझा प्रोटोकॉल के बिना, प्रत्येक एआई होस्ट को उन समान क्षमताओं के लिए कस्टम डिस्कवरी, इंकलाश, त्रुटियों, परिवहन और प्राधिकरण चिपकने की आवश्यकता होती है।
 
-यह 2025 से पहले की वास्तविकता थी। प्रत्येक होस्ट (एलएलएम चलाने वाली चीज) और प्रत्येक सर्वर (उपकरणों और डेटा को उजागर करने वाली चीज) ने कस्टम प्रोटोकॉल भेजे। स्केलिंग का मतलब था एक एनएक्सएम एकीकरण मैट्रिक्स।
+MCP उस एकीकरण मैट्रिक्स को कम करता है। एक सर्वर एक मानक JSON-RPC सतह प्रकाशित करता है। एक अनुपालन क्लाइंट सतह की खोज कर सकता है, इसे एक मॉडल या उपयोगकर्ता को प्रस्तुत कर सकता है, इसे कॉल कर सकता है, और परिणाम की व्याख्या कर सकता है सर्वर-विशिष्ट एडाप्टर के बिना।
 
-मॉडल कॉन्टेक्स्ट प्रोटोकॉल उस मैट्रिक्स को ढक देता है। एक JSON-RPC आधारित विनिर्देश। एक सर्वर उपकरण, संसाधन और संकेतों को उजागर करता है। कोई भी संगत होस्ट  क्लाउड डेस्कटॉप, चैटजीपीटी, कर्सर, क्लाउड कोड, जेड, और एजेंट फ्रेमवर्क की एक लंबी पूंछ  कस्टम गोंद के बिना उन्हें खोज और कॉल कर सकता है।
-
-2026 की शुरुआत से, एमसीपी प्रमुख तीनों (एंट्रोपिक, ओपनएआई, गूगल) और प्रत्येक प्रमुख एजेंट हर्न में डिफ़ॉल्ट टूल-एंड-सीओटी प्रोटोकॉल है।
+MCP संचार को मानकीकृत करता है। यह तय नहीं करता है कि मॉडल को किस उपकरण को कॉल करना चाहिए, अविश्वसनीय सामग्री को सुरक्षित बनाना चाहिए, या एक राज्यहीन अनुरोध को टिकाऊ अनुप्रयोग राज्य में बदलना चाहिए। आपका होस्ट और सर्वर अभी भी उन निर्णयों का मालिक है।
 
 ## अवधारणा
 
-![MCP: one host, one server, three capabilities](../assets/mcp-architecture.svg)
+![MCP host, stateless request, and server primitives](../assets/mcp-architecture.svg)
 
-**The three primitives.**एक MCP सर्वर ठीक तीन चीजों को उजागर करता है।
+### तीन सर्वर आदिम
 
-1. **Tools** फ़ंक्शन जो मॉडल कॉल कर सकता है।`tools`या मानवतावादी `tool_use`. प्रत्येक का नाम, विवरण, JSON योजना इनपुट, और एक हैंडलर है.
-2. **Resources** केवल-पढ़ने वाली सामग्री जो मॉडल या उपयोगकर्ता अनुरोध कर सकता है (फ़ाइल, डेटाबेस पंक्तियाँ, एपीआई प्रतिक्रियाएं) ।
-3. **Prompts** पुनः प्रयोज्य टेम्पलेट किए गए संकेत जो उपयोगकर्ता शॉर्टकट के रूप में उपयोग कर सकता है।
+1. **Tools**प्रत्येक उपकरण का नाम, विवरण, JSON Schema इनपुट और हैंडलर है।
+2. **Resources**नामित, यूआरआई-उपदेशित सामग्री है कि एक ग्राहक पढ़ सकते हैं.
+3. **Prompts**पुनः प्रयोज्य टेम्पलेट्स हैं जो एक होस्ट उपयोगकर्ता को उजागर कर सकते हैं।
 
-**The wire format.**JSON-RPC 2.0 स्टूडियो, वेबसॉकेट, या स्ट्रीम करने योग्य HTTP पर। प्रत्येक संदेश है `{"jsonrpc": "2.0", "method": "...", "params": {...}, "id": N}`. खोज विधिएँ हैं`tools/list`,`resources/list`,`prompts/list`. उद्धरण विधि `tools/call`,`resources/read`,`prompts/get`. .
+मेजबान एआई एप्लिकेशन है। उस मेजबान के अंदर एक एमसीपी क्लाइंट एक सर्वर से बात करता है। परिवहन उनके बीच JSON-RPC संदेश ले जाता है।
 
-**Host vs client vs server.**होस्ट LLM एप्लिकेशन (क्लाउड डेस्कटॉप) है। क्लाइंट होस्ट का एक उप-घटक है जो ठीक एक सर्वर से बात करता है। सर्वर आपका कोड है। एक होस्ट कई सर्वर को एक साथ माउंट कर सकता है।
+### बिना नागरिकता के अनुरोधों को हाथ मिलाकर बदल दिया गया
 
-### हाथ मिलाकर
+MCP 2026-07-28 हटाता है `initialize`और `notifications/initialized`. यह प्रोटोकॉल स्तर के सत्रों को भी हटा देता है. प्रत्येक अनुरोध में संदर्भ होता है जो इसे व्याख्या करने के लिए आवश्यक है।`params._meta`:
 
-प्रत्येक सत्र के साथ शुरू होता है `initialize`. क्लाइंट प्रोटोकॉल संस्करण और इसकी क्षमताओं को भेजता है. सर्वर अपनी संस्करण, नाम और समर्थन क्षमता सेट के साथ प्रतिक्रिया करता है (`tools`,`resources`,`prompts`,`logging`,`roots`) इसके बाद की हर चीज उन क्षमताओं के खिलाफ बातचीत की जाती है।
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "lesson-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
 
-### एमसीपी क्या नहीं है
+प्रोटोकॉल संस्करण और क्लाइंट क्षमताओं की आवश्यकता है. क्लाइंट की पहचान की सिफारिश की जाती है. एक गायब है `_meta`, एक गायब आवश्यक क्षेत्र, या एक आवश्यक क्षेत्र गलत प्रकार के साथ गलत रूप से तैयार किया गया है और अमान्य पैरामीटर लौटाता है (`-32602`). एक अच्छी तरह से गठित संस्करण स्ट्रिंग है कि सर्वर समर्थन नहीं करता है रिटर्न `UnsupportedProtocolVersionError`(`-32022`) सर्वर एक वैध अनुरोध को पूर्व वार्ता रिकॉर्ड को पुनर्प्राप्त किए बिना संसाधित कर सकता है।
 
-- RAG (चरण 11 · 06) अभी भी तय करता है कि क्या खींचना है; MCP संसाधनों के रूप में निकासी परिणामों को उजागर करने के लिए परिवहन है।
-- एमसीपी प्लंपिंग है; लैंगग्राफ, पायदानटिकएआई और ओपनएआई एजेंट्स एसडीके जैसे फ्रेमवर्क इसके ऊपर बैठे हैं।
-- मानचित्र और संदर्भ कार्यान्वयन के तहत ओपन सोर्स हैं।`modelcontextprotocol`org.
+बिना राज्य का मतलब यह नहीं है कि एक आवेदन कभी राज्य बनाए नहीं रख सकता है। इसका मतलब यह है कि राज्य एक MCP कनेक्शन के पीछे छिपा नहीं है या`Mcp-Session-Id`. यदि किसी वर्कफ़्लो को निरंतरता की आवश्यकता होती है, तो सर्वर एक अस्पष्ट हैंडल बनाता है और क्लाइंट बाद के कॉल पर उस हैंडल को एक सामान्य उपकरण तर्क के रूप में पारित करता है।
+
+### खोज और संस्करण चयन
+
+हर आधुनिक सर्वर कार्यान्वयन `server/discover`. परिणाम समर्थित संस्करणों, क्षमताओं और सर्वर पहचान की विज्ञापन देता हैः
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "complete",
+    "supportedVersions": ["2026-07-28"],
+    "capabilities": {
+      "tools": {},
+      "resources": {},
+      "prompts": {}
+    },
+    "ttlMs": 3600000,
+    "cacheScope": "public",
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "demo-server",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+एक क्लाइंट सीधे किसी अन्य विधि को कॉल कर सकता है और संस्करण त्रुटि को संभाल सकता है, लेकिन खोज क्षमता प्रदर्शन और संस्करण चयन को स्पष्ट बनाती है। एक असमर्थित संस्करण वापस आता है `UnsupportedProtocolVersionError`कोड के साथ `-32022`. इसमें डेटा शामिल है `supported`, सर्वर संशोधनों की एक सरणी, और `requested`, अस्वीकृत संशोधन।
+
+स्टूडियो पर, एक दोहरे युग ग्राहक जांच करता है`server/discover`. एक खोज परिणाम या एक मान्यता प्राप्त आधुनिक त्रुटि जैसे`UnsupportedProtocolVersionError`किसी भी त्रुटि या समय सीमा जो आधुनिक के रूप में मान्यता प्राप्त नहीं है, 2025-11-25 तक वापस जाने की अनुमति देता है।`initialize`विरासत व्यवहार संगतता कोड है, आधुनिक डिफ़ॉल्ट नहीं है।
+
+### परिणाम स्पष्ट हैं
+
+प्रत्येक कोर 2026-07-28 परिणाम है`resultType`:
+
+- `complete`ऑपरेशन समाप्त हो गया है।
+- `input_required`इसका मतलब है कि सर्वर को मल्टी राउंड-ट्रिप अनुरोध पैटर्न के माध्यम से एक और राउंड-ट्रिप की आवश्यकता है। कोर सर्वर इसे केवल से वापस कर सकते हैं `tools/call`,`resources/read`या `prompts/get`. .
+
+ग्राहकों को एक विरासत परिणाम को इलाज करना चाहिए जो छोड़ देता है `resultType`पूर्ण रूप से.
+
+सर्वरों में शामिल होना चाहिए `io.modelcontextprotocol/serverInfo`हर परिणाम में `_meta`. यह पहचान स्वयं रिपोर्ट की जाती है और यह प्रदर्शन, लॉगिंग और डिबगिंग के लिए है, सुरक्षा निर्णयों के लिए नहीं।
+
+सूची और पढ़ने के परिणाम भी ले `ttlMs`और `cacheScope`. एक निर्धारक `tools/list`आदेश प्लस एक ताजापन संकेत ग्राहकों को सुरक्षित रूप से खोज कैश करने देता है और शीघ्र कैश स्थिरता में सुधार करता है। `cacheScope: public`साझा कैशिंग की अनुमति देता है; `private`पुनः उपयोग को बुलाए जाने वाले संदर्भ तक सीमित करता है।
+
+### तार प्रारूप और परिवहन
+
+एमसीपी स्टिडियो या स्ट्रीम करने योग्य HTTP पर JSON-RPC 2.0 का उपयोग करता है।
+
+- एक अनुरोध है`jsonrpc`,`id`,`method`और `params`. .
+- एक प्रतिक्रिया में मेल खाता है `id`और या तो `result`या `error`. .
+- सूचना में कोई `id`और कोई प्रतिक्रिया की उम्मीद नहीं करता है।
+
+आधुनिक स्ट्रीम करने योग्य HTTP एक एंडपॉइंट को उजागर करता है जो POST को स्वीकार करता है। प्रत्येक JSON-RPC संदेश को अपना POST मिलता है। एक अनुरोध POST या तो एक JSON ऑब्जेक्ट या अनुरोध-स्कोप सर्वर-सेंड इवेंट्स स्ट्रीम प्राप्त करता है जो अंतिम प्रतिक्रिया के साथ समाप्त होता है। एक स्वीकार किए गए अधिसूचना POST को कोई प्रतिक्रिया निकाय के बिना HTTP 202 प्राप्त होता है; यह कोर संशोधन Streamable HTTP पर कोई क्लाइंट-सेवर अधिसूचना परिभाषित नहीं करता है।
+
+कोई स्टैंडअलोन एमसीपी जीईटी स्ट्रीम नहीं है, सत्र समाप्ति बिंदु हटाएं, `Mcp-Session-Id`या `Last-Event-ID`2026-07-28 में दोहराएं। दीर्घकालिक परिवर्तन सूचनाओं का उपयोग करें `subscriptions/listen`पोस्ट जिसका उत्तर एसएसई धारा के रूप में खुला रहता है।
+
+### सर्वर द्वारा आरंभ किए गए अनुरोधों के बिना क्लाइंट इनपुट
+
+पुराने संशोधनों से सर्वर अनुरोध भेजने की अनुमति देता है जैसे `sampling/createMessage`,`roots/list`या `elicitation/create`एक धारा पर. वर्तमान प्रोटोकॉल के बजाय मल्टी राउंड-ट्रिप अनुरोध का उपयोग करता है. एक पात्र उपकरण कॉल, संसाधन पढ़ने, या शीघ्र रिटर्न प्राप्त करें `resultType: input_required`कम से कम एक के साथ `inputRequests`या `requestState`. क्लाइंट किसी भी अनुरोधित इनपुट को एकत्र करता है, एक नई JSON-RPC आईडी और संबंधित के साथ मूल विधि को पुनः प्रयास करता है `inputResponses`, और सटीक प्रतिध्वनित करता है `requestState`जब एक प्रदान किया गया था।`inputRequests`उपस्थित थे, पुनः प्रयास छोड़ दिया `inputResponses`. .
+
+जड़ें, नमूनाकरण और लॉगिंग कार्यात्मक रहते हैं लेकिन अप्रचलित हैं, इसलिए नए कार्यान्वयनों को उन्हें अपनाना नहीं चाहिए। मौजूदा जड़ें या नमूनाकरण अनुरोध MRTR के भीतर यात्रा करते हैं `inputRequests`, कभी भी स्वतंत्र सर्वर-से-ग्राहक JSON-RPC अनुरोधों के रूप में नहीं। स्पष्ट फ़ाइल या निर्देशिका मापदंडों, संसाधन यूआरआई, सर्वर कॉन्फ़िगरेशन और प्रत्यक्ष मॉडल-प्रदाता एकीकरण को प्राथमिकता दें। स्टूडियो डायग्नोस्टिक्स के लिए stderr का उपयोग करें और उत्पादन टेलीमेट्री के लिए OpenTelemetry का उपयोग करें।
 
 ```figure
 mcp-nxm-collapse
@@ -47,164 +131,137 @@ mcp-nxm-collapse
 
 ## इसे बनाओ
 
-### चरण 1: न्यूनतम MCP सर्वर
+### चरण 1: सर्वर सतह को पंजीकृत करें
 
-आधिकारिक पायथन एसडीके है `mcp`(पूर्व में `mcp-python`) उच्च स्तरीय `FastMCP`सहायक हाथों को सजाते हैं।
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("demo-server")
-
-@mcp.tool()
-def add(a: int, b: int) -> int:
-    """Add two integers."""
-    return a + b
-
-@mcp.resource("config://app")
-def app_config() -> str:
-    """Return the app's current JSON config."""
-    return '{"env": "prod", "region": "us-east-1"}'
-
-@mcp.prompt()
-def code_review(language: str, code: str) -> str:
-    """Review code for correctness and style."""
-    return f"You are a senior {language} reviewer. Review:\n\n{code}"
-
-if __name__ == "__main__":
-    mcp.run(transport="stdio")
-```
-
-तीन सजावटकर्ता तीन आदिमों को पंजीकृत करते हैं। टाइप संकेत जेएसओएन योजना हो जाता है जो होस्ट देखता है। इसे क्लाउड डेस्कटॉप या क्लाउड कोड के तहत चलाएं जिसमें सर्वर प्रविष्टि इस फ़ाइल की ओर इशारा करती है।
-
-### चरण 2: एक मेजबान से एक MCP सर्वर को कॉल करना
-
-आधिकारिक पायथन क्लाइंट JSON-RPC बोलता है. मानव SDK के साथ इसे जोड़ने के लिए एक दर्जन लाइनों की आवश्यकता होती है.
+पंजीकरण सरल रहता है, भले ही अनुरोध अनुबंध में बदलाव किया गया होः
 
 ```python
-from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp import ClientSession
+server = MCPServer("demo-server")
 
-params = StdioServerParameters(command="python", args=["server.py"])
-
-async def call_add(a: int, b: int) -> int:
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            result = await session.call_tool("add", {"a": a, "b": b})
-            return int(result.content[0].text)
-```
-
-`session.list_tools()`उत्पादन मेजबानों इन योजनाओं को प्रत्येक मोड़ में इंजेक्ट ताकि मॉडल एक उत्सर्जन कर सकते हैं`tool_use`ब्लॉक जो क्लाइंट फिर सर्वर को अग्रेषित करता है।
-
-### चरण 3: स्ट्रीम करने योग्य HTTP परिवहन
-
-स्थानीय डेवलपर के लिए स्टीडियो ठीक है। दूरस्थ उपकरणों के लिए, स्ट्रीम करने योग्य HTTP  एक POST प्रति अनुरोध का उपयोग करें, प्रगति के लिए वैकल्पिक सर्वर-सेंड इवेंट्स, 2025-06-18 विनिर्देश संशोधन के बाद से समर्थित।
-
-```python
-# Inside the server entrypoint
-mcp.run(transport="streamable-http", host="0.0.0.0", port=8765)
-```
-
-होस्ट कॉन्फ़िगरेशन (Claude Desktop `mcp.json`या क्लाउड कोड `~/.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "demo": {
-      "type": "http",
-      "url": "https://tools.example.com/mcp"
+@server.tool(
+    "add",
+    "Add two integers.",
+    {
+        "type": "object",
+        "properties": {
+            "a": {"type": "integer"},
+            "b": {"type": "integer"}
+        },
+        "required": ["a", "b"]
     }
-  }
-}
+)
+def add(a: int, b: int) -> dict:
+    return {"sum": a + b}
 ```
 
-सर्वर एक ही सजावट रखता है; केवल परिवहन बदलता है।
+`code/main.py`यह जानबूझकर मानक पुस्तकालय का उपयोग करता है ताकि आप एक SDK में प्रोटोकॉल को सौंपने के बजाय प्रत्येक लिफाफा देख सकें।
 
-### चरण 4: स्कोपिंग और सुरक्षा
+### चरण 2: प्रत्येक अनुरोध पर मेटाडेटा संलग्न करें
 
-एक MCP उपकरण किसी और के विश्वास सीमा पर चल रहा है मनमानी कोड है. तीन अनिवार्य पैटर्न.
+```python
+def request(method, params=None):
+    body_params = dict(params or {})
+    body_params["_meta"] = {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {
+            "name": "demo-client",
+            "version": "1.0.0"
+        }
+    }
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": method,
+        "params": body_params
+    }
+```
 
-- **Capability allowlists.**मेजबान एक `roots`उपकरण हैंडलर में लागू करें; मॉडल द्वारा प्रदान किए गए पथों पर भरोसा न करें।
-- **Human-in-the-loop for mutation.**केवल-पढ़ने वाले उपकरण स्वचालित रूप से निष्पादित कर सकते हैं। लिखने/हटाने के लिए उपकरण पुष्टि की आवश्यकता होगी  सर्वर सेट होने पर मेजबान एक स्वीकृति UI सतह पर आते हैं `destructiveHint: true`उपकरण मेटाडेटा पर।
-- **Tool poisoning defense.**एक दुर्भावनापूर्ण संसाधन में छिपे हुए शीघ्र इंजेक्शन निर्देश हो सकते हैं ("संक्षेप में, भी कॉल करें `exfil`) संसाधन सामग्री को अविश्वसनीय डेटा के रूप में व्यवहार करें; इसे सिस्टम संदेश क्षेत्र में कभी भी प्रवेश नहीं करने दें। चरण 11 · 12 (गार्ड्रेल) देखें।
+इस मेटाडेटा को केवल एक कनेक्शन ऑब्जेक्ट में कैश न करें. सर्वर प्रत्येक अनुरोध पर इसे मान्य करता है।
 
-देखो`code/main.py`एक चलाने योग्य सर्वर + क्लाइंट जोड़ी के लिए यह सब प्रदर्शित करता है।
+### चरण 3: सूचीबद्ध करने से पहले वैकल्पिक रूप से खोजें
 
-## 2026 में भी फंसे हुए जाल
+कॉल`server/discover`, एक समर्थित संस्करण चुनें, फिर कॉल `tools/list`. एक प्रत्यक्ष`tools/list`यह भी मान्य है यदि आप पहले से ही संस्करण जानते हैं और संभाल सकते हैं `-32022`. .
 
-- **Schema drift.**मॉडल ने देखा `tools/list`मोड 1 में टूल सेट बदलता है 5 में टूल सेट बदलता है। मॉडल एक गायब उपकरण को बुलाता है। मेजबानों को फिर से सूचीबद्ध करना चाहिए।`notifications/tools/list_changed`. .
-- **Large resource blobs.**संसाधन अपशिष्ट संदर्भ के रूप में 2MB फ़ाइल को छोड़ना. पृष्ठ या सर्वर-साइड सारांशित करें.
-- **Too many servers.**50 एमसीपी सर्वर स्थापित करने से उपकरण बजट (चरण 11 · 05) उड़ा जाता है। अधिकांश सीमा मॉडल ~ 40 उपकरणों से परे गिरावट करते हैं।
-- **Version skew.**विनिर्देश संशोधन (2024-11, 2025-03, 2025-06, 2025-12) में टूटने वाले फ़ील्ड पेश किए गए हैं।
-- **Stdio deadlocks.**सर्वर जो stdout में लॉग करते हैं JSON-RPC धारा को भ्रष्ट करते हैं. केवल stderr में लॉग करें।
+डेमो नाम क्रम में उपकरण सूची वापस करता है और संलग्न करता है `ttlMs`,`cacheScope`,`resultType`एक उपकरण कॉल एक पूर्ण, गैर-कैश परिणाम वापस करता है क्योंकि इसके आउटपुट वर्तमान स्थिति पर निर्भर कर सकते हैं।
+
+### चरण 4: उसी अनुरोध को HTTP पर मानचित्रित करें
+
+एक रिमोट `tools/call`POST में हेडर शामिल हैं जो JSON-RPC शरीर को दर्पण करते हैंः
+
+```http
+POST /mcp HTTP/1.1
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: add
+```
+
+`MCP-Protocol-Version`शीर्षक में संस्करण से मेल खाना चाहिए `_meta`. .`Mcp-Method`प्रत्येक JSON-RPC अनुरोध पर आवश्यक है और मेल खाना चाहिए `method`. .`Mcp-Name`केवल `tools/call`,`resources/read`और `prompts/get`, जहां यह उपकरण के नाम, संसाधन यूआरआई, या शीघ्र नाम से मेल करना चाहिए. एक गायब आवश्यक हेडर या असंगत HTTP 400 के साथ वापस आता है `HeaderMismatch`कोड `-32020`. .
+
+### चरण 5: प्रोटोकॉल राज्य के बाहर सुरक्षा लागू करें
+
+- प्रत्येक HTTP अनुरोध पर प्राधिकरण और दर्शकों को मान्य करें.
+- स्थानीय सर्वर को स्थानीय होस्ट से जोड़ें और सत्यापित करें `Origin`स्ट्रीम करने योग्य HTTP पर।
+-  के साथ उत्परिवर्तन उपकरण चिह्नित करें`destructiveHint: true`और मेजबान की स्वीकृति की आवश्यकता होती है।
+- अप्रचलित जड़ों पर निर्भर होने के बजाय निर्देशिका और फ़ाइल दायरा को स्पष्ट रूप से पास करें।
+- संसाधनों और उपकरण आउटपुट को अविश्वसनीय डेटा के रूप में व्यवहार करें।
+- stdio के तहत JSON-RPC के लिए stdout आरक्षित रखें; stderr पर डायग्नोस्टिक्स लिखें।
 
 ## इसका प्रयोग करें
 
-2026 MCP स्टैकः
+अपनी निर्देशिका से पाठ चलाएंः
 
-| Situation | Pick |
-|-----------|------|
-| Local dev, single-user tools | Python `FastMCP`, stdio transport |
-| Remote team tools / SaaS integration | Streamable HTTP, OAuth 2.1 auth |
-| TypeScript host (VS Code extension, web app) | `@modelcontextprotocol/sdk` |
-| High-throughput server, typed access | Official Rust SDK (`modelcontextprotocol/rust-sdk`) |
-| Exploring ecosystem servers | `modelcontextprotocol/servers` monorepo (Filesystem, GitHub, Postgres, Slack, Puppeteer) |
+```bash
+python3 code/main.py
+cd code
+python3 -m unittest discover tests -v
+```
 
-अंगूठे का नियमः यदि कोई उपकरण केवल-पढ़ने योग्य, कैश करने योग्य और दो या दो से अधिक मेजबानों से बुलाया जाता है, तो इसे MCP सर्वर के रूप में भेजें। यदि यह एक बार का इनलाइन तर्क है, तो इसे स्थानीय फ़ंक्शन के रूप में रखें (चरण 11 · 09) ।
+पहली पंक्ति में पता लगाने की सूचना दी जानी चाहिए `demo-server`प्रोटोकॉल पर`2026-07-28`. . फिर निरीक्षण`MCPClient.request`: यह पुनर्निर्माण करता है `_meta`प्रत्येक कॉल के लिए. एक अनुरोध से मेटाडेटा हटाएं और सर्वर इसे अस्वीकार करते हैं।
 
 ## इसे भेजें
 
-सहेजें`outputs/skill-mcp-server-designer.md`:
+`outputs/skill-mcp-server-designer.md`एक डोमेन को एक राज्य रहित MCP डिजाइन में बदल देता है। इसके स्वीकृति गेट के लिए खोज परिणाम, प्रति अनुरोध मेटाडेटा नीति, निर्णायक कैश-जाहिर सूचियों, स्पष्ट राज्य हैंडल, परिवहन हेडर, प्राधिकरण और अनुमोदन नियमों की आवश्यकता होती है।
 
-```markdown
----
-name: mcp-server-designer
-description: Design and scaffold an MCP server with tools, resources, and safety defaults.
-version: 1.0.0
-phase: 11
-lesson: 14
-tags: [llm-engineering, mcp, tool-use]
----
+## एमसीपी गहरी गोताखोरी जारी रखें
 
-Given a domain (internal API, database, file source) and the hosts that will mount the server, output:
+इस पाठ में आपको प्रोटोकॉल मॉडल दिया गया है। चरण 13 चार उत्पादन सीमाओं को अलग-अलग निर्माण और सत्यापन पाठों में बदल देता हैः
 
-1. Primitive map. Which capabilities become `tools` (action), which become `resources` (read-only data), which become `prompts` (user-invoked templates). One line per primitive.
-2. Auth plan. Stdio (trusted local), streamable HTTP with API key, or OAuth 2.1 with PKCE. Pick and justify.
-3. Schema draft. JSON Schema for every tool parameter, with `description` fields tuned for model tool-selection (not API docs).
-4. Destructive-action list. Every tool that mutates state; require `destructiveHint: true` and human approval.
-5. Test plan. Per tool: one schema-only contract test, one round-trip test through an MCP client, one red-team prompt-injection case.
+1. [MCP Tool Contracts and Content](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)बंद इनपुट योजनाओं, संरचित सामग्री, रूटिंग मेटाडेटा, अस्पष्ट पृष्ठीकरण, पूर्णता प्राधिकरण और प्रोटोकॉल और टूल-डोमेन त्रुटियों के बीच अंतर को कवर करता है।
+2. [MCP Reliability, Cancellation, and Flow Control](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)अनुरोध रद्द, टिकाऊ कार्य रद्द, समय सीमा, अशक्तता, बैकप्रेशर, प्रॉक्सी बफरिंग और पुनः कनेक्ट व्यवहार को कवर करता है।
+3. [MCP Registry Supply Chain, Admission, Drift, and Rollback](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)नामस्थान प्रमाण, कलाकृतियों की उत्पत्ति, अपरिवर्तनीय पिन, लाइव ड्रिफ्ट, रजिस्ट्री स्थिति, प्रवेश प्रमाण और रोलबैक को कवर करता है।
+4. [MCP Conformance Engineering](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)सोने और नकारात्मक तार ट्रांसक्रिप्ट, सख्त संस्करण युग, एसडीके अंतर, प्रॉक्सी सबूत, संपादन, स्वास्थ्य गेट और रिलीज़ रोलबैक को कवर करता है।
 
-Refuse to ship a server that writes to disk or calls external APIs without an approval path. Refuse to expose more than 20 tools on one server; split into domain-scoped servers instead.
-```
+इनका अनुसरण करें जब सर्वर एक टीम या विश्वास सीमा पार करेगा। वे एक साथ प्रणाली काम करता है से अनुबंध सुरक्षित और तैनाती के माध्यम से निदान योग्य रहता है।
 
 ## व्यायाम
 
-1. **Easy.**`demo-server`एक के साथ `subtract`उपकरण. इसे क्लाउड डेस्कटॉप से कनेक्ट करें. पुष्टि करें होस्ट एक रिस्टार्ट के बिना नया उपकरण उठाता है द्वारा जारी एक `tools/list_changed`अधिसूचना।
-2. **Medium.**एक जोड़ें `resource`जो  के अंतिम 100 पंक्तियों को उजागर करता है`/var/log/app.log`. एक जड़ अनुमति सूची लागू करें तो`../etc/passwd`मॉडल द्वारा मांगी गई है, भले ही यह अवरुद्ध हो।
-3. **Hard.**एक एमसीपी प्रॉक्सी बनाएं जो तीन अपस्ट्रीम सर्वर (फाइल सिस्टम, गिटहब, पोस्टग्रेस) को एक समग्र सतह में बहुविध बनाता है। नाम टकरावों को संभालें और आगे बढ़ें `notifications/tools/list_changed`साफ.
+1. एक जोड़ें `subtract`उपकरण और पुष्टि `tools/list`वर्णमाला क्रम में रहता है।
+2. प्रोटोकॉल- संस्करण कुंजी को हटा दें और अमान्य पैरामीटर की जांच करें (`-32602`) फिर अच्छी तरह से तैयार लेकिन समर्थित संस्करण भेजें `2025-11-25`, सत्यापित करें`-32022`, पुष्टि `requested`उस संशोधन को प्रतिध्वनित करता है, और चुनें `supported`. .
+3. सर्वर-मिंट जोड़ें `draftId`एक ऑपरेशन बनाने के लिए, फिर इसे अद्यतन करने के लिए एक तर्क के रूप में आवश्यक है। यह क्यों है कि एक प्रोटोकॉल सत्र की बजाय आवेदन राज्य है समझाएं।
+4. लौटें`input_required`एक नए आईडी के साथ मूल कॉल को पुनः प्रयास करें, एक `inputResponses`प्रविष्टि, और सटीक `requestState`सर्वर-से-क्लाइंट JSON-RPC अनुरोध का आविष्कार करने के बजाय।
+5. एक दोहरे युग स्टूडियो क्लाइंट स्केच करें। एक परिणाम या आधुनिक त्रुटि को आधुनिक माना जाता है, और वापस जाने की अनुमति दें।`initialize`केवल एक अनजान त्रुटि या समय सीमा के लिए।
 
 ## प्रमुख शर्तें
 
 | Term | What people say | What it actually means |
-|------|-----------------|-----------------------|
-| MCP | "Tool protocol for LLMs" | JSON-RPC 2.0 spec for exposing tools, resources, and prompts to any LLM host. |
-| Host | "Claude Desktop" | The LLM application — owns the model and user UI, mounts one or more clients. |
-| Client | "Connection" | A per-server connection inside the host that speaks JSON-RPC to exactly one server. |
-| Server | "The thing with the tools" | Your code; advertises tools/resources/prompts and handles their invocation. |
-| Tool | "Function call" | Model-invokable action with a JSON Schema input and a text/JSON result. |
-| Resource | "Read-only data" | URI-addressed content (file, row, API response) the host can request. |
-| Prompt | "Saved prompt" | User-invokable template (often with arguments) surfaced as a slash-command. |
-| Stdio transport | "Local dev mode" | Parent host spawns the server as a child process; JSON-RPC over stdin/stdout. |
-| Streamable HTTP | "The 2025-06 remote transport" | POST for requests, optional SSE for server-initiated messages; replaces the older SSE-only transport. |
+|------|-----------------|------------------------|
+| MCP | "Tool protocol for LLMs" | JSON-RPC protocol for server discovery, tools, resources, prompts, and extensions |
+| Host | "The AI app" | Owns the model and UI and mounts one or more MCP clients |
+| Client | "The connector" | Speaks MCP to one server on behalf of a host |
+| Stateless MCP | "No session" | Every request carries version and capabilities; no protocol state is keyed by a connection |
+| `server/discover` | "Capability probe" | Required server method advertising versions, capabilities, and identity |
+| `resultType` | "Result state" | Marks a result as `complete` or `input_required` |
+| State handle | "Workflow id" | Server-minted application identifier passed as an ordinary argument |
+| Streamable HTTP | "Remote transport" | One POST endpoint with JSON or request-scoped SSE responses |
+| MRTR | "Ask and retry" | Input request embedded in a result, followed by a retry of the original operation |
 
 ## आगे पढ़ना
 
-- [Model Context Protocol specification](https://modelcontextprotocol.io/specification) कैनोनिक संदर्भ, तारीख के अनुसार संस्करण।
-- [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) फाइल सिस्टम, गिटहब, पोस्टग्रेस, स्लैक, पप्पीटर संदर्भ सर्वर।
-- [Anthropic — Introducing MCP (Nov 2024)](https://www.anthropic.com/news/model-context-protocol) डिजाइन तर्क के साथ लॉन्च पोस्ट।
-- [Python SDK](https://github.com/modelcontextprotocol/python-sdk) इस पाठ में इस्तेमाल किया गया आधिकारिक एसडीके।
-- [Security considerations for MCP](https://modelcontextprotocol.io/docs/concepts/security) जड़ें, विनाशकारी संकेत, उपकरण विषाक्तता।
-- [Google A2A specification](https://a2a-protocol.org/latest/) एजेंट2एजेंट प्रोटोकॉल; एजेंट-से-एजेंट संचार के लिए भाई-बहन मानक जो एमसीपी के एजेंट-टू-टूल दायरे को पूरक करता है।
-- [Anthropic — Building effective agents (Dec 2024)](https://www.anthropic.com/research/building-effective-agents) जहां एमसीपी एजेंट डिजाइन के लिए व्यापक पैटर्न लाइब्रेरी में स्थित है (अगस्त LLM, वर्कफ़्लो, स्वायत्त एजेंट) ।
+- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [MCP server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [MCP Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP deprecated features](https://modelcontextprotocol.io/specification/2026-07-28/deprecated)
