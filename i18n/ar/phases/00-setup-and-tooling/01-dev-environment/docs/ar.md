@@ -16,7 +16,7 @@
 
 ## المشكلة
 
-أنت على وشك تعلم هندسة الذكاء الاصطناعي عبر 200 دروس تستخدم بايثون، الكتابة النمطية، الخرق، وجوليا. إذا تم تدمير بيئتك، كل دروس واحد يصبح معركة ضد الأدوات بدلا من التعلم.
+أنت على وشك تعلم هندسة الذكاء الاصطناعي عبر 500 دروس تستخدم بايثون، الكتابة النمطية، الخرق، وجوليا. إذا تم تدمير بيئتك، كل دروس واحد يصبح معركة ضد الأدوات بدلا من التعلم.
 
 معظم الناس يخطون إعداد البيئة ثم يقضون ساعات في تحليل أخطاء الاستيراد، نزاعات الإصدارات، ووقودات CUDA المفقودة. سنقوم بهذا مرة واحدة، بشكل صحيح.
 
@@ -154,17 +154,51 @@ if torch.cuda.is_available():
 
 لا يوجد نظام معين للكمبيوترات (GPU) ؟ لا مشكلة. معظم الدروس تعمل على جهاز معين للكمبيوترات (CPU).
 
-### الخطوة السابعة: تحقق من كل شيء
+### الخطوة 7: تحقق من المسار الذي تريد البدء به
 
-إشغال النص التحقق:
+إشغال كل أمر في هذا الدروس من جذور مخزن، المجلد الذي
+يحتوي على`README.md`و`phases/`قبل الرحلة يُفحص فقط ما تحتاج إليه
+يبدأ الطريق المحدد. يفرض أدوات لاحقة بشكل افتراضي حتى يرى المتعلم الجديد
+رد واضح بدلاً من جدار من التحذيرات
+
+ابدأ سلسلة المبتدئين الكاملة:
 
 ```bash
-python phases/00-setup-and-tooling/01-dev-environment/code/verify.py
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner
+```
+
+أو تحقق فقط من الطريق الذي تريده:
+
+```bash
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route ml-foundations
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route llm-engineering
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route agents
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route mcp
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route agent-skills
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route certification
+```
+
+إضافة`--show-later`عندما تريد نفس التحقيق قبل الرحلة للتفتيش الأدوات الاختيارية
+و الاعتماد المستخدمة في الدروس اللاحقة.
+الطريق المختار.
+
+كل عملية فاشلة مطلوبة تتضمن المسار المكتشف أو خطأ الاستيراد
+القيادة التصحيحية الدقيقة. مهارات العميل وطرق الشهادة أيضاً
+التحقق من المضيف اليدوي لأن نص Python لا يمكن أن يثبت أن المضيف AI
+اكتشفت مهارة أو أن المهارات التي اخترتها قابلة للكتابة
+
+عندما يمر المبتدئ قبل الرحلة، فإنه يطبخ الدروس الأولى الدراسة:
+
+```text
+Ready to start Beginner course.
+Next: python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py
 ```
 
 ## استخدمها
 
-بيئتك جاهزة الآن لكل درس في هذه الدورة، إليك ما ستستخدمه في:
+بيئتك جاهزة لبدء المسار الذي تحققت منه
+عندما يطلب الدروس منهم بدلاً من حظر دروسك الأولى على الإطلاق
+هنا ما ستستخدمه في جميع أنحاء المناهج الدراسية:
 
 | Language | Used In | Package Manager |
 |----------|---------|-----------------|
