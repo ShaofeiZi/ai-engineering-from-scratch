@@ -1,152 +1,345 @@
-# Recursos y instrucciones de MCP  Exposición de contexto más allá de las herramientas
+# Recursos y instrucciones de MCP: Contexto direccionable para servidores sin estatus
 
-> Las herramientas obtienen el 90% de la atención de MCP. Las otras dos primitivas del servidor resuelven diferentes problemas. Los recursos exponen los datos para la lectura; las instrucciones exponen las plantillas reutilizables como comandos de corte. Muchos servidores deben usar recursos en lugar de envolver las lecturas en herramientas, y las instrucciones en lugar de flujos de trabajo de codificación dura en las instrucciones del cliente. Esta lección nombra la regla de decisión y recorre el proceso de la instrucción.`resources/*`y `prompts/*`mensajes.
+> Las herramientas realizan operaciones. Los recursos exponen el contenido direccionable. Invita a los paquetes de plantillas de mensajes seleccionadas por el usuario. Un buen servidor MCP mantiene esos contratos separados y predecibles.
 
 **Type:** Build
-**Languages:** Python (stdlib, resource + prompt handler)
-**Prerequisites:** Phase 13 · 07 (MCP server)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lesson 07 (Building an MCP Server), Phase 13, Lesson 09 (MCP Transports)
+**Time:** ~60 minutes
 
 ## Objetivos de aprendizaje
 
-- Decide entre exponer una capacidad como herramienta, recurso o una solicitud para un dominio determinado.
-- Implementación `resources/list`¿ Qué ?`resources/read`¿ Qué ?`resources/subscribe`y manejar .`notifications/resources/updated`¿ Qué ?
-- Implementación `prompts/list`y `prompts/get`con plantillas de discusión.
-- Reconocer cuando el host aparece las instrucciones como comandos de corte vs contexto de inyección automática.
+- Elige entre herramientas, recursos y instrucciones de la intención del consumidor.
+- Publicitar el recurso y la superficie de inmediato a través de obligatorios `server/discover`¿ Qué ?
+- Construir un determinista `resources/list`y `prompts/list`Los resultados.
+- Aplicar`ttlMs`y `cacheScope`sin filtración de datos específicos del usuario.
+- Regresa el error JSON-RPC `-32602`para una URI de recurso inválida o desconocida.
+- Abre una`subscriptions/listen`POST-respuesta de transmisión y correlacionar cada evento por ID de suscripción.
+- Trate el contenido de los recursos y las plantillas de solicitud como salida de servidor no confiable.
 
-## El problema
+## Comience con el consumidor
 
-Un servidor MCP ingenuo para una aplicación de notas expone todo como herramientas: `notes_read`¿ Qué ?`notes_list`¿ Qué ?`notes_search`Esto envuelve todos los datos de acceso en una llamada de herramienta basada en el modelo.
+La forma más fácil de usar mal MCP es comenzar con el código de implementación. Una consulta de base de datos se convierte en una herramienta porque las funciones son familiares. Un flujo de trabajo reutilizable se convierte en un recurso porque se almacena en un archivo. Un prompt se convierte en política oculta porque el host puede inyectarlo.
 
-- El modelo debe decidir si debe llamar o no.`notes_read`para cada consulta que pueda beneficiarse del contexto.
-- El contenido de lectura única no puede ser suscrito o transmitido al panel lateral del host.
-- Las interfaces de usuario del cliente (el panel de adjuntos de recursos de Claude Desktop, el seleccionador de "Incluir archivos" de Cursor) no pueden mostrar los datos.
+Comience con quién elige y qué espera.
 
-La división derecha: exponer datos como recurso, exponer acciones mutantes o computadas como herramientas, exponer flujos de trabajo reutilizables en múltiples pasos como instrucciones.
+| Primitive | Primary intent | Selection owner | Typical result |
+|---|---|---|---|
+| Tool | Perform an operation | Model or application | Structured action result |
+| Resource | Read content at a URI | Host, application, or user | Text or binary content |
+| Prompt | Start a reusable message workflow | User through host UI | One or more prompt messages |
 
-## El concepto
+Una nota en `notes://note-1`es un recurso porque es un contenido direccionable. `delete_note`Es una herramienta porque cambia el estado.`review_note`es una solicitud porque un usuario elige un flujo de trabajo de revisión preparado.
 
-### Herramientas vs recursos vs instrucciones  la regla de decisión
+No exponga una operación como las tres sólo para parecer completa. Cada superficie adicional necesita descubrimiento, autorización, almacenamiento en caché, manejo de errores, pruebas y documentación.
 
-| Capability | Primitive |
-|------------|-----------|
-| User wants to search, filter, or transform data | tool |
-| User wants the host to include this data as context | resource |
-| User wants a templated workflow they can re-run | prompt |
+## El envase de los apátridas 2026-07-28
 
-Guía: si el modelo se beneficiaría de llamarlo en cada consulta relacionada, es una herramienta. Si el usuario se beneficiaría de unirse a una conversación, es un recurso. Si un flujo de trabajo completo de varios pasos es la unidad que el usuario quiere reutilizar, es un prompt.
+Esta lección tiene como objetivo la revisión del protocolo de MCP `2026-07-28`. No hay una sesión de apretón de mano de inicialización o protocolo en este perfil.`_meta`¿Qué es eso?
 
-### Recursos
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "resources/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+```
 
-`resources/list`retorno `{resources: [{uri, name, mimeType, description?}]}`- ¿ Qué ?`resources/read`¿ Qué es ?`{uri}`y los retornos `{contents: [{uri, mimeType, text | blob}]}`¿ Qué ?
+Un servidor debe implementar `server/discover`. Sus resultados publicitarios apoyados
+las versiones, las capacidades de recursos y de ejecución rápida, la identidad de la implementación, y
+Un cliente puede llamar a otro método directamente, pero el descubrimiento le da
+una instantánea estable antes de que construya una interfaz de usuario.
 
-Las URI pueden ser cualquier cosa que pueda ser dirigida:
+```json
+{
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "resources": {"listChanged": true, "subscribe": true},
+    "prompts": {"listChanged": true}
+  },
+  "ttlMs": 3600000,
+  "cacheScope": "public"
+}
+```
 
-- `file:///Users/alice/notes/mcp.md`
-- `postgres://my-db/query/SELECT ...`
-- `notes://note-14`(regimen aduanero)
-- `memory://session-2026-04-22/recent`(específico para el servidor)
+Un resultado normal se declara .`"resultType": "complete"`La respuesta .`_meta`identifica la ejecución de servicio con `io.modelcontextprotocol/serverInfo`. Esta información es útil para el diagnóstico. No es una identidad de autenticación. Una solicitud que contiene una revisión no respaldada devuelve `-32022`con la revisión solicitada y las revisiones soportadas del servidor.
 
-`contents[]`soporta tanto texto como binario.`blob`como una cadena codificada base64 más un `mimeType`¿ Qué ?
+El contrato sin estado cambia sus instintos de diseño. Una lista no puede depender de una llamada previa en una conexión. La autorización puede cambiar el conjunto visible porque las credenciales son la entrada de solicitud, pero el historial de conexión no debe.
 
-### Suscripciones a los recursos
+## Los recursos son contratos estables de URI
 
-Declarar`{resources: {subscribe: true}}`En las capacidades. Llamadas del cliente.`resources/subscribe {uri}`El servidor envía .`notifications/resources/updated {uri}`Cuando el recurso cambia, el cliente vuelve a leer.
+Un recurso es el contenido identificado por un URI. Diseña el URI antes del manipulador.
 
-Caso de uso: un servidor de notas cuyos recursos son archivos en disco; un monitor de archivos activa las notificaciones de actualización; Claude Desktop vuelve a colocar el archivo en contexto cuando se edita fuera del host.
+Las propiedades de las URI son buenas:
 
-### Modelos de recursos (2025-11-25 añadido)
+- Lo suficientemente estable como para marcar o pasar entre solicitudes.
+- Espacio de nombres en el dominio del servidor.
+- Independiente de una identificación de proceso o conexión.
+- Validado antes del acceso al almacenamiento.
+- Autorizado en cada lectura.
 
-`resourceTemplates`dejar que exponga un patrón de URI parametrizado: `notes://{id}`con`id`El cliente puede completar automáticamente las identidades en el selector de recursos.
+`notes://note-1`es mejor que `note-1`porque su espacio de nombres es explícito. Un servidor de archivos puede usar `file://`URI, pero aún debe comprobar los límites de los directorios configurados después de resolver los vínculos simbólicos y los segmentos relativos.
 
-### Las instrucciones
+`resources/list`Retorna los recursos actualmente visibles para el llamador. Se clasifica por una clave estable como URI. El orden determinístico evita que se pierdan caché ruidosos, se cambien instantáneas y se salten entre actualizaciones.
 
-`prompts/list`retorno `{prompts: [{name, description, arguments?}]}`- ¿ Qué ?`prompts/get`¿ Qué es ?`{name, arguments}`y los retornos `{description, messages: [{role, content}]}`¿ Qué ?
+```json
+{
+  "resultType": "complete",
+  "resources": [
+    {
+      "uri": "notes://note-1",
+      "name": "Architecture decision",
+      "description": "Why the service uses a stateless boundary",
+      "mimeType": "text/markdown"
+    }
+  ],
+  "ttlMs": 300000,
+  "cacheScope": "public",
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "notes-server",
+      "version": "2.0.0"
+    }
+  }
+}
+```
 
-Un prompt es una plantilla que llena una lista de mensajes que el host alimenta su modelo. Por ejemplo, un `code_review`¿ Qué es lo que hace?`file_path`argumentos y devuelve una secuencia de tres mensajes: un mensaje del sistema, un mensaje del usuario con el cuerpo de archivo y un asistente de inicio con una plantilla de razonamiento.
+`resources/read`devuelve uno o más elementos de contenido. Un URI desconocido no es una lectura vacía exitosa. La especificación de recursos actual asigna URI de recursos inválidos o desconocidos a parámetros inválidos JSON-RPC, código `-32602`¿ Qué ?
 
-### Anfitriones y avisos
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "error": {
+    "code": -32602,
+    "message": "Unknown or invalid resource URI",
+    "data": {
+      "uri": "notes://missing"
+    }
+  }
+}
+```
 
-Claude Desktop, VS Code y Cursor exponen las instrucciones como comandos de corte en la interfaz de usuario de chat.`/code_review`El servidor de la solicitud es el contrato entre "cortoacto de usuario" y "interrumpto completo enviado al modelo".
+Esta distinción permite separar la ausencia de un documento vacío válido y evita que se vuelva a buscar más ampliamente.
 
-No todos los clientes admiten las instrucciones todavía. Un servidor con capacidad de instrucción declarada pero un cliente sin apoyo inmediato simplemente no verá los comandos de slash.
+### Modelos de recursos
 
-### La notificación de "cambio de lista"
+Una plantilla de recursos describe una familia de URI parámetrizados. Utilice una cuando enumere cada elemento concreto sería caro o ilimitado. Por ejemplo, `notes://projects/{project}/decisions/{decision}`le dice a un cliente cómo formar una dirección válida sin devolver cada decisión.
 
-Tanto los recursos como las instrucciones emiten`notifications/list_changed`Cuando el conjunto mueve, un servidor de notas que acaba de importar 20 notas nuevas emite.`notifications/resources/list_changed`El cliente vuelve a llamar.`resources/list`para recoger las adiciones.
+Una plantilla no debilita la validación. Analizar variables, aplicar autorizaciones, hacer cumplir límites de longitud y caracteres y construir consultas de almacenamiento con parámetros tipados. Nunca concatenar una cola URI arbitraria en un camino del sistema de archivos o en una declaración de base de datos.
 
-### Convenciones sobre el tipo de contenido
+### El contenido no es una instrucción confiable
 
-Para texto: `mimeType: "text/plain"`¿ Qué ?`text/markdown`¿ Qué ?`application/json`¿ Qué ?
-Para binario: `image/png`¿ Qué ?`application/pdf`, más el `blob`campo.
-Para las aplicaciones MCP (lección 14): `text/html;profile=mcp-app`en un `ui://`- ¿Qué es eso?
+El servidor debe limitar el tamaño del contenido, devolver un tipo MIME preciso, editar los campos a los que el llamador no puede acceder y evitar devolver registros no relacionados.
 
-### Recursos dinámicos
+## Las instrucciones son plantillas controladas por el usuario
 
-Un URI de recurso no tiene que corresponder a un archivo estático. `notes://recent`puede devolver las últimas cinco notas en cada lectura. `db://query/users/active`El servidor es libre de calcular el contenido dinámicamente.
+Las instrucciones MCP están diseñadas para la selección explícita del usuario. Un host puede renderizarlas como comandos de corte, elementos de menú o botones de flujo de trabajo. El protocolo no requiere una interfaz de usuario.
 
-Regla: si el cliente puede almacenar en caché por URI, el URI debe ser estable. Si el cálculo es de una sola toma, el URI debe incluir un sello de tiempo o nonce para que el caché del cliente no se desprenda.
+`prompts/list`Cada respuesta necesita un nombre estable, una descripción útil y declaraciones de argumento que permitan al host recopilar información antes de que se haga una solicitud.`prompts/get`¿ Qué ?
 
-### Suscripciones frente a encuestas
+```json
+{
+  "resultType": "complete",
+  "prompts": [
+    {
+      "name": "review_note",
+      "title": "Review a note",
+      "description": "Review one note for a named concern",
+      "arguments": [
+        {
+          "name": "uri",
+          "description": "The note resource URI",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "ttlMs": 600000,
+  "cacheScope": "public"
+}
+```
 
-Los clientes con suscripción pueden recibir el push del servidor a través de `notifications/resources/updated`Los clientes de pre-subscripción o hosts que no lo admiten sondeo por re-lectura. Ambos son conformes con las especificaciones. La declaración de capacidad del servidor le dice al cliente a la que admite.
+`prompts/get`El host decide cómo los mensajes devueltos entran en el contexto del modelo y mantiene su propia política de confianza en una mayor prioridad.
 
-Costo de suscripciones: estado por sesión en el servidor (quién está suscrito a qué). Mantenga el conjunto de suscripciones limitado; los clientes desconectados deben terminar el tiempo.
+Valida los argumentos de la solicitud en el límite del servidor. Un URI de la solicitud debe pasar la misma verificación de autorización que una lectura directa de recursos. No haga de una solicitud un canal lateral alrededor del acceso a recursos.
 
-### Las instrucciones vs instrucciones del sistema
+## Las señales de caché son parte de la corrección
 
-Las instrucciones en MCP no son instrucciones del sistema. Las instrucciones del sistema del host (sus propias instrucciones de operación) y las instrucciones de MCP (plantillas suministradas por el servidor invocadas por el usuario) viven lado a lado. Un cliente bien comportado nunca permite que una instrucción del servidor anule su propia instrucción del sistema; las coloca.
+`ttlMs`Indica al cliente cuánto tiempo puede reutilizarse un resultado. `cacheScope`describe quién puede compartir ese valor almacenado en caché.
+
+| Scope | Meaning | Typical use |
+|---|---|---|
+| `public` | May be reused across users when authorization permits | Public prompt catalog |
+| `private` | Bound to the requesting user or credential context | User-owned note content |
+
+Elige un TTL de la velocidad de cambio de los datos y el daño de la latencia. Cinco minutos pueden adaptarse a un catálogo público de solicitudes.
+
+El MCP sólo define `public`y `private`¿ Cómo ?`cacheScope`Para obtener un resultado secreto o cambiante rápidamente, devuelva`cacheScope: "private"`con`ttlMs: 0`, luego aplicar cualquier regla más estricta de no almacenar en la política de caché del host. `no-store`no es un MCP en sí mismo `cacheScope`El valor.
+
+Las sugerencias de caché nunca reemplazan la autorización. Una clave de caché debe incluir todas las dimensiones de la solicitud que cambien la visibilidad, incluido el cursor de inquilino, usuario, alcance, localización y paginado. Si una caché compartida no puede expresar esas dimensiones de manera segura, use `private`con un TTL cero y una política de no tienda a nivel de host.
+
+## Suscripciones Utilice un flujo de respuesta abierto por el cliente
+
+El patrón de suscripción moderno reemplaza al anterior `resources/subscribe`RPC y el antiguo punto final del evento HTTP GET.
+
+El cliente envía`subscriptions/listen`En HTTP Streamable este es un POST cuya respuesta permanece abierta como un flujo SSE.`notifications`El objeto es una lista de permisos. Un servidor no debe entregar tipos de notificación que no fueron solicitados.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "method": "subscriptions/listen",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    },
+    "notifications": {
+      "resourcesListChanged": true,
+      "promptsListChanged": true,
+      "resourceSubscriptions": [
+        "notes://note-1"
+      ]
+    }
+  }
+}
+```
+
+El ID de solicitud es el ID de suscripción. Antes de cualquier evento solicitado, el servidor envía `notifications/subscriptions/acknowledged`Su filtro contiene sólo el subconjunto que el servidor acepta.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/subscriptions/acknowledged",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/subscriptionId": 17
+    },
+    "notifications": {
+      "resourcesListChanged": true,
+      "resourceSubscriptions": [
+        "notes://note-1"
+      ]
+    }
+  }
+}
+```
+
+Cada evento posterior en esa corriente lleva los mismos metadatos.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/resources/updated",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/subscriptionId": 17
+    },
+    "uri": "notes://note-1"
+  }
+}
+```
+
+La notificación dice que el recurso ha cambiado.`resources/read`No asume que el evento contenga el nuevo documento.
+
+Varias suscripciones pueden compartir un canal de estudio. El ID de suscripción permite al cliente demultiplejarlas.`resultType: "complete"`la respuesta correlacionada con la solicitud original.
+
+No utilice un flujo de suscripción como sesión de protocolo. Una lectura posterior sigue siendo una solicitud completa que puede llegar a cualquier instancia de servidor saludable.
 
 ```figure
 t3-primitive-sort
 ```
 
-## Usalo
+## Laboratorio interactivo
 
-`code/main.py`Extenderá el servidor de notas de la lección 07 con:
+Utilice la figura para clasificar cinco capacidades de un rastreador de proyectos: detalles de emisión, crear un problema, plantilla de revisión de sprint, política del proyecto y problema de cierre. Luego decida qué listas se pueden guardar en caché públicamente, qué lecturas deben permanecer privadas y qué recursos merecen notificaciones de actualización.
 
-- Recursos por nota (`notes://note-1`, etc.) con `resources/subscribe`apoyo.
-- ¿ Qué es esto ?`review_note`una llamada que se hace a una plantilla de tres mensajes.
-- Una simulación de archivo-observador que emite `notifications/resources/updated`cuando se modifique una nota.
-- ¿ Qué es esto ?`notes://recent`un recurso dinámico que siempre devuelve las últimas cinco notas.
+Para cada clasificación, nombre el elegidor. Si el modelo realiza una acción, use una herramienta. Si un host lee contenido con direcciones URI, use un recurso. Si el usuario inicia un flujo de trabajo de mensajes preparados, use un prompt.
 
-Ejecutar la demostración para ver el flujo completo.
+## Laboratorio de práctica
 
-## Envío
+Ejecutar el simulador desde la raíz de repositorio:
 
-Esta lección produce`outputs/skill-primitive-splitter.md`Dado un servidor MCP propuesto, la habilidad clasifica cada capacidad como herramienta / recurso / prompt con una justificación.
+```bash
+cd phases/13-tools-and-protocols/10-mcp-resources-and-prompts/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
+
+Inspectar la transcripción en este orden:
+
+1. Confirmarlo .`server/discover`publicitará la revisión actual y ambas capacidades.
+2. Confirmar que los resultados de la lista están clasificados y utilizar `resultType: "complete"`¿ Qué ?
+3. Confirmar la lista y leer los resultados contienen pistas de caché intencionales.
+4. Cambia la URI de lectura a `notes://missing`y observar .`-32602`¿ Qué ?
+5. Confirmar el reconocimiento de suscripción precede el evento de recurso.
+6. Confirmar el evento y cerrar graciosamente ambos llevar la identificación de suscripción `5`¿ Qué ?
+
+El modelo Python no abre una conexión HTTP real. Representa los mensajes que un SDK debe colocar en el flujo de respuesta escaneado por solicitud. Utilice un SDK oficial para el enmarcado y el transporte en producción.
+
+## Artículo enviado
+
+`outputs/skill-primitive-splitter.md`Es una revisión de diseño reutilizable para la selección primitiva de MCP. Ahora verifica el descubrimiento determinista, el alcance de la caché, el comportamiento URI inválido y los filtros de suscripción modernos.
+
+La lección también nos lleva .`assets/primitive-split.svg`, una versión estática del límite primitivo y de suscripción para el estudio fuera de línea.
+
+## Verifique el hecho
+
+```bash
+cd phases/13-tools-and-protocols/10-mcp-resources-and-prompts/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
+
+Resultado esperado: el programa principal imprime una transcripción JSON y el comando de prueba informa de al menos doce pruebas de aprobación.
+
+## Conexión de Capstone
+
+Utilice este contrato cuando su servidor de capstone exponga conocimientos direccionables además de acciones. Incluya una instantánea de catálogo determinista, una lectura de recursos autorizados, una resolución rápida, un caso URI inválido y una transcripción de suscripción.
+
+Su evidencia debe demostrar que ninguna lista depende del historial de conexión y que un evento de suscripción nunca otorga acceso al recurso subyacente.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`. Observa la lista inicial de recursos, luego activa una edición de nota y verifica la `notifications/resources/updated`el evento de incendios.
-
-2. Añadir un`resources/list_changed`emisor: cuando se crea una nueva nota, envíe la notificación para que los clientes vuelvan a descubrirla.
-
-3. Diseñar tres instrucciones para un servidor MCP de GitHub: `summarize_pr`¿ Qué ?`triage_issue`¿ Qué ?`release_notes`Cada uno con esquemas de argumentos. El cuerpo de respuesta debe ser ejecutable sin más modificaciones.
-
-4. Tome una herramienta existente en el servidor de la Lección 07 y clasifique si debe permanecer como una herramienta o dividirse en un par de recursos más herramientas.
-
-5. Lea la especificación.`server/resources`y `server/prompts`Secciones. Identificar el campo en `resources/read`que rara vez está poblada pero se apoya en la especificación.`_meta`sobre el contenido de los recursos.
+1. Añadir un`notes://projects/{project}/notes/{id}`la plantilla de recursos y validar ambas variables.
+2. Añadir páginas a `resources/list`Mientras que se conserva el orden determinista.
+3. Cambiar un recurso a `cacheScope: "private"`con`ttlMs: 0`, añadir una política de no tienda a nivel de host, y explicar la amenaza que justifica ambos controles.
+4. Añadir una suscripción de cambio de lista de preguntas y demostrar que no se envía ningún evento cuando el filtro omite `promptsListChanged`¿ Qué ?
+5. Crear dos suscripciones simultáneas y demostrar que cada evento lleva la ID de solicitud correcta.
+6. Añadir una autorización sujeta al manejero de lectura y demostrar que una entrada de caché no puede cruzar sujetos.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Resource | "Exposed data" | URI-addressable content the host can read |
-| Resource URI | "Pointer to data" | Scheme-prefixed identifier (`file://`, `notes://`, etc.) |
-| `resources/subscribe` | "Watch for changes" | Client-opt-in server-push updates for a specific URI |
-| `notifications/resources/updated` | "Resource changed" | Signal to client that a subscribed resource has new content |
-| Resource template | "Parameterized URI" | URI pattern with completion hints for the host picker |
-| Prompt | "Slash-command template" | Named multi-message template with argument slots |
-| Prompt arguments | "Template inputs" | Typed parameters the host collects before rendering |
-| `prompts/get` | "Render template" | Server returns the filled-in message list |
-| Content block | "Typed chunk" | `{type: text \| image \| resource \| ui_resource}` |
-| Slash-command UX | "User shortcut" | Host surfaces prompts as commands starting with `/` |
+- **Resource:**Contenido con direcciones URI expuesto por un servidor MCP.
+- **Prompt:**Una plantilla de mensaje controlada por el usuario expuesta por un servidor MCP.
+- **Deterministic list:**Un resultado de descubrimiento con membresía estable y orden para las mismas entradas de solicitud.
+- **`ttlMs`:**Cachar la duración de la frescura en milisegundos.
+- **`cacheScope`:**El límite de compartimiento para un resultado almacenado en caché.
+- **`subscriptions/listen`:**Una solicitud de larga duración cuyo flujo de respuesta proporciona notificaciones filtradas explícitamente.
+- **Subscription ID:**El ID original de solicitud de escucha, repetido en metadatos de notificación.
+- **Invalid parameters:**Erro JSON-RPC `-32602`, utilizado para una URI de recurso inválida o desconocida.
+- **Unsupported protocol version:**Erro JSON-RPC `-32022`, incluyendo `supported`y `requested`Las revisiones.
+- **`server/discover`:**Método servidor obligatorio que devuelve las revisiones, capacidades, identidad y sugerencias opcionales de caché compatibles.
 
 ## Leer más
 
-- [MCP — Concepts: Resources](https://modelcontextprotocol.io/docs/concepts/resources) URI de recursos, suscripciones y plantillas
-- [MCP — Concepts: Prompts](https://modelcontextprotocol.io/docs/concepts/prompts) plantillas rápidas e integración de comandos de corte
-- [MCP — Server resources spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/resources) lleno `resources/*`referencia del mensaje
-- [MCP — Server prompts spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/prompts) lleno `prompts/*`referencia del mensaje
-- [MCP — Protocol info site: resources](https://modelcontextprotocol.info/docs/concepts/resources/) Guía comunitaria en expansión en los documentos oficiales
+- [MCP 2026-07-28 Resources](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
+- [MCP 2026-07-28 Prompts](https://modelcontextprotocol.io/specification/2026-07-28/server/prompts)
+- [MCP 2026-07-28 Subscriptions](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions)
+- [MCP 2026-07-28 Caching](https://modelcontextprotocol.io/specification/2026-07-28/basic/utilities/caching)

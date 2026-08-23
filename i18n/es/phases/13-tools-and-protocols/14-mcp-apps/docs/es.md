@@ -1,216 +1,318 @@
-# Aplicaciones de MCP  Recursos interactivos de interfaz de usuario a través de `ui://`
+# Aplicaciones de MCP sobre el Protocolo de apátridas
 
-> Las aplicaciones MCP (SEP-1724, oficial 26 de enero de 2026) permiten que una herramienta devuelva un HTML interactivo sandboxed renderizado en línea en Claude Desktop, ChatGPT, Cursor, Goose y VS Code.`ui://`El programa de recursos, el `text/html;profile=mcp-app`MIME, el protocolo de postMessage iframe-sandbox, y la superficie de seguridad que viene con dejar que un servidor haga HTML.
+> Un resultado interactivo es todavía una herramienta MCP y el intercambio de recursos. El núcleo 2026-07-28 hace que ese intercambio sea autónomo, mientras que la extensión Apps añade la superficie del navegador sandboxed.
 
 **Type:** Build
-**Languages:** Python (stdlib, UI resource emitter), HTML (sample app)
+**Languages:** Python
 **Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 10 (resources)
 **Time:** ~75 minutes
 
 ## Objetivos de aprendizaje
 
-- Regresa una`ui://`Recursos de una llamada de herramienta y establecer el MIME y los metadatos correctos.
-- Declarar la interfaz de usuario asociada de una herramienta con `_meta.ui.resourceUri`¿ Qué ?`_meta.ui.csp`, y `_meta.ui.permissions`¿ Qué ?
-- Implementar el iframe sandbox postMessage JSON-RPC para la comunicación de interfaz de usuario a host.
-- Aplicar las configuraciones por defecto de CSP y de las políticas de permisos que se defienden contra los ataques de UI.
+- Publicidad de las aplicaciones de MCP a través de `server/discover`y capacidades de extensión por solicitud.
+- Declarar una`ui://`recurso en una herramienta antes de que la herramienta sea llamada.
+- Regresa los resultados completos de la herramienta y los recursos en el cable sin estado de 2026-07-28.
+- Separar las aplicaciones `ui/initialize`mensaje de puente desde el apretón de manos del núcleo de MCP eliminado.
+- Aplicar la validación de origen, sandboxing, CSP y permisos de menor privilegio.
 
 ## El problema
 
-Una era de 2025 `visualize_timeline`La herramienta puede devolver "Aquí hay 14 notas organizadas cronológicamente: ...". Ese es un párrafo. Los usuarios realmente quieren la línea de tiempo interactiva. Antes de MCP Apps, las opciones eran: API de widget específicos para el cliente (artefactos Claude, OpenAI Custom GPT HTML), o ninguna interfaz de usuario en absoluto.
+Un resultado de texto puede describir una línea de tiempo. No puede dar al usuario una línea de tiempo que pueda filtrar, inspeccionar o actuar sobre.
 
-MCP Apps (SEP-1724, lanzado el 26 de enero de 2026) estandariza el contrato.`resource`cuya URI es `ui://...`y cuyo MIME es `text/html;profile=mcp-app`El host lo hace en un iframe sandbox con un CSP limitado y ningún acceso a la red a menos que se le conceda explícitamente.
+MCP Apps resuelve el problema de presentación con una extensión opcional.`ui://`El host puede recoger y revisar ese recurso antes de que la herramienta se ejecute, renderizarlo en un iframe sandboxed y mediar todas las acciones de la aplicación a través de un puente JSON-RPC.
 
-Cada cliente compatible (Claude Desktop, ChatGPT, Goose, VS Code) hace lo mismo `ui://`Un servidor, un paquete HTML, UI universal.
+El protocolo principal cambió en 2026-07-28. No envuelva una aplicación en el viejo ciclo de vida de la conexión:
+
+- No hay núcleo .`initialize`solicitud o `notifications/initialized`notificación.
+- No hay ninguna .`Mcp-Session-Id`¿Qué es eso?
+- Cada solicitud lleva la versión del protocolo y las capacidades del cliente en `params._meta`¿ Qué ?
+- Un servidor implementa `server/discover`para que los clientes puedan inspeccionar versiones, capacidades centrales y extensiones.
+- Cada resultado exitoso tiene un resultado .`resultType`- ¿Qué es eso?
+- El HTTP transmitible utiliza un POST por solicitud. Los puntos de entrada modernos GET y DELETE devuelven 405.
+
+El puente de Apps todavía tiene un método llamado `ui/initialize`Pertenece al dialecto de iframe postMessage. No recrea una sesión central de MCP.
 
 ## El concepto
 
-### El `ui://`plan de recursos
+### Dos protocolos, una característica
 
-Una herramienta devuelve:
+Mantenga las capas explícitas:
+
+1. El núcleo del MCP lleva `server/discover`¿ Qué ?`tools/list`¿ Qué ?`tools/call`¿ Qué ?`resources/list`, y `resources/read`¿ Qué ?
+2. La extensión de MCP Apps declara la interfaz de usuario y define el puente iframe-host.
+3. Las reglas de la caja de arena del navegador limitan lo que la interfaz de usuario puede alcanzar.
+
+El identificador de extensión es `io.modelcontextprotocol/ui`. Ambos pares optan. Un cliente envía soporte de extensión dentro del objeto de capacidades en cada solicitud:
 
 ```json
 {
-  "content": [
-    {"type": "text", "text": "Here is your notes timeline:"},
-    {"type": "ui_resource", "uri": "ui://notes/timeline"}
-  ],
-  "_meta": {
-    "ui": {
-      "resourceUri": "ui://notes/timeline",
-      "csp": {
-        "defaultSrc": "'self'",
-        "scriptSrc": "'self' 'unsafe-inline'",
-        "connectSrc": "'self'"
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {
+        "extensions": {
+          "io.modelcontextprotocol/ui": {}
+        }
       },
-      "permissions": []
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "timeline-host",
+        "version": "1.0.0"
+      }
     }
   }
 }
 ```
 
-El anfitrión llama entonces .`resources/read`en el `ui://notes/timeline`URI y vuelve:
+`clientInfo`Se trata de datos auto-reportados, no de una identidad de autorización.
+
+### Descubrir antes de hacer la traducción
+
+El resultado de descubrimiento del servidor anuncia la extensión:
 
 ```json
 {
-  "contents": [{
-    "uri": "ui://notes/timeline",
-    "mimeType": "text/html;profile=mcp-app",
-    "text": "<!doctype html>..."
-  }]
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "tools": {},
+    "resources": {},
+    "extensions": {
+      "io.modelcontextprotocol/ui": {}
+    }
+  },
+  "ttlMs": 300000,
+  "cacheScope": "public",
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "timeline-app-server",
+      "version": "2.0.0"
+    }
+  }
 }
 ```
 
-### Cuadro de arena de cuadro de cuadro
+El servidor debe soportar el descubrimiento. Un cliente no se ve obligado a llamar al descubrimiento antes de cada acción porque cada acción lleva sus propias capacidades.
 
-El host hace que el HTML esté en una caja de arena.`<iframe>`con:
+### Declarar la interfaz de usuario en la definición de herramienta
 
-- `sandbox="allow-scripts allow-same-origin"`(o más estricta por declaración de servidor)
-- Los CSP declarados por el servidor se aplican a través de encabezados de respuesta.
-- No hay galletas, no hay almacenamiento local del origen del anfitrión.
-- Acceso a la red limitado a `connectSrc`en el CSP.
-
-### protocolo de mensaje
-
-El iframe se comunica con el host vía `window.postMessage`Un pequeño dialecto JSON-RPC 2.0.
-
-Siempre pin .`targetOrigin`en el lado receptor validar el origen exacto del igual.`event.origin`No se debe utilizar una carga útil.`"*"`para ambos lados de este canal  el cuerpo lleva llamadas de herramientas y lecturas de recursos.
-
-```js
-// iframe to host  (pin to host origin)
-window.parent.postMessage({
-  jsonrpc: "2.0",
-  id: 1,
-  method: "host.callTool",
-  params: { name: "notes_update", arguments: { id: "note-14", title: "..." } }
-}, "https://host.example.com");
-
-// host to iframe  (pin to iframe origin)
-iframe.contentWindow.postMessage({
-  jsonrpc: "2.0",
-  id: 1,
-  result: { content: [...] }
-}, "https://iframe.example.com");
-
-// receiver on both sides
-window.addEventListener("message", (event) => {
-  if (event.origin !== "https://expected-peer.example.com") return;
-  // safe to process event.data
-});
-```
-
-Los métodos disponibles en el lado del host que la interfaz de usuario puede llamar:
-
-- `host.callTool(name, arguments)` invoca una herramienta de servidor.
-- `host.readResource(uri)` se lee un recurso de MCP.
-- `host.getPrompt(name, arguments)` trae una plantilla de solicitud.
-- `host.close()` desestima la interfaz de usuario.
-
-Cada llamada sigue pasando por el protocolo MCP y hereda los permisos del servidor.
-
-### Permisos
-
-El `_meta.ui.permissions`lista de solicitudes de capacidades adicionales:
-
-- `camera` acceso a la cámara del usuario (utilizada para las interfaces de exploración de un documento).
-- `microphone` Entrada de voz.
-- `geolocation` ubicación.
-- `network:*` acceso a la red más amplio que `connectSrc`sólo permite.
-
-Cada permiso es una solicitud que el usuario ve antes de que la interfaz de usuario se haga.
-
-### Riesgos de seguridad
-
-HTML en un iframe sigue siendo HTML. Nueva superficie de ataque:
-
-- **Prompt-injection via UI.**Una interfaz de usuario de servidor malicioso puede mostrar texto que se parece a un mensaje del sistema y engaña al usuario.
-- **Exfiltration via `connectSrc`.**Si el CSP lo permite `connect-src: *`, la interfaz de usuario puede enviar datos a cualquier lugar.
-- **Clickjacking.**La interfaz de usuario superpone al host Chrome. Los hosts deben evitar la manipulación del índice z y hacer cumplir las reglas de opacidad.
-- **Steal focus.**La interfaz de usuario toma el enfoque del teclado y captura el siguiente mensaje.
-
-La fase 13 · 15 cubre estos en profundidad como parte de la seguridad de los PCM; esta lección los introduce.
-
-### `ui/initialize`el apretón de manos
-
-Después de que el iframe se carga, envía `ui/initialize`por correoMensaje:
+El contrato de aplicaciones modernas une una interfaz de usuario a la herramienta en `tools/list`¿Qué es esto ?
 
 ```json
-{"jsonrpc": "2.0", "id": 0, "method": "ui/initialize",
- "params": {"theme": "dark", "locale": "en-US", "sessionId": "..."}}
+{
+  "name": "notes_timeline",
+  "description": "Render a timeline of notes.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "_meta": {
+    "ui": {
+      "resourceUri": "ui://notes/timeline.html"
+    }
+  }
+}
 ```
 
-El host responde con capacidades y un token de sesión. La interfaz de usuario utiliza el token de sesión en cada llamada del host posterior.
+Este es un proceso de pre-llamada de metadatos. El host puede precargar, almacenar en caché y revisar la seguridad del HTML antes de que un resultado le pida que lo muestre.`_meta.ui.resourceUri`forma.
 
-### Primitivas de la SDK AppRenderer / AppFrame
+`tools/list`Es caché en el núcleo actual. Incluye orden determinístico,`ttlMs`, y `cacheScope`- Usar .`private`cuando las herramientas visibles varían según el usuario o el token.
 
-El ext-apps SDK expone dos primitivas de conveniencia:
+### Regresa los datos, luego deja que el host vincule la vista
 
-- `AppRenderer`(lado del servidor)  envuelve un componente React / Vue / Solid y emite un `ui://`recurso con el MIME y metadatos adecuados.
-- `AppFrame`(cliente lado)  recibe el recurso, monta el iframe, y mediación postMessage.
+La llamada de herramienta devuelve contenido ordinario más datos estructurados:
 
-Puedes usar estos o rodar manualmente el HTML y JSON-RPC.
+```json
+{
+  "resultType": "complete",
+  "content": [
+    {"type": "text", "text": "Timeline ready."}
+  ],
+  "structuredContent": {
+    "notes": [
+      {"id": "note-1", "title": "Discover", "created": "2026-07-28"}
+    ]
+  },
+  "isError": false
+}
+```
 
-### Estado del ecosistema
+El host ya sabe qué vista pertenece a la herramienta. Evite inventar un nuevo bloque de contenido solo para repetir el URI.
 
-MCP Apps se envió el 26 de enero de 2026.
+### Sirve la aplicación como recurso
 
-- **Claude Desktop.**Apoyo total desde enero de 2026.
-- **ChatGPT.**Apoyo completo a través del SDK de aplicaciones (el mismo protocolo subyacente de MCP Apps).
-- **Cursor.**Beta; habilitar a través de la configuración.
-- **VS Code.**Sólo construye el interior.
-- **Goose.**Apoyo total.
-- **Zed, Windsurf.**- El mapa de la carretera.
+El servidor anuncia `resources`En el descubrimiento, por lo que también implementa el obligatorio`resources/list`La entrada de la lista determinista incluye el URI canónico, un nombre estable, descripción y tipo MIME.`resultType`, metadatos de identidad del servidor, `ttlMs`, y `cacheScope`, como la lista de herramientas deterministas.
 
-Servidores en producción: tablas de control, visualizaciones de mapas, tablas de datos, constructores de gráficos, vistas previas de IDE sandbox.
+El anfitrión envía`resources/read`En Streamable HTTP, la solicitud tiene:
+
+```text
+POST /mcp
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: resources/read
+Mcp-Name: ui://notes/timeline.html
+```
+
+Los valores de encabezado y el cuerpo JSON-RPC deben coincidir.`-32020`¿ Qué ?
+
+El resultado contiene el recurso HTML y las sugerencias de caché:
+
+```json
+{
+  "resultType": "complete",
+  "contents": [
+    {
+      "uri": "ui://notes/timeline.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "text": "<!doctype html>...",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "connectDomains": [],
+            "resourceDomains": [],
+            "frameDomains": [],
+            "baseUriDomains": []
+          },
+          "permissions": {}
+        }
+      }
+    }
+  ],
+  "ttlMs": 60000,
+  "cacheScope": "public"
+}
+```
+
+### Cachar los recursos de la interfaz de usuario como contenido ejecutable
+
+Un recurso de aplicación no es intercambiable con la prosa ordinaria. Su entrada en caché puede ejecutar código puente, renderizar datos de herramienta y solicitar acciones mediadas por el host.`ui://`URI, identidad y versión admitidas del servidor, digestión de contenido de recursos y contexto de autorización cuando `cacheScope`Nunca vuelva a utilizar un recurso privado de la aplicación en todos los principales porque el HTML o sus metadatos de política pueden diferir incluso cuando el URI es idéntico.
+
+Invalida la entrada cuando su `ttlMs`expira, la herramienta es `_meta.ui.resourceUri`cambios de enlace, cambios en la versión del servidor o en el pin de descriptor admitido, o una suscripción reconocida para cambiar recursos nombra el URI. Recargar y volver a aplicar la revisión de CSP y permisos antes de volver a instalar. Un iframe obsoleto no debe mantener permisos más amplios simplemente porque una nueva versión de recurso aún no se ha cargado.
+
+### Rechazar la ambigüedad del cable antes de la política de características
+
+La validación tiene un orden deliberado. primero valida la forma JSON-RPC y requiere metadatos de protocolo de cadena más un mapa de capacidad del cliente objeto. Luego compara los encabezados de enrutamiento con el cuerpo. Sólo entonces decide si se admite la versión del protocolo correspondiente. Este orden impide que un proxy y el servidor interpreten diferentes solicitudes.
+
+| Condition | HTTP | JSON-RPC error |
+|-----------|------|----------------|
+| Header and body version, method, or name disagree | 400 | `-32020` |
+| Header and body agree on an unsupported version | 400 | `-32022`, with `data` exactly `{"supported":["2026-07-28"],"requested":"<actual>"}` |
+| `resources/read` lacks the Apps extension capability | 400 | `-32021`, with `data.requiredCapabilities.extensions.io.modelcontextprotocol/ui` |
+| Method is unknown | 404 | `-32601` |
+
+Una notificación JSON-RPC no tiene `id`, por lo que el servidor nunca emite una respuesta JSON-RPC para él. Una notificación HTTP aceptada devuelve 202 con un cuerpo vacío. Un error puede cambiar el estado HTTP, pero aún no puede crear un cuerpo de error JSON-RPC para una notificación.
+
+### La caja de arena es un límite, no un veredicto de confianza
+
+Un host controla el iframe. La aplicación no puede leer directamente las cookies del host, el almacenamiento local o la página DOM. Todos los trabajos privilegiados deben cruzar el puente.
+
+Utilice estos valores predeterminados:
+
+- Deja todas las listas de dominios de CSP vacías, luego añade sólo los orígenes que la aplicación necesita.`connectDomains`para extraer, XHR y WebSocket; uso `resourceDomains`para scripts, estilos, imágenes y fuentes.
+- En el caso práctico, agrupar código y datos.
+- No solicite permiso de cámara, micrófono o ubicación a menos que una característica visible lo necesite.
+- Pinar `postMessage`a la exactitud del origen de los pares y rechazar los eventos de cualquier otro origen.
+- Trate los argumentos de las herramientas, los resultados de las herramientas, el texto de los recursos y los mensajes de puente como entradas no confiables.
+- Mantenga el consentimiento del usuario en el host.
+
+No copiar un fijo `sandbox`El host debe elegir banderas basadas en el modelo de origen de la aplicación y su propio diseño de aislamiento.
+
+Un dominio permitido sigue siendo un camino de exfiltración.`connectDomains: ["https://api.example.com"]`significa que cualquier guión que se ejecuta dentro de la aplicación puede enviar datos permitidos allí. La coincidencia exacta del origen evita la confusión del destino, pero no decide si la carga útil es adecuada. Mantenga el acceso de conexión vacío por defecto, evite colocar fichas portadoras en el iframe, operaciones de estrecha representación a través del host cuando sea práctico, limite los tamaños de respuesta y solicitud y controle qué acción del usuario causó cada solicitud saliente. Tratar`resourceDomains`separadamente de `connectDomains`; el permiso para cargar una fuente o un guión no debe permitir cargar datos arbitrarios.
+
+### El puente de Apps tiene su propio ciclo de vida
+
+El puente de aplicaciones es un dialecto JSON-RPC sobre `postMessage`Puede intercambiarse .`ui/initialize`y `ui/*`Notificaciones y puede proxy métodos de aspecto de núcleo tales como `tools/call`¿ Qué ?
+
+La vista envía `ui/initialize`con`appInfo`y un `appCapabilities`Objeto. El host devuelve sus capacidades y contexto del host. Sólo después de esa respuesta el View envía `ui/notifications/initialized`El anfitrión debe esperar esta notificación de aplicaciones antes de enviar mensajes a la vista.
+
+Ese apretón de manos local crea un puente entre un iframe y un host frame. No negocia la versión del protocolo MCP, no crea estado del servidor ni crea una sesión de transporte.`notifications/initialized`fue eliminado, mientras que las aplicaciones `ui/notifications/initialized`Una solicitud central generada por una llamada de herramienta puenteada es una nueva solicitud autónoma con un nuevo ID JSON-RPC y metadatos completos de la solicitud.
+
+### Contexto del anfitrión, acciones y revocación
+
+El host sigue siendo la autoridad después de la inicialización del puente. Una vista puede solicitar una acción de herramienta, navegación, uso de clipboard u otro efecto privilegiado solo a través de una capacidad que el host anunció. El host valida la solicitud tipada, el usuario actual, el objetivo y los argumentos, aplica la política de aprobación y puede rechazarla. Un clic de botón y un mensaje de puente válido expresan la intención; ninguno otorga autoridad.
+
+Trate el tema, el tamaño y la accesibilidad como contextos de cambio en lugar de entradas de renderización de una sola vez:
+
+- Aplique los tokens de color y tipografía proporcionados por el host, y luego reaccione cuando cambie la preferencia de tema o contraste.
+- Deja que la vista informe las dimensiones deseadas, pero deja que el anfitrión cubra y aplique el tamaño de iframe para que el contenido no pueda escapar de su diseño o crear superposiciones engañosas.
+- Preserva el orden del teclado, el enfoque visible, los nombres accesibles, el estado del lector de pantalla, el contraste suficiente, el zoom y el comportamiento de movimiento reducido dentro del iframe.
+- Re-test transferencia de enfoque entre los controles de host y Control de vista después de cambiar de tamaño y volver a renderizar.
+
+Las capacidades pueden ser revocadas mientras la aplicación esté abierta porque el usuario cambia de cuenta, cambia de política, un servidor está en cuarentena o el host restringe el consentimiento.`ui/initialize`. En caso de revocación, rechazar las llamadas privilegiadas pendientes, detener la actividad de red que ya no se ajusta a las políticas, eliminar el estado de renderización sensible y volver a montar o volver a escribir cuando el recurso de la interfaz de usuario mismo ya no sea admitido.
+
+### El retroceso es parte del contrato.
+
+Un servidor consciente de las aplicaciones todavía puede servir a los hosts que no anuncian la extensión de la interfaz de usuario:
+
+- Regresa la misma herramienta sin `_meta.ui`En el`tools/list`¿ Qué ?
+- Mantenga un resultado de texto útil para `tools/call`¿ Qué ?
+- Rechazar`resources/read`para la interfaz de usuario con un error de capacidad faltante.
+- Nunca asuma que exista un iframe al decidir si la herramienta está completa.
 
 ```figure
 t3-ui-sandbox
 ```
 
+## Construye el mismo
+
+`code/main.py`Construye un pequeño modelo de protocolo en proceso sin un SDK. Valida el envase de solicitud actual y los valores de enrutamiento HTTP Streamable, anuncia Apps a través de `server/discover`, enumera herramientas y recursos, ejecuta la herramienta y sirve un recurso HTML independiente.
+
+El modelo recibe cuerpos ya analizados y encabezados de enrutamiento.`Content-Type`o `Accept`. Utilice la Lección 09 para el adaptador HTTP de transmisión completo que requiere `Content-Type: application/json`y un `Accept`valor que contiene ambos `application/json`y `text/event-stream`¿ Qué ?
+
+- ¿Qué quieres decir ?
+
+```bash
+cd phases/13-tools-and-protocols/14-mcp-apps
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
+
+Inspeccionar cuatro cosas en la salida:
+
+1. Cada llamada es independiente.
+2. Cada solicitud tiene`_meta`las capacidades.
+3. `resources/list`devuelve un descriptor estable antes de leer cualquier recurso.
+4. Cada resultado tiene`resultType`y metadatos de identidad del servidor.
+5. No aparece ningún identificador de sesión principal.
+
 ## Usalo
 
-`code/main.py`extiende el servidor de notas con un `visualize_timeline`herramienta que devuelve un `ui://notes/timeline`recurso, más un manipulador para `resources/read`En ese URI que devuelve un pequeño pero completo paquete de HTML con una línea de tiempo SVG. El HTML está templado stdlib  no hay sistema de construcción. postMessage se esboza en comentarios JS ya que stdlib no puede ejecutar un navegador.
+Comience con`server/discover`- Confirmar .`io.modelcontextprotocol/ui`aparece en el mapa de extensiones del servidor. Luego llame `tools/list`La primera respuesta declara el recurso. La segunda sigue siendo una herramienta de uso sólo de texto.
 
-Qué ver:
-
-- `_meta.ui`En la respuesta de la herramienta se incluyen recursosUri, CSP, permisos.
-- El HTML se renderiza sin acceso a la red; todos los datos están en línea.
-- JS llama .`host.callTool`por medio de`window.parent.postMessage`(documentado pero inerte en esta demo de la SDLIB).
+Leer .`ui://notes/timeline.html`Busca en el HTML para`hostOrigin`y el `event.origin`Esas dos líneas son la prueba mínima visible de que el puente no utiliza un blanco de tarjeta salvaje.
 
 ## Envío
 
-Esta lección produce`outputs/skill-mcp-apps-spec.md`. Dado que una herramienta que se beneficiaría de una interfaz de usuario interactiva, la habilidad produce el contrato completo de MCP Apps: `ui://`URI, CSP, permisos, puntos de entrada de mensajes y una lista de verificación de seguridad.
+Esta lección nos lleva .`outputs/skill-mcp-apps-spec.md`. Utilice para revisar un contrato de aplicación antes de escribir código marco. Se obliga al autor a indicar el envase principal actual, la negociación de extensiones, fallback, recurso de UI, política de caché, CSP, permisos, métodos de puente y límite de consentimiento.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`y inspeccionar el HTML emitido. Abra el HTML directamente en un navegador; verifique los renders SVG. Luego esboza el contrato de postMessage que la interfaz de usuario usaría para llamar `host.callTool("notes_update", ...)`¿ Qué ?
-
-2. Apegue el CSP: retire `'unsafe-inline'`¿Qué cambios hay en el código de generación de HTML?
-
-3. Añadir un segundo recurso de interfaz de usuario `ui://notes/editor`Cuando el usuario envía, el iframe llama `host.callTool("notes_update", ...)`¿ Qué ?
-
-4. ¿Dónde puede un servidor malicioso inyectar contenido? ¿De qué se defiende la caja de arena iframe y qué no?
-
-5. Lea la especificación de SEP-1724 e identifique una capacidad en el SDK de MCP Apps que esta implementación de juguetes no utiliza. (Punta: sincronización de estado a nivel de componentes).
+1. Cambia la capacidad del cliente a un mapa de extensión vacío.`tools/list`mantiene la herramienta pero elimina la unión de la interfaz de usuario.
+2. Envía`Mcp-Name: ui://notes/other.html`Con un cuerpo que lee la línea de tiempo.`-32020`¿ Qué ?
+3. Cambiar el recurso a `cacheScope: private`Describir la condición específica del usuario que la justifica.
+4. Mueve el guión a `https://static.example.com/app.js`Añadir ese origen a `resourceDomains`y explicar el nuevo riesgo de la cadena de suministro.
+5. Añadir un`notes_open`la herramienta y el botón de ruta haga clic en el host. Mantenga la aprobación del usuario en el host.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP Apps | "Interactive UI resources" | SEP-1724 extension shipped 2026-01-26 |
-| `ui://` | "App URI scheme" | Resource scheme for UI bundles |
-| `text/html;profile=mcp-app` | "The MIME" | Content-type for MCP App HTML |
-| Iframe sandbox | "Render container" | Browser sandboxing of the UI with CSP and permissions |
-| postMessage JSON-RPC | "UI-to-host wire" | Tiny JSON-RPC-over-postMessage dialect for host calls |
-| `_meta.ui` | "Tool-UI binding" | Metadata linking a tool result to a UI resource |
-| CSP | "Content-Security-Policy" | Declares allowed sources for scripts, network, styles |
-| AppRenderer | "Server SDK primitive" | Converts a framework component into a `ui://` resource |
-| AppFrame | "Client SDK primitive" | Iframe mount helper that mediates postMessage |
-| `ui/initialize` | "Handshake" | First postMessage from UI to host |
+| Term | Meaning |
+|------|---------|
+| MCP Apps | Optional extension for interactive HTML rendered by an MCP host |
+| `io.modelcontextprotocol/ui` | Extension identifier advertised by both peers |
+| `ui://` | Resource scheme for an App's UI template |
+| `text/html;profile=mcp-app` | MIME type for MCP App HTML |
+| `server/discover` | Current RPC for protocol and capability discovery |
+| `resources/list` | Mandatory resource listing method when the server advertises resources |
+| `resultType` | Required discriminator for modern successful results |
+| `ui/initialize` | First Apps bridge request, separate from removed core initialization |
+| `ui/notifications/initialized` | Apps View readiness notification sent after the host responds |
+| CSP | Browser policy that restricts scripts, styles, images, and network origins |
+| Text fallback | Tool behavior retained for a host without Apps support |
 
 ## Leer más
 
-- [MCP ext-apps — GitHub](https://github.com/modelcontextprotocol/ext-apps) Implementación de referencia y KDD
-- [MCP Apps specification 2026-01-26](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx) Documento de especificación formal
-- [MCP — Apps extension overview](https://modelcontextprotocol.io/extensions/apps/overview) Documentación de alto nivel
-- [MCP blog — MCP Apps launch](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/) Enero 2026 puesta en marcha
-- [MCP Apps API reference](https://apps.extensions.modelcontextprotocol.io/api/) Referencia de SDK al estilo JSDoc
+- [MCP 2026-07-28 base protocol](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+- [MCP Apps overview](https://modelcontextprotocol.io/extensions/apps/overview)
+- [MCP Apps build guide](https://modelcontextprotocol.io/extensions/apps/build)
+- [Official extension support matrix](https://modelcontextprotocol.io/extensions/client-matrix)

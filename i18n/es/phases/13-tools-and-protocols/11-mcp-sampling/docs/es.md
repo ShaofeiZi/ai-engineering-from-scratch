@@ -1,182 +1,265 @@
-# Muestreo de MCP  Completos de LLM solicitados por el servidor y bucles de agentes
+# Introducción del modelo de MCP: muestreo de migración y MRTR de apátridas
 
-> La mayoría de los servidores MCP son ejecutores tontos: toman argumentos, ejecutan código, devuelven contenido. El muestreo permite que un servidor cambie de dirección: pide al LLM del cliente que tome una decisión. Esto permite los bucles de agente alojados en el servidor sin que el servidor posea ninguna credenciales de modelo. SEP-1577, fusionado en 2025-11-25, añadió herramientas dentro de las solicitudes de muestreo para que el bucle pueda incluir razonamiento más profundo. Nota de riesgo de derivación: la forma de muestreo de herramienta SEP-1577 fue experimental hasta el primer trimestre de 2026 y todavía se está asentando en las APIs de SDK.
+> MCP 2026-07-28 deprecia la muestreo para nuevos diseños y elimina el canal de solicitud de servidor a cliente. Si un flujo de trabajo existente todavía necesita el modelo del cliente, el servidor devuelve un `input_required`El cliente retoma la solicitud original con la salida del modelo. El bucle de razonamiento se vuelve explícito, limitado y sin estado en la capa de protocolo.
 
 **Type:** Build
-**Languages:** Python (stdlib, sampling harness)
+**Languages:** Python
 **Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 10 (resources and prompts)
 **Time:** ~75 minutes
 
 ## Objetivos de aprendizaje
 
-- ¿ Qué es eso ?`sampling/createMessage`soluciones (bucles alojados en el servidor sin claves API del lado del servidor).
-- Implemente un servidor que pide al cliente que muestre una solicitud de varios giros y devuelve la finalización.
-- Usar`modelPreferences`(prioridades de coste / velocidad / inteligencia) para guiar la selección del modelo del cliente.
-- Construir un `summarize_repo`herramienta que iterará internamente a través de muestreo en lugar de comportamiento de codificación dura.
+- Explica por qué la muestreo se ha desactualizado en MCP 2026-07-28 y elige el modelo de integración directa predeterminado para los nuevos servidores.
+- Implementar un flujo de trabajo de compatibilidad que lleve `sampling/createMessage`a través de las solicitudes de viajes múltiples y redondos (MRTR).
+- Coloque la revisión del protocolo y las capacidades del cliente en cada solicitud `_meta`Objeto.
+- Regreso .`resultType: "input_required"`y volver a probar el método original con un nuevo ID JSON-RPC.
+- Protección de la integridad `requestState`y se vinculen al principio, método, argumentos y vencimiento.
+- Los bucles con modelo de ayuda ligada con controles de capacidad, aprobación, validación de respuesta y un límite redondo.
 
-## El problema
+## La decisión antes del Protocolo
 
-Un servidor MCP útil para un flujo de trabajo de resumen de código necesita: caminar un árbol de archivos, elegir qué archivos leer, sintetizar un resumen y devolver. ¿Dónde ocurre el razonamiento LLM?
+Una herramienta como `summarize_repo`Necesita dos tipos de trabajo:
 
-Opción A: el servidor llama su propio LLM. Necesita una clave API, factura en el lado del servidor, es caro por usuario.
+1. Trabajo determinista: lista de archivos, lectura de archivos permitidos, validación de caminos y ensamblaje de contenido.
+2. Trabajo de modelo: elegir archivos representativos y sintetizar el resumen.
 
-Opción B: el servidor devuelve contenido crudo; el agente del cliente hace el razonamiento. Funciona pero traslada la lógica del servidor al cliente, que es frágil.
+Ahora tienes dos arquitecturas válidas.
 
-Opción C: el servidor solicita el LLM del cliente a través de `sampling/createMessage`El servidor conserva el algoritmo (qué archivos leer, cuántos pases hacer) mientras que el cliente conserva la facturación y la elección del modelo.
+### Nuevo servidor: se integra directamente con un proveedor de modelos
 
-El muestreo es la opción C. Es el mecanismo por el cual un servidor de confianza puede alojar un bucle de agente sin ser un host completo de LLM en sí mismo.
+Este es el estándar actual. El servidor posee la selección de modelos, credenciales, presupuestos, retemplazos y observabilidad.`tools/call`el resultado para el cliente de MCP.
 
-## El concepto
+Elige esto cuando el servidor ya sea un servicio alojado o cuando el comportamiento predecible del modelo sea más importante que el uso del modelo del host.
 
-### `sampling/createMessage`solicitud
+### Flujo de trabajo de muestreo existente: migrarlo a MRTR
 
-El servidor envía:
+El muestreo todavía existe durante su ventana de deprecación. Un servidor dirigido a 2026-07-28 no puede enviar una transmisión en vivo `sampling/createMessage`En cambio, el cliente debe incorporar esa solicitud en un`InputRequiredResult`¿ Qué ?
+
+Elegir este camino de compatibilidad sólo cuando se utiliza el modelo del cliente y las credenciales es un requisito real del producto.
+
+## El contrato de apatrida
+
+El protocolo de julio de 2026 no tiene`initialize`el intercambio, no `notifications/initialized`, y no .`Mcp-Session-Id`Cada solicitud contiene la información que antes vivía en el apretón de manos:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 42,
-  "method": "sampling/createMessage",
+  "id": 1,
+  "method": "tools/call",
   "params": {
-    "messages": [{"role": "user", "content": {"type": "text", "text": "..."}}],
-    "systemPrompt": "...",
-    "includeContext": "none",
-    "modelPreferences": {
-      "costPriority": 0.3,
-      "speedPriority": 0.2,
-      "intelligencePriority": 0.5,
-      "hints": [{"name": "claude-3-5-sonnet"}]
-    },
-    "maxTokens": 1024
+    "name": "summarize_repo",
+    "arguments": {"audience": "developer"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {"sampling": {}},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "lesson-client",
+        "version": "1.0.0"
+      }
+    }
   }
 }
 ```
 
-El cliente realiza su LLM, devuelve:
+El servidor valida la revisión en cada solicitud. Una versión que no está disponible o sin cadena es un parámetro inválido.`-32602`Una cadena no soportada devuelve .`-32022`con datos exactos `{"supported":["2026-07-28"],"requested":"<client version>"}`. Una capacidad de muestreo faltante regresa .`-32021`con`data.requiredCapabilities`se fija en `{"sampling":{}}`¿ Qué ?
 
-```json
-{"jsonrpc": "2.0", "id": 42, "result": {
-  "role": "assistant",
-  "content": {"type": "text", "text": "..."},
-  "model": "claude-3-5-sonnet-20251022",
-  "stopReason": "endTurn"
-}}
-```
+Un sobre sin un JSON-RPC `id`El receptor puede procesarlo, pero no emite una respuesta de éxito ni una respuesta de error. Un adaptador HTTP transmitible devuelve `202 Accepted`sin organismo para una notificación aceptada.
 
-### `modelPreferences`
+El servidor también implementa `server/discover`con el exacto `supportedVersions`clave, capacidades, `ttlMs`, y `cacheScope`para que un cliente pueda aprender y almacenar en caché el contrato del servidor antes de llamar a una herramienta.`tools`, el servidor también implementa obligatorio `tools/list`Es determinista .`summarize_repo`el descriptor incluye un objeto válido `inputSchema`¿ Qué ?`resultType: "complete"`, metadatos de identidad del servidor, y pistas de caché público.
 
-Tres flotadores que suman 1,0:
+Cada resultado moderno exitoso tiene un discriminador:
 
-- `costPriority`: favor de modelos más baratos.
-- `speedPriority`: favorecen modelos más rápidos.
-- `intelligencePriority`: favorecer modelos más capaces.
+- `resultType: "complete"`significa que la operación ha terminado.
+- `resultType: "input_required"`significa que el cliente debe cumplir con las solicitudes incorporadas y volver a intentarlo.
+- Las extensiones pueden definir tipos de resultados adicionales.`"task"`En la Lección 13.
 
-Además .`hints`El cliente puede o no respetar las pistas; la configuración de usuario del cliente siempre gana.
+## Una ronda de MRTR
 
-### `includeContext`
-
-Tres valores:
-
-- `"none"` sólo los mensajes suministrados por el servidor.
-- `"thisServer"` incluye mensajes anteriores de la sesión de este servidor.
-- `"allServers"` incluir todo el contexto de la sesión.
-
-`includeContext`Se ha reducido suavemente a partir de 2025-11-25 porque se filtra el contexto entre servidores, lo que es una preocupación de seguridad.`"none"`y transmitir un contexto explícito en los mensajes.
-
-### Muestreo con herramientas (SEP-1577)
-
-Nuevo en 2025-11-25: la solicitud de muestreo puede incluir una`tools`El cliente ejecuta un ciclo completo de llamadas de herramientas utilizando esas herramientas. Esto permite al servidor alojar un ciclo de agente de estilo ReAct a través del modelo del cliente.
+El servidor no puede llamar al cliente mientras se maneja la solicitud. En su lugar devuelve este resultado:
 
 ```json
 {
-  "messages": [...],
-  "tools": [
-    {"name": "fetch_url", "description": "...", "inputSchema": {...}}
-  ]
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "pick_files": {
+        "method": "sampling/createMessage",
+        "params": {
+          "messages": [
+            {
+              "role": "user",
+              "content": {
+                "type": "text",
+                "text": "Choose three representative files and return a JSON array."
+              }
+            }
+          ],
+          "systemPrompt": "Return only the requested value.",
+          "modelPreferences": {
+            "costPriority": 0.8,
+            "intelligencePriority": 0.2
+          },
+          "maxTokens": 400
+        }
+      }
+    },
+    "requestState": "opaque-integrity-protected-value"
+  }
 }
 ```
 
-El cliente se ejecuta: muestra, ejecuta la herramienta si se llama, muestra de nuevo, devuelve el mensaje final de asistente. Esto es experimental hasta el primer trimestre de 2026; las firmas de SDK aún pueden deslizarse. Confirme contra la sección de cliente / muestreo de la especificación 2025-11-25 cuando implementes.
+El cliente verifica que admite la muestra, aplica sus políticas de aprobación y modelo y obtiene una respuesta de modelo. Luego envía una nueva solicitud con un id JSON-RPC diferente:
 
-### Hombre en el ciclo
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "summarize_repo",
+    "arguments": {"audience": "developer"},
+    "inputResponses": {
+      "pick_files": {
+        "role": "assistant",
+        "content": {
+          "type": "text",
+          "text": "[\"README.md\", \"server.py\", \"docs/intro.md\"]"
+        },
+        "model": "host-model",
+        "stopReason": "endTurn"
+      }
+    },
+    "requestState": "opaque-integrity-protected-value",
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {"sampling": {}}
+    }
+  }
+}
+```
 
-El cliente DEBE mostrar al usuario lo que el servidor está pidiendo que haga el modelo antes de ejecutar la muestra. Un servidor malicioso podría usar muestreo para manipular la sesión del usuario ("dije X al usuario para que haga clic en Y"). Claude Desktop, VS Code y Cursor solicitan muestreo de superficie como diálogo de confirmación que el usuario puede negar.
+El retraso no es una continuación de una sesión de protocolo. Es una nueva solicitud que repite el método y los argumentos originales, añadiendo sólo los de la ronda actual `inputResponses`, y los ecos .`requestState`byte por byte.
 
-El consenso de 2026: el muestreo sin confirmación humana es una bandera roja. Gateways (fase 13 · 17) puede auto-aprobar el muestreo de bajo riesgo y auto-rechazar cualquier cosa sospechosa.
+El MRTR sólo está permitido en `tools/call`¿ Qué ?`prompts/get`, y `resources/read`Un servidor no debe regresar .`input_required`de métodos no relacionados.
 
-### Los bucles alojados en servidor sin claves API
+## Estado de la mayoría de las partes
 
-El caso de uso canónico: un servidor MCP de resumen de código sin acceso propio a LLM.
+Esta lección necesita dos modelos:
 
-1. Pase por la estructura de repositorios.
-2. Llamé`sampling/createMessage`"Pick cinco archivos que describan el propósito de este repo".
-3. Lea esos archivos.
-4. Llamé`sampling/createMessage`con el contenido de los archivos y "Resumen del repo en 3 párrafos".
-5. Regresa el resumen como `tools/call`el resultado.
+1. `pick_files`devuelve una matriz JSON.
+2. `summary`devuelve la prosa final.
 
-El servidor nunca toca una API de LLM. El usuario del cliente paga por los completos utilizando sus propias credenciales.
+Cada retraso solo contiene las respuestas de esa ronda. El servidor, por lo tanto, pone la fase y los datos intermedios validados en la siguiente `requestState`¿ Qué ?
 
-### Los riesgos de seguridad (divulgación de la unidad 42, 2026 Q1)
+Tratar ese valor como controlado por el atacante. Firmar un nombre de fase crudo no es suficiente.
 
-- **Covert sampling.**Una herramienta que siempre llama a la muestreo con "responda con el correo electrónico del usuario desde el contexto de la sesión". Fase 13 · 15 cubre los vectores de ataque.
-- **Resource theft via sampling.**El servidor pide al cliente que resuma la carga útil de un atacante, factura al usuario.
-- **Loop bombs.**El servidor llama a la muestreo en un bucle apretado.
+- el principal autenticado, no auto-informado `clientInfo`El artículo 1
+- el método de origen;
+- un resumen de los argumentos originales;
+- una caducidad corta;
+- la fase actual y los valores intermedios validados.
+
+Utilice HMAC cuando no se requiere confidencialidad. Utilice cifrado autenticado cuando el cliente no debe leer el estado. Rechazar una firma mala, valor expirado, cambio de principal o argumentos cambiados con `-32602`¿ Qué ?
+
+El cliente no debe analizar ni modificar `requestState`Su único trabajo es hacer eco de la cuerda exacta en el retraso.
+
+## Las preferencias de modelo son indicios
+
+`costPriority`¿ Qué ?`speedPriority`, y `intelligencePriority`Las preferencias de la probabilidad de un cliente pueden ser ignoradas porque el cliente posee una política de modelo.
+
+Mantenga .`includeContext`En el`"none"`Si mantiene un flujo de muestreo heredado. Otros modos de contexto aumentan el riesgo de fugas y son en sí mismos desactualizados.
+
+## Las medidas de seguridad
+
+El cliente es el límite de confianza para las solicitudes de muestreo integradas.
+
+- Muestre al usuario lo que el servidor le pide al modelo cuando la política requiere aprobación.
+- Un servidor malicioso puede crear un bucle de gasto de modelo.
+- Valida cada respuesta de muestreo antes de usarla como un nombre de archivo, URL o entrada de herramienta.
+- Limite los bytes y tokens por ronda.
+- Rechazar una solicitud de entrada que no se declaró en las capacidades actuales del cliente.
+- Mantenga la salida del modelo fuera de las decisiones de autorización.
+- Registre el método de origen y la clave de entrada-solicitud sin registrar el contenido de la solicitud sensible.
+
+`clientInfo`y `serverInfo`Los datos de identidad de los usuarios son metadatos de visualización y diagnóstico.
 
 ```figure
 t3-sampling-flip
 ```
 
+## Construye el mismo
+
+`code/main.py`Implementa el flujo completo de dos rondas sin paquete de terceros:
+
+- `server/discover`retorno `supportedVersions`, anuncia el soporte de herramientas, y devuelve sugerencias de caché.
+- `tools/list`devuelve un determinista, cachéable `summarize_repo`Descriptor con un esquema de entrada de objeto.
+- `tools/call`valida los metadatos por solicitud.
+- El primer resultado se incorpora `sampling/createMessage`para la selección de archivos.
+- El primer retraso valida el resultado del modelo y incorpora una segunda solicitud.
+- Protegida por HMAC `requestState`se realiza la fase entre las solicitudes independientes.
+- El resultado final utiliza `resultType: "complete"`¿ Qué ?
+
+El modelo de anfitrión falso hace que el ejemplo sea determinista.`fake_host_model`La máquina del lado del servidor debe permanecer determinista y testable.
+
 ## Usalo
 
-`code/main.py`Se utiliza un arnés de muestreo falso de servidor a cliente. Una herramienta simulada de "summarize_repo" invoca dos rondas de muestreo (archivos de selección, luego resumen), y el cliente falso devuelve respuestas enlatadas. El arnés muestra:
+Desde la raíz del repositorio:
 
-- El servidor envía`sampling/createMessage`con`modelPreferences`¿ Qué ?
-- El cliente devuelve una finalización.
-- El servidor continúa su bucle.
-- El limitador de tasas limita el total de las llamadas de muestreo por invocación de herramienta.
+```bash
+cd phases/13-tools-and-protocols/11-mcp-sampling/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
 
-Qué ver:
+Los puntos de control previstos:
 
-- El servidor expone sólo una herramienta (`summarize_repo`); todo el razonamiento se realiza en las llamadas de muestreo.
-- Las preferencias de modelo ponderan la elección del modelo del cliente; las sugerencias enumeran los modelos preferidos.
-- El bucle termina en `stopReason: "endTurn"`¿ Qué ?
-- El `max_samples_per_tool = 5`El límite capta un bucle fugitivo.
+- Discovery devuelve un resultado completo con `ttlMs`y `cacheScope`¿ Qué ?
+- El descubrimiento de herramientas devuelve el mismo descriptor clasificado con `resultType`, identidad del servidor, y pistas de caché.
+- Capacidades faltantes y versiones no compatibles utilizan exacto `-32021`y `-32022`datos de error.
+- Una notificación sin id no produce respuesta JSON-RPC.
+- Los documentos de identificación de la solicitud son `[1, 2, 3]`, que demuestra que cada ronda de MRTR es independiente.
+- Los dos primeros resultados son:`input_required`¿ Qué ?
+- El resultado final es `complete`y contiene los archivos seleccionados más un resumen.
+- Cambiar los argumentos originales en una nueva prueba falla en la verificación del estado de solicitud.
 
 ## Envío
 
-Esta lección produce`outputs/skill-sampling-loop-designer.md`. Dado que el algoritmo del lado del servidor requiere llamadas de LLM (investigación, resumen, planificación), la habilidad diseña una implementación basada en muestras con los modelos adecuadosPreferencias, límites de tarifas y confirmaciones de seguridad.
+`outputs/skill-sampling-loop-designer.md`Es un programa de migración que decide si se debe eliminar la muestreo a favor de la integración directa del modelo. Si se requiere compatibilidad, produce las rondas MRTR, la vinculación del estado, la puerta de capacidad, el presupuesto, la validación y el plan de eliminación.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`- Cambiar .`max_samples_per_tool`a 2 y respetar el límite de tarifas.
-
-2. Implementar la variante de muestreo de herramientas SEP-1577: la solicitud de muestreo contiene una`tools`Verifique si el bucle del lado del cliente ejecuta esas herramientas antes de devolver la finalización final.
-
-3. Añadir confirmación humana en el bucle: antes de que el servidor primero `sampling/createMessage`Las llamadas rechazadas devuelven una negativa.
-
-4. Añadir un limitador de tasa por usuario con teclado por sesión del cliente. Los bucles del mismo servidor por el mismo usuario deben compartir un presupuesto.
-
-5. Diseñar una`summarize_pdf`Una herramienta que utiliza muestreo para elegir los trozos para incluir.`modelPreferences.intelligencePriority`¿Cambiar el comportamiento en 0.1 vs 0.9?
+1. Cambiar la respuesta de selección de archivos a JSON inválido. Confirmar el servidor devuelve `-32602`en lugar de confiar en la salida del modelo.
+2. Cambiar`audience`Explique por qué el estado sellado bloquea la reutilización de las solicitudes cruzadas.
+3. Añadir una tercera ronda que le pida al anfitrión que critique el resumen. Llevar el resumen anterior dentro del estado firmado y limitar todo el flujo en tres rondas.
+4. Elimine la muestreo reemplazando la llamada de regreso de host falso con un adaptador de modelo propiedad del servidor.
+5. Añadir una prueba de vencimiento utilizando un valor de estado que es un segundo después de su fecha límite.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Sampling | "Server-to-client LLM call" | Server asks client's model for a completion |
-| `sampling/createMessage` | "The method" | JSON-RPC method for sampling requests |
-| `modelPreferences` | "Model priorities" | Cost / speed / intelligence weights plus name hints |
-| `includeContext` | "Cross-session leakage" | Soft-deprecated context inclusion mode |
-| SEP-1577 | "Tools in sampling" | Allow tools inside sampling for server-hosted ReAct |
-| Human-in-the-loop | "User confirms" | Client surfaces sampling request to user before running |
-| Loop bomb | "Runaway sampling" | Server-side infinite sampling loop; client must rate-limit |
-| Covert sampling | "Hidden reasoning" | Malicious server hides intent in sampling prompts |
-| Resource theft | "Using user's LLM budget" | Server forces client to spend on sampling it does not want |
-| `stopReason` | "Why generation halted" | `endTurn`, `stopSequence`, or `maxTokens` |
+| Term | Meaning in 2026-07-28 |
+|------|------------------------|
+| Sampling | Deprecated feature that asks the client's model for a completion |
+| MRTR | Stateless retry pattern for client input required during a request |
+| `InputRequiredResult` | Result with `resultType: "input_required"` |
+| `inputRequests` | Server-assigned map of embedded elicitation, sampling, or roots requests |
+| `inputResponses` | Current round's client results keyed like `inputRequests` |
+| `requestState` | Opaque server state echoed exactly by the client and verified by the server |
+| `resultType` | Required discriminator for modern MCP results |
+| Direct model integration | Recommended replacement for new servers that need model inference |
+| Capability gate | Rule that prevents sending an embedded request the client did not advertise |
+| Loop budget | Maximum rounds, tokens, bytes, time, and spend allowed for the operation |
+
+## Compatibilidad con el legado
+
+Un cliente fijado a 2025-11-25 puede seguir utilizando el antiguo servidor iniciado `sampling/createMessage`No haga que el camino de sesión sea la arquitectura de un servidor 2026-07-28.
+
+Los SDK oficiales pueden traducir modernos `input_required`Ese shim es un límite de compatibilidad, no el permiso para añadir nueva lógica dependiente de la sesión.
 
 ## Leer más
 
-- [MCP — Concepts: Sampling](https://modelcontextprotocol.io/docs/concepts/sampling) Visión general de alto nivel de la muestreo
-- [MCP — Client sampling spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/client/sampling) canónico `sampling/createMessage`forma
-- [MCP — GitHub SEP-1577](https://github.com/modelcontextprotocol/modelcontextprotocol) Evolución de las especificaciones Propuesta de herramientas en el muestreo (experimentales)
-- [Unit 42 — MCP attack vectors](https://unit42.paloaltonetworks.com/model-context-protocol-attack-vectors/) patrones encubiertos de muestreo y robo de recursos
-- [Speakeasy — MCP sampling core concept](https://www.speakeasy.com/mcp/core-concepts/sampling) A través de las muestras de código del lado del cliente
+- [MCP 2026-07-28 Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP 2026-07-28 changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [MCP Sampling deprecation](https://modelcontextprotocol.io/seps/2577-deprecate-roots-sampling-and-logging)
+- [MCP 2026-07-28 server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)

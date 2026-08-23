@@ -1,98 +1,182 @@
-# MCP Transports  stdio vs transmisión HTTP vs SSE Migración
+# Transporte de MCP: estudio y streaming HTTP sin estado
 
-> El stdio funciona localmente y en ningún otro lugar. Streamable HTTP (2025-03-26) es el estándar remoto. El viejo transporte HTTP+SSE se desaprovecha y se elimina a mediados de 2026. Elegir el transporte equivocado cuesta una migración; elegir el correcto compra un servidor MCP remoto hospedable con continuidad de sesión y protección de redireccionamiento DNS.
+> El transporte transporta mensajes MCP. No proporciona el estado del protocolo faltante.`2026-07-28`, local stdio y remoto Streamable HTTP ambos llevan solicitudes auto-describir.
 
 **Type:** Learn
-**Languages:** Python (stdlib, Streamable HTTP endpoint skeleton)
-**Prerequisites:** Phase 13 · 07, 08 (MCP server and client)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lessons 07 and 08
+**Time:** ~65 minutes
 
 ## Objetivos de aprendizaje
 
-- Escoge entre stdio y Streamable HTTP basado en la forma de implementación (local vs remoto, un solo proceso vs flota).
-- Implemente el patrón de punto final HTTP de transmisión: POST para las solicitudes, GET para el flujo de sesión.
-- Hacer cumplir`Origin`validación y semántica de sesión para derrotar la re-indicación de DNS.
-- Migra un servidor HTTP+SSE heredado a HTTP Streamable antes de las fechas límite de eliminación de mediados de 2026.
+- Elija el estudio para procesos infantiles locales y Streamable HTTP para servicios de red.
+- Implementar el moderno contrato HTTP Streamable de un solo punto final, solo POST.
+- Reflejar y validar las versiones, métodos y encabezados de nombres de MCP en relación con el cuerpo JSON-RPC.
+- Entrega de SSE a escala de solicitud y de larga duración `subscriptions/listen`flujo correctamente.
+- Migra las implementaciones HTTP+SSE basadas en sesiones y heredadas sin presentar el comportamiento heredado como moderno.
 
 ## El problema
 
-El primer transporte remoto MCP (2024-11) fue HTTP+SSE: dos puntos finales, uno para los POST del cliente y un canal de Server-Sent-Events para el flujo de servidor a cliente. Funcionó. También fue torpe: dos puntos finales por sesión, caches rotos frente a algunos CDN, y una fuerte dependencia de las conexiones SSE de larga duración que algunos WAF terminan agresivamente.
+Anteriormente, las revisiones de HTTP Streamable combinaban la negociación de protocolos con el comportamiento de conexión y sesión.`Mcp-Session-Id`, exponer una corriente de GET independiente, aceptar DELETE para la terminación de la sesión y reanudar la SSE con `Last-Event-ID`¿ Qué ?
 
-La especificación 2025-03-26 la reemplazó con Streamable HTTP: un punto final, POST para las solicitudes del cliente, GET para establecer un flujo de sesión, ambos compartiendo una `Mcp-Session-Id`En el caso de los servidores de Internet, el sistema de acceso a Internet (SSE) se ha modificado en forma de header.
+MCP `2026-07-28`El servidor de HTTP puede validar esos encabezados contra el cuerpo antes de la ejecución.
 
-Y el estudio sigue siendo importante para los servidores locales. Claude Desktop, VS Code, y cada cliente en forma de IDE despierta servidores a través del estudio. El modelo mental correcto: estudio para "esta máquina", Streamable HTTP para "en la red". No hay cruce.
+El resultado es más fácil de escalar y más fácil de razonar. También significa que un servidor que enseña el transporte 2025 como actual está enseñando el modelo de falla y seguridad equivocado.
 
 ## El concepto
 
 ### estudio
 
-- Transporte de procesamiento infantil. El cliente genera el servidor, se comunica a través de stdin/stdout.
-- Un objeto JSON por línea.
-- No hay ID de sesión; la identidad del proceso es la sesión.
-- No se necesita autor (el niño hereda el límite de confianza del padre).
-- Nunca utilice para servidores remotos  necesitaría SSH o socat para el túnel, en cuyo punto utilizar Streamable HTTP.
+La unión de estudio es para un subproceso lanzado por el cliente:
 
-### HTTP en transmisión
+- El cliente escribe un mensaje UTF-8 JSON-RPC por línea a stdin.
+- El servidor escribe un mensaje UTF-8 JSON-RPC por línea a stdout.
+- El servidor escribe diagnósticos a Stderr.
+- El servidor sale rápidamente en el EOF.
+- Cada solicitud moderna lleva versiones y capacidades de cliente en `params._meta`¿ Qué ?
 
-Un solo punto final `/mcp`(o cualquier camino). Apoya tres métodos HTTP:
+El proceso puede funcionar para muchas llamadas, pero no es una sesión de protocolo moderno. Si sale inesperadamente, las solicitudes en vuelo se pierden. Reiniciar el proceso, redescubrir, volver a listar, volver a abrir suscripciones y volver a intentar operaciones seguras con nuevos ID de solicitud.
 
-- **POST /mcp.**El cliente envía un mensaje JSON-RPC. El servidor responde con una sola respuesta JSON, o un flujo SSE de una o más respuestas (utiles para respuestas en lote y notificaciones relacionadas con esa solicitud).
-- **GET /mcp.**El cliente abre un canal SSE de larga duración. El servidor lo utiliza para las solicitudes de servidor a cliente (muestras, notificaciones, elicitación).
-- **DELETE /mcp.**El cliente termina explícitamente la sesión.
+### HTTP en 2026-07-28
 
-Las sesiones son identificadas por la `Mcp-Session-Id`El servidor establece la primera respuesta y el cliente hace eco en cada solicitud posterior. los ID de sesión DEBEN ser cifrados al azar (128 bits); los ID seleccionados por el cliente se rechazan por seguridad.
+Un servidor moderno expone un punto final de MCP, como `/mcp`, que acepta POST.
 
-### Un solo punto final vs dos
+Cada solicitud o notificación JSON-RPC es un nuevo POST HTTP. El cuerpo contiene un mensaje JSON-RPC. Los clientes no envían respuestas JSON-RPC al servidor.
 
-El modo de dos puntos finales de la antigua especificación todavía es llamable en 2026  la especificación lo declara "compatible con el legado". Pero todos los nuevos servidores deben ser de un solo punto final.
+Para una solicitud, el servidor devuelve:
 
-### `Origin`validación y re-indicación de DNS
+- `Content-Type: application/json`con una respuesta JSON-RPC; o
+- `Content-Type: text/event-stream`con notificaciones relacionadas con dicha solicitud, seguidas de la respuesta final JSON-RPC.
 
-Los navegadores no son clientes MCP (hoy), pero un atacante puede crear una página web que convence a un navegador de POST a `localhost:1234/mcp` donde el servidor local de MCP del usuario escucha. Si el servidor no verifica `Origin`, la política de origen del navegador no lo guardará porque `Origin: http://evil.com`es de origen cruzado válido.
+Para una notificación aceptada, el servidor devuelve `202 Accepted`Sin cuerpo.
 
-La especificación 2025-11-25 requiere que los servidores rechacen las solicitudes de los cuales `Origin`La lista de permisos normalmente contiene el host del cliente MCP (`https://claude.ai`¿ Qué ?`vscode-webview://*`) y las variantes localhost para las interfaces locales.
+Los clientes anuncian ambos tipos de respuesta:
 
-### Ciclo de vida de la sesión
+```http
+Accept: application/json, text/event-stream
+```
 
-1. El cliente envía la primera solicitud sin `Mcp-Session-Id`¿ Qué ?
-2. El servidor asigna una identificación aleatoria, conjuntos `Mcp-Session-Id`en el encabezado de respuesta.
-3. El cliente hace eco de ese encabezado en todas las solicitudes posteriores y en `GET /mcp`para el arroyo.
-4. La sesión puede ser revocada por el servidor; el cliente ve 404 en las solicitudes posteriores y debe reiniciar.
-5. El cliente puede EXPLICITAMENTE DELETAR la sesión para el cierre limpio.
+### Solo POST significa sólo POST
 
-### Mantener el dispositivo activo y volver a conectarlo
+El HTTP de transmisión moderna no tiene flujo de GET independiente y no tiene punto final de sesión DELETE.
 
-Las conexiones de SSE caen. El cliente restablece al volver a GET con el mismo `Mcp-Session-Id`. El servidor DEVE hacer cola de los eventos perdidos durante la interrupción (hasta una ventana razonable) y reproducirlos a través del `last-event-id`El cliente hace eco.
+- `GET /mcp`retorno `405 Method Not Allowed`¿ Qué ?
+- `DELETE /mcp`retorno `405 Method Not Allowed`¿ Qué ?
+- `Mcp-Session-Id`se ignora y nunca se acuña o se hace eco.
+- `Last-Event-ID`se ignora porque las corrientes modernas no son reanulables.
 
-La fase 13 · 13 abarca las tareas, que permiten que el trabajo de larga duración sobreviva incluso una reconnección de sesión completa.
+Si una secuencia de solicitudes se rompe antes de su respuesta final, el cliente ha perdido esa solicitud en vuelo. Puede emitir una nueva solicitud con un nuevo ID JSON-RPC cuando la retoma sea segura. No debe intentar la reanudación de la secuencia.
 
-### Probe de compatibilidad hacia atrás
+### Validación del origen
 
-Un cliente que quiere soportar servidores viejos y nuevos:
+Los servidores validan `Origin`En caso de que el encabezado esté presente y no esté explícitamente permitido, devuelva `403 Forbidden`Un cliente no navegador puede omitir`Origin`, lo que las normas oficiales de transporte permiten.
 
-1. Envía a`/mcp`¿ Qué ?
-2. Si la respuesta es `200 OK`con JSON o SSE, esto es Streamable HTTP.
-3. Si la respuesta es `200 OK`con`Content-Type: text/event-stream`Y un `Location`cabezal que apunta a un punto final secundario, esto es HTTP + SSE heredado; siga el `Location`¿ Qué ?
+Los servidores locales deben vincularse a `127.0.0.1`Los servicios de red todavía necesitan autenticación y autorización en cada solicitud.
 
-### Cloudflare, ngrok y alojamiento
+Utilice la coincidencia exacta de origen después de la configuración canónica.`origin.startswith("https://trusted.example")`son inseguras porque pueden aceptar sufijos controlados por el atacante.
 
-Los servidores MCP remotos de producción en 2026 se ejecutan en Cloudflare Workers (con su MCP Agents SDK), Functions Vercel o Node / Python contenerizado. clave: su alojamiento debe admitir conexiones HTTP de larga duración para el SSE GET. Los límites de nivel gratuitos de Vercel se limitan a 10 segundos y no son adecuados. Cloudflare Workers soporta flujos indefinidos.
+### Título de metadatos HTTP requerido
 
-### Compuesto de la puerta de entrada
+Cada solicitud POST moderna incluye:
 
-Cuando se enfrentan varios servidores MCP con una puerta de enlace (fase 13 · 17), la puerta de enlace es un único punto final HTTP que reescribe las identidades de sesión y multiplexes aguas arriba.
+```http
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: notes_search
+```
 
-### Modo de falla del transporte
+Reglas de encabezado:
 
-- **stdio SIGPIPE.**La muerte del niño en medio de la escritura aumenta el SIGPIPE; los servidores deben salir limpios.
-- **HTTP 502 / 504.**Cloudflare, nginx y otros proxies emiten estos en fallas de aguas arriba. Los clientes HTTP transmitibles deben intentarlo una vez más después de una corta copia de seguridad.
-- **SSE connection drop.**TCP RST, tiempo de espera de proxy, o cambio de red del cliente cierra la corriente.`Mcp-Session-Id`y opcionales `last-event-id`para reanudar.
-- **Session revocation.**El servidor invalida un ID de sesión; el cliente ve 404 en la siguiente solicitud. El cliente debe dar la mano de nuevo.
-- **Clock skew.**Los cálculos de recursos-TTL en el cliente difieren del servidor.
+- `MCP-Protocol-Version`es requerida y debe ser igual `params._meta.io.modelcontextprotocol/protocolVersion`¿ Qué ?
+- `Mcp-Method`se requiere y debe ser igual al JSON-RPC `method`¿ Qué ?
+- `Mcp-Name`es necesario para `tools/call`¿ Qué ?`resources/read`, y `prompts/get`¿ Qué ?
+- `Mcp-Name`igual `params.name`, o`params.uri`por`resources/read`¿ Qué ?
+- Los valores de encabezado son sensibles a los casos aunque los nombres de encabezado son insensibles a los casos.
 
-### Cuándo evitar el HTTP en transmisión
+No seguro o no ASCII `Mcp-Name`Los valores utilizan el sentinela exacto UTF-8 Base64:
 
-Algunas empresas despliegan servidores MCP detrás de gRPC o transporte de colas de mensajes dentro de sus propias redes. Esto no es estándar  La especificación de MCP no las define formalmente. Gateways pueden exponer una superficie HTTP en streaming a los clientes de MCP mientras usan gRPC internamente. Mantenga la superficie externa conforme a las especificaciones; la puerta de entrada es propietaria de la traducción.
+```text
+=?base64?{Base64EncodedValue}?=
+```
+
+El servidor decodifica ese valor antes de compararlo con el cuerpo.
+
+Los encabezados espejos que faltan, están malformados o no coinciden devuelven HTTP `400`con código JSON-RPC `-32020`. Si el encabezado y el cuerpo coinciden en una versión que el servidor no admite, devuelva HTTP `400`con`-32022`y datos de error exactos como `{"supported":["2026-07-28"],"requested":"2027-01-01"}`¿ Qué ?
+
+Un método moderno desconocido devuelve HTTP `404`con JSON-RPC `-32601`. El cuerpo JSON-RPC es importante porque un cliente de doble era lo utiliza para distinguir un error moderno de un error de punto final heredado.
+
+### ETS con escala de solicitud
+
+Un servidor puede elegir SSE para una solicitud de larga duración:
+
+```text
+POST tools/call id=41
+  <- notifications/progress related to id=41
+  <- notifications/progress related to id=41
+  <- JSON-RPC response id=41
+stream closes
+```
+
+El servidor no debe enviar solicitudes independientes de JSON-RPC en esta corriente. Muestras, elicitación e interacciones de raíces utilizan resultados de Requestas de viaje múltiple. Cerrar la corriente de respuesta cancela esa solicitud.
+
+No agregue ID de evento SSE para reproducir. `Last-Event-ID`La reanudación no forma parte de la revisión moderna.
+
+### Cambios de larga duración con suscripciones/audición
+
+Las notificaciones de cambio utilizan una solicitud abierta por el cliente, no una GET independiente:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "listen-1",
+  "method": "subscriptions/listen",
+  "params": {
+    "notifications": {
+      "toolsListChanged": true,
+      "resourceSubscriptions": ["notes://note-1"]
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+La respuesta POST es una corriente SSE de larga duración.`notifications/subscriptions/acknowledged`. El reconocimiento, cada notificación de cambio y el resultado final llevan `io.modelcontextprotocol/subscriptionId`En el`_meta`El servidor puede emitir comentarios de SSE como mantenientes. Cuando la corriente baja, el cliente reemite `subscriptions/listen`con una nueva identificación de solicitud y reajusta los datos afectados.
+
+`resources/subscribe`y `resources/unsubscribe`No los uses en una conexión moderna.
+
+### Estado de aplicación explícita
+
+La eliminación de sesiones de protocolo no prohíbe los flujos de trabajo con estado. El servidor puede acuñar un mango de estado opaco y devolverlo como resultado de herramienta normal. El cliente pasa ese mango como un argumento explícito en llamadas posteriores.
+
+Enlace las manijas al principal autenticado, haga que no sean probables, expire y autorice todo uso. Esto hace que el estado sea visible en la capa de aplicación en lugar de ocultarlo en la afinidad del transporte.
+
+El fallo causado por el estado de réplica oculta es mecánico:
+
+1. La solicitud A llega a la réplica 1 y crea un borrador en la memoria de ese proceso.
+2. La respuesta no devuelve un proyecto de manipulación porque la implementación asume que la conexión identifica el proyecto.
+3. La solicitud B es un nuevo POST y llega a la réplica 2.
+4. Replica 2 tiene metadatos de protocolo válidos pero no hay forma de nombrar o cargar el borrador, por lo que el flujo de trabajo falla o lee el objeto local incorrecto.
+5. El enrutamiento pegajoso parece arreglar el síntoma hasta que una reiniciación, despliegue, reprogramar o fallar sobre el siguiente pedido.
+
+El límite correcto tiene dos partes. El contexto del protocolo se mantiene en cada solicitud. El estado de aplicación duradera vive en una tienda compartida bajo un mango memorizado por el servidor devuelto al cliente. La siguiente llamada suministra el manejo, cualquier réplica carga el mismo registro, y la autorización une el registro al principal y al inquilino autenticados. La memoria de réplica puede almacenar un registro en caché, pero no puede ser la única copia requerida para la corrección.
+
+Seleccione el mecanismo de estado por vida. Las variables locales de solicitud pueden servir una llamada. Una continuación corta de MRTR puede usar integridad protegida `requestState`Una tarea de proyecto o duradera necesita un manejo explícito más persistencia compartida, vencimiento, control de concurrencia e idempotencia. ninguno de esos objetos es una sesión de protocolo MCP.
+
+### Compatibilidad con la doble era HTTP
+
+Un cliente que admite servidores modernos y antiguos intenta primero un POST moderno. Si recibe HTTP `400`¿ Qué ?`404`, o`405`, inspeccionará el cuerpo:
+
+- Un error moderno reconocido JSON-RPC prueba que el servidor es moderno. Correcta la solicitud o vuelva a probar una versión anunciada. No rebajes el nivel.
+- Un cuerpo vacío o una respuesta no reconocida puede indicar un servidor HTTP+SSE heredado. Sólo entonces prueba el antiguo punto final GET y espera su legado `endpoint`El evento.
+
+Un servidor puede soportar ambas épocas durante la migración enrutando metadatos modernos a la implementación moderna de solo POST y manteniendo puntos finales heredados separados para clientes antiguos. Nunca describa el comportamiento heredado GET, DELETE, session id o replay como parte de `2026-07-28`¿ Qué ?
 
 ```figure
 tp-transport-handshake
@@ -100,49 +184,54 @@ tp-transport-handshake
 
 ## Usalo
 
-`code/main.py`Implementa un punto final HTTP de transmisión mínimo utilizando `http.server`Se encarga de POST, GET y DELETE en`/mcp`, conjuntos `Mcp-Session-Id`en la primera respuesta, valida `Origin`El procesador reutiliza la lógica de envío del servidor de notas de la Lección 07.
+`code/main.py`Implementa un servidor HTTP Streamable finito y moderno con la biblioteca estándar Python. Valida los encabezados Origin y Mirrored, ignora los encabezados de sesión eliminados, devuelve JSON para llamadas normales y demuestra un límite `subscriptions/listen`El flujo de SSE.
 
-Qué ver:
+```bash
+cd code
+python3 main.py --probe
+python3 -m unittest discover tests -v
+```
 
-- El procesador POST lee el cuerpo JSON-RPC, envía y escribe una respuesta JSON (la variante de respuesta única; la variante SSE es estructuralmente similar).
-- El `Origin`el control rechaza el defecto `http://evil.example`La sonda pero acepta.`http://localhost`¿ Qué ?
-- Los ID de sesión son cadenas hexáticas aleatorias de 128 bits; el servidor mantiene el estado por sesión en la memoria.
+La sonda comprueba:
+
+- se rechazará el origen inválido;
+- el descubrimiento tiene éxito sin un ID de sesión;
+- `Mcp-Session-Id`y `Last-Event-ID`se ignoran;
+- los resultados de las discrepancias de encabezado `-32020`El artículo 1
+- versiones no compatibles `-32022`con exactitud`supported`y `requested`datos;
+- una notificación aceptada sin id devuelve HTTP `202`sin cuerpo;
+- Obtener y borrar el retorno `405`El artículo 1
+- `subscriptions/listen`es un flujo de respuesta POST cuyo reconocimiento, notificación y resultado final llevan su identificación de suscripción.
 
 ## Envío
 
-Esta lección produce`outputs/skill-mcp-transport-migrator.md`. Dado un servidor MCP HTTP+SSE (legacy), la habilidad produce un plan de migración a Streamable HTTP con continuidad de identificación de sesión, comprobaciones de origen y soporte de sonda compatible con retroceso.
+Esta lección nos lleva .`outputs/skill-mcp-transport-migrator.md`. Elimina las sesiones de protocolo modernas, agrega validación de cabezas y cuerpo, sustituye GET independiente por `subscriptions/listen`, y mantiene cualquier puente heredado visiblemente separado.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`. POST un`initialize`de la`curl`y observar el `Mcp-Session-Id`POST una segunda solicitud que se hace eco del encabezado y verifique la continuidad de la sesión.
-
-2. Añadir un manipulador GET que abre una corriente SSE. Envía uno `notifications/progress`Reconecta al volver a GET con la misma identificación de sesión y confirma que el servidor la acepta.
-
-3. Implementar el `last-event-id`En reconectar, reproducir cualquier evento generado desde esa identificación.
-
-4. Extenderse`Origin`validación para apoyar un patrón de tarjeta salvaje (`https://*.example.com`) y confirmar que acepta `https://app.example.com`Pero rechaza.`https://evil.example.com.attacker.net`¿ Qué ?
-
-5. Tome un servidor HTTP+SSE heredado del registro oficial (hay varios) y esboce la migración: qué cambios en el manejo de puntos finales, generación de id de sesión y semántica de encabezado.
+1. Retirada`Mcp-Method`de una POST. Confirmar HTTP `400`y error `-32020`¿ Qué ?
+2. Envía la versión de encabezado y cuerpo correspondiente `2027-01-01`Confirmar el HTTP`400`, error `-32022`, y datos exactos `{"supported":["2026-07-28"],"requested":"2027-01-01"}`¿ Qué ?
+3. Envía un centinela Base64 .`Mcp-Name`Para un URI de recurso no ASCII. Confirme que el valor decodificado se compara con `params.uri`¿ Qué ?
+4. Rompe la transmisión de escucha finita antes de su respuesta final, reediciéndola con un nuevo ID JSON-RPC y herramientas de reafirmación.
+5. Añadir un manejo explícito del flujo de trabajo a la herramienta ping. Atarlo a un sujeto de autorización sin usar afinidad de conexión.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| stdio transport | "Local child process" | JSON-RPC over stdin/stdout, newline-delimited |
-| Streamable HTTP | "The remote transport" | Single-endpoint POST + GET + optional SSE, 2025-03-26 spec |
-| HTTP+SSE | "Legacy" | Two-endpoint model being removed in mid-2026 |
-| `Mcp-Session-Id` | "Session header" | Server-assigned random id echoed on every subsequent request |
-| `Origin` allowlist | "DNS-rebinding defense" | Reject requests whose Origin is not approved |
-| Single endpoint | "One URL" | `/mcp` handles POST / GET / DELETE for all session operations |
-| `last-event-id` | "SSE replay" | Header used to resume a dropped stream without missing events |
-| Backwards-compat probe | "Old vs new detection" | Client response-shape check that auto-selects transport |
-| Long-lived HTTP | "SSE streaming" | Server pushes events for minutes or hours on one TCP connection |
-| Session revocation | "Force re-init" | Server invalidates a session id; client must handshake again |
+| Term | Meaning |
+|------|---------|
+| stdio | Newline-delimited JSON-RPC over a client-launched subprocess |
+| Streamable HTTP | Single endpoint where each modern message is a new POST |
+| Request-scoped SSE | POST response stream containing related notifications and final response |
+| `subscriptions/listen` | Long-lived POST request for opted-in change notifications |
+| Header mismatch | HTTP `400` and JSON-RPC `-32020` when mirrored headers disagree with body |
+| Origin validation | DNS-rebinding defense for incoming connections, not authentication |
+| Explicit state handle | Application token passed as an ordinary argument instead of hidden session state |
+| Legacy bridge | Separate earlier-era behavior kept only for compatibility |
 
 ## Leer más
 
-- [MCP — Basic transports spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) referencia canónica para stdio y Streamable HTTP
-- [MCP — Basic transports spec 2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) la revisión que introdujo Streamable HTTP
-- [Cloudflare — MCP transport](https://developers.cloudflare.com/agents/model-context-protocol/transport/) Modelos de HTTP en streaming alojados por los trabajadores
-- [AWS — MCP transport mechanisms](https://builder.aws.com/content/35A0IphCeLvYzly9Sw40G1dVNzc/mcp-transport-mechanisms-stdio-vs-streamable-http) Comparación entre formas de despliegue
-- [Atlassian — HTTP+SSE deprecation notice](https://community.atlassian.com/forums/Atlassian-Remote-MCP-Server/HTTP-SSE-Deprecation-Notice/ba-p/3205484) ejemplo concreto de fecha límite de migración
+- [MCP Transport Overview](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
+- [MCP stdio Transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)
+- [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [MCP Subscriptions](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions)
+- [MCP 2026-07-28 Changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)

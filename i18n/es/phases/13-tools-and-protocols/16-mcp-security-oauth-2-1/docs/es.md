@@ -1,169 +1,303 @@
-# MCP Security II  OAuth 2.1, Indicadores de recursos, objetivos incremental
+# Autorizamiento de MCP: CIMD, vinculación del emisor, PKCE y Step-Up
 
-> Los servidores MCP remotos necesitan autorización, no solo autenticación. La especificación 2025-11-25 se alinea con OAuth 2.1 + PKCE + indicadores de recursos (RFC 8707) + metadatos de recursos protegidos (RFC 9728). SEP-835 agrega el consentimiento de alcance incremental con autorización de incremento en 403 WWW-Authenticate. Esta lección implementa el flujo de incremento como máquina de estado para que pueda ver cada salto.
+> Una solicitud remota de MCP es estatalizada, pero su autorización no es anónima. Atarde cada credencial al emisor que la creó y cada token al recurso que la recibe.
 
 **Type:** Build
-**Languages:** Python (stdlib, OAuth state machine simulator)
-**Prerequisites:** Phase 13 · 09 (transports), Phase 13 · 15 (security I)
-**Time:** ~75 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13 · 09 (transports), Phase 13 · 15 (security)
+**Time:** ~90 minutes
 
 ## Objetivos de aprendizaje
 
-- Distinguir entre servidor de recursos y responsabilidades del servidor de autorización.
-- Siga el flujo de código de autorización OAuth 2.1 protegido por PKCE.
-- Usar`resource`(RFC 8707) y metadatos de recursos protegidos (RFC 9728) para prevenir ataques de subcontratación confusa.
-- Implementar la autorización de incremento: el servidor responde 403 con WWW-Authenticate solicitando un mayor alcance; el cliente re-pide el consentimiento del usuario y retenta.
+- Descubra los servidores de autorización a través de metadatos de recursos protegidos.
+- Prefiere Documents de Metadatos de Identificación de Cliente sobre Registro Dinámico de Cliente obsoleto.
+- Declarar lo correcto `application_type`cuando sea inevitable una vía de compatibilidad con el DCR.
+- Valida la respuesta de autorización `iss`y aislar las credenciales por emisor.
+- Utilice PKCE, indicadores de recursos, validación de audiencia y escopo incremental.
+- Enviar las solicitudes autorizadas del MCP 2026-07-28 sin sesiones de protocolo.
 
 ## El problema
 
-El MCP temprano (antes de 2025) envió servidores remotos con claves de API ad-hoc o incluso sin auth.
+Un servidor MCP remoto puede leer registros privados, escribir sistemas externos o desencadenar trabajos costosos.
 
-Tres necesidades del mundo real:
+- ¿Qué servidor de autorización emitió la credencial?
+- ¿Para qué recurso MCP es el token?
+- ¿Qué cliente y redirección URI completaron el flujo?
+- ¿Qué operaciones aprobó el usuario?
+- ¿Este pedido exacto todavía encaja en esa aprobación?
 
-- **Ordinary remote servers.**El usuario instala un servidor MCP remoto que accede a su Notion / GitHub / Gmail. OAuth 2.1 con PKCE es la forma correcta.
-- **Scope escalation.**Un servidor de notas otorgado `notes:read`puede necesitar más tarde `notes:write`En lugar de repetir todo el flujo, el incremento (SEP-835) pide el alcance adicional.
-- **Confused deputy prevention.**El cliente tiene un token de audiencia para el servidor A. El servidor A es malicioso y trata de presentar el token al servidor B. Los indicadores de recursos (RFC 8707) pinan el token a su público previsto.
+El perfil de autorización 2026-07-28 endurece la inscripción de clientes y el manejo de emisores. Prefiere documentos de metadatos de ID de clientes, deprecia la inscripción dinámica de clientes, requiere el derecho `application_type`en DCR, valida las respuestas de los emisores de la RFC 9207 y prohíbe la reutilización de las credenciales entre los emisores.
 
-OAuth 2.1 no es nuevo. Lo nuevo es el perfil de MCP: flujos requeridos específicos (código de autorización + PKCE solamente; no implícito, no credenciales de cliente por defecto), indicadores de recursos obligatorios para cada solicitud de token, y metadatos de recursos protegidos publicados para que los clientes sepan a dónde ir.
+Estas reglas complementan el núcleo de los apátridas, no restauran un apretón de manos o un`Mcp-Session-Id`¿ Qué ?
 
 ## El concepto
 
-### Roles
+### Conozca los tres papeles
 
-- **Client.**El cliente MCP (Claude Desktop, Cursor, etc.).
-- **Resource server.**El servidor MCP (notaciones, GitHub, Postgres, lo que sea).
-- **Authorization server.**Puede ser el mismo servicio que el servidor de recursos o un IDP separado (Auth0, Keycloak, Cognito).
+- **MCP client:**Envía solicitudes en nombre de un propietario de recursos.
+- **MCP resource server:**acepta el token de acceso y sirve al punto final del MCP.
+- **Authorization server:**autentica al propietario del recurso, recauda su consentimiento y emite tokens.
 
-En el perfil de MCP, los servidores de recursos y autorización PUEDEN ser el mismo host pero DEBEN ser distinguidos por URL.
+El servidor de recursos y el servidor de autorización pueden operarse juntos, pero mantener sus identificadores y responsabilidades de validación separados.
 
-### Código de autorización + PKCE
+### La autorización se aplica a HTTP
 
-El flujo:
+La especificación de autorización MCP se aplica a los transportes basados en HTTP. Un servidor de estudio local se ejecuta bajo el límite de confianza del proceso y el sistema operativo. No agregue un flujo OAuth falso del navegador al estudio simplemente por simetría.
 
-1. El cliente genera `code_verifier`(a azar) y `code_challenge`(SHA256).
-2. El cliente redirige al usuario a `/authorize?response_type=code&client_id=...&redirect_uri=...&scope=notes:read&code_challenge=...&resource=https://notes.example.com`¿ Qué ?
-3. El servidor de autorización redirige a `redirect_uri?code=...`¿ Qué ?
-4. Los clientes envían mensajes a `/token?grant_type=authorization_code&code=...&code_verifier=...&resource=...`¿ Qué ?
-5. El servidor de autorización valida el hash del verificador contra el desafío almacenado y emite un token de acceso.
-6. El cliente utiliza el token: `Authorization: Bearer ...`en cada solicitud al servidor de recursos.
+Para el HTTP remoto Streamable, envíe el token portador en el `Authorization`En cualquier solicitud, nunca lo coloque en la URL.
 
-PKCE evita los ataques de interceptación de código de autorización. Los indicadores de recursos impiden que el token sea válido en otros lugares.
+### Comience con metadatos de recursos protegidos
 
-### Metadatos de recursos protegidos (RFC 9728)
-
-El servidor de recursos publica una `.well-known/oauth-protected-resource`Documento:
+El servidor de recursos publica metadatos de RFC 9728:
 
 ```json
 {
-  "resource": "https://notes.example.com",
+  "resource": "https://notes.example.com/mcp",
   "authorization_servers": ["https://auth.example.com"],
-  "scopes_supported": ["notes:read", "notes:write", "notes:delete"]
+  "scopes_supported": ["notes:delete", "notes:read", "notes:write"]
 }
 ```
 
-El cliente descubre el servidor de autorización desde el servidor de recursos. Reduce la configuración  el cliente solo necesita la URL del recurso.
+El cliente comienza desde la URL de recurso MCP, saca este documento, selecciona un servidor de autorización anunciado y luego saca los metadatos OAuth o OpenID Connect de ese servidor.
 
-### Indicadores de recursos (RFC 8707)
+Preserva la ruta de recursos al construir la RFC 9728 conocida URL. Para el recurso `https://notes.example.com/mcp`, esta lección utiliza`https://notes.example.com/.well-known/oauth-protected-resource/mcp`- Dejar caer el .`/mcp`el sufijo puede seleccionar metadatos para un recurso protegido diferente del mismo origen.
 
-`resource`Parámetro en el token de solicitud pines de la audiencia prevista del token.`aud: "https://notes.example.com"`Otro servidor de MCP recibiendo estos cheques de tokens .`aud`y lo rechaza.
+No adivines el servidor de autorización a partir de un nombre de host. No sigas a un emisor descubierto en un cuerpo de error no validado. Mantén una política en la que el cliente está dispuesto a confiar en los emisores.
 
-### Modelo de alcance
+### Verificar los metadatos del servidor de autorización
 
-Los espacios son cadenas separadas por el espacio.
+Los metadatos deben exponer los puntos finales y los controles soportados:
 
-- `notes:read`¿ Qué ?`notes:write`¿ Qué ?`notes:delete`
-- `admin:*`para capacidades de administración (utilización reducida)
-- `profile:read`para la identidad
-
-La selección del alcance debe ser el menor privilegio: pedir lo que necesita ahora, dar un paso cuando necesita más.
-
-### Autorización de incremento (SEP-835)
-
-Subvenciones de los usuarios `notes:read`Luego le piden al agente que borre una nota.
-
+```json
+{
+  "issuer": "https://auth.example.com",
+  "authorization_endpoint": "https://auth.example.com/authorize",
+  "token_endpoint": "https://auth.example.com/token",
+  "code_challenge_methods_supported": ["S256"],
+  "authorization_response_iss_parameter_supported": true,
+  "client_id_metadata_document_supported": true
+}
 ```
-HTTP/1.1 403 Forbidden
+
+Requerir S256 para PKCE. Registrar la cadena exacta de emisor. Ese valor exacto se convierte en la clave para el registro y almacenamiento de tokens.
+
+### Seguir la prioridad de registro
+
+Utilice la información del cliente pre-registrada cuando el cliente ya tenga una relación explícita con el emisor seleccionado. De lo contrario, prefiere Documentación de Metadatos de ID del cliente cuando el servidor de autorización anuncia soporte. Utilice DCR solo como la retroceso de compatibilidad obsoleta, luego solicite información del cliente si ninguno de esos mecanismos está disponible.
+
+### Preferir documentos de metadatos de ID del cliente
+
+Un documento de metadatos de ID de cliente le da al servidor de autorización una URL HTTPS que es tanto el identificador del cliente como la ubicación de sus metadatos:
+
+```json
+{
+  "client_id": "https://client.example.com/oauth/metadata.json",
+  "client_name": "Notes desktop client",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"]
+}
+```
+
+El servidor de autorización recoge y valida el documento.`client_id`Debe ser una URL HTTPS con una ruta, y el valor dentro del documento debe ser igual a esa URL exactamente.`client_id`¿ Qué ?`client_name`, y `redirect_uris`- ¿ Qué ?`application_type`El nuevo uso obligatorio de la misma es específicamente el camino de DCR.
+
+Trate la obtención del documento como una operación sensible a SSRF. Resolver y validar el destino, rechazar direcciones de recorrido, privadas, locales de enlace y de otro modo no permitidas, volver a comprobar después de redirecciones y cambios en DNS, limitar redirecciones, bytes y tiempo, requiere JSON y solo de acuerdo con controles de caché HTTP validados. Trate `client_name`y otros campos de visualización como texto no confiable.
+
+CIMD elimina la necesidad de imprimir un nuevo identificador dinámico para cada primer contacto. No elimina la validación de URI redirigida, la política del emisor o el consentimiento del usuario.
+
+### DCR es un camino de compatibilidad
+
+El registro de clientes dinámico sigue disponible para servidores de autorización antiguos, pero se ha desactualizado para las nuevas implementaciones de MCP.
+
+Cuando utilice DCR, debe declarar `application_type`¿Qué es esto ?
+
+```json
+{
+  "client_name": "Notes desktop client",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"]
+}
+```
+
+- Utilización de escritorio, móvil, línea de comandos y clientes de loopback `native`¿ Qué ?
+- Uso de aplicaciones de navegador alojadas remotamente `web`y redirecciones remotas HTTPS.
+
+Salvar el campo puede ser por defecto `web`en una implementación de registro OpenID Connect y hacer una redirección de loopback legítima falla.
+
+Mantenga el código DCR detrás de una decisión de retroceso explícita. No retroceda silenciosamente después de un fallo de validación CIMD arbitrario. Eso podría convertir un fallo de seguridad en una ruta de inscripción más débil.
+
+### Las credenciales vinculativas al emisor
+
+Almacenar material de inscripción con moneda del emisor bajo el emisor exacto:
+
+```text
+issuer_credentials[issuer] = pre_registered_or_dcr_client
+tokens[(issuer, resource)] = access_token
+```
+
+Si el descubrimiento de recursos protegidos cambia desde `https://auth-one.example`¿ Qué ?`https://auth-two.example`, reevaluar la confianza. Nunca envíe el secreto del cliente del primer emisor, la identificación del cliente DCR, el token de acceso de registro, el token de actualización o el token de acceso al segundo.
+
+Un ID de cliente de CIMD es diferente porque es una URL HTTPS auto-alojada, no una credencial acuñada por un servidor de autorización. La misma URL de CIMD es portátil: un nuevo emisor de confianza saca y valida el documento sin volver a registrarse en DCR. Las respuestas y tokens de autorización aún se validan y almacenan bajo el nuevo emisor.
+
+### Código de autorización con PKCE
+
+El flujo interactivo es:
+
+1. Generar una alta entropía `code_verifier`¿ Qué ?
+2. Derivar el S256 `code_challenge`¿ Qué ?
+3. Envía la solicitud de autorización con exactitud `client_id`¿ Qué ?`redirect_uri`¿ Qué ?`scope`¿ Qué ?`code_challenge`, y `resource`¿ Qué ?
+4. Recibir una respuesta de autorización que contenga `code`y, cuando se haya proporcionado, `iss`¿ Qué ?
+5. Validación`iss`contra el emisor registrado exacto antes de utilizar cualquier campo de respuesta.
+6. Cambiar el código con `code_verifier`, el mismo redireccionamiento de URI, y el mismo `resource`¿ Qué ?
+7. Guarde el token resultante en la sección `(issuer, resource)`¿ Qué ?
+
+El `resource`El parámetro de RFC 8707 aparece tanto en las solicitudes de autorización como en las de tokens.
+
+### Validación`iss`exactamente
+
+La RFC 9207 evita que una respuesta de autorización de un emisor se confunda con una respuesta de otro.
+
+¿ Cuándo ?`iss`Si el código está presente, compare con el emisor registrado sin doblar el caso, cambios de la columna de seguimiento, eliminación de puerto predeterminado o normalización de codificación por ciento. En caso de desajuste, no actúe sobre el código ni incluso muestre detalles de error controlados por el atacante de esa respuesta.
+
+Un servidor de autorización que incluye `iss`publicidad `authorization_response_iss_parameter_supported: true`Los clientes actuales aún validan un regalo .`iss`Incluso cuando ese anuncio no está.
+
+### Valida la audiencia en el servidor MCP
+
+El servidor de recursos sólo acepta tokens emitidos por sí mismo:
+
+```text
+token.issuer == configured_authorization_server
+token.audience == canonical_mcp_resource
+```
+
+Los tokens inválidos, vencidos, de emisor incorrecto o de audiencia incorrecta reciben 401. El servidor MCP no debe aceptar ni transitar un token destinado a otro servicio.
+
+### Solicitar el menor alcance de corriente
+
+Si una herramienta posterior requiere más, el servidor devuelve 403 con un desafío de alcance autorizado:
+
+```text
 WWW-Authenticate: Bearer error="insufficient_scope",
-    scope="notes:delete", resource="https://notes.example.com"
+  scope="notes:delete",
+  resource_metadata="https://notes.example.com/.well-known/oauth-protected-resource/mcp"
 ```
 
-El cliente ve el error insufficient_scope, le pide al usuario un diálogo de consentimiento para el alcance adicional, realiza un mini flujo OAuth para él, retoma la solicitud con el nuevo token.
+El cliente explica el nuevo permiso, obtiene el consentimiento, realiza un nuevo flujo de autorización con el conjunto de alcance combinado y vuelve a probar la solicitud de MCP con un nuevo ID JSON-RPC.
 
-### Validación de la audiencia de los tokens
+No asuma que el ámbito de aplicación cuestionado es un subconjunto de `scopes_supported`El desafío es autoritario para la operación actual.
 
-Cada solicitud: controles del servidor `token.aud == self.resource_url`Desajuste = 401. Esto detiene el reutilización de tokens entre servidores.
+### Autorización y cable de MCP sin estatus
 
-### Tokens de corta duración y rotación
+Una llamada de herramienta autorizada todavía lleva el envase completo de la solicitud actual:
 
-Los tokens de acceso DEVEN ser de corta duración (1 hora por defecto).
+```text
+POST /mcp
+Authorization: Bearer <access-token>
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: notes.delete
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "tools/call",
+  "params": {
+    "name": "notes.delete",
+    "arguments": {"id": "note-7"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "oauth-lesson-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+El token autoriza al principal, los metadatos de la solicitud negocian el comportamiento del protocolo, ninguno sustituye al otro.
+
+Valida el cable en un orden fijo: tipos de JSON-RPC y metadatos, igualdad de encabezado y cuerpo, luego soporte de protocolo. Una desajuste de enrutamiento o encabezado de versión devuelve HTTP 400 con `-32020`Si el encabezado y el cuerpo coinciden en una versión no compatible, devuelva HTTP 400 con `-32022`y `data`Es exactamente .`{"supported":["2026-07-28"],"requested":"<actual>"}`Un método desconocido devuelve HTTP 404 con `-32601`¿ Qué ?
+
+Cada error de solicitud, incluido 401 tokens inválidos y 403 alcance insuficiente, es un envase de error JSON-RPC con la solicitud original `id`. La información de recuperación estructurada pertenece a un error opcional `data`¿ Qué es ?`WWW-Authenticate`El título de respuesta HTTP sigue siendo el de una notificación.`id`Una notificación HTTP aceptada devuelve 202 con un cuerpo vacío.
+
+El servidor implementa `server/discover`y publicitarias, por lo que también implementa el obligatorio`tools/list`Los descriptores de herramientas tienen nombres, descripciones y raíz de objeto estables.`inputSchema`La lista es determinista y devuelve `resultType`, metadatos de identidad del servidor, un límite `ttlMs`, y `cacheScope`• El descubrimiento y una lista de herramientas independientes del usuario pueden estar disponibles antes de la autorización.
 
 ### No hay pasaportes simbólicos
 
-Los servidores de muestreo (fase 13 · 11) NO DEBEN pasar el token del cliente a otros servicios.
+Un servidor MCP no debe reenviar el token de acceso MCP del cliente a una API en aguas subidas. Obtener un token en aguas subidas separado con el público adecuado o usar un diseño explícito de intercambio de tokens. La validación de audiencia solo funciona cuando los servicios rechazan tokens acuñados para otra persona.
 
-### Prevención de los diputados
+### Tokens de actualización
 
-El token se une a `aud`. El cliente se obliga a`client_id`La especificación prohíbe explícitamente el viejo patrón de "pasar el token" que era común en los ecosistemas de herramientas remotas anteriores a MCP.
-
-### Descubrimiento de la identificación del cliente
-
-Cada cliente MCP publica sus metadatos en una URL fija. Los servidores de autorización pueden recoger el documento de metadatos del cliente para descubrir los URIs de redirección e información de contacto. Esto elimina el registro manual del cliente.
-
-### Puertas de entrada y OAuth
-
-La fase 13 · 17 muestra cómo una puerta de enlace empresarial maneja OAuth: la puerta de enlace retiene credenciales para servidores upstream, los tokens para el cliente son emitidos por puerta de enlace y los tokens upstream nunca salen de la puerta de enlace. Esto cambia el modelo de confianza  los usuarios autentican con la puerta de enlace una vez; la puerta de enlace maneja N autorizaciones de servidor.
+Los tokens de actualización son opcionales. Cuando se emiten, guardanlos confidencialmente y los contratan por emisor y recurso. No asuma que existen.
 
 ```figure
 t3-scope-stepup
 ```
 
+## Construye el mismo
+
+`code/main.py`Es un protocolo en proceso y simulador de autorización. Implementa el descubrimiento de recursos protegidos, los metadatos del servidor de autorización, la inscripción en CIMD, la retroceso de DCR con versiones, las comprobaciones de tipos de aplicaciones, PKCE, validación de emisores, tokens vinculados a recursos, aumento de alcance, `server/discover`¿ Qué ?`tools/list`, y una solicitud de herramienta sin estado.
+
+El modelo recibe cuerpos de solicitud analizados y encabezados de enrutamiento.`Content-Type`o `Accept`. Conectarlo al adaptador HTTP de la Lección 09, que requiere `Content-Type: application/json`y un `Accept`valor que contiene ambos `application/json`y `text/event-stream`¿ Qué ?
+
+- ¿Qué quieres decir ?
+
+```bash
+cd phases/13-tools-and-protocols/16-mcp-security-oauth-2-1
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
+
+La salida muestra el descubrimiento primero, la inscripción en CIMD, una lectura ordinaria, dos pasos separados de alcance y el almacenamiento de credenciales con llave de emisor.
+
 ## Usalo
 
-`code/main.py`simula el flujo de incremento completo de OAuth 2.1 como máquina de estado. Implementa:
+Mapa de los objetos del simulador a los componentes de producción:
 
-- Verificador de código PKCE / generación de desafíos.
-- Flujo de código de autorización con indicador de recursos.
-- punto final de metadatos de recursos protegidos.
-- Validación de tokens con verificación de audiencia.
-- Un paso adelante .`insufficient_scope`¿ Qué ?
-
-No hay servidor HTTP en esta lección; la máquina de estado se ejecuta en la memoria para que pueda rastrear cada salto.
+- `ResourceServer.protected_resource_metadata`se convierte en el punto final de la RFC 9728.
+- `AuthorizationServer.metadata`se convierte en RFC 8414 o OpenID Connect descubrimiento.
+- `Client.enroll`se convierte en resolución CIMD más una rama explícita de compatibilidad DCR.
+- Credenciales de clientes emitidas por el emisor y `tokens_by_issuer_resource`Una URL CIMD puede permanecer portátil mientras sus resultados de autorización permanezcan vinculados al emisor.
+- `ResourceServer.handle`Se convierte en un middleware que valida los encabezados actuales de MCP, el token y el alcance de las herramientas antes de enviar mientras se mantiene cada error de solicitud en un envase JSON-RPC correspondiente.
 
 ## Envío
 
-Esta lección produce`outputs/skill-oauth-scope-planner.md`. Dado que un servidor MCP remoto con herramientas, la habilidad diseña el conjunto de alcance, las reglas de fijación y la política de incremento.
+Esta lección nos lleva .`outputs/skill-oauth-scope-planner.md`. Ahora se diseña la prioridad de inscripción, el almacenamiento de credenciales vinculadas al emisor, el tipo de solicitud, PKCE, los indicadores de recursos, los desafíos de alcance y el límite actual de las solicitudes de apatridia.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`- Rastrear el flujo de aumento de dos escopo.
-
-2. Añadir la rotación de los tokens de actualización: cada actualización emite un nuevo token de actualización e invalida el antiguo. Simula un token de actualización robado que se utiliza después de la rotación y confirma que falla.
-
-3. Implemente el metafinante de metadatos de recursos protegidos como una respuesta HTTP real utilizando stdlib http.server. Reflejar el punto final /mcp de la Lección 09.
-
-4. Diseñar una jerarquía de alcance para un servidor MCP de GitHub: leer repo, escribir relaciones públicas, aprobar relaciones públicas, fusionar relaciones públicas, administrar.
-
-5. Lea RFC 8707 y RFC 9728. Identifique el campo en 9728 que MCP utiliza de manera diferente al ejemplo de la RFC.`scopes_supported`(en inglés).
+1. Añadir la rotación de la ficha de actualización y rechazar la reutilización de la ficha de actualización anterior.
+2. Añadir una lista de permisos de emisor. Al cambiar de emisor, reutilice solo una URL CIMD portátil; rechace todas las credenciales y tokens emitidas anteriormente por el emisor.
+3. Añadir una caducidad a los códigos de autorización y confirmar que un intercambio tardío falla.
+4. Construir una variante del cliente web con una redirección remota HTTPS y comparar sus metadatos DCR con el cliente nativo.
+5. Añadir un segundo recurso bajo el mismo emisor. Confirmar su token de acceso no se puede utilizar en el primer recurso.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| OAuth 2.1 | "Modern OAuth" | Consolidated RFC that mandates PKCE and forbids implicit flow |
-| PKCE | "Proof-of-possession" | Code verifier + challenge defeating authorization-code interception |
-| Resource indicator | "Token audience" | RFC 8707 `resource` parameter pinning token to one server |
-| Protected-resource metadata | "Discovery doc" | RFC 9728 `.well-known/oauth-protected-resource` |
-| Step-up authorization | "Incremental consent" | SEP-835 flow for adding scopes on demand |
-| `insufficient_scope` | "403 with WWW-Authenticate" | Server signal to re-consent for a larger scope |
-| Confused deputy | "Token reuse across services" | Attack where a trusted holder forwards a token inappropriately |
-| Short-lived token | "Access token TTL" | Bearer that expires quickly; refresh token renews |
-| Scope hierarchy | "Least privilege stack" | Graduated scope set with step-up between levels |
-| Client ID metadata | "Client discovery doc" | URL at which the client publishes its own OAuth metadata |
+| Term | Meaning |
+|------|---------|
+| Protected-resource metadata | RFC 9728 document that identifies the resource and authorization servers |
+| CIMD | HTTPS metadata document whose URL is the OAuth client identifier |
+| DCR | Deprecated dynamic client enrollment retained for compatibility |
+| `application_type` | `native` or `web`, used to validate redirect URI rules |
+| PKCE | Verifier and S256 challenge that protect an intercepted authorization code |
+| `iss` | RFC 9207 authorization response issuer identifier |
+| Resource indicator | RFC 8707 parameter that binds a token request to an MCP resource |
+| Audience | Resource for which a token is valid |
+| Step-up | New consent and token issuance for an additional current-operation scope |
+| Issuer-bound credentials | Registration and token records isolated by exact authorization server issuer |
 
 ## Leer más
 
-- [MCP — Authorization spec](https://modelcontextprotocol.io/specification/draft/basic/authorization) perfil de MCP OAuth canónico
-- [den.dev — MCP November authorization spec](https://den.dev/blog/mcp-november-authorization-spec/) la transición de los cambios de 2025 a 2021
-- [RFC 8707 — Resource indicators for OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc8707) el RFC de afición de audiencia
-- [RFC 9728 — OAuth 2.0 protected resource metadata](https://datatracker.ietf.org/doc/html/rfc9728) el documento de descubrimiento RFC
-- [Aembit — MCP OAuth 2.1, PKCE and the future of AI authorization](https://aembit.io/blog/mcp-oauth-2-1-pkce-and-the-future-of-ai-authorization/) Acceso a la práctica, flujo de progreso, paso a paso
+- [MCP 2026-07-28 authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
+- [RFC 9728: OAuth 2.0 Protected Resource Metadata](https://www.rfc-editor.org/rfc/rfc9728)
+- [RFC 8707: Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707)
+- [RFC 9207: OAuth 2.0 Authorization Server Issuer Identification](https://www.rfc-editor.org/rfc/rfc9207)
+- [OAuth Client ID Metadata Document draft](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/)

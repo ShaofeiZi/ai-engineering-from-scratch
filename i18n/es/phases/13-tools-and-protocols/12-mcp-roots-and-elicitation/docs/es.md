@@ -1,177 +1,303 @@
-# Raíces y Elicitación  Entrada de usuario en alcance y en medio del vuelo
+# El alcance explícito y la obtención de la licencia de apatrida
 
-> Los caminos codificados se rompen en el momento en que un usuario abre un proyecto diferente. Los argumentos de herramienta pre-rellenados se rompen cuando el usuario especifica poco. Roots abarca el servidor a un conjunto de URI controlados por el usuario; la elicitación se detiene a mitad de la llamada de herramienta para pedirle al usuario una entrada estructurada a través de un formulario o URL. Dos primitivas del cliente, dos correcciones para los modos comunes de falla de MCP. SEP-1036 (URL-mode elicitation, 2025-11-25) es experimental a través de H1 2026  verifique versiones de SDK antes de depender de él.
+> Las raíces se deprecian en MCP 2026-07-28 y nunca fueron una caja de seguridad. Coloque alcance en argumentos de herramientas visibles o en URIs de recursos, autorízala en el servidor y use MRTR cuando una herramienta realmente necesita la entrada del usuario. El usuario ve la decisión, el modelo ve el mango y cualquier instancia del servidor puede procesar la retrayectoria.
 
 **Type:** Build
-**Languages:** Python (stdlib, roots + elicitation demo)
-**Prerequisites:** Phase 13 · 07 (MCP server)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 11 (stateless MRTR)
+**Time:** ~60 minutes
 
 ## Objetivos de aprendizaje
 
-- Declarar`roots`y responder a`notifications/roots/list_changed`¿ Qué ?
-- Restringir las operaciones de archivos del servidor a las URI dentro del conjunto de raíces declarado.
-- Usar`elicitation/create`solicitar al usuario una confirmación o una entrada estructurada en medio de la llamada de la herramienta.
-- Elegir entre la elicitación en modo de formulario y en modo URL (esta última es experimental; se nota el riesgo de deriva).
+- Reemplazar las raíces obsoletas con parámetros explícitos del espacio de trabajo, URI de recursos o configuración de servidor.
+- Indicaciones de alcance separadas de la autorización, contención de ruta y sandboxing del sistema operativo.
+- Modo de entrega de formulario `elicitation/create`a través de un MRTR `input_required`el resultado.
+- Publicitar soporte de elicitación en las capacidades del cliente por solicitud y rechazar los modos no soportados.
+- Validación`accept`¿ Qué ?`decline`, y `cancel`como resultados distintos.
+- Atardecer la confirmación destructiva a un principal autenticado, argumentos originales, conjunto de candidatos y caducidad.
 
-## El problema
+## Dos problemas que parecen ser similares
 
-Dos fallas concretas un servidor MCP notas golpes en la producción.
+Una herramienta de notas recibe la siguiente solicitud: " Eliminar el antiguo informe TPS".
 
-**Broken path assumption.**El servidor está escrito contra `~/notes`Un usuario en una máquina diferente con notas en `~/Documents/Notes`recibe una llamada de herramienta que falla silenciosamente (no se encuentra archivo) o peor, escribió en el lugar equivocado.
+El servidor debe responder a dos preguntas diferentes.
 
-**Missing argument the user would know.**El usuario pide "borrar la vieja nota del informe TPS". El modelo llama `notes_delete(title: "TPS report")`Pero hay tres notas que coinciden con las de 2023, 2024 y 2025. La herramienta no puede adivinar. No conseguir "ambiguo" es molesto; correr en las tres es catastrófico.
+1. ¿En qué espacio de trabajo puede tocar esta operación?
+2. ¿A cuál de las tres notas coincidencias se refería el usuario?
 
-Las raíces fijan la primera: el cliente declara en `initialize`El servidor detiene la llamada de la herramienta y envía `elicitation/create`para pedirle al usuario que elija cuál.
+La primera es el alcance y la autorización. La segunda es la desambiguación interactiva. La mezcla de ellos conduce a diseños peligrosos, como tratar una carpeta proporcionada por el cliente como prueba de que el llamador puede eliminar todo lo que hay dentro de ella.
 
-## El concepto
+## Las raíces son una superficie de migración
 
-### Las raíces
+Las revisiones anteriores de MCP permitían a un cliente anunciar Roots y notificar a un servidor cuando la lista cambiaba. Roots eran una guía informativa. No restringían lo que el proceso del servidor podía leer, no autorizaban al llamador y no creaban una caja de arena del sistema operativo.
 
-El cliente declara una lista raíz en `initialize`¿Qué es esto ?
+El MCP 2026-07-28 se desestima `roots/list`y `notifications/roots/list_changed`Prefiero uno de estos reemplazos explícitos:
+
+- ¿ Qué es esto ?`workspaceUri`o `directory`argumento de herramienta cuando el alcance varía por llamada.
+- Un URI de recurso cuando la operación ya apunta a un recurso.
+- Configuración de servidor cuando una implementación posee un espacio de trabajo fijo.
+- Un proceso sandbox o sistema de archivos encarcelado cuando el código debe ser técnicamente incapaz de escapar.
+
+Si todavía se necesita una integración existente para el 2026-07-28 `roots/list`durante la ventana de deprecación, el servidor lo incrusta en MRTR `inputRequests`. No debe enviar una solicitud inversa en vivo. Es un adaptador de migración; los nuevos operadores deben aceptar un alcance explícito en su lugar.
+
+El modelo puede ver y repetir un mango explícito.
+
+### La regla de tres capas
+
+Un URI explícito aún no se autoriza.
+
+1. **Authorization:**¿Está autorizado este director autenticado a usar este espacio de trabajo?
+2. **Containment:**¿El URI objetivo normalizado permanece dentro del límite del espacio de trabajo autorizado?
+3. **Sandbox:**¿Puede el sistema operativo evitar que un servidor comprometido se escape de todos modos?
+
+El servidor ejecutable mantiene una lista de permisos de los URI de espacio de trabajo autorizados, normaliza los caminos codificados por ciento, verifica un límite real del componente de camino y vuelve a comprobar la contención inmediatamente antes de la eliminación.
+
+Las comprobaciones ingenuas de prefijos de cadena están equivocadas:
+
+```text
+allowed:   file:///work/notes
+attacker:  file:///work/notes-evil/secret.md
+traversal: file:///work/notes/%2e%2e/private.md
+```
+
+Los dos caminos hostiles comienzan con una cadena engañosa. Normaliza primero, luego compara los componentes del camino. Un servidor de sistema de archivos de producción también debe defenderse contra las carreras de enlaces simbólicos y la semántica de la ruta específica de la plataforma.
+
+## La solicitud sigue existiendo, pero la entrega ha cambiado
+
+La elicitación es la característica actual del cliente para recopilar la entrada del usuario durante `tools/call`¿ Qué ?`prompts/get`, o`resources/read`. El nombre del método permanece `elicitation/create`Lo que cambió fue la dirección del flujo del cable.
+
+Un servidor 2026-07-28 no envía una solicitud inversa JSON-RPC.`InputRequiredResult`¿Qué es esto ?
 
 ```json
 {
-  "capabilities": {"roots": {"listChanged": true}}
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "delete_choice": {
+        "method": "elicitation/create",
+        "params": {
+          "mode": "form",
+          "message": "Choose one matching note and confirm deletion.",
+          "requestedSchema": {
+            "type": "object",
+            "properties": {
+              "note_id": {
+                "type": "string",
+                "enum": ["note-3", "note-7", "note-14"]
+              },
+              "confirm": {"type": "boolean"}
+            },
+            "required": ["note_id", "confirm"]
+          }
+        }
+      }
+    },
+    "requestState": "integrity-protected-delete-state"
+  }
 }
 ```
 
-El servidor puede entonces llamar `roots/list`¿Qué es esto ?
-
-```json
-{"roots": [{"uri": "file:///Users/alice/Documents/Notes", "name": "Notes"}]}
-```
-
-Los servidores deben tratar las raíces como el límite: cualquier archivo leído o escrito fuera del conjunto de raíces es rechazado. Esto no es aplicado por el cliente (el servidor sigue siendo el código en el que confía el usuario), pero los servidores que cumplen con las especificaciones lo honran.
-
-Cuando el usuario agrega o elimina una raíz, el cliente envía `notifications/roots/list_changed`El servidor vuelve a llamar .`roots/list`y actualiza sus límites.
-
-### ¿Por qué las raíces son un cliente primitivo
-
-Los raíces son declarados por el cliente porque representan el modelo de consentimiento del usuario. El usuario le dijo a Claude Desktop "dar acceso a este servidor de notas a estos dos directorios". El servidor no puede ampliar ese alcance.
-
-### Elicitación: el modo de formulario por defecto
-
-`elicitation/create`toma un esquema de forma más un mensaje de lenguaje natural:
+El host hace la versión del formulario. El usuario puede aceptar, rechazar o rechazarlo explícitamente.`tools/call`con una identificación nueva:
 
 ```json
 {
-  "method": "elicitation/create",
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
   "params": {
-    "message": "Delete 'TPS report'? Multiple notes match; pick one.",
-    "requestedSchema": {
-      "type": "object",
-      "properties": {
-        "note_id": {
-          "type": "string",
-          "enum": ["note-3", "note-7", "note-14"]
-        },
-        "confirm": {"type": "boolean"}
-      },
-      "required": ["note_id", "confirm"]
+    "name": "notes_delete",
+    "arguments": {
+      "workspaceUri": "file:///Users/alice/Documents/Notes",
+      "title": "TPS report"
+    },
+    "inputResponses": {
+      "delete_choice": {
+        "action": "accept",
+        "content": {"note_id": "note-14", "confirm": true}
+      }
+    },
+    "requestState": "integrity-protected-delete-state",
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {
+        "elicitation": {"form": {}}
+      }
     }
   }
 }
 ```
 
-El cliente entrega un formulario, recoge la respuesta del usuario, devuelve:
+El servidor verifica el estado de eco, valida la respuesta contra el esquema esperado, verifica que la nota seleccionada estaba en el conjunto de candidatos firmados, reautorizará el espacio de trabajo, volverá a comprobar la contención y luego se eliminará.
+
+## Las negociaciones de capacidad son por solicitud
+
+Un cliente que admite la elicitación en modo de formulario declara:
 
 ```json
 {
-  "action": "accept",
-  "content": {"note_id": "note-14", "confirm": true}
+  "io.modelcontextprotocol/clientCapabilities": {
+    "elicitation": {"form": {}}
+  }
 }
 ```
 
-Tres acciones posibles:`accept`(el usuario lo llenó), `decline`(el usuario lo cerró), `cancel`(el usuario abortó toda la llamada de herramienta).
+Una capacidad de elicitación vacía,`"elicitation": {}`, sigue siendo equivalente a un apoyo de compatibilidad sólo en forma.`"elicitation": {"form": {}}`También admite el modo de formulario. Una declaración de URL solamente, `"elicitation": {"url": {}}`El servidor no debe incorporar un modo ausente de las capacidades de la solicitud actual, incluso si una solicitud anterior lo publicitó.
 
-Los esquemas de forma son planos  objetos anidados no son compatibles en v1. los SDK suelen rechazar cualquier cosa más compleja que una sola capa.
+Cada solicitud también lleva`io.modelcontextprotocol/protocolVersion`. Una versión que no está presente o no está en cadena se devuelve `-32602`Una cadena no soportada devuelve .`-32022`con exactitud`supported`y `requested`Datos. Datos de apoyo de elicitación faltantes o sólo en URL `-32021`con`data.requiredCapabilities`se fija en `{"elicitation":{"form":{}}}`¿ Qué ?
 
-### Elicitación: modo URL (SEP-1036, experimental)
+Un sobre sin un JSON-RPC `id`es una notificación. Procesarlo sin emitir un éxito o respuesta de error JSON-RPC. En Streamable HTTP, una notificación aceptada recibe `202 Accepted`Sin cuerpo.
 
-Nuevo en 2025-11-25. En lugar de un esquema, el servidor envía una URL:
+`clientInfo`El uso de la información de la información de usuario debe incluirse para el diagnóstico, pero es auto-relatado y no puede identificar al usuario para su autorización.
+
+El servidor implementa `server/discover`y los retornos `supportedVersions`, capacidades,`ttlMs`, y `cacheScope`con`resultType: "complete"`. No anuncia Roots para este diseño moderno.`tools/list`Ese resultado devuelve la determinística`notes_delete`descriptor, un objeto válido `inputSchema`, metadatos de identidad del servidor, y pistas de caché público.
+
+## Modo de formulario
+
+El modo de formulario utiliza un esquema JSON restringido diseñado para diálogos utilizables. La raíz es un objeto y sus propiedades son campos primitivos planos o matrices enum compatibles.
+
+Utilice el modo de formulario para:
+
+- elegir uno de varios candidatos;
+- la confirmación de una operación destructiva;
+- la recogida de preferencias no sensibles;
+- recoger un pequeño número de valores que el usuario, no el modelo, debe decidir.
+
+No utilice el modo de formulario para contraseñas, claves de API, tokens de acceso o credenciales de pago. Esos secretos pasarían por el cliente MCP y podrían llegar a registros o contexto del modelo.
+
+El servidor valida el contenido devuelto de nuevo. La validación del formulario del lado del cliente mejora la experiencia de usuario, pero no crea confianza.
+
+## Modo de URL
+
+El modo URL envía una URL web segura para una interacción fuera de banda:
 
 ```json
 {
   "method": "elicitation/create",
   "params": {
-    "message": "Sign in to GitHub",
-    "url": "https://github.com/login/oauth/authorize?client_id=..."
+    "mode": "url",
+    "message": "Connect the report service to continue.",
+    "url": "https://mcp.example.com/connect/report-service"
   }
 }
 ```
 
-El cliente abre la URL en un navegador, espera que se complete, regresa cuando el usuario regresa.
+Utilice cuando la información sensible debe ir directamente a un flujo web controlado por el servidor, como la autorización de terceros. El cliente muestra el destino completo y obtiene su consentimiento antes de abrirlo. No debe pre-recoger la URL.
 
-Nota de riesgo de derivación: la forma de respuesta de SEP-1036 todavía se está estableciendo; algunos SDK devuelven la URL de devolución, otros devuelven un token de finalización. Lea las notas de liberación de su SDK antes de usar el modo URL en producción.
+Un `accept`respuesta significa que el usuario ha aceptado abrir la URL. No demuestra que el flujo externo se haya completado. En el retraso, el servidor verifica su propio estado y completa o devuelve otro `input_required`el resultado.
 
-### Cuando la elicitación es la herramienta correcta
+La elicitación de URL no es un reemplazo de la autorización entre el cliente MCP y el servidor MCP. Es para una interacción externa que el servidor MCP necesita realizar en nombre del usuario. El servidor debe vincular al usuario del navegador al mismo principal autenticado que comenzó la operación MCP.
 
-- Confirmación del usuario antes de las acciones destructivas (indicio destructivo + elicitación).
-- Desambiguación (escolle uno de N coincidencias).
-- Configuración de ejecución inicial (claves API, directorios, preferencias).
-- Flujos de estilo OAuth (modo URL).
+## Ramas de respuesta
 
-### Cuando la elicitación es incorrecta
+Tratar las acciones como decisiones de producto, no como alias:
 
-- Rellenar los argumentos requeridos de una herramienta que el modelo podría haber pedido en prosa.
-- Las llamadas de alta frecuencia. La llamada interrumpe la conversación; no lo dispares dentro de un bucle.
-- Cualquier cosa que el servidor pueda validar después del hecho. Valida, devuelve un error, deja que el modelo le pregunte al usuario en texto.
+| Action | Meaning | Safe server behavior |
+|--------|---------|----------------------|
+| `accept` | User submitted the interaction | Validate content and continue |
+| `decline` | User explicitly refused | Return a complete, non-error refusal outcome |
+| `cancel` | User dismissed or could not finish | Stop safely and allow a later retry |
 
-### Puente humano en el circuito
+Nunca interprete el contenido faltante como consentimiento. Nunca convierta el declive en un bucle repetido.
 
-La elicitación más la muestreo juntos permiten el modelo "humano en el bucle" de MCP. El bucle de agente de un servidor puede pausar para la entrada del usuario (elicitación) o el razonamiento del modelo (muestreo).
+## Protección del Estado MRTR destructivo
+
+La lista de candidatos no puede vivir solo en un valor Base64 de solicitud o sin firmar. Un cliente controla todo lo que envía de vuelta.
+
+La lección firma una carga útil estatal que contiene:
+
+- el principal autenticado;
+- método de origen;
+- digestión de `workspaceUri`y `title`El artículo 1
+- las identidades permitidas de las notas indicadas en el formulario;
+- fase de operación;
+- corto plazo.
+
+Antes de la mutación, el servidor también verifica el registro de notas en vivo. Esto captura carreras de eliminación y un objetivo se desplazó fuera del espacio de trabajo después de que se mostró el formulario.
+
+En caso de una acción financiera o irreversible única, el HMAC por sí solo no impide que un estado válido se repita dentro de su vencimiento. Almacenar y consumir un nonce exactamente una vez en una tienda de reproducción compartida por cada instancia de manipulador. La lección inyecta una tienda limitada y cortada con TTL y mantiene su reclamo atómico mientras realiza la eliminación en memoria. Una base de datos de producción debe combinar la reclamación de noción y la mutación en una transacción o en un límite de escritura condicional equivalente.
+
+Valida la interacción antes de reclamar la noción.`cancel`No realiza ninguna mutación y deja el estado retrativable hasta la expiración.`decline`es terminal, así que la lección consume el nonce sin borrar nada.
 
 ```figure
 t3-roots-boundary
 ```
 
+## Construye el mismo
+
+`code/main.py`demuestra una moderna `notes_delete`herramienta:
+
+- `tools/list`devuelve un descriptor determinístico y cachéable con el espacio de trabajo y el esquema de título requeridos.
+- El alcance es explícito.`workspaceUri`¿Qué es eso?
+- La configuración del servidor autoriza ese espacio de trabajo para el director de la lección.
+- La normalización de URI rechaza la confusión de prefijos y el cruce codificado.
+- Cada eliminación destructiva requiere una elicitación en modo de forma.
+- La elicitación viaja hacia dentro.`resultType: "input_required"`¿ Qué ?
+- Firmado .`requestState`se une a la lista exacta de candidatos y a los argumentos originales.
+- Una tienda de reproducción inyectada rechaza el mismo estado aceptado o rechazado en todas las instancias del servidor.
+- El retraso utiliza un nuevo ID de solicitud y devuelve `resultType: "complete"`¿ Qué ?
+
+El almacenamiento de datos está en la memoria por lo que el comportamiento del protocolo es fácil de inspeccionar.
+
 ## Usalo
 
-`code/main.py`extiende el servidor de notas con:
+Desde la raíz del repositorio:
 
-- `roots/list`respuesta que el servidor vuelve a solicitar después de las notificaciones modificadas de la lista raíz.
-- ¿ Qué es esto ?`notes_delete`herramienta que utiliza `elicitation/create`para desambiguar cuando coincidan varias notas.
-- ¿ Qué es esto ?`notes_setup`herramienta que utiliza la elicitación de modo URL para abrir una página de configuración de primera ejecución (simulada).
-- Una verificación de límites que niegue operaciones en URI fuera de las raíces declaradas.
+```bash
+cd phases/13-tools-and-protocols/12-mcp-roots-and-elicitation/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
 
-La demostración tiene tres escenarios: happy path (un partido), desambiguación (tres partidos, incendios de elicitación), escritura fuera de raíz (rechazada).
+Los puntos de control previstos:
+
+- Discovery anuncia herramientas sin raíces.
+- Retorno de descubrimiento de herramientas `notes_delete`con`resultType`, identidad del servidor, y pistas de caché.
+- Solicitud de identificación`1`devuelve el formulario en `inputRequests.delete_choice`¿ Qué ?
+- Solicitud de identificación`2`se hace eco del estado firmado y completa la eliminación.
+- Un camino de prefijo y un camino de cruce codificado no pueden contenerse.
+- Un título cambiado no puede reutilizar el estado de confirmación original.
+- Una disminución deja la nota sin cambios.
+- Dos objetos del servidor que comparten el estado de nota y repetición no pueden ejecutar una confirmación.
+- Las declaraciones de formulario vacío y explícito funcionan, mientras que el soporte solo para URL devuelve exactas `-32021`requisitos de los formularios.
+- Las versiones no compatibles utilizan el mismo `-32022`forma de los datos.
+- Una notificación sin id no produce respuesta JSON-RPC.
 
 ## Envío
 
-Esta lección produce`outputs/skill-elicitation-form-designer.md`. Dado una herramienta que podría necesitar una confirmación o desambiguación del usuario, la habilidad diseña el esquema de formulario de solicitud y la plantilla de mensaje.
+`outputs/skill-elicitation-form-designer.md`Diseña el alcance explícito, las verificaciones de autorización, el formulario MRTR, las ramas de respuesta y la vinculación de estado. Se niega a tratar las raíces desactualizadas como una caja de arena o a recopilar secretos a través del modo de formulario.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`.Activa la ruta de desambiguación; confirma que la respuesta del usuario simulada se envía de nuevo a la herramienta.
-
-2. Añadir una nueva herramienta `notes_archive`¿Cómo se compara esto con el modelo de re-petición en texto?
-
-3. Implemente la elicitación de modo URL para un flujo OAuth de primera ejecución.
-
-4. Extenderse`roots/list`manipulación: cuando llega una notificación, el servidor debe volver a leer y revisar automáticamente los manuales de archivos abiertos que ahora podrían estar fuera de su alcance.
-
-5. Lea el hilo de discusión del tema SEP-1036 en GitHub. Identifique una pregunta abierta que afecte a cómo los servidores deben manejar las llamadas de retroceso en modo URL.
+1. Sustituye la memoria de repetición de almacenamiento con SQLite. Utilice una transacción para reclamar el noce y borrar la nota, luego demuestre que dos procesos no pueden comprometerse ambos.
+2. Añadir`url`• la capacidad de negociación y un flujo de configuración fuera de banda.`inputResponses`¿ Qué ?
+3. Reemplaza el mapa de notas en memoria con una base de datos temporal de SQLite. Reverifique la autorización y contención dentro de la transacción de mutación.
+4. Añadir una política de enlace simbólico para una implementación real del sistema de archivos. Explicar por qué la contención léxica URI sola no puede detener una fuga de enlace simbólico.
+5. Diseñar un adaptador 2025-11-25 que mapee la salida del procesador MRTR moderno a la elicitación iniciada por el servidor heredado. Manténgalo aislado del procesador actual.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Root | "Consent boundary" | URI the client has allowed the server to touch |
-| `roots/list` | "Server asks for scope" | Client returns the current root set |
-| `notifications/roots/list_changed` | "User changed scope" | Client signals the root set has mutated |
-| Elicitation | "Ask the user mid-call" | Server-initiated request for structured user input |
-| `elicitation/create` | "The method" | JSON-RPC method for elicitation requests |
-| Form mode | "Schema-driven form" | Flat JSON Schema rendered as a form in the client UI |
-| URL mode | "Browser redirect" | SEP-1036 experimental; opens a URL and waits |
-| `accept` / `decline` / `cancel` | "User response outcomes" | Three branches the server handles |
-| Disambiguation | "Pick one" | Common elicitation use case when a tool has N candidates |
-| Flat form | "Top-level properties only" | Elicitation schemas cannot nest |
+| Term | Meaning in 2026-07-28 |
+|------|------------------------|
+| Roots | Deprecated informational workspace hints, not authorization or sandboxing |
+| Explicit scope | Workspace, directory, or resource handle visible in request arguments |
+| Containment | Normalized path-component check that keeps a target inside a boundary |
+| Elicitation | Client feature for obtaining user input during an MCP operation |
+| Form mode | In-band structured user input using a restricted flat schema |
+| URL mode | Out-of-band interaction for sensitive or external workflows |
+| MRTR | Stateless input-required result followed by a fresh retry |
+| `requestState` | Opaque state echoed exactly and integrity-checked by the server |
+| Decline | Explicit user refusal |
+| Cancel | Dismissal or incomplete interaction without approval |
+
+## Compatibilidad con el legado
+
+Para un compañero fijado a 2025-11-25, `roots/list`¿ Qué ?`notifications/roots/list_changed`, y en vivo por el servidor iniciado `elicitation/create`Etiquetar el legado del adaptador. No permita que una lista de raíz heredada para eludir la autorización del servidor, y no llevar supuestos de sesión de protocolo en el procesador moderno.
 
 ## Leer más
 
-- [MCP — Client roots spec](https://modelcontextprotocol.io/specification/draft/client/roots) Referencia a las raíces canónicas
-- [MCP — Client elicitation spec](https://modelcontextprotocol.io/specification/draft/client/elicitation) referencia canónica de la obtención
-- [Cisco — What's new in MCP elicitation, structured content, OAuth enhancements](https://blogs.cisco.com/developer/whats-new-in-mcp-elicitation-structured-content-and-oauth-enhancements) 2025-11-25 adiciones de paso por paso
-- [MCP — GitHub SEP-1036](https://github.com/modelcontextprotocol/modelcontextprotocol) Proposición de obtención de datos en modo URL (experimentales, riesgo de deriva)
-- [The New Stack — How elicitation brings human-in-the-loop to AI tools](https://thenewstack.io/how-elicitation-in-mcp-brings-human-in-the-loop-to-ai-tools/) UX de paso
+- [MCP 2026-07-28 Elicitation](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation)
+- [MCP 2026-07-28 Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP 2026-07-28 Roots deprecation](https://modelcontextprotocol.io/specification/2026-07-28/client/roots)
+- [MCP 2026-07-28 server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)

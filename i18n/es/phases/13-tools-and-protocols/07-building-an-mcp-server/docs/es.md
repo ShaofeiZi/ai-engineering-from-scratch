@@ -1,124 +1,153 @@
-# Construir un servidor MCP  Python + SDKs de tipoScript
+# Construir un servidor MCP: Python sin estado y TypeScript
 
-> La mayoría de los tutoriales MCP sólo muestran mundos de saludos de estudio. Un servidor real expone herramientas más recursos más instrucciones, maneja la negociación de capacidades, emite errores estructurados y funciona de la misma manera en los SDK. Esta lección construye un servidor de notas de extremo a extremo: stdlib stdio transport, JSON-RPC despacho, los tres servidores primitivos, y un estilo de función pura que cae en el FastMCP del SDK Python o el SDK TypeScript cuando se gradúa.
+> Un servidor MCP moderno no recuerda un apretón de manos. Valida los metadatos en cada solicitud, ejecuta un procesador y devuelve un resultado tipado.
 
 **Type:** Build
-**Languages:** Python (stdlib, stdio MCP server)
-**Prerequisites:** Phase 13 · 06 (MCP fundamentals)
-**Time:** ~75 minutes
+**Languages:** Python, TypeScript
+**Prerequisites:** Phase 13, Lesson 06
+**Time:** ~85 minutes
 
 ## Objetivos de aprendizaje
 
-- Implementación `initialize`¿ Qué ?`tools/list`¿ Qué ?`tools/call`¿ Qué ?`resources/list`¿ Qué ?`resources/read`¿ Qué ?`prompts/list`, y `prompts/get`Los métodos.
-- Escriba un bucle de envío que lee mensajes JSON-RPC de stdin y escribe respuestas a stdout.
-- Emite respuestas de errores estructuradas por la especificación JSON-RPC 2.0 y los códigos adicionales de MCP.
-- Graduar una implementación de stdlib en FastMCP (Python SDK) o el SDK de TypeScript sin reescribir la lógica de la herramienta.
+- Implementación obligatoria `server/discover`para MCP `2026-07-28`¿ Qué ?
+- Valida la versión del protocolo y las capacidades del cliente en cada solicitud.
+- Exponer herramientas, recursos y instrucciones con ordenamiento de lista determinista.
+- Regreso .`resultType`, identidad del servidor, y indicios de caché sobre los resultados correctos.
+- Servir el mismo contrato sin estado sobre el estudio de línea nueva y limitada en Python y TypeScript.
 
 ## El problema
 
-Antes de poder utilizar un transporte remoto (fase 13 · 09) o una capa auth (fase 13 · 16), necesita un servidor local limpio. local significa stdio: el servidor es generado por el cliente como un proceso hijo, los mensajes fluyen sobre stdin/stdout newline-delimited.
+Un servidor que almacena las capacidades del cliente después del primer mensaje es fácil de construir y difícil de operar. El mismo proceso puede servir a clientes secuenciales. Una solicitud remota puede aterrizar en un trabajador diferente. Una declaración de capacidad obsoleta puede filtrar el comportamiento a través de los límites de autorización.
 
-La especificación 2025-11-25 prescribe que los mensajes de estudio se codifican como objetos JSON con una `\n`No hay SSE aquí; SSE era el viejo modo remoto y se está eliminando a mediados de 2026 (el servidor Rovo MCP de Atlassian lo depreció el 30 de junio de 2026; Keboola el 1 de abril de 2026).
+MCP `2026-07-28`La aplicación puede mantener notas duraderas, trabajos o manipulaciones de estado explícito. Lo que no puede mantener es el estado de protocolo oculto que cambia la forma en que se descifre una solicitud posterior.
 
-Un servidor de notas es una buena forma porque ejerce las tres primitivas del servidor.`notes_create`Los recursos exponen los datos (`notes://{id}`Instrucciones de plantillas de buques (`review_note`La forma de esta lección se generaliza a cualquier dominio.
+Esta lección construye un servidor de notas dos veces. Las versiones de Python y TypeScript usan solo sus bibliotecas estándar para el núcleo del protocolo. Ambos exponen los mismos métodos y aplican el mismo contrato de cable.
 
 ## El concepto
 
-### Bucle de envío
+### El moderno bucle de envío
 
+```text
+read one JSON-RPC line
+parse the envelope
+if it is a notification, do not respond
+validate params._meta for this request
+route by method
+wrap success with resultType and serverInfo
+write one JSON-RPC response line
+forget request-scoped metadata
 ```
-loop:
-  line = stdin.readline()
-  msg = json.loads(line)
-  if has id:
-    handle request -> write response
-  else:
-    handle notification -> no response
+
+Tres reglas del estudio siguen siendo importantes:
+
+- Escriba sólo mensajes JSON-RPC a stdout. Envía diagnósticos a stderr.
+- Delimitar los mensajes con una línea nueva y vertiente cada respuesta.
+- Salir inmediatamente cuando el stdin llegue a la Oficina de Ejecuciones.
+
+La vida útil del proceso es una vida útil del transporte.
+
+### Validación de la solicitud
+
+Cada solicitud debe contener:
+
+```json
+{
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "notes-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
 ```
 
-Tres reglas:
+Se requieren los dos primeros campos. `clientInfo`Se recomienda validar una forma de identidad actual, pero no tratarla como autenticación.
 
-- No imprima nada en stdout que no sea un envase JSON-RPC.
-- Cada solicitud debe coincidir con una respuesta que contenga la misma`id`¿ Qué ?
-- No se deben responder a las notificaciones.
+Si la versión no está soportada, devuelva el código `-32022`con`requested`y `supported`. Los metadatos de la solicitud faltantes son parámetros inválidos, código `-32602`Nunca llenes los campos que faltan de una llamada anterior.
 
-### Implementación `initialize`
+### Descubrimiento obligatorio
+
+Los servidores modernos deben implementar `server/discover`. Un resultado completo de descubrimiento incluye versiones modernas compatibles, capacidades, instrucciones opcionales, sugerencias de caché y la identidad del servidor en el resultado `_meta`¿Qué es esto ?
+
+```json
+{
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "tools": {"listChanged": false},
+    "resources": {"listChanged": false, "subscribe": false},
+    "prompts": {"listChanged": false}
+  },
+  "ttlMs": 3600000,
+  "cacheScope": "public",
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "notes-server",
+      "version": "2.0.0"
+    }
+  }
+}
+```
+
+Discovery no desbloquea el servidor. Un cliente puede llamar`tools/list`sin llamar descubrimiento porque`tools/list`ya contiene los mismos metadatos de la solicitud.
+
+### Herramientas
+
+`tools/list`El orden estable mejora la caché de la respuesta y mantiene el contexto del modelo estable.`ttlMs`y `cacheScope`¿ Qué ?
+
+`tools/call`devuelve bloques de contenido y `isError`. Utilice un error JSON-RPC cuando el envase del protocolo o los parámetros del método son inválidos.`isError: true`cuando se ejecuta una invocación de herramienta válida pero la herramienta en sí misma falla.
+
+Las anotaciones de las herramientas siguen siendo indicios, no ejecuciones:
+
+- `readOnlyHint`
+- `destructiveHint`
+- `idempotentHint`
+- `openWorldHint`
+
+El host debe usarlos para la confirmación y presentación. El servidor debe seguir aplicando la autorización real.
+
+### Recursos
+
+`resources/list`devuelve descriptores de URI estables. `resources/read`devuelve el contenido escrito. ambos son caché en `2026-07-28`, por lo que ambos incluyen`ttlMs`y `cacheScope`¿ Qué ?
+
+Usar`cacheScope: "private"`Una caché compartida no debe reutilizar una respuesta privada en contextos de autorización.
+
+La entrega de cambios moderna no utiliza `resources/subscribe`Un cliente abre .`subscriptions/listen`y las peticiones `resourceSubscriptions`La lección 10 construye ese flujo.
+
+### Las instrucciones
+
+`prompts/list`es cachéable y determinista. `prompts/get`El resultado de la solicitud de solicitud de presentación está completo, pero no es uno de los resultados cachéables o de lectura que requieren sugerencias de caché.
+
+### Cada resultado exitoso es escrito
+
+Los ejemplos utilizan un envase para cada éxito:
 
 ```python
-def initialize(params):
+def complete(payload):
     return {
-        "protocolVersion": "2025-11-25",
-        "capabilities": {
-            "tools": {"listChanged": True},
-            "resources": {"listChanged": True, "subscribe": False},
-            "prompts": {"listChanged": False},
-        },
-        "serverInfo": {"name": "notes", "version": "1.0.0"},
+        "resultType": "complete",
+        **payload,
+        "_meta": {SERVER_INFO_KEY: SERVER_INFO},
     }
 ```
 
-El cliente depende de la capacidad establecida para las funciones de la puerta.
+Lista, lectura y manipulador de descubrimientos añadir `ttlMs`Además`cacheScope`La centralización de este envoltorio evita que un manipulador omita silenciosamente los campos de resultados modernos.
 
-### Implementación `tools/list`y `tools/call`
+### No se iniciaron solicitudes del servidor
 
-`tools/list`retorno `{tools: [...]}`con cada entrada que tenga `name`¿ Qué ?`description`¿ Qué ?`inputSchema`- ¿ Qué ?`tools/call`¿ Qué es ?`{name, arguments}`y los retornos `{content: [blocks], isError: bool}`¿ Qué ?
+Un servidor moderno puede enviar notificaciones relacionadas con una solicitud de cliente o notificaciones en una apertura de cliente `subscriptions/listen`No debe enviar su propia solicitud JSON-RPC.
 
-Los bloques de contenido se escriben.
+Cuando un manipulador necesita muestreo, elicitación o entrada de raíces, devuelve un `input_required`El cliente cumple las solicitudes de entrada integradas y vuelve a probar el método original con un nuevo ID de solicitud.
 
-```json
-{"type": "text", "text": "Found 2 notes"}
-{"type": "resource", "resource": {"uri": "notes://14", "text": "..."}}
-{"type": "image", "data": "<base64>", "mimeType": "image/png"}
-```
+### Compatibilidad explícita con el legado
 
-Los errores de herramienta vienen en dos formas. Los errores de nivel de protocolo (método desconocido, parámetros malos) son errores JSON-RPC. Los errores de nivel de herramienta (llamada válida pero la herramienta falló) se devuelven como `{content: [...], isError: true}`Eso permite al modelo ver el fracaso en su contexto.
+Un servidor de doble era también puede implementar la `2025-11-25`El sistema de control de la carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de carga de`_meta`los campos están presentes y el comportamiento legado cuando recibe `initialize`¿ Qué ?
 
-### Recursos de ejecución
-
-Los recursos son de lectura única por diseño. `resources/list`devuelve un manifiesto; `resources/read`Los URI pueden ser:`file://...`¿ Qué ?`http://...`, o un esquema de costumbre como `notes://`¿ Qué ?
-
-Cuando expones datos como un recurso en lugar de una herramienta:
-
-- El modelo no lo "llamará"; el cliente puede inyectarlo en contexto a petición del usuario.
-- Las suscripciones permiten al servidor impulsar las actualizaciones cuando el recurso cambia (fase 13 · 10).
-- La fase 13 · 14 se extiende con `ui://`para recursos interactivos.
-
-### Instrucciones de ejecución
-
-Las instrucciones son plantillas con argumentos nombrados. El anfitrión las muestra como comandos de corte.`review_note`¿ Cómo se puede hacer esto ?`note_id`argumentos y producir una plantilla de solicitud de mensajes múltiples que el cliente alimenta a su modelo.
-
-### Las sutilezas del transporte de estudio
-
-- JSON de línea nueva y limitada.
-- No se haga un amortiguador.`sys.stdout.flush()`después de cada escrito.
-- El cliente controla la vida útil. Cuando el stdin cierre (EOF), salga limpio.
-- No maneje SIGPIPE en silencio; ingrese y salga.
-
-### Anotadas
-
-Cada herramienta puede llevar`annotations`que describe las propiedades de seguridad:
-
-- `readOnlyHint: true` lectura pura, seguro para volver a intentarlo.
-- `destructiveHint: true` efectos secundarios irreversibles; el cliente debe confirmarlo.
-- `idempotentHint: true` las mismas entradas producen las mismas salidas.
-- `openWorldHint: true` interactuar con sistemas externos.
-
-El cliente utiliza estos para decidir UX (diálogos de confirmación, indicadores de estado) y enrutamiento (fase 13 · 17).
-
-### Camino de graduación
-
-El servidor de stdlib en `code/main.py`FastMCP (Python) desploma la misma lógica al estilo decorador:
-
-```python
-from fastmcp import FastMCP
-app = FastMCP("notes")
-
-@app.tool()
-def notes_search(query: str, limit: int = 10) -> list[dict]:
-    ...
-```
-
-El SDK TypeScript tiene una forma equivalente. El camino de graduación es de entrada cuando estás listo; los conceptos (capacidades, envío, bloques de contenido) son los mismos.
+No ponga un `2026-07-28`No se puede hacer un sello de la mano.`resultType`El código de esta lección es deliberadamente moderno sólo para que sus invariantes permanezcan visibles.
 
 ```figure
 t3-dispatch-loop
@@ -126,53 +155,52 @@ t3-dispatch-loop
 
 ## Usalo
 
-`code/main.py`es un servidor completo de notas MCP sobre el estudio, sólo stdlib.`initialize`¿ Qué ?`tools/list`¿ Qué ?`tools/call`para tres herramientas (`notes_list`¿ Qué ?`notes_search`¿ Qué ?`notes_create`), `resources/list`y `resources/read`para cada nota, y un `review_note`Puede ejecutarlo mediante el envío de mensajes JSON-RPC:
+Ejecutar la demostración y pruebas finitas del servidor Python:
 
+```bash
+cd code
+python3 main.py --demo
+python3 -m unittest discover tests -v
 ```
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | python main.py
+
+Ejecutar el puerto TypeScript con un ejecutor TypeScript:
+
+```bash
+npx tsx main.ts --demo
 ```
 
-Qué ver:
-
-- El despachador es un`dict[str, Callable]`teclado por nombre del método.
-- Cada ejecutor de herramientas devuelve una lista de bloques de contenido, no una cadena desnudo.
-- `isError: true`se fija cuando el ejecutor levante.
+La demostración envía .`server/discover`, enumera cada primitivo, invoca herramientas y muestra un error de versión no soportado.
 
 ## Envío
 
-Esta lección produce`outputs/skill-mcp-server-scaffolder.md`. Dado un dominio (notas, entradas, archivos, base de datos), la habilidad se basa en un servidor MCP con las herramientas / recursos / instrucciones adecuadas para dividir y el camino de graduación de SDK.
+Esta lección nos lleva .`outputs/skill-mcp-server-scaffolder.md`Produce un plan de servidor moderno con un contrato de descubrimiento, validación por solicitud, listas deterministas cachéables y un adaptador heredado aislado opcional.
 
 ## Los ejercicios
 
-1. - ¿ Qué ?`code/main.py`y conducir con mensajes JSON-RPC construidos a mano.`notes_create`, entonces`resources/read`para recuperar la nueva nota.
-
-2. Añadir un`notes_delete`herramienta con `annotations: {destructiveHint: true}`. Verificar que el cliente aparecería en un diálogo de confirmación (esto requiere un host real; Claude Desktop funciona).
-
-3. Implementación `resources/subscribe`Así que el servidor empuja`notifications/resources/updated`Cuando se modifica una nota, añada una tarea de mantenimiento.
-
-4. Portar el servidor a FastMCP. El archivo Python debe reducirse a menos de 80 líneas. El comportamiento del cable debe ser idéntico; verifique con el mismo arnés de prueba JSON-RPC.
-
-5. Lea la especificación.`server/tools`Sección y identificar un campo de una definición de herramienta no implementada en el servidor de esta lección. (Intenta: hay varios; escoge uno y agregue).
+1. Eliminar las capacidades de una solicitud y demostrar que el servidor no reutiliza la declaración de la solicitud anterior.
+2. Revierten el `TOOLS`¿ Qué ?`PROMPTS`Confirmar que todos los resultados de la lista permanecen estables.
+3. Añadir un destructivo `notes_delete`La aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la aplicación de la ley es.`destructiveHint`sólo como una pista de experiencia.
+4. Añadir`resources/templates/list`con`ttlMs`¿ Qué ?`cacheScope`, y el orden determinista.
+5. Construir un adaptador separado para `2025-11-25`Añadir pruebas que demuestren que una solicitud moderna nunca entra.
 
 ## Términos clave
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP server | "The thing that exposes tools" | Process that speaks MCP JSON-RPC over stdio or HTTP |
-| stdio transport | "Child process model" | Server is spawned by client; communicates via stdin/stdout |
-| Dispatcher | "Method router" | Map of JSON-RPC method name to handler function |
-| Content block | "Tool result chunk" | Typed element in the `content` array of a tool response |
-| `isError` | "Tool-level failure" | Signals the tool failed; distinguishes from JSON-RPC error |
-| Annotations | "Safety hints" | readOnly / destructive / idempotent / openWorld flags |
-| FastMCP | "Python SDK" | Decorator-based higher-level framework on top of the MCP protocol |
-| Resource URI | "Addressable data" | `file://`, `db://`, or custom scheme identifying a resource |
-| Prompt template | "Slash-command brief" | Server-supplied template with argument slots for host UIs |
-| Capability declaration | "Feature toggle" | Per-primitive flags declared in `initialize` |
+| Term | Meaning |
+|------|---------|
+| Stateless server | Handles each request from its own metadata without protocol-session memory |
+| `server/discover` | Mandatory modern method that advertises versions and capabilities |
+| Complete result | Successful modern result with `resultType: "complete"` |
+| Cacheable result | Discovery, list, or resource-read result with `ttlMs` and `cacheScope` |
+| Deterministic list | Same logical registry produces the same item order |
+| Server identity | Recommended `io.modelcontextprotocol/serverInfo` in result `_meta` |
+| Tool error | Valid tool call that returns content with `isError: true` |
+| Protocol error | Invalid JSON-RPC or MCP request returned through `error` |
 
 ## Leer más
 
-- [Model Context Protocol — Python SDK](https://github.com/modelcontextprotocol/python-sdk) la implementación de Python de referencia
-- [Model Context Protocol — TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) Implementación de las TS paralelas
-- [FastMCP — server framework](https://gofastmcp.com/) API Python de estilo decorador para servidores MCP
-- [MCP — Quickstart server guide](https://modelcontextprotocol.io/quickstart/server) Tutorial de extremo a extremo utilizando cualquiera de los SDK
-- [MCP — Server tools spec](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) referencia completa para las herramientas/* mensajes
+- [MCP Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/)
+- [MCP Server Discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)
+- [MCP Resources](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
+- [MCP Prompts](https://modelcontextprotocol.io/specification/2026-07-28/server/prompts)
+- [MCP stdio Transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)

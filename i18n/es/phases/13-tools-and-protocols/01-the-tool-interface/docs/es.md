@@ -152,5 +152,5 @@ Esta lección produce`outputs/skill-tool-interface-reviewer.md`. Dado un borrado
 - [OpenAI — Function calling guide](https://platform.openai.com/docs/guides/function-calling) referencia canónica para las declaraciones de herramientas y formas de llamadas de estilo OpenAI
 - [Anthropic — Tool use overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview) El de Claude `tool_use`- ¿ Qué ?`tool_result`formato de bloque
 - [Google — Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling)¿ Qué es esto ?`functionDeclarations`y semántica paralela en Gemini
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) la generalización agnóstica del proveedor de la interfaz de herramientas
+- [Model Context Protocol — Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) la generalización actual sin estado y agnóstica del proveedor de la interfaz de herramientas
 - [JSON Schema — 2020-12 release notes](https://json-schema.org/draft/2020-12/release-notes) el dialecto de esquema de cada herramienta moderna API habla
