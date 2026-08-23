@@ -41,17 +41,8 @@
 
 ### مراحل الدعوة الخمسة
 
-```mermaid
-stateDiagram-v2
-  [*] --> Discovered
-  Discovered --> Eligible: actor and policy allow
-  Eligible --> Selected: explicit name or routing match
-  Selected --> Activated: body enters context
-  Activated --> Executing: permitted tool or model step begins
-  Executing --> Completed: output verified
-  Discovered --> Denied: actor or policy blocks
-  Eligible --> NotSelected: routing threshold not met
-  Activated --> Blocked: capability or approval unavailable
+```figure
+skill-invocation-stages
 ```
 
 استخدم هذه الكلمات بدقة:
@@ -138,14 +129,8 @@ score(s, x) = capability_match + trigger_match + context_match - exclusion_match
 
 قد يكون الدرجة الدقيقة قرارًا لدرجة الماجستير بدلاً من الرياضيات. لا يزال مبدأ الهندسة ينطبق: يجب أن يتجاوز اختيار عتبة ومهارة تنافسية. عندما تكون الأدلة ضعيفة ، فلتمتنع.
 
-```mermaid
-flowchart TD
-  Q[User request] --> E[Filter by actor eligibility]
-  E --> R[Compare request with descriptions]
-  R --> M{One clear match?}
-  M -->|yes| A[Activate selected skill]
-  M -->|no, ambiguous| C[Ask or use ordinary reasoning]
-  M -->|no match| N[Do not activate]
+```figure
+skill-routing-abstention
 ```
 
 بالنسبة للمهارات ذات التأثير العالي، قد يكون التوجيه ضمني غير مناسب حتى مع وصف قوي. استخدم سياسة الإنسان فقط عندما تتجاوز تكلفة الإيجابية الكاذبة ملاءمة الاختيار الآلي.
@@ -191,12 +176,8 @@ flowchart TD
 
 حجة الدعوة تتجاوز عدة حدود:
 
-```mermaid
-flowchart LR
-  U[User text] --> P[Host parser]
-  P --> B[Bound arguments]
-  B --> C[Skill context]
-  C --> T[Typed tool call]
+```figure
+skill-argument-boundaries
 ```
 
 في كل حدود، الحفاظ على النية دون التعامل مع النص كرمز.
@@ -214,16 +195,8 @@ flowchart LR
 
 هذا يزيل عدم اليقين في التوجيه لكنه يخلق اعتماد على API في الوقت التشغيل. ابق هذا المعدل خارج الجسم المحمول:
 
-```mermaid
-flowchart LR
-  P[Portable bundle] --> S[SKILL.md]
-  P --> R[references]
-  P --> C[scripts]
-  H[Host adapter] --> D[discovery path]
-  H --> A[explicit activation API]
-  H --> I[invocation policy]
-  H --> B[argument binding]
-  H --> P
+```figure
+skill-host-adapter
 ```
 
 يجب أن تظل المهارة قابلة للتفاهم عندما يفتحها عميل متوافق مختلف.

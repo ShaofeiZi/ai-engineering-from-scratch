@@ -63,14 +63,8 @@
 
 ### الحكم منفصل عن العمل التحديدي
 
-```mermaid
-flowchart LR
-  T[Task request] --> J1[Model: classify task and choose branch]
-  J1 --> R[Reference: load branch-specific rules]
-  R --> S[Script or tool: collect deterministic evidence]
-  S --> J2[Model: interpret evidence]
-  J2 --> A[Artifact contract]
-  A --> V[Deterministic and human verification]
+```figure
+skill-workflow-extraction
 ```
 
 استخدم النموذج الحكم للتصنيف، وتحديد الأولويات، والإختلاط، والغموض. استخدم النصوص أو الأدوات لتحليل، والحساب، والتحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق.
@@ -96,14 +90,8 @@ flowchart LR
 
 ### ستة طبقات تقييم
 
-```mermaid
-flowchart TB
-  L1[1. Package structure] --> L2[2. Trigger routing]
-  L2 --> L3[3. Instruction and artifact behavior]
-  L3 --> L4[4. Script correctness]
-  L4 --> L5[5. Safety and authority]
-  L5 --> L6[6. Packaging and portability]
-  L6 --> G{Release gate}
+```figure
+skill-eval-layers
 ```
 
 كل طبقة تجيب على سؤال مختلف لا يمكن أن يستبدل المرور الآخر
@@ -268,13 +256,8 @@ treatment: same model + same tools + same task, skill available
 
 يجب أن يتم تركيب اختبار الإطلاق في وجهة نظيفة، ثم تشغيل التحقق من التحقق من النسخة المثبتة.
 
-```mermaid
-flowchart LR
-  S[Source bundle] --> M[Build manifest]
-  M --> I[Install complete tree]
-  I --> H[Verify hashes and paths]
-  H --> D[Discover installed skill]
-  D --> E[Run eval smoke test]
+```figure
+skill-package-install
 ```
 
 اختبار فقط شجرة المصدر يفتقد أخطاء التركيب، فقدان البطاقات التنفيذية، الإشارات المسطحة، أسماء أعادة الكتابة، والملفات القديمة التي تبقى من الإصدارات القديمة.
@@ -458,23 +441,8 @@ python3 -m unittest discover -s code/tests -v
 
 استخدم هذه الحلقة الإصدارية لكل مراجعة مهارة:
 
-```mermaid
-flowchart LR
-  O[Observe real workflow] --> C[Define contract]
-  C --> P[Package procedure and helpers]
-  P --> E[Run layered evals]
-  E --> F{Failure class}
-  F -->|routing| D[Edit description or policy]
-  F -->|behavior| B[Edit body, references, or tools]
-  F -->|script| S[Fix deterministic code]
-  F -->|safety| A[Reduce authority or strengthen isolation]
-  F -->|portability| H[Add adapter, fallback, or incompatibility]
-  D --> E
-  B --> E
-  S --> E
-  A --> E
-  H --> E
-  E -->|passes gate| R[Release complete bundle]
+```figure
+skill-authoring-loop
 ```
 
 تغيير الطبقة المسؤولة عن الفشل لا تضع المزيد من الكلمات في`SKILL.md`عندما تكون المشكلة الحقيقية هي جهاز تثبيت يضع الإشارات أو صندوق رمل يضع المجلد المنزلي في المجال.

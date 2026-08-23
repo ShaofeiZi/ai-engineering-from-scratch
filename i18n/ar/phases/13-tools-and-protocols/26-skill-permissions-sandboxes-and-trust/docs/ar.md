@@ -49,17 +49,8 @@
 - يوافق على الإجراءات التالية؛
 - إثبات النتيجة صحيحة
 
-```mermaid
-flowchart LR
-  S[Activated skill] --> M[Model proposes action]
-  M --> C[Capability registry]
-  C --> P[Permission policy]
-  P --> A{Approval needed?}
-  A -->|yes, granted| X[Isolated executor]
-  A -->|no| X
-  A -->|denied| D[Stop and report]
-  X --> O[Observation]
-  O --> V[Verification gate]
+```figure
+skill-authority-chain
 ```
 
 كل مربع يمكن تشكيله بشكل مستقل. إزالة واحد يضعف خاصية مختلفة.
@@ -96,18 +87,8 @@ flowchart LR
 
 حساب المسار يخرج من مساحة العمل، والعالم يطابق كثيرا، والجربة المكررة يكرر كتابة، أو خطوة التنظيف تقوم بحذف المجلد المولود خطأ.
 
-```mermaid
-flowchart TB
-  P[Skill package] --> I[Model instructions]
-  R[References and assets] --> I
-  U[Untrusted task content] --> I
-  I --> Q[Requested actions]
-  SC[Scripts and dependencies] --> Q
-  Q --> H[Host tools and executor]
-  H --> F[Files]
-  H --> N[Network]
-  H --> E[Environment and credentials]
-  H --> X[External side effects]
+```figure
+skill-trust-surface
 ```
 
 رسم هذه الرسم البياني لكل مهارة عالية التأثير، ووضع علامة على من يسيطر على كل حافة و أي حدود تؤكد ذلك.
@@ -246,17 +227,8 @@ WORKSPACE=/workspace/project
 
 استخدام الموافقة على الإجراءات التي لا يمكن تفويض سلطتها بأمان مسبقا.
 
-```mermaid
-flowchart TD
-  A[Proposed action] --> R{Reversible and local?}
-  R -->|yes| S{Inside pre-approved scope?}
-  S -->|yes| E[Execute in sandbox]
-  S -->|no| P[Ask for scoped approval]
-  R -->|no| H{External, destructive, costly, or sensitive?}
-  H -->|yes| P
-  H -->|no| E
-  P -->|granted| E
-  P -->|denied| D[Stop]
+```figure
+skill-approval-decision
 ```
 
 يجب أن يظهر الموافقة الهدف الفعلي والنتيجة. "تسمح بالفشل؟" ضعيف. "تسمح للمراجعة`publish_release`أداة لنشر الإصدار 2.4.0 إلى سجل المرحلة؟" يمكن العمل عليها.

@@ -33,15 +33,8 @@
 
 تعامل نظام الملفات كمدخول مصدر. لا تنشر المسارات الخام مباشرة إلى النموذج.
 
-```mermaid
-flowchart LR
-  R[Configured roots] --> W[Enumerate immediate skill dirs]
-  W --> P[Find SKILL.md]
-  P --> V[Validate package]
-  V --> S[Attach scope and provenance]
-  S --> C[Resolve collisions]
-  C --> B[Apply catalog budget]
-  B --> O[Publish name, description, path]
+```figure
+skill-discovery-pipeline
 ```
 
 يجب أن تنتج كل مرحلة بيانات مهيكلة وفشل مهيكلي. يجب أن يرد سجل الكشف على:
@@ -101,10 +94,8 @@ flowchart LR
 
 تُصف المواصفات المُحددة لمهارات العميل الحمل المُرحَّل، والمركز هو أنّ لكل مستوى غرض مختلف.
 
-```mermaid
-flowchart TB
-  L1[Level 1: catalog metadata<br/>name, description, source] -->|skill selected| L2[Level 2: SKILL.md body<br/>workflow and decision map]
-  L2 -->|branch requires detail| L3[Level 3: references, scripts, assets<br/>task-specific material]
+```figure
+skill-disclosure-levels
 ```
 
 #### المستوى 1: البيانات المعدنية الكتالوجية
@@ -164,12 +155,8 @@ description: Validate a release candidate and produce a readiness report. Use wh
 
 حافظ على الرسم البياني للمراجعة مشحونة.`SKILL.md`وتجنب السلاسل العميقة. قفزة واحدة تجعل الوصول قابلة للتحقق وتقلل من فرصة أن القيود المطلوبة لا تدخل أبداً في السياق.
 
-```mermaid
-flowchart LR
-  S[SKILL.md] --> P[python-release.md]
-  S --> C[container-release.md]
-  S --> D[docs-release.md]
-  S --> T[report-template.md]
+```figure
+skill-reference-map
 ```
 
 ### ميزانية الكتالوجية والسياق النشط هي ميزانيات مختلفة
@@ -201,16 +188,8 @@ references/external-link -> /private/company-secrets
 
 حل جذور الحزمة والمرشح مع أساسية النظام الملفي، رفض المدخلات المطلقة، وتحقق من أن المرشح المحل يبقى تحت الجذر المحل. قرر ما إذا كان الروابط المماثلة مسموحة قبل اكتشاف. إذا تم السماح بذلك، تحقق من الهدف المحل في كل مرة.
 
-```mermaid
-flowchart LR
-  I[Requested relative path] --> A{Absolute or parent escape?}
-  A -->|yes| X[Reject]
-  A -->|no| R[Resolve against package root]
-  R --> U{Resolved path under root?}
-  U -->|no| X
-  U -->|yes| F{Expected file type?}
-  F -->|no| X
-  F -->|yes| L[Load with size limit]
+```figure
+skill-resource-containment
 ```
 
 لا يُؤكد احتواء المسار ثقة المحتوى. إشارة صالحة داخل الحزمة لا تزال قد تحتوي على تعليمات ضارة. يتعامل الدروس 26 مع هذا التهديد.

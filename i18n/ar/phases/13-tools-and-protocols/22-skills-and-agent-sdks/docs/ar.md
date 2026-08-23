@@ -192,16 +192,8 @@ npx skills remove skill-contract-reviewer
 
 مهارة العميل هو دليل نقطة دخولها هي`SKILL.md`. يحتوي ملف الإدخال على المادة الأمامية YAML تليها تعليمات Markdown. يمكن أن يحتوي الإدراج أيضًا على مرجعيات وسكرتات وأصول.
 
-```mermaid
-flowchart TD
-  B[release-readiness bundle] --> S[SKILL.md]
-  B --> R[references]
-  R --> RP[release-policy.md]
-  R --> CF[changelog-format.md]
-  B --> C[scripts]
-  C --> IR[inspect_release.py]
-  B --> A[assets]
-  A --> RC[release-checklist.md]
+```figure
+skill-package-anatomy
 ```
 
 الإرشادية، وليس ملف ماركداون وحده، هي الوحدة القابلة للتنفيذ.`SKILL.md`مع إشارات مفقودة هي حزمة مكسورة حتى لو تم تحليل المواد الأمامية.
@@ -304,19 +296,8 @@ Use this workflow for a release candidate, not for ordinary development builds.
 
 ### دورة حياة المهارات
 
-```mermaid
-flowchart LR
-  D[Discover package] --> V[Validate metadata and layout]
-  V --> C[Publish catalog entry]
-  C --> S{Select?}
-  S -->|explicit user request| A[Activate]
-  S -->|implicit model match| A
-  S -->|no match| N[Leave unloaded]
-  A --> B[Load SKILL.md body]
-  B --> R[Read required resources]
-  R --> T[Request tools or run scripts]
-  T --> E[Return evidence and artifact]
-  E --> Q[Verify result]
+```figure
+skill-runtime-lifecycle
 ```
 
 كل سهم هو حدود مع وضع الفشل الخاص به.
@@ -336,15 +317,8 @@ flowchart LR
 
 يجيب MCP: "ما هي القدرات التي يمكن لهذا التطبيق أن يستدعيها، وما هي مخططاتها؟" يجيب المهارة، "كيف ينبغي على وكيل التوجه إلى هذه الفئة من المهام؟"
 
-```mermaid
-flowchart TB
-  U[User goal] --> K[Activated skill]
-  K --> P[Procedure and decision rules]
-  P --> M[MCP or local tool]
-  M --> O[Observation]
-  O --> P
-  P --> A[Artifact]
-  A --> V[Verification]
+```figure
+skill-tool-orthogonality
 ```
 
 قد تسمي المهارة أداة، ولكن المضيف يمتلك سجل القدرات الفعلية. إذا كانت الأداة غائبة، يجب أن تشير المهارة إلى عكس أو فشل بوضوح. يجب ألا يعني ذلك أبداً أن تسمية القدرة تخلقها.
@@ -400,13 +374,8 @@ python3 -m unittest discover -s code/tests -v
 
 تأكيد الحقائق الهيكلية الرخيصة قبل قواعد المحتوى العميقة:
 
-```mermaid
-flowchart LR
-  F[Frontmatter delimiters] --> Y[Scalar metadata]
-  Y --> N[Name and directory match]
-  N --> R[Required fields]
-  R --> X[Known extensions]
-  X --> B[Body and resource rules]
+```figure
+skill-validation-order
 ```
 
 هذا النظام يمنع الأخطاء الثانوية من إخفاء أول ناقص محطم.
