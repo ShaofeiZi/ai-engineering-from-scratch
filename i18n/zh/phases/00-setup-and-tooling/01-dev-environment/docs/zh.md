@@ -16,7 +16,7 @@
 
 ## 问题
 
-你即将学习人工智能工程,使用Python,TypeScript,Rust和Julia的200多个课程. 如果你的环境被破坏,
+你即将学习人工智能工程,使用Python,TypeScript,Rust和Julia的500多个课程. 如果你的环境被破坏,
 
 大多数人会跳过环境设置,然后花费数小时检查进口错误,版本冲突,以及缺失的CUDA驱动程序.
 
@@ -154,17 +154,51 @@ if torch.cuda.is_available():
 
 没有GPU?没有问题.大多数课程都在CPU上进行.对于训练重的课程,请使用Google Colab或云GPU.
 
-### 七步:检查一切
+### 步骤 7: 验证您想要开始的路线
 
-运行验证脚本:
+运行本课中的每个命令从库根,目录中运行
+含有`README.md`其他`phases/`飞行前检查你需要的东西
+默认情况下,它会跳过后来的工具,这样一个新学习者会看到
+只是一个明确的答案,而不是一个警告墙.
+
+开始全新手序列:
 
 ```bash
-python phases/00-setup-and-tooling/01-dev-environment/code/verify.py
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner
+```
+
+或只查看你想要的路线:
+
+```bash
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route ml-foundations
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route llm-engineering
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route agents
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route mcp
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route agent-skills
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route certification
+```
+
+加入`--show-later`当你想要相同的飞行前检查可选的工具时
+后期工具永远不会阻止学习.
+选择的路线.
+
+每次未能执行的检查都包括检测到的路径或进口错误以及
+代理技能和认证路线也显示
+由于Python脚本不能证明AI主机有
+您发现了技能或您选择的技能范围可写.
+
+开始飞行前,它打印出了第一课:
+
+```text
+Ready to start Beginner course.
+Next: python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py
 ```
 
 ## 用它
 
-你的环境现在为本课程的每一个课程都准备好了.
+您的环境准备好启动您检查的路线.
+当一个课时要求他们,而不是完全阻止你的第一课时
+您将在整个课程中使用的内容是:
 
 | Language | Used In | Package Manager |
 |----------|---------|-----------------|
