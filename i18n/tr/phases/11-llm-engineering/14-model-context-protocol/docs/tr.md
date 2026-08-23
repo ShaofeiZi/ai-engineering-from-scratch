@@ -1,45 +1,129 @@
 # Model Konekst Protokolü (MCP)
 
-> 2025'ten önce inşa edilen her LLM uygulaması kendi araç şeması icat etti. Sonra Anthropic MCP'yi gönderdi, Claude onu kabul etti, OpenAI onu kabul etti ve 2026 yılına kadar herhangi bir LLM'yi herhangi bir araç, veri kaynağı veya ajan ile bağlamak için varsayılan tel biçimi. Bir MCP sunucusu yazın ve her sunucu ona konuşur.
+> MCP, bir AI sunucusuna araçları, kaynakları ve istekleri keşfetmek ve çağrıştırmak için bir protokol verir. 2026-07-28 baskısı bu protokolü devletsiz hale getirir: yetenek ve sürüm bağlamı her taleple seyahat eder, bağlantı bağlı bir el sıkışmasında değil.
 
 **Type:** Build
 **Languages:** Python
 **Prerequisites:** Phase 11 · 09 (Function Calling), Phase 11 · 03 (Structured Outputs)
 **Time:** ~75 minutes
 
+## Öğrenme Hedefleri
+
+- Bir MCP barındırma, istemci, sunucu, nakliye ve sunucu primitif ayırt edin.
+- MCP 2026-07-28 tarafından istenen metadata ile JSON-RPC talebi oluşturun.
+- Kullanım`server/discover`Versiyonları, kimliği ve özelliklerini incelemek için.
+- Araçlardan, kaynaklardan ve isteklerden yazılmış ve önbelleğe anlaşılan sonuçları geri gönderin.
+- Modern devletsiz MCP'nin el sıkışması çağındaki sunucularla nasıl etkileşime girdiğini açıklayın.
+- Bir sunucu için güvenli durum, ulaşım ve onay sınırlarını seçin.
+
 ## Sorun
 
-Bir chatbot gönderir ve üç alet gerektirir: bir veritabanı sorgu, bir takvim API ve bir dosya okuyucu. Claude için üç JSON şeması yazarsınız.`tools`Cursor, Zed ve Claude Code 'i, her biri ince farklı JSON sözleşmeleri ile üç tane daha yeniden yazıyor. Bir hafta sonra Anthropic yeni bir alan ekliyor; altı şema güncelleştiriyorsunuz.
+Uygulama bir veritabanı sorgu, bir takvim işlevi ve bir dosya okuyucuya ihtiyaç duyar. Paylaşılan bir protokol olmadan, her AI sunucusu aynı özellikler için özel keşif, çağrı, hata, nakliye ve yetki yapıştırıcıya ihtiyaç duyar.
 
-Bu, 2025'ten önceki gerçeklikti. Her sunucu (LLM'yi çalıştıran bir şey) ve her sunucu (almanları ve verileri açığa çıkaran bir şey) özel protokoller gönderdi.
+MCP, bu entegrasyon matrisini azaltır. Bir sunucu standart bir JSON-RPC yüzeyini yayınlar. Uyumlu bir istemci yüzeyi keşfedebilir, bir model veya kullanıcıya sunar, çağrıştırır ve sonuçları sunucu özel bir adaptör olmadan yorumlayabilir.
 
-Model Kontext Protocol, bu matrisi çöker. Bir JSON-RPC tabanlı spesifikasyon. Bir sunucu araçları, kaynakları ve istekleri ortaya çıkarır. Her uyumlu sunucu  Claude Desktop, ChatGPT, Cursor, Claude Code, Zed ve uzun bir kuyruğu ajan çerçeveleri  özelleştirilmiş yapıştırıcı olmadan onları keşfedebilir ve çağırabilir.
-
-2026'ın başından itibaren, MCP, büyük üç (Anthropic, OpenAI, Google) ve her büyük ajan harnessinde varsayılan araç ve bağlam protokolüdür.
+MCP iletişim standartlaştırır. Model hangi aracı çağırması gerektiğini, güvenilmeyen içeriği güvenli hale getirmesi veya devletsiz bir talebi dayanıklı bir uygulama durumuna dönüştürmesi gerektiğini belirlemez. Ev sahibi ve sunucu bu kararları hala sahip.
 
 ## Anlaşım
 
-![MCP: one host, one server, three capabilities](../assets/mcp-architecture.svg)
+![MCP host, stateless request, and server primitives](../assets/mcp-architecture.svg)
 
-**The three primitives.**Bir MCP sunucusu tam olarak üç şeyi ortaya çıkarır.
+### Üç sunucu ilkesi
 
-1. **Tools** modelin çağırabileceği fonksiyonlar.`tools`ya da Anthropic'in `tool_use`Her birinin adı, açıklaması, JSON Schema girişleri ve bir yöneticisi vardır.
-2. **Resources** Model veya kullanıcı talep edebilecek sadece okuyabilir içerik (dosyalar, veritabanı satırları, API cevapları).
-3. **Prompts** Kullanıcı kısa yollar olarak kullanabileceği tekrar kullanılabilir şablonlı çağrılar.
+1. **Tools**Her araç bir isim, açıklama, JSON Schema giriş ve işlemci vardır.
+2. **Resources**URI adresli ve müşterinin okuyabileceği içerikler.
+3. **Prompts**bir host tarafından kullanıcının açıklayabileceği tekrar kullanılabilir şablonlardır.
 
-**The wire format.**JSON-RPC 2.0 stdio, WebSocket veya akışlanabilir HTTP üzerinden. Her mesaj `{"jsonrpc": "2.0", "method": "...", "params": {...}, "id": N}`Bulma yöntemleri:`tools/list`- Evet .`resources/list`- Evet .`prompts/list`- İpucu yöntemleri `tools/call`- Evet .`resources/read`- Evet .`prompts/get`- Evet .
+Host, AI uygulamasıdır. Bu host içindeki bir MCP istemcisi bir sunucuyla konuşur.
 
-**Host vs client vs server.**Host, LLM uygulamasıdır (Claude Desktop). Müşteri, tam olarak bir sunucuyla konuşan host'un alt bileşenidir.
+### İnsansızlık talepleri el sıkışının yerini alır
 
-### El sıkışması
+MCP 2026-07-28 kaldırılıyor `initialize`ve `notifications/initialized`Ayrıca protokol düzeyinde oturumları da kaldırır.`params._meta`- ...
 
-Her seansı `initialize`.Müşteri protokol versiyonunu ve özelliklerini gönderir.Server, desteklediği versiyon, isim ve özellik seti ile yanıt verir (`tools`- Evet .`resources`- Evet .`prompts`- Evet .`logging`- Evet .`roots`Ardından tüm bu yeteneklere karşı müzakere edilir.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "lesson-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
 
-### MCP'nin ne olmadığını
+Protokol versiyonu ve istemci yetenekleri gereklidir.`_meta`, eksik olan gerekli alan veya yanlış tipi olan gerekli alan yanlış biçimlendirilmiş ve geçersiz Parameler gönderilmiştir (`-32602`). Server tarafından desteklenmeyen iyi oluşan bir sürüm dizisi gönderir `UnsupportedProtocolVersionError`(`-32022`). Bir sunucu, geçerli bir talebi daha önce yapılan müzakere kayıtlarını geri kazanmadan işleyebilir.
 
-- RAG (Fase 11 · 06) hala neyi çekmeye karar verir; MCP, çekim sonuçlarını kaynak olarak ortaya çıkarmak için taşıma araçtır.
-- MCP tesisat; LangGraph, PydanticAI ve OpenAI Ajanlar SDK gibi çerçeveler üzerinde oturur.
-- Spec ve referans uygulamalar açık kaynaklı olarak açık kaynaklıdır.`modelcontextprotocol`org.
+İstemsizlik, bir başvuru hiçbir zaman durumunu koruyabilme anlamına gelmez.`Mcp-Session-Id`. Eğer bir iş akışı süreklilik gerektirirse, sunucu bir açık olmayan eldiven oluşturur ve müşteri daha sonraki aramalarda sıradan bir araç argümanı olarak bu eldivenini geçer.
+
+### Bulma ve sürüm seçimi
+
+Her modern sunucu uygulaması `server/discover`. Sonuç desteklenen sürümleri , özellikleri ve sunucu kimliğini reklam eder:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "complete",
+    "supportedVersions": ["2026-07-28"],
+    "capabilities": {
+      "tools": {},
+      "resources": {},
+      "prompts": {}
+    },
+    "ttlMs": 3600000,
+    "cacheScope": "public",
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "demo-server",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+Bir istemci doğrudan başka bir yöntemi arayabilir ve bir sürüm hatasını ele alabilir, ancak keşif yetenek gösterisini ve sürüm seçimini açık yapar. Desteklenmeyen bir sürüm geri gelir `UnsupportedProtocolVersionError`Kodla `-32022`Verilerinde `supported`, bir dizi sunucu revizyonu ve `requested`, reddedilen düzenleme.
+
+Stüdyoda, ikili çağda çalışan bir müşteri ile konuşuyor.`server/discover`Bir keşif sonucu veya tanınan modern bir hata .`UnsupportedProtocolVersionError`Modern olarak tanınmayan herhangi bir hata veya zamanlama 2025-11-25'e geri dönmenizi sağlar.`initialize`Geçmiş davranışlar uyumluluk kodu, modern standart değil.
+
+### Sonuçlar açıkça belirtildi .
+
+2026-07-28 sonuçları her çekirdeğin üzerinde`resultType`- ...
+
+- `complete`Operasyon bitti demektir.
+- `input_required`Bu da sunucuyu bir daha dönüşe ve dönüşe yönlendirme şekliyle yönlendirme gerektirir.`tools/call`- Evet .`resources/read`veya`prompts/get`- Evet .
+
+Müşteriler , eklenmiş bir sonuca bakmalıdır .`resultType`Tam olarak.
+
+Sunucular `io.modelcontextprotocol/serverInfo`Her sonuçta.`_meta`Bu kimlik kendiliğinden bildirilmektedir ve güvenlik kararları için değil görüntüleme, kayıt ve hata işlemleri için kullanılır.
+
+Liste ve okuma sonuçları da taşınır `ttlMs`ve `cacheScope`- Deterministik bir`tools/list`sipariş eklenmiş bir tazelik ipucu müşterilerin keşifleri güvenli bir şekilde önbelleğe almalarını sağlar ve hızlı önbelleğin istikrarını artırır. `cacheScope: public`Paylaşılan önbelleğe izin verir; `private`Bu, tekrar kullanımı çağrı bağlamına sınırlıyor.
+
+### Kablo biçimi ve nakliye
+
+MCP, stdio veya Streamable HTTP üzerinden JSON-RPC 2.0 kullanır.
+
+- Bir talebinin `jsonrpc`- Evet .`id`- Evet .`method`ve`params`- Evet .
+- Bir cevap eşleşir .`id`Ve ya da`result`veya `error`- Evet .
+- Bir bildirim yok .`id`Ve hiçbir tepki beklemiyor.
+
+Modern Streamable HTTP, POST'u kabul eden bir uç noktasını ortaya çıkarır. Her JSON-RPC mesajı kendi POST'unu alır. Bir istek POST, bir JSON nesnesi veya son cevabıyla biten bir istek-scoped Server-Sent Events akışını alır. Kabul edilen bir bildirim POST, hiçbir cevap vücudu olmayan HTTP 202 alır; bu temel revizyondan Streamable HTTP üzerinden hiçbir istemci-sözümci bildirim tanımlanmaz.
+
+Standalone MCP GET akışı, DELETE seans son noktası yok.`Mcp-Session-Id`veya`Last-Event-ID`2026-07-28'de tekrar oynayın.`subscriptions/listen`POST, SSE akışı olarak açık bir cevap olarak kalır.
+
+### Sunucu tarafından başlatılan istekler olmadan istemci girişleri
+
+Daha eski değişiklikler , sunucuya  gibi istekler göndermesine izin verir .`sampling/createMessage`- Evet .`roots/list`veya`elicitation/create`Bir akış üzerinde. Şu anki protokol bunun yerine Multi Round-Trip Requests kullanıyor.`resultType: input_required`en az bir tane ile `inputRequests`veya `requestState`. Müşteri istedikleri herhangi bir giriş toplar, yeni bir JSON-RPC kimliği ve ilgili `inputResponses`, ve tam olarak yankılanır .`requestState`Eğer bir tane sağlanmamışsa`inputRequests`Varken tekrar denemeyi bırakır.`inputResponses`- Evet .
+
+Kökler, Örnekleme ve Kayıtlama işlevsel kalır ancak eski hale gelmiştir, bu nedenle yeni uygulamalar bunları benimsememeli.`inputRequests`, asla bağımsız sunucu-klient JSON-RPC istekleri olarak. Açık dosya veya dizin parametrelerini, kaynak URIs'lerini, sunucu yapılandırmasını ve doğrudan model sağlayıcı entegrasyonu tercih edin. stderr'yi stdio teşhisleri ve OpenTelemetry'yi üretim telemetrisi için kullanın.
 
 ```figure
 mcp-nxm-collapse
@@ -47,164 +131,137 @@ mcp-nxm-collapse
 
 ## Yapın
 
-### Adım 1: En az MCP sunucusu
+### Adım 1: Bir sunucu yüzeyini kaydet
 
-Resmi Python SDK `mcp`(önceden)`mcp-python`Yüksek düzeyde`FastMCP`Yardımcı, işçilerin dekorasyonunu yapar.
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("demo-server")
-
-@mcp.tool()
-def add(a: int, b: int) -> int:
-    """Add two integers."""
-    return a + b
-
-@mcp.resource("config://app")
-def app_config() -> str:
-    """Return the app's current JSON config."""
-    return '{"env": "prod", "region": "us-east-1"}'
-
-@mcp.prompt()
-def code_review(language: str, code: str) -> str:
-    """Review code for correctness and style."""
-    return f"You are a senior {language} reviewer. Review:\n\n{code}"
-
-if __name__ == "__main__":
-    mcp.run(transport="stdio")
-```
-
-Üç dekorator üç primitif kaydetir. Tip ipuçları ev sahibi tarafından görülen JSON Şeması haline gelir. Bu dosyaya işaret eden sunucu girişini kullanarak Claude Desktop veya Claude Code altında çalıştırın.
-
-### Adım 2: Bir konukseverden MCP sunucusunu aramak
-
-Resmi Python istemcisi JSON-RPC konuşur. Antropic SDK ile eşleştirmek bir düzine satır alır.
+Başvuru sözleşmesi değiştirilmesine rağmen kayıt basit kalır:
 
 ```python
-from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp import ClientSession
+server = MCPServer("demo-server")
 
-params = StdioServerParameters(command="python", args=["server.py"])
-
-async def call_add(a: int, b: int) -> int:
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            result = await session.call_tool("add", {"a": a, "b": b})
-            return int(result.content[0].text)
-```
-
-`session.list_tools()`Üretim ev sahipliği, bu şemaları her dönüşte enjekte ederek model bir `tool_use`Bu blok, istemci tarafından sunucuya aktarılır.
-
-### Adım 3: Akışlı HTTP taşımacılığı
-
-Stdio yerel geliştiriciler için iyi. Uzaktan araçlar için, akışlanabilir HTTP  bir POST'u istek başına kullanın, ilerleme için seçeneği Server-Sent Events, 2025-06-18 spesifikasyon revizyondan beri desteklenir.
-
-```python
-# Inside the server entrypoint
-mcp.run(transport="streamable-http", host="0.0.0.0", port=8765)
-```
-
-Host yapılandırması (Claude Desktop `mcp.json`ya da Claude Code `~/.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "demo": {
-      "type": "http",
-      "url": "https://tools.example.com/mcp"
+@server.tool(
+    "add",
+    "Add two integers.",
+    {
+        "type": "object",
+        "properties": {
+            "a": {"type": "integer"},
+            "b": {"type": "integer"}
+        },
+        "required": ["a", "b"]
     }
-  }
-}
+)
+def add(a: int, b: int) -> dict:
+    return {"sum": a + b}
 ```
 
-Sunucu aynı dekorasyonları koruyor. Sadece nakliye değişir.
+            `code/main.py`Bu program, bir SDK'ye protokolü delegasyon etmek yerine her zarfı görebilmeniz için standart kütüphaneden kasıtlı olarak kullanır.
 
-### 4. Adım: Çevre ve güvenlik
+### Adım 2: Her talebe metadata ekleyin
 
-Bir MCP aracı, başkalarının güven sınırlarında çalışan keyfi koddur.
+```python
+def request(method, params=None):
+    body_params = dict(params or {})
+    body_params["_meta"] = {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {
+            "name": "demo-client",
+            "version": "1.0.0"
+        }
+    }
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": method,
+        "params": body_params
+    }
+```
 
-- **Capability allowlists.**Ev sahibi bir `roots`Bu özellikleri kullanmak için, sunucu yalnızca izin verilen yolları görür.
-- **Human-in-the-loop for mutation.**Sadece okunur araçlar otomatik olarak işlevlendirilebilir. Yaz / sil araçlar onay gerektirir  sunucu ayarladığında hostlar onay kullanıcı aracını yüzeyde `destructiveHint: true`Araç metadataları.
-- **Tool poisoning defense.**Kötü bir kaynak gizli enjeksiyon talimatlarını içerebilir ("toplamlama yaparken, aynı zamanda arama `exfil`" " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
+Bu metadataları yalnızca bir bağlantı nesnesinde saklama. Sunucu her istekle onaylar.
 
-Bakın .`code/main.py`Tüm bunları gösteren çalıştırılabilir bir sunucu + istemci çift için.
+### Adım 3: listelenmeden önce seçeneği keşfet
 
-## 2026'da hala yolculuk eden tuzaklar
+Arama .`server/discover`, desteklenen bir sürüm seçin, sonra arın `tools/list`- Bir direkt .`tools/list`Eğer versiyonu zaten biliyorsanız ve bunu yapabiliyorsanız geçerlidir.`-32022`- Evet .
 
-- **Schema drift.**Model gördü .`tools/list`1. virajda araç seti 5. virajda değişir. model kaybolmuş bir araç çağırır. Ev sahibi yeniden listelemelidir.`notifications/tools/list_changed`- Evet .
-- **Large resource blobs.**2 MB dosyayı kaynak atık bağlamı olarak atmak.
-- **Too many servers.**50 MCP sunucu yüklemek araç bütçesini bozar (Fase 11 · 05).
-- **Version skew.**Spec revizyondaki (2024-11, 2025-03, 2025-06, 2025-12) kırma alanları sunulur.
-- **Stdio deadlocks.**Stdout'a giriş yapan sunucular JSON-RPC akışını bozar.
+Demo , araç listelerini isim sırasıyla gönderir ve ekler `ttlMs`- Evet .`cacheScope`- Evet .`resultType`Bir araç çağrısı, mevcut durumdan bağlı olabileceği için, tamamlanmış, önbelleğe kaydedilebilir olmayan bir sonuç gönderir.
+
+### Adım 4: Aynı istekleri HTTP'ye haritasın
+
+Uzaktan bir ...`tools/call`POST, JSON-RPC bedenini yansıtan başlıkları içerir:
+
+```http
+POST /mcp HTTP/1.1
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: add
+```
+
+- Evet .`MCP-Protocol-Version`Başlık , `_meta`- Evet .`Mcp-Method`her JSON-RPC talebi için gerekli ve eşleşmelidir `method`- Evet .`Mcp-Name`Sadece `tools/call`- Evet .`resources/read`ve`prompts/get`, tool adı, kaynak URI veya prompt adı ile eşleşmesi gereken.`HeaderMismatch`kod`-32020`- Evet .
+
+### Adım 5: Protokol durumundan dışarıdaki güvenlik güçlendirilmesi
+
+- Her HTTP istek için yetki ve izleyicileri doğrulayın.
+- Yerel sunucuları yerel sunucu ile bağlayın ve doğrulayın `Origin`Akışlı HTTP'de.
+-  ile mutasyon aletlerini işaretleyin`destructiveHint: true`ve ev sahibi onayını gerektirir.
+- Geçmiş köklere bağlı olmaksızın açıkça dizini ve dosya kapsamını geçin.
+- Kaynakları ve araç çıkışını güvenilmeyen veriler olarak değerlendirin.
+- Stdout'u stdio altında JSON-RPC için ayırın; stderr'e teşhis yazın.
 
 ## Kullan
 
-2026 MCP yığın:
+Dersleri dizininden çalıştır:
 
-| Situation | Pick |
-|-----------|------|
-| Local dev, single-user tools | Python `FastMCP`, stdio transport |
-| Remote team tools / SaaS integration | Streamable HTTP, OAuth 2.1 auth |
-| TypeScript host (VS Code extension, web app) | `@modelcontextprotocol/sdk` |
-| High-throughput server, typed access | Official Rust SDK (`modelcontextprotocol/rust-sdk`) |
-| Exploring ecosystem servers | `modelcontextprotocol/servers` monorepo (Filesystem, GitHub, Postgres, Slack, Puppeteer) |
+```bash
+python3 code/main.py
+cd code
+python3 -m unittest discover tests -v
+```
 
-Basamak kural: bir araç sadece okunur, önbelleğe alınır ve iki veya daha fazla host'tan çağrılırsa, onu MCP sunucu olarak gönderin. Tek seferlik iç çizgi mantığı ise, yerel bir işlev olarak tutun (Fase 11 · 09).
+İlk satırda `demo-server`Protokolde`2026-07-28`- Sonra kontrol et .`MCPClient.request`Bu yeniden inşa ediliyor.`_meta`Bir talebinden metadataları çıkar ve sunucu tarafından reddedildiğini gözlemle.
 
 ## Gönder
 
-- Kaydet .`outputs/skill-mcp-server-designer.md`- ...
+`outputs/skill-mcp-server-designer.md`Bir alanı devletsiz bir MCP tasarımı haline getirir. Kabul kapısı bir keşif sonucu, talep başına metadata politikası, belirleyici önbelleğe farkındalık listesini, açık durum eleştiri, ulaşım başlıklarını, yetki ve onay kurallarını gerektirir.
 
-```markdown
----
-name: mcp-server-designer
-description: Design and scaffold an MCP server with tools, resources, and safety defaults.
-version: 1.0.0
-phase: 11
-lesson: 14
-tags: [llm-engineering, mcp, tool-use]
----
+## MCP Derin Dalışını Sürdürün
 
-Given a domain (internal API, database, file source) and the hosts that will mount the server, output:
+Bu ders size protokol modeli verir. 13 aşama dört üretim sınırını ayrı yapı ve doğrulama derslerine dönüştürür:
 
-1. Primitive map. Which capabilities become `tools` (action), which become `resources` (read-only data), which become `prompts` (user-invoked templates). One line per primitive.
-2. Auth plan. Stdio (trusted local), streamable HTTP with API key, or OAuth 2.1 with PKCE. Pick and justify.
-3. Schema draft. JSON Schema for every tool parameter, with `description` fields tuned for model tool-selection (not API docs).
-4. Destructive-action list. Every tool that mutates state; require `destructiveHint: true` and human approval.
-5. Test plan. Per tool: one schema-only contract test, one round-trip test through an MCP client, one red-team prompt-injection case.
+1. [MCP Tool Contracts and Content](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)Kapalı giriş şemeleri, yapılandırılmış içerik, yönlendirme metadata, netsiz sayfalama, tamamlama yetkisi ve protokol ve araç alanı hataları arasındaki farkı kapsar.
+2. [MCP Reliability, Cancellation, and Flow Control](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)Başvuru iptalini, kalıcı görev iptalini, tarihleri, boşluğu, geri baskıyı, vekil tamponu ve yeniden bağlama davranışını kapsar.
+3. [MCP Registry Supply Chain, Admission, Drift, and Rollback](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)Ad alanı kanıtını, eserlerin kökenini, değişmez pinleri, canlı sürüklemeyi, kayıt durumunu, kabul kanıtı ve geri dönüşü kapsar.
+4. [MCP Conformance Engineering](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)Altın ve negatif tel transkriptleri, sıkı sürüm dönemleri, SDK farklılıkları, vekillik kanıtları, redaksiyon, sağlık kapıları ve serbest bırakma geri dönüşü kapsar.
 
-Refuse to ship a server that writes to disk or calls external APIs without an approval path. Refuse to expose more than 20 tools on one server; split into domain-scoped servers instead.
-```
+Bu yöntemler, bir ekip veya güven sınırını geçtikleri sırada takip edilir.
 
 ## Egzersizler
 
-1. **Easy.**`demo-server`bir `subtract`Kullanıcı yeni aracı yeniden başlatmadan aldığını onaylayın.`tools/list_changed`bildirim.
-2. **Medium.**Bir ekle`resource`Bu da son 100 satırını ortaya çıkarıyor.`/var/log/app.log`- Kök izinlerini uygulayın .`../etc/passwd`model istese bile engellenir.
-3. **Hard.**Üç yukarı akım sunucusu (File System, GitHub, Postgres) bir toplu yüzeye çoğaltan bir MCP proxy oluşturun.`notifications/tools/list_changed`Temiz bir şekilde.
+1. Bir ekle`subtract`araç ve onay`tools/list`alfabetik olarak sıralanmış.
+2. Protokol sürüm anahtarını kaldır ve geçersiz Paramları doğrulay (`-32602`Sonra iyi şekillenen ama desteklenmeyen versiyonu gönderin.`2025-11-25`, doğrulayın `-32022`, onaylayın .`requested`Bu incelemeyi tekrarlıyor ve seçmelisiniz.`supported`- Evet .
+3. Sunucu-Mint ekle `draftId`Bu işlemin neden bir protokol seansı yerine bir uygulama durumu olduğunu açıklayın.
+4. Geri dön .`input_required`Kullanıcı onayına ihtiyaç duyan bir araçtan.`inputResponses`Giriş ve tam olarak`requestState`Bir sunucu-klient JSON-RPC talebi icat etmek yerine.
+5. İki çağda bir stüdyo istemcisini çizin. Bir sonucu veya tanınan modern hatayı modern olarak değerlendirin ve geri dönüşe izin verin.`initialize`Sadece tanınmamış bir hata veya bir süreliğine.
 
 ## Anahtar Terimler
 
 | Term | What people say | What it actually means |
-|------|-----------------|-----------------------|
-| MCP | "Tool protocol for LLMs" | JSON-RPC 2.0 spec for exposing tools, resources, and prompts to any LLM host. |
-| Host | "Claude Desktop" | The LLM application — owns the model and user UI, mounts one or more clients. |
-| Client | "Connection" | A per-server connection inside the host that speaks JSON-RPC to exactly one server. |
-| Server | "The thing with the tools" | Your code; advertises tools/resources/prompts and handles their invocation. |
-| Tool | "Function call" | Model-invokable action with a JSON Schema input and a text/JSON result. |
-| Resource | "Read-only data" | URI-addressed content (file, row, API response) the host can request. |
-| Prompt | "Saved prompt" | User-invokable template (often with arguments) surfaced as a slash-command. |
-| Stdio transport | "Local dev mode" | Parent host spawns the server as a child process; JSON-RPC over stdin/stdout. |
-| Streamable HTTP | "The 2025-06 remote transport" | POST for requests, optional SSE for server-initiated messages; replaces the older SSE-only transport. |
+|------|-----------------|------------------------|
+| MCP | "Tool protocol for LLMs" | JSON-RPC protocol for server discovery, tools, resources, prompts, and extensions |
+| Host | "The AI app" | Owns the model and UI and mounts one or more MCP clients |
+| Client | "The connector" | Speaks MCP to one server on behalf of a host |
+| Stateless MCP | "No session" | Every request carries version and capabilities; no protocol state is keyed by a connection |
+| `server/discover` | "Capability probe" | Required server method advertising versions, capabilities, and identity |
+| `resultType` | "Result state" | Marks a result as `complete` or `input_required` |
+| State handle | "Workflow id" | Server-minted application identifier passed as an ordinary argument |
+| Streamable HTTP | "Remote transport" | One POST endpoint with JSON or request-scoped SSE responses |
+| MRTR | "Ask and retry" | Input request embedded in a result, followed by a retry of the original operation |
 
 ## Daha Fazla Okumak
 
-- [Model Context Protocol specification](https://modelcontextprotocol.io/specification) Kanonik referans, tarihsel olarak versiyonlanmıştır.
-- [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) Dosya sistemi, GitHub, Postgres, Slack, Puppeteer referans sunucuları.
-- [Anthropic — Introducing MCP (Nov 2024)](https://www.anthropic.com/news/model-context-protocol) tasarım temsili ile başlatma noktası.
-- [Python SDK](https://github.com/modelcontextprotocol/python-sdk) bu derste kullanılan resmi SDK.
-- [Security considerations for MCP](https://modelcontextprotocol.io/docs/concepts/security) kökler, yıkıcı ipuçları, alet zehirlenmesi.
-- [Google A2A specification](https://a2a-protocol.org/latest/) Agent2Agent protokolü; MCP'nin ajan-ağız alanını tamamlayan ajan-ağız iletişim için kardeş standartı.
-- [Anthropic — Building effective agents (Dec 2024)](https://www.anthropic.com/research/building-effective-agents) MCP'nin, ajan tasarımı için daha geniş bir örnekteki kitaplıkta yer aldığı (genişleştirilmiş LLM, iş akışları, otonom ajanlar).
+- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [MCP server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [MCP Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP deprecated features](https://modelcontextprotocol.io/specification/2026-07-28/deprecated)

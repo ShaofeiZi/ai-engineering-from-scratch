@@ -12,7 +12,7 @@
   "phases/11-llm-engineering/11-caching-cost/docs/en.md": "bec924754c74950f7a7f6e975846b477cb63cc8aec4e8942cffdb4bbbd076bd3",
   "phases/11-llm-engineering/12-guardrails/docs/en.md": "7bca84f499c6a75c2f97253f3fa4cf85befb0fbcf66e4c882e125279686ad73f",
   "phases/11-llm-engineering/13-production-app/docs/en.md": "b0a346e45927205a67e1db24f0d67e16adde62736840bd2ac923a5fc03cd6101",
-  "phases/11-llm-engineering/14-model-context-protocol/docs/en.md": "0fca0b7198240b7feb7aea83ccecd30bbfe0285f140be211a5e038975ba21c55",
+  "phases/11-llm-engineering/14-model-context-protocol/docs/en.md": "26356da586c4f90922e0ab61af4ea47d81deaf3c9b2cc91e4ae8ac44efaadd7b",
   "phases/11-llm-engineering/15-prompt-caching/docs/en.md": "c72d9e6ced54e99c366d6f573ba03a8a4f0a4e365eddc8911a92712dd1cfd201",
   "phases/11-llm-engineering/16-langgraph-state-machines/docs/en.md": "cd449175f7292a9821644d0b829cd0576a68f0da3aedbbc9e3547b45fd7b05cb",
   "phases/11-llm-engineering/17-agent-framework-tradeoffs/docs/en.md": "4c0c6119addcb3cf05f3a9e1884ae3bf75e4428a6196c90982653559c94c83b7"
