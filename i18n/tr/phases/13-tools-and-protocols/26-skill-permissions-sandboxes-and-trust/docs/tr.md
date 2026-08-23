@@ -49,17 +49,8 @@ Aktifleştirme genellikle talimatları model görebilir bağlamda yerleştirir. 
 - bir sonraki eylem onaylamak;
 - Bir sonucu doğru olduğunu kanıtlayın.
 
-```mermaid
-flowchart LR
-  S[Activated skill] --> M[Model proposes action]
-  M --> C[Capability registry]
-  C --> P[Permission policy]
-  P --> A{Approval needed?}
-  A -->|yes, granted| X[Isolated executor]
-  A -->|no| X
-  A -->|denied| D[Stop and report]
-  X --> O[Observation]
-  O --> V[Verification gate]
+```figure
+skill-authority-chain
 ```
 
 Her kutu bağımsız olarak yapılandırılabilir. Birini çıkarmak farklı bir özelliği zayıflatır.
@@ -96,18 +87,8 @@ Bir sorun, web sayfası, belge, görüntü, depot dosyası veya araç sonucu, ku
 
 Bir yol hesaplaması çalışma alanından kaçar, bir küre fazla eşleşir, bir tekrar deneme yazıyı kopyalar veya temizleme adımları yanlış oluşturulan dizini siler.
 
-```mermaid
-flowchart TB
-  P[Skill package] --> I[Model instructions]
-  R[References and assets] --> I
-  U[Untrusted task content] --> I
-  I --> Q[Requested actions]
-  SC[Scripts and dependencies] --> Q
-  Q --> H[Host tools and executor]
-  H --> F[Files]
-  H --> N[Network]
-  H --> E[Environment and credentials]
-  H --> X[External side effects]
+```figure
+skill-trust-surface
 ```
 
 Bu grafikte her yüksek etki yeteneği için çiz, her kenarı kimin kontrol ettiğini ve hangi sınırın doğruladığını işaretle.
@@ -246,17 +227,8 @@ HTTPS kaynağı, şema, sunucu ve etkin limandır. `https://api.example.test`ve 
 
 Yetkisini önceden güvenle devredilemeyen eylemler için onay kullanın.
 
-```mermaid
-flowchart TD
-  A[Proposed action] --> R{Reversible and local?}
-  R -->|yes| S{Inside pre-approved scope?}
-  S -->|yes| E[Execute in sandbox]
-  S -->|no| P[Ask for scoped approval]
-  R -->|no| H{External, destructive, costly, or sensitive?}
-  H -->|yes| P
-  H -->|no| E
-  P -->|granted| E
-  P -->|denied| D[Stop]
+```figure
+skill-approval-decision
 ```
 
 Onaylama gerçek hedefi ve sonuçları göstermelidir. "Barsı izin ver" zayıf. "Başını izin ver"`publish_release`2.4.0 sürümünü aşama kayıtlarına yayınlamak için araç?" kullanılabilir.

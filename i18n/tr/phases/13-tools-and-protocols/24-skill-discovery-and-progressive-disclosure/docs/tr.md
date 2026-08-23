@@ -33,15 +33,8 @@ Genel olarak yapılan anlaşma bir katalog: modelin her uygun beceri için kompa
 
 Dosya sistemini kaynak giriş olarak değerlendirin.
 
-```mermaid
-flowchart LR
-  R[Configured roots] --> W[Enumerate immediate skill dirs]
-  W --> P[Find SKILL.md]
-  P --> V[Validate package]
-  V --> S[Attach scope and provenance]
-  S --> C[Resolve collisions]
-  C --> B[Apply catalog budget]
-  B --> O[Publish name, description, path]
+```figure
+skill-discovery-pipeline
 ```
 
 Her aşamada yapılandırılmış veriler ve yapılandırılmış hatalar üretilmelidir.
@@ -101,10 +94,8 @@ Ev sahibi için bir politika seçin.Diagnostikte reddedilen veya gölgelik edile
 
 Ajan Yetenekleri özellikleri aşamalı yüklemeyi tanımlar.
 
-```mermaid
-flowchart TB
-  L1[Level 1: catalog metadata<br/>name, description, source] -->|skill selected| L2[Level 2: SKILL.md body<br/>workflow and decision map]
-  L2 -->|branch requires detail| L3[Level 3: references, scripts, assets<br/>task-specific material]
+```figure
+skill-disclosure-levels
 ```
 
 #### 1 seviye: Katalog metadataları
@@ -164,12 +155,8 @@ Bu, her referansın gözlemlenebilir bir yük koşulunu verir.`references/`"Bund
 
 Referans grafikini yüzeysel tutun.`SKILL.md`Bir atlama ulaşılabilirliği test edilebilir hale getirir ve gerekli bir kısıtlamanın hiçbir zaman bağlamına girme olasılığını azaltır.
 
-```mermaid
-flowchart LR
-  S[SKILL.md] --> P[python-release.md]
-  S --> C[container-release.md]
-  S --> D[docs-release.md]
-  S --> T[report-template.md]
+```figure
+skill-reference-map
 ```
 
 ### Katalog bütçesi ve aktif bağlam farklı bütçelerdir
@@ -201,16 +188,8 @@ references/external-link -> /private/company-secrets
 
 Paket kökünü ve adayını dosya sistemi semantikası ile çözün, mutlak girişi reddedin ve çözülen adayın çözülen kök altında kaldığını doğrulayın. Bulmadan önce sim bağlantıların izin verildiğini belirleyin. İzin verirse, çözülen hedefi her zaman kontrol edin.
 
-```mermaid
-flowchart LR
-  I[Requested relative path] --> A{Absolute or parent escape?}
-  A -->|yes| X[Reject]
-  A -->|no| R[Resolve against package root]
-  R --> U{Resolved path under root?}
-  U -->|no| X
-  U -->|yes| F{Expected file type?}
-  F -->|no| X
-  F -->|yes| L[Load with size limit]
+```figure
+skill-resource-containment
 ```
 
 Yolu tutma içeriğe güven oluşturmaz. Geçerli bir paket içi referans hala zararlı talimatlar içerebilir.

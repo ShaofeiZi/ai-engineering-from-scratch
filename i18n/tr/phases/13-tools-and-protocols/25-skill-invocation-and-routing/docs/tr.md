@@ -41,17 +41,8 @@ Uygulanabilir Agent becerileri özellikleri paketi tanımlar. Bir evrensel slash
 
 ### Beş çağrı aşaması
 
-```mermaid
-stateDiagram-v2
-  [*] --> Discovered
-  Discovered --> Eligible: actor and policy allow
-  Eligible --> Selected: explicit name or routing match
-  Selected --> Activated: body enters context
-  Activated --> Executing: permitted tool or model step begins
-  Executing --> Completed: output verified
-  Discovered --> Denied: actor or policy blocks
-  Eligible --> NotSelected: routing threshold not met
-  Activated --> Blocked: capability or approval unavailable
+```figure
+skill-invocation-stages
 ```
 
 Bu kelimeleri doğru kullan:
@@ -138,14 +129,8 @@ score(s, x) = capability_match + trigger_match + context_match - exclusion_match
 
 Bu nedenle, teknik prensip hala geçerlidir: seçim bir eşiği ve rekabetçi bir beceriyi aşmalıdır.
 
-```mermaid
-flowchart TD
-  Q[User request] --> E[Filter by actor eligibility]
-  E --> R[Compare request with descriptions]
-  R --> M{One clear match?}
-  M -->|yes| A[Activate selected skill]
-  M -->|no, ambiguous| C[Ask or use ordinary reasoning]
-  M -->|no match| N[Do not activate]
+```figure
+skill-routing-abstention
 ```
 
 Yüksek etki becerileri için, içten yönlendirme sert bir açıklama bile uygun olmayabilir. Yanlış pozitif maliyetinin otomatik seçimin rahatlığını aşması durumunda sadece insan politikalarını kullanın.
@@ -191,12 +176,8 @@ Yaklaşık bir kadının payı .`package`ve `build`Sadece açık olumlu ve ilgil
 
 Bir çağrı argümanı birkaç sınır aşıyor:
 
-```mermaid
-flowchart LR
-  U[User text] --> P[Host parser]
-  P --> B[Bound arguments]
-  B --> C[Skill context]
-  C --> T[Typed tool call]
+```figure
+skill-argument-boundaries
 ```
 
 Her sınırda, metni kod olarak görmeden niyetinizi koruyun.
@@ -214,16 +195,8 @@ Bir ürün bir beceriyi etkinleştirebilir çünkü iş akışı zaten görev t�
 
 Bu, yönlendirme belirsizliğini ortadan kaldırır, ancak çalıştırma zaman API'ye bağımlılık yaratır.
 
-```mermaid
-flowchart LR
-  P[Portable bundle] --> S[SKILL.md]
-  P --> R[references]
-  P --> C[scripts]
-  H[Host adapter] --> D[discovery path]
-  H --> A[explicit activation API]
-  H --> I[invocation policy]
-  H --> B[argument binding]
-  H --> P
+```figure
+skill-host-adapter
 ```
 
 Bu yetenek, farklı bir uyumlu müşteri tarafından açıldığında anlaşılır kalmalıdır.

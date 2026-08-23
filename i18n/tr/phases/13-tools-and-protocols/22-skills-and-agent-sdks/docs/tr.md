@@ -192,16 +192,8 @@ Bu nedenle, her tekrar kullanılabilir talimatı bir beceri olarak değerlendirm
 
 Bir ajan yeteneği , giriş noktası olan bir dizindir .`SKILL.md`. Giriş dosyası, YAML ön maddesini ve ardından Markdown talimatlarını içerir. Dizin ayrıca referanslar, senaryolar ve varlıkları da içerebilir.
 
-```mermaid
-flowchart TD
-  B[release-readiness bundle] --> S[SKILL.md]
-  B --> R[references]
-  R --> RP[release-policy.md]
-  R --> CF[changelog-format.md]
-  B --> C[scripts]
-  C --> IR[inspect_release.py]
-  B --> A[assets]
-  A --> RC[release-checklist.md]
+```figure
+skill-package-anatomy
 ```
 
 Markdown dosyası değil, dizin, dağıtılabilir birimdir.`SKILL.md`Kayıp referansları olan bir paket, ön malzemesi analiz edilse bile kırılmış.
@@ -304,19 +296,8 @@ Konfigurasyon kodu gibi ön maddeyi gözden geçirin. Onu doğrulayın, versiyon
 
 ### Yetenek yaşam döngüsü
 
-```mermaid
-flowchart LR
-  D[Discover package] --> V[Validate metadata and layout]
-  V --> C[Publish catalog entry]
-  C --> S{Select?}
-  S -->|explicit user request| A[Activate]
-  S -->|implicit model match| A
-  S -->|no match| N[Leave unloaded]
-  A --> B[Load SKILL.md body]
-  B --> R[Read required resources]
-  R --> T[Request tools or run scripts]
-  T --> E[Return evidence and artifact]
-  E --> Q[Verify result]
+```figure
+skill-runtime-lifecycle
 ```
 
 Her ok kendi başarısızlık modlarına sahip bir sınırdır.
@@ -336,15 +317,8 @@ Bu aşamaların çökmesi kötü zihinsel modellere neden olur. Bulunan bir bece
 
 MCP, "Bu uygulama hangi yetenekleri arayabilir ve onların şemaları nelerdir?" diye cevap verir.
 
-```mermaid
-flowchart TB
-  U[User goal] --> K[Activated skill]
-  K --> P[Procedure and decision rules]
-  P --> M[MCP or local tool]
-  M --> O[Observation]
-  O --> P
-  P --> A[Artifact]
-  A --> V[Verification]
+```figure
+skill-tool-orthogonality
 ```
 
 Bu özellik bir aracı adlayabilir, ancak ev sahibi gerçek yetenek kayıtlarına sahip. Eğer araç yoksa, yetenek bir düşüş veya başarısızlık belirtmelidir. Bu asla bir yeteneğin adının oluşturulduğunu ima etmelidir.
@@ -400,13 +374,8 @@ Demo, bir geçerli taşınabilir beceri, bir host genişletilen beceri, bir geç
 
 Daha derin içeriği kurallarından önce ucuz yapısal gerçekleri doğrulayın:
 
-```mermaid
-flowchart LR
-  F[Frontmatter delimiters] --> Y[Scalar metadata]
-  Y --> N[Name and directory match]
-  N --> R[Required fields]
-  R --> X[Known extensions]
-  X --> B[Body and resource rules]
+```figure
+skill-validation-order
 ```
 
 Bu sıralama ikinci hataların ilk kırık değişkenini gizlemesini engeller.

@@ -63,14 +63,8 @@ Cevaplar paket mimarisi ve eval seti haline gelir.
 
 ### Deterministik çalışmalardan ayrı bir yargı
 
-```mermaid
-flowchart LR
-  T[Task request] --> J1[Model: classify task and choose branch]
-  J1 --> R[Reference: load branch-specific rules]
-  R --> S[Script or tool: collect deterministic evidence]
-  S --> J2[Model: interpret evidence]
-  J2 --> A[Artifact contract]
-  A --> V[Deterministic and human verification]
+```figure
+skill-workflow-extraction
 ```
 
 Sınıflandırma, önceliklendirme, sentez ve belirsizlik için model yargı kullanın.
@@ -96,14 +90,8 @@ Bu emir, prozanın demo çalışmasından sonra başarı kriterlerini icat etmek
 
 ### Altı değerleme katmanı
 
-```mermaid
-flowchart TB
-  L1[1. Package structure] --> L2[2. Trigger routing]
-  L2 --> L3[3. Instruction and artifact behavior]
-  L3 --> L4[4. Script correctness]
-  L4 --> L5[5. Safety and authority]
-  L5 --> L6[6. Packaging and portability]
-  L6 --> G{Release gate}
+```figure
+skill-eval-layers
 ```
 
 Her katman farklı bir soruya cevap verir.
@@ -268,13 +256,8 @@ Kontrol sadece talimat, araç politikası, onay, kum kutusu veya doğrulama olup
 
 Bir serbest bırakma testi temiz bir hedef yerine kurulmalı, sonra kurulan kopyaya karşı doğrulama çalıştırılmalıdır.
 
-```mermaid
-flowchart LR
-  S[Source bundle] --> M[Build manifest]
-  M --> I[Install complete tree]
-  I --> H[Verify hashes and paths]
-  H --> D[Discover installed skill]
-  D --> E[Run eval smoke test]
+```figure
+skill-package-install
 ```
 
 Sadece kaynak ağacını test etmek, kurulum hatalarını, kaybolan çalıştırılabilir bitleri, düzleştirilmiş referansları, yeniden yazılmış isimleri ve eski sürümlerden kalan eski dosyaları kaçırır.
@@ -458,23 +441,8 @@ Rapor paket revizyonu ve eval ayar versiyonu ile birlikte saklanmalıdır. Eski 
 
 Her beceri düzenlemesi için bu yazarlık döngüsünü kullanın:
 
-```mermaid
-flowchart LR
-  O[Observe real workflow] --> C[Define contract]
-  C --> P[Package procedure and helpers]
-  P --> E[Run layered evals]
-  E --> F{Failure class}
-  F -->|routing| D[Edit description or policy]
-  F -->|behavior| B[Edit body, references, or tools]
-  F -->|script| S[Fix deterministic code]
-  F -->|safety| A[Reduce authority or strengthen isolation]
-  F -->|portability| H[Add adapter, fallback, or incompatibility]
-  D --> E
-  B --> E
-  S --> E
-  A --> E
-  H --> E
-  E -->|passes gate| R[Release complete bundle]
+```figure
+skill-authoring-loop
 ```
 
 Başarısızlıktan sorumlu katmanı değiştir.`SKILL.md`Gerçek sorun referansları bırakan bir yükleyici veya ev dizini açığa çıkaran bir kum kutusu olduğunda.
