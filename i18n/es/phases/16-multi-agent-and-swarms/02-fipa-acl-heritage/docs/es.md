@@ -107,7 +107,7 @@ La encuesta de 2025 de Liu et al. ("Una encuesta de protocolos de interoperabili
 - Cargas útiles nativas de JSON compatibles con todas las herramientas modernas.
 - Contenido en lenguaje natural que los LLM puedan interpretar sin una ontología codificada a mano.
 - Transporte de la pila web (HTTP, SSE, WebSocket).
-- Descubrimiento de la capacidad mediante documentos auto-descriptivos (MCP `listTools`, Tarjeta de agente A2A).
+- Descubrimiento de la capacidad a través de MCP en vivo `server/discover`y las tarjetas de agente A2A.
 
 Se trata de una semántica de intención más flexible para una implementación más fácil.
 
@@ -207,5 +207,5 @@ Documenta estas cinco preguntas para cualquier nuevo protocolo antes de enviarlo
 - [Liu et al. — A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, ANP](https://arxiv.org/html/2505.02279v1) la encuesta canónica de 2025 que conecta las especificaciones modernas con el patrimonio de la FIPA
 - [FIPA ACL Message Structure Specification (fipa00037)](http://www.fipa.org/specs/fipa00037/) el formato del envase 2000 ratificado
 - [FIPA Communicative Act Library Specification (fipa00037)](http://www.fipa.org/specs/fipa00037/) el catálogo completo de la interpretación
-- [MCP specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) el equivalente moderno de uso de herramientas de `request`- ¿ Qué ?`query-ref`
+- [MCP specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) el equivalente actual de uso de herramientas sin estado de `request`- ¿ Qué ?`query-ref`
 - [A2A specification](https://a2a-protocol.org/latest/specification/) el equivalente moderno de agente-para-par de contrato-net y suscriptor-notificar
