@@ -107,7 +107,7 @@ Liu et al. tarafından 2025 tarihli araştırması ("A Survey of Agent Interoper
 - JSON-devde gelen payloadlar, her modern araçla uyumludur.
 - LLM'lerin el kodlanmış ontoloji olmadan yorumlayabileceği doğal dil içerikleri.
 - Web-stack taşımacılığı (HTTP, SSE, WebSocket).
-- Kendini tanımlayan belgeler yoluyla yetenek keşfi (MCP `listTools`A2A Ajan Kartı .
+- Canlı MCP üzerinden yetenek keşfi `server/discover`A2A Ajan Kartları.
 
 Daha kolay uygulanmak için gevşek niyet semantikası.
 
@@ -207,5 +207,5 @@ Bu beş soruyu, yeni bir protokol için üretime göndermeden önce belgeleyin.
 - [Liu et al. — A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, ANP](https://arxiv.org/html/2505.02279v1) Modern özellikleri FIPA mirası ile bağlayan 2025 Kanonik Anket
 - [FIPA ACL Message Structure Specification (fipa00037)](http://www.fipa.org/specs/fipa00037/) Ratifik edilmiş 2000 zarfı biçimi
 - [FIPA Communicative Act Library Specification (fipa00037)](http://www.fipa.org/specs/fipa00037/) Tam performans kataloğu
-- [MCP specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) modern araç kullanımı eşdeğeri `request`- Ne ?`query-ref`
+- [MCP specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) mevcut devletsiz araç kullanımı eşdeğeri `request`- Ne ?`query-ref`
 - [A2A specification](https://a2a-protocol.org/latest/specification/) Modern ajan-e eşdeğerlik sözleşme-net ve abone-bilgi
