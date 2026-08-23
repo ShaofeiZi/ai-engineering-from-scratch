@@ -12,7 +12,7 @@
 - 解释一个连续场景如何被分化为像素,以及为什么采样/量化决定对每一个下游模型设定了上限
 - 读取,切片,检查图像作为NumPy阵列,并流动地切换HWC和CHW布局
 - 将RGB,灰度,HSV和YCbCr之间的转换,并证明每个颜色空间存在的原因
-- 应用像素级预处理 (正常化,标准化,变大,频道第一) 正如火视觉预期的那样
+- 应用像素级预处理 (规范化,标准化,大小化,频道第一) 正如预训练的 PyTorch 视觉模型所预期的那样
 
 ## 问题
 
@@ -202,13 +202,12 @@ conv-output-size
 
 ## 建立它
 
-### 步骤1:加载图像并检查其形状
+### 步骤1: 构建一个图像色器,检查其形状
 
-使用 Pillow 来加载任何JPEG或 PNG,转换为NumPy,然后打印你得到的东西.
+开始使用确定性合成图像,所以第一个实验室只使用NumPy进行离线运行.文件解码是一个独立的边界:一旦JPEG或PNG解码器返回RGB字节,下面的每个数操作都是相同的.
 
 ```python
 import numpy as np
-from PIL import Image
 
 def synthetic_rgb(h=128, w=192, seed=0):
     rng = np.random.default_rng(seed)
@@ -220,8 +219,6 @@ def synthetic_rgb(h=128, w=192, seed=0):
     return np.clip(rgb, 0, 255).astype(np.uint8)
 
 arr = synthetic_rgb()
-# Or load from disk:
-# arr = np.asarray(Image.open("your_image.jpg").convert("RGB"))
 
 print(f"type:   {type(arr).__name__}")
 print(f"dtype:  {arr.dtype}")
@@ -231,7 +228,7 @@ print(f"max:    {arr.max()}")
 print(f"pixel at (0, 0): {arr[0, 0]}")
 ```
 
-预期产量:`shape: (H, W, 3)`现在`dtype: uint8`范围`[0, 255]`这就是磁盘上的定律表示,无论字节来自摄像头,JPEG解码器,还是合成发电机.
+预期产量:`shape: (H, W, 3)`现在`dtype: uint8`范围`[0, 255]`这就是可行的解码表示,无论字节来自摄像头,图像解码器,或者这个合成发电机.
 
 ### 步骤2:分开道和重新排序布局
 
@@ -270,15 +267,16 @@ def rgb_to_hsv(rgb):
 
     h = np.zeros_like(cmax)
     mask = delta > 0
-    rmax = mask & (cmax == r)
-    gmax = mask & (cmax == g)
-    bmax = mask & (cmax == b)
+    argmax = np.argmax(rgb_f, axis=-1)
+    rmax = mask & (argmax == 0)
+    gmax = mask & (argmax == 1)
+    bmax = mask & (argmax == 2)
     h[rmax] = ((g[rmax] - b[rmax]) / delta[rmax]) % 6
     h[gmax] = ((b[gmax] - r[gmax]) / delta[gmax]) + 2
     h[bmax] = ((r[bmax] - g[bmax]) / delta[bmax]) + 4
     h = h * 60.0
 
-    s = np.where(cmax > 0, delta / cmax, 0)
+    s = np.divide(delta, cmax, out=np.zeros_like(delta), where=cmax > 0)
     v = cmax
     return np.stack([h, s, v], axis=-1)
 
@@ -326,58 +324,93 @@ print(f"roundtrip max pixel diff: {max_diff}    # should be 0 or 1")
 
 预处理/减处理对是每个火视图的准确值.`transforms.Normalize`电话是在盖子下.
 
-### 步骤5:使用三种插射方法重新尺寸
+### 步骤5:从零开始重新尺寸
 
-让我们看到差异.
+最近的邻居圆每一个输出坐标为一个源像素.双线交差发现四个周围的像素,并通过距离混合它们.下面的两个实现都使用结点一致的坐标,因此第一和最后的源像素保持固定.
 
 ```python
-target = (arr.shape[0] * 3, arr.shape[1] * 3)
+def resize_coordinates(source_length, target_length):
+    if target_length == 1:
+        return np.zeros(1, dtype=np.float32)
+    return np.linspace(0, source_length - 1, target_length, dtype=np.float32)
 
-nearest = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.NEAREST))
-bilinear = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BILINEAR))
-bicubic = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BICUBIC))
+def nearest_resize(image, target_height, target_width):
+    y = np.rint(resize_coordinates(image.shape[0], target_height)).astype(int)
+    x = np.rint(resize_coordinates(image.shape[1], target_width)).astype(int)
+    return image[y[:, None], x[None, :]]
+
+def bilinear_resize(image, target_height, target_width):
+    y = resize_coordinates(image.shape[0], target_height)
+    x = resize_coordinates(image.shape[1], target_width)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    y1 = np.minimum(y0 + 1, image.shape[0] - 1)
+    x1 = np.minimum(x0 + 1, image.shape[1] - 1)
+    wy = (y - y0)[:, None, None]
+    wx = (x - x0)[None, :, None]
+
+    source = image.astype(np.float32)
+    top = source[y0[:, None], x0[None, :]] * (1 - wx)
+    top += source[y0[:, None], x1[None, :]] * wx
+    bottom = source[y1[:, None], x0[None, :]] * (1 - wx)
+    bottom += source[y1[:, None], x1[None, :]] * wx
+    result = top * (1 - wy) + bottom * wy
+    return np.clip(np.rint(result), 0, 255).astype(image.dtype)
+
+target_height = arr.shape[0] * 3
+target_width = arr.shape[1] * 3
+nearest = nearest_resize(arr, target_height, target_width)
+bilinear = bilinear_resize(arr, target_height, target_width)
 
 def local_roughness(x):
     gy = np.diff(x.astype(float), axis=0)
     gx = np.diff(x.astype(float), axis=1)
     return float(np.abs(gy).mean() + np.abs(gx).mean())
 
-for name, out in [("nearest", nearest), ("bilinear", bilinear), ("bicubic", bicubic)]:
+for name, out in [("nearest", nearest), ("bilinear", bilinear)]:
     print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
 ```
 
-两线性是最平滑的. 双线性是最平滑的. 双线性是最平滑的. 双线性是最平滑的.
+接近的比分在粗度上最高,因为它保持硬边缘.双线性比分更平滑,因为每个新的像素都在每个轴上混合了两个位置.可运行的伴侣用Catmull-Rom立方核将相同的可分离的想法扩展到每个轴的四个邻居,然后在没有图像库的情况下打印所有三个结果.
 
 ## 用它
 
-`torchvision.transforms`它们将上述所有内容捆绑成一个可构成的管道. 下面的代码完全复制了`preprocess_imagenet`增加尺寸和收获.
+皮托奇在批量,设备意识的光器上执行相同操作.下面的代码将更短的侧面改大小,取一个中心作物,标准化每个频道,并产生预训练模型预期的NCHW光器.
 
 ```python
 import torch
-from torchvision import transforms
-from PIL import Image
+import torch.nn.functional as F
 
-img = Image.fromarray(synthetic_rgb(256, 256))
+image_hwc = torch.from_numpy(synthetic_rgb(256, 320))
+batch = image_hwc.permute(2, 0, 1).unsqueeze(0).float() / 255.0
 
-pipeline = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+height, width = batch.shape[-2:]
+scale = 256 / min(height, width)
+resized_height = round(height * scale)
+resized_width = round(width * scale)
+batch = F.interpolate(
+    batch,
+    size=(resized_height, resized_width),
+    mode="bilinear",
+    align_corners=False,
+    antialias=True,
+)
 
-x = pipeline(img)
-print(f"tensor type:  {type(x).__name__}")
-print(f"tensor dtype: {x.dtype}")
-print(f"tensor shape: {tuple(x.shape)}      # (C, H, W)")
-print(f"per-channel mean: {x.mean(dim=(1, 2)).tolist()}")
-print(f"per-channel std:  {x.std(dim=(1, 2)).tolist()}")
+top = (resized_height - 224) // 2
+left = (resized_width - 224) // 2
+batch = batch[:, :, top:top + 224, left:left + 224]
 
-batch = x.unsqueeze(0)
-print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a model")
+mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+batch = (batch - mean) / std
+
+print(f"tensor dtype: {batch.dtype}")
+print(f"batched shape: {tuple(batch.shape)}")
+print(f"per-channel mean: {batch.mean(dim=(0, 2, 3)).tolist()}")
+print(f"per-channel std:  {batch.std(dim=(0, 2, 3)).tolist()}")
 ```
 
-按照这个顺序进行四步:`Resize(256)`缩小较短的侧面到256; `CenterCrop(224)`取出中部的224x224补丁;`ToTensor()`通过255分开,将HWC换为CHW; `Normalize`减去ImageNet的平均值并以 std 分开. 逆转这个顺序,默默改变了达到模型的结果.
+按照这个顺序进行四步:将字节转换为浮动,将HWC换为NCHW,将较短的侧面的尺寸改为256,取一个224x224的中心作物,然后减去ImageNet的平均值并按其标准偏差划分.逆转这个顺序默默改变到达模型的结果.
 
 ## 运送它
 
@@ -388,7 +421,7 @@ print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a m
 
 ## 运动
 
-1. **(Easy)**装载一个JPEG使用OpenCV (`cv2.imread`打印两种形状和像素在`(0, 0)`解释道顺序差异,然后写一个直线转换,使OpenCV阵列与枕头阵列相同.
+1. **(Easy)**创建一个2x2 RGB `uint8`转换HWC为CHW,然后再再转换,打印两种形状,证明回路保存了每一个值.
 2. **(Medium)**写下`standardize(img, mean, std)`它们的相反,`roundtrip_max_diff <= 1`您的功能必须在HWC中的单个图像和NCHW中的一批相同的呼叫上工作.
 3. **(Hard)**运行一个1x1 conv,学习RGB的重量混合物,成一个灰色频道.`[0.299, 0.587, 0.114]`结它们,并检查输出与手册匹配`rgb_to_grayscale`其他经典的颜色空间转换可以写成1x1卷曲?
 
