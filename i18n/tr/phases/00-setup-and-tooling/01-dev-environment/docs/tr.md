@@ -16,7 +16,7 @@
 
 ## Sorun
 
-Python, TypeScript, Rust ve Julia kullanarak 200+ ders boyunca AI mühendisliği öğrenmek üzeresiniz. Eğer çevrenizin bozulursa, her ders öğrenmek yerine araçlarla mücadeleye dönüşür.
+Python, TypeScript, Rust ve Julia'yı kullanarak 500+ ders boyunca AI mühendisliği öğrenmek üzeresiniz. Eğer çevrenizin bozulursa, her ders öğrenmek yerine araçlarla mücadeleye dönüşür.
 
 Çoğu insan çevre ayarını atlıyor, sonra saatlerce import hatalarını, sürüm çatışmalarını ve kayıp CUDA sürücülerini düzeltmeye çalışıyor.
 
@@ -154,17 +154,51 @@ if torch.cuda.is_available():
 
 Bir GPU yok? Sorun yok. Çoğu ders CPU'da çalışır. Eğitim ağır dersler için Google Colab veya bulut GPU'ları kullanın.
 
-### 7 . Adım: Herşeyi Kontrol Et
+### Adım 7: Başlamak istediğiniz rotayi doğrulayın
 
-Verifikasyon senaryounu çalıştır:
+Bu dersdeki her komutu deposu kökü, dizini,
+içerir`README.md`ve `phases/`Uçuş öncesi kontrol sadece ihtiyacınız olan şeyi .
+Seçilen yolu başlatır. Öntanımlı olarak daha sonraki araçları atlar böylece yeni öğrenci
+Bir duvar uyarı yerine açık bir cevap.
+
+Tam başlangıç dizisini başlat:
 
 ```bash
-python phases/00-setup-and-tooling/01-dev-environment/code/verify.py
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner
+```
+
+Ya da sadece istediğiniz yolu kontrol edin:
+
+```bash
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route ml-foundations
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route llm-engineering
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route agents
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route mcp
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route agent-skills
+python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route certification
+```
+
+Ekle`--show-later`Aynı uçuş öncesi araçları kontrol etmek istediğinizde
+Kayıp bir sonraki araç asla
+Seçilen rota.
+
+Her başarısız gerekli kontrol, tespit edilen yol veya ithalat hatası ve
+Ajan yetenekleri ve sertifika yolları da gösterir
+Python scriptinin bir AI host'ın sahip olduğunu kanıtlayamadığı için manuel host kontrolleri
+Bir beceri keşfetmişsin ya da seçtiğin beceri alanının yazılabilir olduğunu.
+
+İlk uçuş öncesi uçuş geçince, tam olarak ilk ders yazdırır:
+
+```text
+Ready to start Beginner course.
+Next: python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py
 ```
 
 ## Kullan
 
-Bu dersler için çevrenizin hazır olması gerekiyor.
+Çevre kontrol ettiğiniz rota başlatmak için hazır.
+Bir dersin ilk dersini tamamen engellemek yerine, onlardan istediklerinde
+İşte tüm programda kullanacağınız:
 
 | Language | Used In | Package Manager |
 |----------|---------|-----------------|
