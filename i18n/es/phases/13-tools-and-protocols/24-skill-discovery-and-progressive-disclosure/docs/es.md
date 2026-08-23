@@ -33,15 +33,8 @@ Un buen tiempo de ejecución hace que el descubrimiento sea determinista y la di
 
 Trate el sistema de archivos como entrada de origen. No publique caminos crudos directamente al modelo.
 
-```mermaid
-flowchart LR
-  R[Configured roots] --> W[Enumerate immediate skill dirs]
-  W --> P[Find SKILL.md]
-  P --> V[Validate package]
-  V --> S[Attach scope and provenance]
-  S --> C[Resolve collisions]
-  C --> B[Apply catalog budget]
-  B --> O[Publish name, description, path]
+```figure
+skill-discovery-pipeline
 ```
 
 Cada etapa debe producir datos estructurados y fallos estructurados.
@@ -101,10 +94,8 @@ Elige una política para el anfitrión. Preserva los candidatos rechazados o som
 
 La especificación de habilidades de agente describe la carga en etapas.
 
-```mermaid
-flowchart TB
-  L1[Level 1: catalog metadata<br/>name, description, source] -->|skill selected| L2[Level 2: SKILL.md body<br/>workflow and decision map]
-  L2 -->|branch requires detail| L3[Level 3: references, scripts, assets<br/>task-specific material]
+```figure
+skill-disclosure-levels
 ```
 
 #### Nivel 1: Metadatos de catálogo
@@ -164,12 +155,8 @@ Esto da a cada referencia una condición de carga observable.`references/`No lo 
 
 Mantenga el gráfico de referencia superficial.`SKILL.md`Un salto hace que la accesibilidad sea probable y reduce la posibilidad de que una restricción necesaria nunca entre en contexto.
 
-```mermaid
-flowchart LR
-  S[SKILL.md] --> P[python-release.md]
-  S --> C[container-release.md]
-  S --> D[docs-release.md]
-  S --> T[report-template.md]
+```figure
+skill-reference-map
 ```
 
 ### El presupuesto del catálogo y el contexto activo son presupuestos diferentes
@@ -201,16 +188,8 @@ references/external-link -> /private/company-secrets
 
 Resolver la raíz del paquete y el candidato con la semántica del sistema de archivos, rechazar las entradas absolutas y verificar que el candidato resuelto permanece bajo la raíz resuelta. Decidir si los enlaces simbólicos están permitidos antes de la descubrimiento. Si es posible, comprobar el objetivo resuelto cada vez.
 
-```mermaid
-flowchart LR
-  I[Requested relative path] --> A{Absolute or parent escape?}
-  A -->|yes| X[Reject]
-  A -->|no| R[Resolve against package root]
-  R --> U{Resolved path under root?}
-  U -->|no| X
-  U -->|yes| F{Expected file type?}
-  F -->|no| X
-  F -->|yes| L[Load with size limit]
+```figure
+skill-resource-containment
 ```
 
 La contención de vías no establece la confianza del contenido. Una referencia válida dentro del paquete puede aún contener instrucciones maliciosas. La lección 26 maneja esa amenaza.

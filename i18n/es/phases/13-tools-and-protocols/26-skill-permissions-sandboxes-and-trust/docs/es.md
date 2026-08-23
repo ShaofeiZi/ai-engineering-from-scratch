@@ -49,17 +49,8 @@ La activación normalmente coloca las instrucciones en el contexto visible del m
 - aprobar una acción consecuente;
 - demostrar que el resultado es correcto.
 
-```mermaid
-flowchart LR
-  S[Activated skill] --> M[Model proposes action]
-  M --> C[Capability registry]
-  C --> P[Permission policy]
-  P --> A{Approval needed?}
-  A -->|yes, granted| X[Isolated executor]
-  A -->|no| X
-  A -->|denied| D[Stop and report]
-  X --> O[Observation]
-  O --> V[Verification gate]
+```figure
+skill-authority-chain
 ```
 
 Cada caja se puede configurar de forma independiente.
@@ -96,18 +87,8 @@ Un problema, página web, documento, imagen, archivo de repositorio o resultado 
 
 Un cálculo de ruta se escapa del espacio de trabajo, un globo coincide demasiado, un retiro duplica una escritura o un paso de limpieza elimina el directorio generado incorrectamente.
 
-```mermaid
-flowchart TB
-  P[Skill package] --> I[Model instructions]
-  R[References and assets] --> I
-  U[Untrusted task content] --> I
-  I --> Q[Requested actions]
-  SC[Scripts and dependencies] --> Q
-  Q --> H[Host tools and executor]
-  H --> F[Files]
-  H --> N[Network]
-  H --> E[Environment and credentials]
-  H --> X[External side effects]
+```figure
+skill-trust-surface
 ```
 
 Dibuja este gráfico para cada habilidad de alto impacto, marque quién controla cada borde y qué límite lo valida.
@@ -246,17 +227,8 @@ Un origen HTTPS es el esquema, el host y el puerto efectivo. `https://api.exampl
 
 Utilice la aprobación para acciones cuya autoridad no puede ser delegada con seguridad de antemano.
 
-```mermaid
-flowchart TD
-  A[Proposed action] --> R{Reversible and local?}
-  R -->|yes| S{Inside pre-approved scope?}
-  S -->|yes| E[Execute in sandbox]
-  S -->|no| P[Ask for scoped approval]
-  R -->|no| H{External, destructive, costly, or sensitive?}
-  H -->|yes| P
-  H -->|no| E
-  P -->|granted| E
-  P -->|denied| D[Stop]
+```figure
+skill-approval-decision
 ```
 
 La aprobación debe mostrar el objetivo real y la consecuencia. "Permitir la explosión?" es débil. "Permitir a los revisados"`publish_release`¿Es posible utilizar la herramienta para publicar la versión 2.4.0 en el registro de la puesta en escena?"

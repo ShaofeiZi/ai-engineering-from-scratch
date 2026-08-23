@@ -192,16 +192,8 @@ La primera tarea de ingeniería es la clasificación, decidir qué es el artefac
 
 Una habilidad de agente es un directorio cuyo punto de entrada es `SKILL.md`. El archivo de entrada contiene la materia frontal de YAML seguida de instrucciones de Markdown.
 
-```mermaid
-flowchart TD
-  B[release-readiness bundle] --> S[SKILL.md]
-  B --> R[references]
-  R --> RP[release-policy.md]
-  R --> CF[changelog-format.md]
-  B --> C[scripts]
-  C --> IR[inspect_release.py]
-  B --> A[assets]
-  A --> RC[release-checklist.md]
+```figure
+skill-package-anatomy
 ```
 
 El directorio, no el archivo Markdown solo, es la unidad desplegable.`SKILL.md`con referencias faltantes es un paquete roto incluso si su material frontal se analiza.
@@ -304,19 +296,8 @@ Revise la materia frontal como código de configuración, valida, versionarla e 
 
 ### El ciclo de vida de las habilidades
 
-```mermaid
-flowchart LR
-  D[Discover package] --> V[Validate metadata and layout]
-  V --> C[Publish catalog entry]
-  C --> S{Select?}
-  S -->|explicit user request| A[Activate]
-  S -->|implicit model match| A
-  S -->|no match| N[Leave unloaded]
-  A --> B[Load SKILL.md body]
-  B --> R[Read required resources]
-  R --> T[Request tools or run scripts]
-  T --> E[Return evidence and artifact]
-  E --> Q[Verify result]
+```figure
+skill-runtime-lifecycle
 ```
 
 Cada flecha es un límite con sus propios modos de fracaso.
@@ -336,15 +317,8 @@ La desintegración de estas etapas causa malos modelos mentales. Una habilidad d
 
 MCP responde: "¿Qué capacidades puede requerir esta aplicación, y cuáles son sus esquemas?" Una habilidad responde: "¿Cómo debe un agente abordar esta clase de tarea?"
 
-```mermaid
-flowchart TB
-  U[User goal] --> K[Activated skill]
-  K --> P[Procedure and decision rules]
-  P --> M[MCP or local tool]
-  M --> O[Observation]
-  O --> P
-  P --> A[Artifact]
-  A --> V[Verification]
+```figure
+skill-tool-orthogonality
 ```
 
 La habilidad puede nombrar una herramienta, pero el host posee el registro de capacidades reales. Si la herramienta está ausente, la habilidad debe indicar una caída o falla claramente. Nunca debe implicar que nombrar una capacidad la crea.
@@ -400,13 +374,8 @@ La demostración imprime JSON para una habilidad portátil válida, una habilida
 
 Validar los hechos estructurales baratos antes de reglas de contenido más profundas:
 
-```mermaid
-flowchart LR
-  F[Frontmatter delimiters] --> Y[Scalar metadata]
-  Y --> N[Name and directory match]
-  N --> R[Required fields]
-  R --> X[Known extensions]
-  X --> B[Body and resource rules]
+```figure
+skill-validation-order
 ```
 
 Este orden evita que los errores secundarios ocultan la primera invariante rota.

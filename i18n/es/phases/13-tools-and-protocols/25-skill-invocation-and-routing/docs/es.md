@@ -41,17 +41,8 @@ La especificación portátil de habilidades de agente define el paquete. no esta
 
 ### Las cinco etapas de invocación
 
-```mermaid
-stateDiagram-v2
-  [*] --> Discovered
-  Discovered --> Eligible: actor and policy allow
-  Eligible --> Selected: explicit name or routing match
-  Selected --> Activated: body enters context
-  Activated --> Executing: permitted tool or model step begins
-  Executing --> Completed: output verified
-  Discovered --> Denied: actor or policy blocks
-  Eligible --> NotSelected: routing threshold not met
-  Activated --> Blocked: capability or approval unavailable
+```figure
+skill-invocation-stages
 ```
 
 Usa estas palabras con precisión:
@@ -138,14 +129,8 @@ score(s, x) = capability_match + trigger_match + context_match - exclusion_match
 
 El resultado exacto puede ser una decisión de LLM en lugar de aritmética. El principio de ingeniería sigue siendo válido: la selección debe superar un umbral y una habilidad en competencia. Cuando la evidencia es débil, absténgase.
 
-```mermaid
-flowchart TD
-  Q[User request] --> E[Filter by actor eligibility]
-  E --> R[Compare request with descriptions]
-  R --> M{One clear match?}
-  M -->|yes| A[Activate selected skill]
-  M -->|no, ambiguous| C[Ask or use ordinary reasoning]
-  M -->|no match| N[Do not activate]
+```figure
+skill-routing-abstention
 ```
 
 Para las habilidades de alto impacto, el enrutamiento implícito puede ser inapropiado incluso con una descripción fuerte.
@@ -191,12 +176,8 @@ Las acciones de la casi perdida`package`y `build`Un conjunto de enrutamiento hec
 
 Un argumento de invocación cruza varios límites:
 
-```mermaid
-flowchart LR
-  U[User text] --> P[Host parser]
-  P --> B[Bound arguments]
-  B --> C[Skill context]
-  C --> T[Typed tool call]
+```figure
+skill-argument-boundaries
 ```
 
 En cada límite, preserva la intención sin tratar el texto como código.
@@ -214,16 +195,8 @@ Un producto puede activar una habilidad porque su flujo de trabajo ya conoce el 
 
 Esto elimina la incertidumbre de enrutamiento, pero crea una dependencia de la API de tiempo de ejecución.
 
-```mermaid
-flowchart LR
-  P[Portable bundle] --> S[SKILL.md]
-  P --> R[references]
-  P --> C[scripts]
-  H[Host adapter] --> D[discovery path]
-  H --> A[explicit activation API]
-  H --> I[invocation policy]
-  H --> B[argument binding]
-  H --> P
+```figure
+skill-host-adapter
 ```
 
 La habilidad debe permanecer inteligible cuando se abre por un cliente diferente que cumpla.

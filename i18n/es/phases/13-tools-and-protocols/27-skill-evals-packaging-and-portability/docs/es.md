@@ -63,14 +63,8 @@ Las respuestas se convierten en la arquitectura del paquete y el conjunto de eva
 
 ### El juicio separado del trabajo determinista
 
-```mermaid
-flowchart LR
-  T[Task request] --> J1[Model: classify task and choose branch]
-  J1 --> R[Reference: load branch-specific rules]
-  R --> S[Script or tool: collect deterministic evidence]
-  S --> J2[Model: interpret evidence]
-  J2 --> A[Artifact contract]
-  A --> V[Deterministic and human verification]
+```figure
+skill-workflow-extraction
 ```
 
 Utilice el juicio modelo para la clasificación, la prioridad, la síntesis y la ambigüedad. Utilice scripts o herramientas para analizar, contar, validar, convertir, consultar las API tipadas y hacer cumplir las invariantes.
@@ -96,14 +90,8 @@ Este orden hace que la prosa sirva un sistema testable en lugar de inventar crit
 
 ### Seis capas de evaluación
 
-```mermaid
-flowchart TB
-  L1[1. Package structure] --> L2[2. Trigger routing]
-  L2 --> L3[3. Instruction and artifact behavior]
-  L3 --> L4[4. Script correctness]
-  L4 --> L5[5. Safety and authority]
-  L5 --> L6[6. Packaging and portability]
-  L6 --> G{Release gate}
+```figure
+skill-eval-layers
 ```
 
 Cada capa responde a una pregunta diferente.
@@ -268,13 +256,8 @@ Registrar si el control es sólo instrucción, política de herramientas, aproba
 
 Una prueba de liberación debe instalarse en un destino limpio, y luego ejecutar la validación con respecto a la copia instalada.
 
-```mermaid
-flowchart LR
-  S[Source bundle] --> M[Build manifest]
-  M --> I[Install complete tree]
-  I --> H[Verify hashes and paths]
-  H --> D[Discover installed skill]
-  D --> E[Run eval smoke test]
+```figure
+skill-package-install
 ```
 
 Probando solo el árbol fuente se pierden errores de instalación, bits ejecutables perdidos, referencias aplanadas, nombres reescritos y archivos obsoletos que quedan de versiones anteriores.
@@ -458,23 +441,8 @@ Almacenar el informe con la versión de revisión del paquete y la versión de f
 
 Utilice este bucle de autoría para cada revisión de habilidades:
 
-```mermaid
-flowchart LR
-  O[Observe real workflow] --> C[Define contract]
-  C --> P[Package procedure and helpers]
-  P --> E[Run layered evals]
-  E --> F{Failure class}
-  F -->|routing| D[Edit description or policy]
-  F -->|behavior| B[Edit body, references, or tools]
-  F -->|script| S[Fix deterministic code]
-  F -->|safety| A[Reduce authority or strengthen isolation]
-  F -->|portability| H[Add adapter, fallback, or incompatibility]
-  D --> E
-  B --> E
-  S --> E
-  A --> E
-  H --> E
-  E -->|passes gate| R[Release complete bundle]
+```figure
+skill-authoring-loop
 ```
 
 Cambiar la capa responsable del fracaso. No meter más palabras en`SKILL.md`cuando el problema real es un instalador que deja caer referencias o una caja de arena que expone el directorio de origen.
