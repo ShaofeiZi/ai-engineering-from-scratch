@@ -12,7 +12,7 @@
 - Sürekli bir sahne nasıl piksellere ayrılır ve örnekleme/kvantisalatma kararlarının her aşağı akımlı modelde tavan belirlemesini açıklayın.
 - NumPy dizileri olarak görüntüleri okuyun, kesin ve kontrol edin ve HWC ve CHW düzenleri arasında akıcı olarak geçin
 - RGB, gri ölçek, HSV ve YCbCr arasında dönüştürün ve her renk alanının neden var olduğunu açıklayın
-- Piksel düzeyinde önceden işleme uygulayın (normalleştir, standartlaştır, boyutlandır, kanal önce) tam olarak torchvision beklediği gibi
+- Piksel düzeyinde önceden işleme uygulayın (normalleştir, standartlaştır, boyutlandır, kanal önce) önceden eğitilmiş PyTorch görme modelleri beklediği gibi
 
 ## Sorun
 
@@ -202,13 +202,12 @@ conv-output-size
 
 ## Yapın
 
-### Adım 1: Bir resim yükle ve şeklini kontrol et
+### Adım 1: Bir görüntü tensörü oluşturun ve şeklini kontrol edin
 
-Yastık kullanın herhangi bir JPEG veya PNG yüklemek, NumPy'ye dönüştürmek ve elde ettiğiniz şeyi basmak için.
+Deterministik sentetik bir görüntü ile başlayın, böylece ilk laboratuvar sadece NumPy ile çevrimdışı çalıştırılır. Dosya dekodlaması ayrı bir sınırdır: bir JPEG veya PNG dekodörü RGB baytları döndürdükten sonra, aşağıdaki her tensor işlem aynıdır.
 
 ```python
 import numpy as np
-from PIL import Image
 
 def synthetic_rgb(h=128, w=192, seed=0):
     rng = np.random.default_rng(seed)
@@ -220,8 +219,6 @@ def synthetic_rgb(h=128, w=192, seed=0):
     return np.clip(rgb, 0, 255).astype(np.uint8)
 
 arr = synthetic_rgb()
-# Or load from disk:
-# arr = np.asarray(Image.open("your_image.jpg").convert("RGB"))
 
 print(f"type:   {type(arr).__name__}")
 print(f"dtype:  {arr.dtype}")
@@ -231,7 +228,7 @@ print(f"max:    {arr.max()}")
 print(f"pixel at (0, 0): {arr[0, 0]}")
 ```
 
-Beklenen üretim: `shape: (H, W, 3)`- Evet .`dtype: uint8`, aralığı `[0, 255]`Bu, baytların bir kamera, JPEG dekodör veya sentetik jeneratörden geldiği için disk üzerinde kanonik temsil.
+Beklenen üretim: `shape: (H, W, 3)`- Evet .`dtype: uint8`, aralığı `[0, 255]`Bu, baytların bir kamera, bir görüntü dekodörü veya bu sentetik jeneratörden geldiği için kanonik olarak çözülmüş bir temsil.
 
 ### Adım 2: Çanakları bölün ve yeniden düzenlen
 
@@ -270,15 +267,16 @@ def rgb_to_hsv(rgb):
 
     h = np.zeros_like(cmax)
     mask = delta > 0
-    rmax = mask & (cmax == r)
-    gmax = mask & (cmax == g)
-    bmax = mask & (cmax == b)
+    argmax = np.argmax(rgb_f, axis=-1)
+    rmax = mask & (argmax == 0)
+    gmax = mask & (argmax == 1)
+    bmax = mask & (argmax == 2)
     h[rmax] = ((g[rmax] - b[rmax]) / delta[rmax]) % 6
     h[gmax] = ((b[gmax] - r[gmax]) / delta[gmax]) + 2
     h[bmax] = ((r[bmax] - g[bmax]) / delta[bmax]) + 4
     h = h * 60.0
 
-    s = np.where(cmax > 0, delta / cmax, 0)
+    s = np.divide(delta, cmax, out=np.zeros_like(delta), where=cmax > 0)
     v = cmax
     return np.stack([h, s, v], axis=-1)
 
@@ -326,58 +324,93 @@ print(f"roundtrip max pixel diff: {max_diff}    # should be 0 or 1")
 
 Kanal başına ortalama sıfır, std bir yakın olmalıdır.`transforms.Normalize`Telefon, kapuk altında.
 
-### Adım 5: Üç interpolasyon yöntemiyle yeniden boyutlandır
+### Adım 5: Baştan yeniden boyutlandır
 
-En yakın, iki çizgilik ve iki küplik bir ölçekle karşılaştırın, fark görülebilir.
+En yakın komşu çevreler, her çıkış koordinatını bir kaynak pikseline çevirir. İkizli interpolasyon, çevresindeki dört pikselyi bulur ve onları mesafe ile birleştirir. Aşağıdaki her iki uygulamada son noktalara uyumlu koordinatlar kullanılır, böylece ilk ve son kaynak pikselleri sabit kalır.
 
 ```python
-target = (arr.shape[0] * 3, arr.shape[1] * 3)
+def resize_coordinates(source_length, target_length):
+    if target_length == 1:
+        return np.zeros(1, dtype=np.float32)
+    return np.linspace(0, source_length - 1, target_length, dtype=np.float32)
 
-nearest = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.NEAREST))
-bilinear = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BILINEAR))
-bicubic = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BICUBIC))
+def nearest_resize(image, target_height, target_width):
+    y = np.rint(resize_coordinates(image.shape[0], target_height)).astype(int)
+    x = np.rint(resize_coordinates(image.shape[1], target_width)).astype(int)
+    return image[y[:, None], x[None, :]]
+
+def bilinear_resize(image, target_height, target_width):
+    y = resize_coordinates(image.shape[0], target_height)
+    x = resize_coordinates(image.shape[1], target_width)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    y1 = np.minimum(y0 + 1, image.shape[0] - 1)
+    x1 = np.minimum(x0 + 1, image.shape[1] - 1)
+    wy = (y - y0)[:, None, None]
+    wx = (x - x0)[None, :, None]
+
+    source = image.astype(np.float32)
+    top = source[y0[:, None], x0[None, :]] * (1 - wx)
+    top += source[y0[:, None], x1[None, :]] * wx
+    bottom = source[y1[:, None], x0[None, :]] * (1 - wx)
+    bottom += source[y1[:, None], x1[None, :]] * wx
+    result = top * (1 - wy) + bottom * wy
+    return np.clip(np.rint(result), 0, 255).astype(image.dtype)
+
+target_height = arr.shape[0] * 3
+target_width = arr.shape[1] * 3
+nearest = nearest_resize(arr, target_height, target_width)
+bilinear = bilinear_resize(arr, target_height, target_width)
 
 def local_roughness(x):
     gy = np.diff(x.astype(float), axis=0)
     gx = np.diff(x.astype(float), axis=1)
     return float(np.abs(gy).mean() + np.abs(gx).mean())
 
-for name, out in [("nearest", nearest), ("bilinear", bilinear), ("bicubic", bicubic)]:
+for name, out in [("nearest", nearest), ("bilinear", bilinear)]:
     print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
 ```
 
-En yakınları sertlik oranında en yüksek puanlar verir çünkü sert kenarları tutar. Bilineer en nemlidir.
+En yakınları sert kenarları koruduğu için kabalık konusunda en yüksek puanlar verir. Bilinear daha düzgüntür çünkü her yeni piksel her eksede iki pozisyonu birleştirir. Çekilebilir eş aynı ayrılabilir fikri bir eksede dört komşuya Catmull-Rom küp çekirdeği ile uzattır, sonra resim kütüphanesi olmadan tüm üç sonucu da yazdırır.
 
 ## Kullan
 
-`torchvision.transforms`Aşağıdaki kod tam olarak neyi yansıtır.`preprocess_imagenet`Evet, artı boyutlandırma ve biçim.
+PyTorch, toplu, cihaz farkındalıklı tensörlerde aynı işlemleri yapar. Aşağıdaki kod daha kısa tarafı boyutlandırır, bir merkez biçimini alır, her kanalı standartlaştırır ve önceden eğitilmiş bir model beklediği NCHW tensörü üretir.
 
 ```python
 import torch
-from torchvision import transforms
-from PIL import Image
+import torch.nn.functional as F
 
-img = Image.fromarray(synthetic_rgb(256, 256))
+image_hwc = torch.from_numpy(synthetic_rgb(256, 320))
+batch = image_hwc.permute(2, 0, 1).unsqueeze(0).float() / 255.0
 
-pipeline = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+height, width = batch.shape[-2:]
+scale = 256 / min(height, width)
+resized_height = round(height * scale)
+resized_width = round(width * scale)
+batch = F.interpolate(
+    batch,
+    size=(resized_height, resized_width),
+    mode="bilinear",
+    align_corners=False,
+    antialias=True,
+)
 
-x = pipeline(img)
-print(f"tensor type:  {type(x).__name__}")
-print(f"tensor dtype: {x.dtype}")
-print(f"tensor shape: {tuple(x.shape)}      # (C, H, W)")
-print(f"per-channel mean: {x.mean(dim=(1, 2)).tolist()}")
-print(f"per-channel std:  {x.std(dim=(1, 2)).tolist()}")
+top = (resized_height - 224) // 2
+left = (resized_width - 224) // 2
+batch = batch[:, :, top:top + 224, left:left + 224]
 
-batch = x.unsqueeze(0)
-print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a model")
+mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+batch = (batch - mean) / std
+
+print(f"tensor dtype: {batch.dtype}")
+print(f"batched shape: {tuple(batch.shape)}")
+print(f"per-channel mean: {batch.mean(dim=(0, 2, 3)).tolist()}")
+print(f"per-channel std:  {batch.std(dim=(0, 2, 3)).tolist()}")
 ```
 
-Dört adım, tam olarak bu sırada:`Resize(256)`256'a kadar daha kısa tarafı ölçeyor. `CenterCrop(224)`Orta tarafta 224x224 yama alır .`ToTensor()`255 ile bölünür ve HWC'yi CHW'ye değiştirir; `Normalize`ImageNet ortalamasını çıkarır ve std ile bölür. Bu sırayı ters çevirmek, modelin ulaştığını sessizce değiştirir.
+Dört adım, bu tam sırada: baytları yüzerek değiştirin ve HWC'yi NCHW'ye değiştirin, daha kısa tarafın boyutunu 256'ya değiştirin, 224x224 merkez biçimini alın, ardından ImageNet ortalamasını çıkarın ve standart sapma ile bölün. Bu sırayı ters çevirmek, modelin ulaştığını sessizçe değiştirir.
 
 ## Gönder
 
@@ -388,7 +421,7 @@ Bu ders şunları ortaya çıkarır:
 
 ## Egzersizler
 
-1. **(Easy)**OpenCV ile JPEG yükle (`cv2.imread`İki şekli de, piksel de basın.`(0, 0)`Kanal-sıra farkını açıklayın, sonra OpenCV dizini Yastık dizisi ile aynı hale getiren tek satırlı bir dönüşüm yazın.
+1. **(Easy)**2x2 RGB oluştur`uint8`HWC'yi CHW'ye çevir ve geriye, her iki şeklini de yazdır ve dönüş yolculuğunun her değerini koruduğunu kanıtla.
 2. **(Medium)**Yazmın .`standardize(img, mean, std)`ve bunun tersine birlikte bir `roundtrip_max_diff <= 1`Uint8 görüntülerini test et. fonksiyonlarınız HWC'deki tek bir görüntüde ve aynı çağrı ile NCHW'deki bir partide çalışmalıdır.
 3. **(Hard)**3 kanallı ImageNet standartlaştırılmış bir tensör alın ve RGB'nin ağırlıklı karışımını bir gri ölçekli kanal olarak öğrenen 1x1 konforu üzerinden çalıştırın.`[0.299, 0.587, 0.114]`, dondur ve çıkışın el kitabına uyuyor olduğunu kontrol et.`rgb_to_grayscale`Hangi klasik renk- uzay dönüşümleri 1x1 dönüşümleri olarak yazılabilir?
 
