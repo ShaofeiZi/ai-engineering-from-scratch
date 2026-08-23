@@ -152,5 +152,5 @@ tp-tool-loop
 - [OpenAI — Function calling guide](https://platform.openai.com/docs/guides/function-calling) OpenAI शैली के उपकरण घोषणाओं और कॉल आकारों के लिए कैनोनिक संदर्भ
 - [Anthropic — Tool use overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview) क्लाउड की `tool_use`/`tool_result`ब्लॉक प्रारूप
 - [Google — Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling) `functionDeclarations`और जुड़वां में समानांतर कॉल अर्थशास्त्र
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) उपकरण इंटरफ़ेस का प्रदाता-अज्ञानी सामान्यीकरण
+- [Model Context Protocol — Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) उपकरण इंटरफ़ेस का वर्तमान स्टेटलेस, प्रदाता-अज्ञानी सामान्यीकरण
 - [JSON Schema — 2020-12 release notes](https://json-schema.org/draft/2020-12/release-notes) योजना बोली हर आधुनिक उपकरण एपीआई बोलता है
