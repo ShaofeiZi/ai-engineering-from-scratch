@@ -1,169 +1,303 @@
-# MCP Güvenliği II  OAuth 2.1, Kaynak göstergeler, Gelişmiş kapsamlar
+# MCP Yetkisi: CIMD, Emitör Bağlantısı, PKCE ve Step-Up
 
-> Uzaktan MCP sunucuları sadece doğrulama değil yetkilidir. 2025-11-25 spesifikasyonu OAuth 2.1 + PKCE + kaynak göstergelerine (RFC 8707) + korunan kaynak metadatalarına (RFC 9728) uyum sağlar. SEP-835 403 WWW-Authenticate'de step-up yetki ile artımsal kapsamlılık onayını ekler. Bu ders step-up akışını bir durum makinesi olarak uyguluyor, böylece her atışını görebilirsiniz.
+> Uzaktan bir MCP talebi devletsiz, ancak yetkisi anonim değildir. Her tanıklığı oluşturan emitenine ve her token'ı alan kaynağa bağlayın.
 
 **Type:** Build
-**Languages:** Python (stdlib, OAuth state machine simulator)
-**Prerequisites:** Phase 13 · 09 (transports), Phase 13 · 15 (security I)
-**Time:** ~75 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13 · 09 (transports), Phase 13 · 15 (security)
+**Time:** ~90 minutes
 
 ## Öğrenme Hedefleri
 
-- Kaynak sunucusu ile yetki sunucu sorumluluklarını ayırt edin.
-- PKCE korumalı OAuth 2.1 yetki kod akışını izleyin.
-- Kullanım`resource`(RFC 8707) ve korunan kaynak metadataları (RFC 9728) karışıklıklı yardım saldırılarının önlenmesi için.
-- Gelişme yetkisi uygulanır: sunucu 403'e WWW-Authenticate ile daha büyük bir kapsam talep eder; istemci kullanıcı onayını tekrar talep eder ve tekrar dener.
+- Korunan kaynak metadataları üzerinden yetki sunucularını keşfedin.
+- Geçmiş Dinamik Müşteri Kayıtları yerine Müşteri Kimliği Metadata Belgelerini tercih edin.
+- Doğruları bildirin .`application_type`DCR uyumluluğu yolunun kaçınılmaz olduğu durumlarda.
+- Yetkililik cevabını doğrulayın `iss`ve emitenin kimliği ile ilgili bilgileri ayırmak.
+- PKCE, kaynak göstergelerini, izleyicilerin doğrulanmasını ve artış alanlarını kullanın.
+- Protokol seansları olmadan yetkili MCP 2026-07-28 isteklerini gönderin.
 
 ## Sorun
 
-Erken MCP (2025) ad-hoc API anahtarları veya hiç bir auth ile uzaktan sunucuları gönderdi. 2025-11-25 spesifikasyonu, bu boşluğu tam bir OAuth 2.1 profiliyle kapatıyor.
+Uzaktan bir MCP sunucusu özel kayıtları okuyabilir, dış sistemleri yazabilir veya pahalı çalışmaları tetikleyebilir. Kimlik kimliği kimlik kimliğini belirler. Yetki ayrıca cevap vermelidir:
 
-Gerçek dünyadaki üç ihtiyaç:
+- Hangi yetki sunucusu bu kimlik bilgileri verdi?
+- Hangi MCP kaynağı için bir simge?
+- Hangi müşteri ve URI akışını tamamladı?
+- Kullanıcı hangi işlemleri onayladı?
+- Bu talep hala onayına uygun mu?
 
-- **Ordinary remote servers.**Kullanıcı, Notion / GitHub / Gmail'ine erişebilen uzaktan bir MCP sunucusu yükler. PKCE ile OAuth 2.1 doğru şekildir.
-- **Scope escalation.**Not sunucu veriliyor .`notes:read`Daha sonra ihtiyacın olabilir .`notes:write`Tüm akışı yeniden yapmak yerine, step-up (SEP-835) ek kapsamı talep eder.
-- **Confused deputy prevention.**Müşteri, Server A için kitle odaklı bir token tutmaktadır. Server A kötü niyetli ve token'ı Server B'ye sunmaya çalışır. Kaynak göstericileri (RFC 8707) token'i amaçlı kitleye bağlar.
+2026-07-28 yetki profili müşteri kayıtlarını ve emitenin yönetimini zorlaştırır.`application_type`DCR'de, RFC 9207 emitenin yanıtlarını onaylar ve emitenler arasında kredi belgelerini yeniden kullanmayı yasaklar.
 
-OAuth 2.1 yeni bir şey değil. Yeni olan MCP'nin profili: belirli gerekli akışlar (sadece yetki kodu + PKCE; hiçbir içerikli, varsayılan olarak müşteri kimlikleri yoktur), her token talebi için zorunlu kaynak göstergeler ve müşterilerin nereye gideceğini bilmeleri için yayınlanan korunan kaynak metadataları.
+Bu kurallar devletsiz çekirdeği tamamlıyor.`Mcp-Session-Id`- Evet .
 
 ## Anlaşım
 
-### Roller
+### Üç rolü bil.
 
-- **Client.**MCP istemcisi (Claude Desktop, Cursor vb.).
-- **Resource server.**MCP sunucusu (notlar, GitHub, Postgres, her neyse).
-- **Authorization server.**Kaynak sunucu ile aynı hizmet veya ayrı bir IDP (Auth0, Keycloak, Cognito) olabilir.
+- **MCP client:**bir kaynak sahibi adına talepler gönderir.
+- **MCP resource server:**erişim tokenini kabul eder ve MCP son noktasına hizmet eder.
+- **Authorization server:**Kaynak sahibi doğrulanır, onay toplar ve tokenler verir.
 
-MCP'nin profilli, kaynak ve yetki sunucuları aynı barındırma olabilir ancak URL'ler ile ayırt edilmelidir.
+Kaynak sunucusu ve yetki sunucusu birlikte çalışabilir, ancak kimliklerini ve doğrulama sorumluluklarını ayrı tutarlar.
 
-### Yetki kodu + PKCE
+### HTTP için yetki geçerlidir
 
-Akış:
+MCP yetki özellikleri HTTP tabanlı taşımalara uygulanır. Yerel studio sunucusu işlem ve işletim sistemi güven sınırı altında çalışır.
 
-1. Müşteri üretir `code_verifier`(hassasi) ve `code_challenge`(SHA256)
-2. Müşteri kullanıcıyı  adresine yönlendirir`/authorize?response_type=code&client_id=...&redirect_uri=...&scope=notes:read&code_challenge=...&resource=https://notes.example.com`- Evet .
-3. Kullanıcı onay verdi. yetki sunucusu yönlendiriyor `redirect_uri?code=...`- Evet .
-4. Müşteri gönderdi `/token?grant_type=authorization_code&code=...&code_verifier=...&resource=...`- Evet .
-5. Yetki sunucu, verifikatörün hashini depolanan zorlukla doğruluyor ve bir erişim jetonu yayınlıyor.
-6. Müşteri simgesini kullanıyor: `Authorization: Bearer ...`Kaynak sunucusuna yapılan her talepte.
+Uzak Akışlı HTTP için, taşıyıcı simgesini `Authorization`Her istek için başlık.
 
-PKCE yetki kodları kapsamlı saldırıları önler. Kaynak göstergelerleri token'ın başka yerlerde geçerli olmamasını engeller.
+### Korunan kaynak metadata ile başlayın
 
-### Korunan kaynak metadataları (RFC 9728)
-
-Kaynak sunucusu bir `.well-known/oauth-protected-resource`Belge:
+Kaynak sunucusu RFC 9728 metadatalarını yayınlar:
 
 ```json
 {
-  "resource": "https://notes.example.com",
+  "resource": "https://notes.example.com/mcp",
   "authorization_servers": ["https://auth.example.com"],
-  "scopes_supported": ["notes:read", "notes:write", "notes:delete"]
+  "scopes_supported": ["notes:delete", "notes:read", "notes:write"]
 }
 ```
 
-Client yetki sunucusunu kaynak sunucusundan keşfeder. Yapılandırmayı azaltır  istemci yalnızca kaynak URL'ine ihtiyaç duyar.
+Müşteri MCP kaynak URL'den başlar, bu belgeyi alır, reklamlı bir yetki sunucusu seçer ve ardından bu sunucunun OAuth veya OpenID Connect metadatalarını alır.
 
-### Kaynak göstericileri (RFC 8707)
+RFC 9728'in bilinen URL'sini oluştururken kaynak yolunu korumak.`https://notes.example.com/mcp`Bu ders kullanıyor .`https://notes.example.com/.well-known/oauth-protected-resource/mcp`- Kaldırıyorum .`/mcp`İle aynı kökendeki farklı korunan kaynak için metadata seçilebilir.
 
-`resource`Token istekinde belirtilen parametre, token'ın amaçlı kitlesini işaretler.`aud: "https://notes.example.com"`Bu token çeklerini alan başka bir MCP sunucusu .`aud`Ve onu reddeder.
+Bir host adından yetki sunucusunu tahmin etmeyin. Geçersiz bir hata kurumundan keşfedilen bir emitenin izini tutmayın. Müşteri emitenin güvenmeye istekli olduğu bir politika tutun.
 
-### Kapsam modeli
+### Yetki sunucusunun metadatalarını doğrulayın
 
-Görevi alanlar uzayla ayrılan iplerdir.
+Metadata son noktaları ve desteklenen kontrolleri ortaya çıkarmalıdır:
 
-- `notes:read`- Evet .`notes:write`- Evet .`notes:delete`
-- `admin:*`Admin yetenekleri için (sürekli kullanmak)
-- `profile:read`Kimlik için
-
-Sınıf seçimi en az ayrıcalık olmalıdır: ihtiyacınız olanı şimdi isteyin, daha fazlasına ihtiyacınız olduğunda adım atın.
-
-### Gelişme izni (SEP-835)
-
-Kullanıcı yardımları `notes:read`Sonra ajanı bir not silmesini isterler.
-
+```json
+{
+  "issuer": "https://auth.example.com",
+  "authorization_endpoint": "https://auth.example.com/authorize",
+  "token_endpoint": "https://auth.example.com/token",
+  "code_challenge_methods_supported": ["S256"],
+  "authorization_response_iss_parameter_supported": true,
+  "client_id_metadata_document_supported": true
+}
 ```
-HTTP/1.1 403 Forbidden
+
+PKCE için S256'yi isteyin. Tam emiten dizinini kaydetin. Bu tam değer kayıt ve token depolama anahtarı olur.
+
+### Kayıt önceliğini izleyin
+
+Seçilen emitenle müşteri zaten açık bir ilişkiye sahip olduğunda önceden kaydedilen müşteri bilgilerini kullanın. Aksi takdirde yetki sunucusu destek ilan ettiğinde Müşteri ID Metadata Belgeleri tercih edin. DCR'yi sadece geçersiz uyumluluk geri dönüşü olarak kullanın, sonra bu mekanizmaların hiçbiri mevcut değilse müşteri bilgilerini istemek için uyarın.
+
+### Müşteri Kimliği Metadata Belgelerini tercih edin
+
+Bir Müşteri Kimliği Metadata Belgesi, yetki sunucusuna hem müşteri kimliği hem de metadatalarının konumunu oluşturan bir HTTPS URL verir:
+
+```json
+{
+  "client_id": "https://client.example.com/oauth/metadata.json",
+  "client_name": "Notes desktop client",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"]
+}
+```
+
+Yetki sunucusu belgeyi alır ve onaylar.`client_id`Bir yollu HTTPS URL olması ve belgenin içindeki değer tam olarak bu URL'ye eşit olması gerekir. Gerekli belge alanları `client_id`- Evet .`client_name`ve`redirect_uris`- Evet .`application_type`Bu örnekte belirtilen ancak CIMD'nin bir talebi değildir.
+
+Belgeyi almak SSRF hassas bir işlem olarak ele alın. Destinasyonunu çöz ve doğrulayın, loopback, özel, bağlantı yerel ve diğer şekilde izin verilmeyen adresleri reddedin, yönlendirmelerden ve DNS değişikliklerinden sonra tekrar kontrol edin, yönlendirmeleri, baytları ve zamanı sınırlayın, JSON gerektirir ve yalnızca doğrulanmış HTTP önbelleği kontrollerine göre.`client_name`ve güvenilmeyen metin olarak diğer görüntü alanları.
+
+CIMD, her ilk temas için yeni bir dinamik kimlik oluşturma gereksinimini ortadan kaldırır. URI doğrulama, emitenin politikası veya kullanıcı onayını kaldırmaz.
+
+### DCR uyumluluk yolu
+
+Dinamik Müşteri Kayıtlaması eski yetki sunucuları için mevcut kalır, ancak yeni MCP uygulamalar için geçersiz hale gelmiştir.
+
+DCR kullanırken, bildirin `application_type`- ...
+
+```json
+{
+  "client_name": "Notes desktop client",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"]
+}
+```
+
+- Masaüstü, mobil, komut satırı ve loopback istemciler kullanıyor `native`- Evet .
+- Uzaktan barındırılan tarayıcı uygulamaları kullan `web`Uzak HTTPS yönlendirmeleri.
+
+Alanı eklemek öntanımlı olarak `web`OpenID Connect kayıt uygulamasında geçerli bir loopback yönlendirme başarısız oldu.
+
+Açık bir geri dönüş kararının arkasında DCR kodu tutun. CIMD onaylamasında keyfi bir başarısızlıktan sonra sessizce geri düşmeyin. Bu bir güvenlik başarısızlığını daha zayıf bir kayıt yoluna dönüştürebilir.
+
+### Emitente bağlayıcı kimlikler
+
+Emitent tarafından yazılmış kayıt materyallerini tam emitenin altında saklayın:
+
+```text
+issuer_credentials[issuer] = pre_registered_or_dcr_client
+tokens[(issuer, resource)] = access_token
+```
+
+Korunan kaynak keşfi değişirse `https://auth-one.example`- ...`https://auth-two.example`DCR'nin ilk emitenin müşteri sırrını, DCR müşteri kimliğini, kayıt erişim tokenini, yenilenme tokenini veya erişim tokenini ikinci bir emitenin yanına asla gönderme. Önceden kayıtlı ve DCR müşterileri yeni emitenin için verilen kimlik bilgileri kullanmalıdır.
+
+CIMD istemci kimliği farklıdır çünkü bir yetki sunucusu tarafından hazırlanan bir tanıtım notu değil, kendi kendine barındırılan bir HTTPS URL'dir. Aynı CIMD URL taşınabilir: yeni güvenilir bir emiten, belgeyi DCR yeniden kaydetmeden alıyor ve doğruluyor. Yetki cevapları ve jetonlar hala doğrulanır ve yeni emitenin altında saklanır.
+
+### PKCE ile yetki kodu
+
+Etkin akış:
+
+1. Yüksek entropi üretin .`code_verifier`- Evet .
+2. S256 ' u çıkarın .`code_challenge`- Evet .
+3. İzin isteğini tam olarak gönder `client_id`- Evet .`redirect_uri`- Evet .`scope`- Evet .`code_challenge`ve`resource`- Evet .
+4.  İçeren bir onay cevabı alın`code`ve sağlandığında,`iss`- Evet .
+5. Geçerlileştir`iss`herhangi bir cevap alanını kullanmadan önce kayıtlı emitenin tam karşılığını alır.
+6. Kodu  ile değiştir .`code_verifier`, aynı URI yönlendirme ve aynı `resource`- Evet .
+7. Sonuçlı tokenı aşağıda saklayın `(issuer, resource)`- Evet .
+
+- Evet .`resource`RFC 8707'den gelen parametreler hem yetki taleplerinde hem de simge talebinde görünür. Kanonik MCP sunucu URI'sini tanımlar.
+
+### Geçerlileştir`iss`Tam olarak
+
+RFC 9207, bir emitenin izin cevabının diğer bir emitenin cevabıyla karıştırılmasını engeller.
+
+Ne zaman ?`iss`Eğer bu durum geçerli ise, kayıtlı yayıncı ile kıyaslayın, durum katlanmadan, arkaplan değişiklikleri, varsayılan port kaldırılmadan veya yüzde kodlama normalleştirilmeden.
+
+İçeriği bir yetki sunucusu `iss`reklamlar `authorization_response_iss_parameter_supported: true`Şu anki müşteriler hala bir hediyeyi onaylıyor .`iss`Bu reklam eksikken bile.
+
+### MCP sunucusunda izleyicileri doğrula
+
+Kaynak sunucusu yalnızca kendisi için gönderilen tokenleri kabul eder:
+
+```text
+token.issuer == configured_authorization_server
+token.audience == canonical_mcp_resource
+```
+
+Geçersiz, sona ermiş, yanlış yayıncı veya yanlış izleyiciler için belirtiler 401 alır. MCP sunucusu başka bir hizmet için belirtilen bir belirti kabul edemez veya nakliye edemez.
+
+### En küçük akım alanını isteyin
+
+Şimdi gerekli alanı ile başlayın. Daha sonraki bir araç daha fazlasını gerektiriyorsa, sunucu yetkili bir alan zorluğu ile 403'yi geri gönderir:
+
+```text
 WWW-Authenticate: Bearer error="insufficient_scope",
-    scope="notes:delete", resource="https://notes.example.com"
+  scope="notes:delete",
+  resource_metadata="https://notes.example.com/.well-known/oauth-protected-resource/mcp"
 ```
 
-Müşteri insufficient_scope hatasını görür, kullanıcıya ek kapsam için bir onay diyalogunu sunar, bunun için mini OAuth akışını yapar, talebi yeni jetonla tekrar dener.
+Müşteri yeni izinleri açıklar, onay alır, kombinasyon kapsamı seti ile yeni bir yetki akışı yapar ve MCP talebini yeni bir JSON-RPC kimliği ile tekrar dener.
 
-### Token izleyicisi doğrulama
+Saldırı alanının bir alt kümesi olduğunu düşünmeyin `scopes_supported`Bu zorluk mevcut operasyon için yetkili.
 
-Her istek: sunucu kontrolü`token.aud == self.resource_url`Bu, sunucu çapındaki token yeniden kullanımı durdurur.
+### Yetki ve devletsiz MCP kablosu
 
-### Kısa ömürlü tokenler ve dönüşüm
+Yetkili bir araç çağrısı hala mevcut tüm talep zarfını taşıyor:
 
-Erişim tokenleri kısa ömürlü olmalıdır (1 saat varsayılan).
+```text
+POST /mcp
+Authorization: Bearer <access-token>
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: notes.delete
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "tools/call",
+  "params": {
+    "name": "notes.delete",
+    "arguments": {"id": "note-7"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "oauth-lesson-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+Token, başkanı onaylıyor, talep metadataları protokol davranışını müzakere ediyor.
+
+Kabloyu sabit bir sırada doğrulayın: JSON-RPC ve metadata türleri, başlık ve vücut eşitliği, sonra protokol desteği.`-32020`. Başlık ve vücut desteklenmeyen bir versiyon için anlaşılırsa, HTTP 400'i  ile geri gönderin.`-32022`ve `data`Tam olarak .`{"supported":["2026-07-28"],"requested":"<actual>"}`Bilinmeyen bir yöntem HTTP 404 ' i  ile gönderir .`-32601`- Evet .
+
+401 geçersiz token ve 403 yetersiz kapsam dahil her talep hatası, orijinal talebi olan JSON-RPC hatası zarfıdır `id`Yapılandırılmış kurtarma bilgisi seçmeli hataya düşer `data`- ...`WWW-Authenticate`HTTP cevap başlığı olarak kalır.`id`Kabul edilen HTTP bildirimi boş bir vücutla 202'yi gönderir.
+
+Sunucu uygulaması `server/discover`ve araçları reklam eder, bu yüzden zorunlu `tools/list`Metod. Araç tanımlayıcıları sabit isimlere, tanımlara ve nesne kökü'ne sahiptir.`inputSchema`Değerler. Liste belirleyici ve geri dönüştürür.`resultType`, sunucu kimliği metadata, sınırlı `ttlMs`ve`cacheScope`.Kendimiyetten önce keşif ve kullanıcılara bağlı bir araç listesinin kullanılabilir olması.
 
 ### - İşaretli geçit yok.
 
-Örnekleme sunucuları (Fase 13 · 11) müşteri tokenini diğer hizmetlere aktarmamalıdır.
+Bir MCP sunucusu, müşterinin MCP erişim tokenini bir aşağı akım API'ye göndermemelidir. Doğru kitleyle ayrı bir aşağı akım token al veya açık bir token-değişim tasarımı kullan. Kitle onaylaması yalnızca hizmetler başka bir kişi için hazırlanan tokenleri reddettiğinde çalışır.
 
-### Karışık Yardımcı Önleme
+### Yenilenme simgeler
 
-İşaret bağlanır `aud`Müşteri bağlanır .`client_id`Bu özellik açıkça eski "pass the token" modelini yasaklıyor.
-
-### Müşteri kimliği tespit edilmesi
-
-Her MCP istemcisi metadatalarını sabit bir URL'de yayınlar. Yetki sunucular, istemcinin metadata belgesini yeniden yönlendirme URI'lerini ve iletişim bilgilerini keşfetmek için alabilir. Bu da manuel istemci kayıtlarını kaldırır.
-
-### Geçitler ve OAuth
-
-13 · 17 aşaması bir kurumsal geçitinin OAuth'u nasıl ele aldığını gösterir: geçit yukarıdaki sunucular için kimlik bilgileri tutar, istemciye gelen tokenler geçit tarafından verilir ve yukarıdaki tokenler geçitten asla ayrılmaz. Bu, güven modelini tersine çevirir  kullanıcılar bir kez geçitle kimlik doğruluşu yaparlar; geçit N sunucu yetkileri ele alırlar.
+Yenilenme tokenleri seçmeli. Çıkardığında gizlice saklayın ve emiten ve kaynak tarafından anahtarlandırın. Var olduklarını düşünmeyin. Yetki sunucusu dönmeyi desteklediğinde döndürün ve geçersiz değerlerin tekrar kullanıldığını tespit edin.
 
 ```figure
 t3-scope-stepup
 ```
 
+## Yapın
+
+`code/main.py`Proces içindeki bir protokol ve yetki simülatörüdür. Korunan kaynak keşfi, yetki sunucu metadataları, CIMD kayıt, sürümle kapatılmış DCR geri dönüşü, uygulama tipi kontrolleri, PKCE, emiten onaylaması, kaynaklara bağlı tokenler, kapsam artışı,`server/discover`- Evet .`tools/list`, ve bir devletsiz araç talebi.
+
+Modelle analiz edilen istek organları ve yönlendirme başlıkları bulunmaktadır.`Content-Type`veya `Accept`. Ders 09'un Akışlanabilir HTTP adaptörüne bağlayın, bu da `Content-Type: application/json`ve bir `Accept`her ikisini içeren değer `application/json`ve `text/event-stream`- Evet .
+
+Çek şunu:
+
+```bash
+cd phases/13-tools-and-protocols/16-mcp-security-oauth-2-1
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
+
+Çıktı ilk olarak keşif, CIMD kayıt, sıradan bir okuma, iki ayrı alan step-up ve emitenin anahtarı doğrulama depolama gösterir.
+
 ## Kullan
 
-`code/main.py`OAuth 2.1'in tam yükseltme akışını bir durum makinesi olarak simüle eder.
+Simülatör nesneleri üretim bileşenlerine göre haritasın:
 
-- PKCE kod doğrulayıcısı / meydan okuma üretimi.
-- Yetki kodı kaynak göstergesi ile akış.
-- Korunan kaynak metadata son noktası.
-- Görev verifiyle onaylanmış.
-- İlerleme .`insufficient_scope`- Evet .
-
-Bu derste HTTP sunucusu yoktur; durum makinesi hafızada çalışır, böylece her hop'u izleyebilirsiniz. 13 · 17 aşamasındaki geçit dersi onu gerçek bir taşımacılığa kablolar.
+- `ResourceServer.protected_resource_metadata`RFC 9728 son noktası haline gelir.
+- `AuthorizationServer.metadata`RFC 8414 veya OpenID Connect keşfi haline gelir.
+- `Client.enroll`CIMD çözünürlüğü ve açık bir DCR uyumluluk dalı olur.
+- Emitent tarafından belirtilen müşteri kimlikleri ve `tokens_by_issuer_resource`CIMD URL'si, yetkili sonuçları emitenin üzerine bağlanmışken taşınabilir kalabilir.
+- `ResourceServer.handle`göndermeden önce mevcut MCP başlıklarını, jetonu ve araç kapsamını doğrulayan ve her talep hatasını eşleşen JSON-RPC zarfında tutan bir middleware haline gelir.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-oauth-scope-planner.md`. Araçlarla birlikte uzaktan bir MCP sunucusu verildiğinde, yetenek alanı, kuralları ve gelişme politikasını tasarlar.
+Bu ders gemileri `outputs/skill-oauth-scope-planner.md`Şimdi kayıt önceliği, emitenin bağladığı tanıklık bilgilerini depolama, başvuru türü, PKCE, kaynak göstergeler, kapsam zorlukları ve mevcut devletsiz talep sınırını tasarlıyor.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`İki boyutlu bir adım atış akışını takip edin.
-
-2. Yenilenme simgesi dönüşümünü ekleyin: Her yenilenme yeni bir yenilenme simgesi çıkarır ve eski birini geçersiz kılar.
-
-3. Korunan kaynak metadata son noktasını stdlib http.server kullanarak gerçek bir HTTP yanıt olarak uygulayın. /mcp son noktasını Ders 09'dan yansıttır.
-
-4. GitHub MCP sunucu için bir kapsam hiyerarşisi tasarlayın: repo okuyun, PR yazın, PR onaylayın, PR birleştirin, admin. Her seviyede step-up kullanın.
-
-5. RFC 8707 ve RFC 9728'i okuyun. 9728'de MCP'nin RFC örneğinden farklı olarak kullandığı bir alanı belirleyin.`scopes_supported`.)
+1. Yenilenme simgesi dönüşümünü ekle ve önceki yenilenme simgesi yeniden kullanımı reddet.
+2. Emitent izin listesi ekleyin. Emitent değişikliği sırasında, yalnızca taşınabilir bir CIMD URL'i yeniden kullanın; daha önce emitent tarafından yazılmış tüm kimlik kimliklerini ve simgeleri reddedin.
+3. Yetki kodlarına bir sona erme ekleyin ve geç bir değişimin başarısız olduğunu onaylayın.
+4. Uzak bir HTTPS yönlendirme ile bir web istemci variansı oluşturun ve DCR metadatalarını yerel istemci ile karşılaştırın.
+5. Aynı emitenin altında ikinci bir kaynak ekleyin. Erişim tokeninin ilk kaynakta kullanılamayacağını onaylayın.
 
 ## Anahtar Terimler
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| OAuth 2.1 | "Modern OAuth" | Consolidated RFC that mandates PKCE and forbids implicit flow |
-| PKCE | "Proof-of-possession" | Code verifier + challenge defeating authorization-code interception |
-| Resource indicator | "Token audience" | RFC 8707 `resource` parameter pinning token to one server |
-| Protected-resource metadata | "Discovery doc" | RFC 9728 `.well-known/oauth-protected-resource` |
-| Step-up authorization | "Incremental consent" | SEP-835 flow for adding scopes on demand |
-| `insufficient_scope` | "403 with WWW-Authenticate" | Server signal to re-consent for a larger scope |
-| Confused deputy | "Token reuse across services" | Attack where a trusted holder forwards a token inappropriately |
-| Short-lived token | "Access token TTL" | Bearer that expires quickly; refresh token renews |
-| Scope hierarchy | "Least privilege stack" | Graduated scope set with step-up between levels |
-| Client ID metadata | "Client discovery doc" | URL at which the client publishes its own OAuth metadata |
+| Term | Meaning |
+|------|---------|
+| Protected-resource metadata | RFC 9728 document that identifies the resource and authorization servers |
+| CIMD | HTTPS metadata document whose URL is the OAuth client identifier |
+| DCR | Deprecated dynamic client enrollment retained for compatibility |
+| `application_type` | `native` or `web`, used to validate redirect URI rules |
+| PKCE | Verifier and S256 challenge that protect an intercepted authorization code |
+| `iss` | RFC 9207 authorization response issuer identifier |
+| Resource indicator | RFC 8707 parameter that binds a token request to an MCP resource |
+| Audience | Resource for which a token is valid |
+| Step-up | New consent and token issuance for an additional current-operation scope |
+| Issuer-bound credentials | Registration and token records isolated by exact authorization server issuer |
 
 ## Daha Fazla Okumak
 
-- [MCP — Authorization spec](https://modelcontextprotocol.io/specification/draft/basic/authorization) Kanonik MCP OAuth profili
-- [den.dev — MCP November authorization spec](https://den.dev/blog/mcp-november-authorization-spec/) 2025-11-25 değişikliklerinin yürürlükteki geçişi
-- [RFC 8707 — Resource indicators for OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc8707) Seyircilik RFC
-- [RFC 9728 — OAuth 2.0 protected resource metadata](https://datatracker.ietf.org/doc/html/rfc9728) keşif belgesinin RFC
-- [Aembit — MCP OAuth 2.1, PKCE and the future of AI authorization](https://aembit.io/blog/mcp-oauth-2-1-pkce-and-the-future-of-ai-authorization/) pratik adım atma akışı yürüyüş
+- [MCP 2026-07-28 authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
+- [RFC 9728: OAuth 2.0 Protected Resource Metadata](https://www.rfc-editor.org/rfc/rfc9728)
+- [RFC 8707: Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707)
+- [RFC 9207: OAuth 2.0 Authorization Server Issuer Identification](https://www.rfc-editor.org/rfc/rfc9207)
+- [OAuth Client ID Metadata Document draft](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/)

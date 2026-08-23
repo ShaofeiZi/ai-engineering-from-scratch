@@ -152,5 +152,5 @@ Bu ders bize çok yararlı .`outputs/skill-tool-interface-reviewer.md`. Bir proj
 - [OpenAI — Function calling guide](https://platform.openai.com/docs/guides/function-calling) OpenAI tarzındaki araç açıklamaları ve çağrı biçimleri için kanonik referans
 - [Anthropic — Tool use overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)Claude'un.`tool_use`- Ne ?`tool_result`blok biçimi
 - [Google — Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling) `functionDeclarations`ve İkizler'de paralel çağrı semantikası
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) Araç arayüzünün tedarikçi-agnostik genelleşmesi
+- [Model Context Protocol — Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) araç arayüzünün mevcut devletsiz, tedarikçi-agnostik genelleşmesi
 - [JSON Schema — 2020-12 release notes](https://json-schema.org/draft/2020-12/release-notes) her modern araç API konuşan schema dili

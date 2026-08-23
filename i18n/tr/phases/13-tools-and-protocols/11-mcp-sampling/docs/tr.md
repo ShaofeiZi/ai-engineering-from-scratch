@@ -1,182 +1,265 @@
-# MCP Örnekleme  Server İsteği LLM Tamamlamaları ve Ajan Çubukları
+# MCP Model Girişi: Örnekleme Göçmenliği ve İnsansız MRTR
 
-> Çoğu MCP sunucusu aptal uygulayıcılar: argümanları al, kod çalıştır, içeriği geri getir. Örnekleme, bir sunucuyu yön değiştirmeye zorlar: müşterinin LLM'sinden bir karar vermesi için sorar. Bu, sunucu'nun herhangi bir model kimlik bilgisi sahibi olmadan sunucu barındırılmış ajan döngüleri etkinleştirir. SEP-1577, 2025-11-25'te birleştirildi, örneğe ihtiyaç duyulan araçlar eklendi, böylece döngü daha derin bir mantıklama içerebilir. Drift risk notu: SEP-1577 örneğe girme aracı şekli, 2026'ın birinci çeyreğine kadar deneysel olarak kullanıldı ve hala SDK API'lerinde yerleşmektedir.
+> MCP 2026-07-28 yeni tasarımlar için örneklemeyi geçersiz kılar ve sunucu-klient istek kanalını kaldırır.`input_required`Bu işlemler, bir sonraki işlemin sonuçlarını gösterir ve istemci orijinal talebi model çıkışı ile tekrar dener.
 
 **Type:** Build
-**Languages:** Python (stdlib, sampling harness)
+**Languages:** Python
 **Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 10 (resources and prompts)
 **Time:** ~75 minutes
 
 ## Öğrenme Hedefleri
 
-- Neyi açıkla `sampling/createMessage`çözüyor (server tarafından barındırılan, sunucu taraflı API anahtarları olmayan döngüler).
-- Bir sunucu uygulamak, istemciyi bir çok dönüşlü çağrıyı örneklemesini ve tamamlanmayı geri getirmesini ister.
-- Kullanım`modelPreferences`(maliyet / hız / istihbarat öncelikleri) müşteri model seçimini yönlendirmek için.
-- Bir tane yapın .`summarize_repo`Hard-coding davranışları yerine örneği kullanarak içten olarak tekrarlayan bir araç.
+- MCP 2026-07-28'de örnekleme neden geçersiz hale geldiğini açıklayın ve yeni sunucular için doğrudan model entegrasyonu öntanımlı seçimini seçin.
+- Uygunluk iş akışı uygulanır `sampling/createMessage`Çoklu dönüş yolculuğu (MRTR) talepleri üzerinden.
+- Protokol gözden geçirilmesi ve her talebe müşteri yeteneklerini ekleyin `_meta`- Ne? - Ne?
+- Geri dön .`resultType: "input_required"`ve yeni bir JSON-RPC kimliği ile orijinal yöntemi tekrar deneyin.
+- Doğruluk korunması `requestState`ve onu temel, yöntem, argüman ve sona ermesi ile bağlar.
+- Kapalı model desteklenen döngüler, yetenek kontrolleri, onaylama, cevap doğrulama ve yuvarlak bir sınır ile.
 
-## Sorun
+## Protokol Öncesindeki Karar
 
-Bir kod özetleme iş akışı için yararlı bir MCP sunucusu: bir dosya ağacını yürümek, hangi dosyaları okumak için seçmek, bir özet sentezlemek ve geri vermek gerekir. LLM mantıklaşması nerede gerçekleşir?
+Bir araç gibi`summarize_repo`İki iş türüne ihtiyaç duyar:
 
-A. Seçenek: sunucu kendi LLM'ini çağırır. API anahtarı gerekir, sunucu tarafında faturalar, kullanıcı başına pahalıdır.
+1. Deterministik iş: dosyaları listelemek, izin verilen dosyaları okumak, yolları doğrulama ve içeriği birleştirmek.
+2. Model çalışma: temsilci dosyaları seçin ve özetin sentezi yapın.
 
-Seçenek B: sunucu ham içeriği gönderir; istemcinin ajanı mantık yürütür. Çalışır ama kırılgan olan istemci istekine sunucu mantığını taşır.
+Şimdi iki geçerli mimarlığa sahipsiniz.
 
-Seçenek C: sunucu, müşterinin LLM'sini `sampling/createMessage`.Server algoritmayı ( hangi dosyaları okumak, kaç geçiş yapmak) saklarken, müşteri faturalama ve model seçimini saklar.Server'in hiçbir kimliği yoktur.
+### Yeni sunucu: doğrudan bir model sağlayıcı ile entegre
 
-Örnekleme, C. Bir güvenilir sunucunun, bir temsilci döngüsünü kendisi tam bir LLM sunucusu olmadan barındırması için kullanılan mekanizmadır.
+Bu mevcut varsayılan. Sunucu model seçeneğine, yeteneklerine, bütçelerine, tekrar denemelerine ve gözlemlenebilirliğine sahiptir.`tools/call`MCP müşterisine sonuç.
 
-## Anlaşım
+Sunucu zaten barındırılan bir hizmet olduğunda veya tahmin edilebilir model davranışının barındırıcının modelini kullanmaktan daha önemli olduğu zaman seçin.
 
-### `sampling/createMessage`taleb
+### Var olan örnekleme iş akışı: MRTR'ye aktar
 
-Sunucu gönderir:
+Örnekleme, sonlandırma penceresi sırasında hala var. 2026-07-28'yi hedef alan bir sunucu canlı bir mesaj gönderemez.`sampling/createMessage`Bu durumda, bu talebi bir`InputRequiredResult`- Evet .
+
+Bu uyumluluk yolunu yalnızca istemcinin modelini kullanırken seçin ve yetenekler gerçek bir ürün gereksinimidir. Yeni uygulamalar eski örneklemeyi benimsememeliğinden bir kaldırma planını kaydet.
+
+## Ülkesizlik Sözleşmesi
+
+Temmuz 2026 protokolü hiçbir şey yapmadı.`initialize`Değişiklik, hayır.`notifications/initialized`- Hayır .`Mcp-Session-Id`Her talepte eskiden el sıkışmasında yaşayan bilgiler yer alır:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 42,
-  "method": "sampling/createMessage",
+  "id": 1,
+  "method": "tools/call",
   "params": {
-    "messages": [{"role": "user", "content": {"type": "text", "text": "..."}}],
-    "systemPrompt": "...",
-    "includeContext": "none",
-    "modelPreferences": {
-      "costPriority": 0.3,
-      "speedPriority": 0.2,
-      "intelligencePriority": 0.5,
-      "hints": [{"name": "claude-3-5-sonnet"}]
-    },
-    "maxTokens": 1024
+    "name": "summarize_repo",
+    "arguments": {"audience": "developer"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {"sampling": {}},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "lesson-client",
+        "version": "1.0.0"
+      }
+    }
   }
 }
 ```
 
-Müşteri LLM'ini yürütür, geri gönderir:
+Sunucu, her istek üzerinde düzeltmeyi doğruluyor. Kayıp veya dizilmemiş bir sürüm geçersiz parametrelerdir.`-32602`Desteklenmeyen bir dizileri gönderir .`-32022`Tam verilerle`{"supported":["2026-07-28"],"requested":"<client version>"}`- Kayıp bir örnekleme yeteneği geri döndü .`-32021`- Evet .`data.requiredCapabilities` ayarlanmıştır`{"sampling":{}}`- Evet .
 
-```json
-{"jsonrpc": "2.0", "id": 42, "result": {
-  "role": "assistant",
-  "content": {"type": "text", "text": "..."},
-  "model": "claude-3-5-sonnet-20251022",
-  "stopReason": "endTurn"
-}}
-```
+JSON-RPC olmadan bir zarf `id`Bu bir uyarıdır. Alıcı onu işleyebilir, ancak ne bir başarısızlık cevabı ne de bir hata cevabı gönderir.`202 Accepted`Kabul edilmiş bir bildirim için hiçbir organ bulunmamaktadır.
 
-### `modelPreferences`
+Sunucu da uyguluyor `server/discover`Tam olarak .`supportedVersions`Anahtar, yetenekler, `ttlMs`ve`cacheScope`Bu yüzden bir müşteri bir aracı aramanın önünde sunucu sözleşmesini öğrenir ve önbelleğe kaydediyor.`tools`, sunucu da zorunlu uygulamaları yapar `tools/list`- Deterministik .`summarize_repo`Deskriptör geçerli bir nesne içerir `inputSchema`- Evet .`resultType: "complete"`, sunucu kimliği metadataları ve kamu kaş ipuçları.
 
-1.0'a kadar toplam üç akış:
+Her başarılı modern sonuç bir ayrımcıya sahiptir:
 
-- `costPriority`: daha ucuz modeller tercih.
-- `speedPriority`Daha hızlı modeller tercih edilir.
-- `intelligencePriority`: daha yetenekli modeller için tercih edilir.
+- `resultType: "complete"`Operasyon bitti demektir.
+- `resultType: "input_required"`Yani müşteri gömülü istekleri yerine getirmeli ve tekrar denemeli.
+- Uygulamalar ek sonuç türlerini tanımlayabilir.`"task"`13. Ders.
 
-Ayrıca .`hints`: sunucu tercih eden isimli modeller. Müşteri ipuçlarını saymayabilir veya saymayabilir; müşteri'nin kullanıcı yapılandırması her zaman kazanır.
+## Bir MRTR Rundi
 
-### `includeContext`
-
-Üç değer:
-
-- `"none"`- Sadece sunucu tarafından gönderilen mesajlar.
-- `"thisServer"` bu sunucu oturumundan önceki mesajları içerir.
-- `"allServers"` tüm oturum bağlamını içerir.
-
-`includeContext`2025-11-25'te güvenlik endişesi olan sunucu çapındaki bağlamı sızdırdığı için hafif derecede azalmıştır.`"none"`Ve mesajlarda açık bir bağlam geçiriyorlar.
-
-### Araçlarla örnekleme (SEP-1577)
-
-2025-11-25 yıllarında yeni: örnekleme talebinde bir `tools`array. istemci bu araçları kullanarak tam bir araç çağrı döngüsü çalıştırır. Bu, sunucuyu istemcinin modelini ReAct tarzı bir ajan döngüsünü barındırmaya izin verir.
+Sunucu, istekle çalışırken istemciyi arayamaz. Bunun yerine bu sonucu gönderir:
 
 ```json
 {
-  "messages": [...],
-  "tools": [
-    {"name": "fetch_url", "description": "...", "inputSchema": {...}}
-  ]
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "pick_files": {
+        "method": "sampling/createMessage",
+        "params": {
+          "messages": [
+            {
+              "role": "user",
+              "content": {
+                "type": "text",
+                "text": "Choose three representative files and return a JSON array."
+              }
+            }
+          ],
+          "systemPrompt": "Return only the requested value.",
+          "modelPreferences": {
+            "costPriority": 0.8,
+            "intelligencePriority": 0.2
+          },
+          "maxTokens": 400
+        }
+      }
+    },
+    "requestState": "opaque-integrity-protected-value"
+  }
 }
 ```
 
-Müşteri döngüleri: örnek, çağrıldığında çalıştırma aracı, tekrar örnek, son asistan mesajını gönder. Bu, 1. yüzyıl 2026; SDK imzaları hala sürüklenebilir. Uyguladığınızda 2025-11-25 spesifikasyonunun müşteri / örnekleme bölümüne karşı onaylayın.
+Müşteri, örneklemeyi desteklediğini doğruluyor, onay ve model politikalarını uyguluyor ve bir model cevabı elde ediyor.
 
-### - İnsanlık.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "summarize_repo",
+    "arguments": {"audience": "developer"},
+    "inputResponses": {
+      "pick_files": {
+        "role": "assistant",
+        "content": {
+          "type": "text",
+          "text": "[\"README.md\", \"server.py\", \"docs/intro.md\"]"
+        },
+        "model": "host-model",
+        "stopReason": "endTurn"
+      }
+    },
+    "requestState": "opaque-integrity-protected-value",
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {"sampling": {}}
+    }
+  }
+}
+```
 
-Müşteri, örneği çalıştırmadan önce sunucunun modelden ne yapmasını istediğini kullanıcıya göstermelidir. Kötü bir sunucu, kullanıcı oturumunu manipüle etmek için örneği kullanır ("kullanıcıya X deyin ki Y'yi tıklasınlar"). Kullanıcı onay diyalogi olarak Claude Desktop, VS Code ve Cursor yüzey örneği isteklerini reddedebilir.
+Tekrar deneme bir protokol seansının bir devamı değildir. Orijinal yöntem ve argümanları tekrarlayan yeni bir istektir, sadece mevcut turun `inputResponses`, ve yankıları `requestState`Bayt bayt.
 
-2026'da yapılan bir fikir birliği: insan onayı olmadan örnek almak kırmızı bir bayrak. Gateways (Fase 13 · 17) düşük riskli örneklemeyi otomatik olarak onaylayabilir ve şüpheli herhangi bir şeyi otomatik olarak reddedebilir.
+MRTR sadece `tools/call`- Evet .`prompts/get`ve`resources/read`Bir sunucu geri dönmemelidir .`input_required`İlişkili olmayan yöntemlerden.
 
-### API anahtarları olmayan sunucu barındırılmış döngüler
+## Çok Yönlü Devlet
 
-Kanonik kullanım durumunda: kendi LLM erişimi olmayan bir kod-sözleme MCP sunucusu.
+Bu derste iki örnek çağrı gerekiyor:
 
-1. Reklam yapısını yürüyün.
-2. Arama .`sampling/createMessage`"Bu repo'nun amacını açıklayacak beş dosya seç".
-3. Dosyaları oku.
-4. Arama .`sampling/createMessage`Dosyaların içeriği ve "Repo'yu 3 paragrafla özetle".
-5. Özetlemeyi bir olarak gönderin .`tools/call`Sonuç.
+1. `pick_files`JSON dizini gönderir.
+2. `summary`Son prozanı geri verir.
 
-Sunucu hiçbir zaman LLM API'ye dokunmaz. Müşteri kullanıcıları kendi kimliklerini kullanarak tamamlamaları için ödeme yaparlar.
+Her tekrar deneme sadece bu tur için cevapları taşır. bu nedenle sunucu aşama ve onaylanmış ara verileri bir sonraki `requestState`- Evet .
 
-### Güvenlik riskleri (Bölüm 42'nin açıklaması, 2026 Q1)
+Bu değerleri saldırgan kontrolü altında tutmak.
 
-- **Covert sampling.**Her zaman "işaret bağlamından kullanıcı e-postalarına cevap ver" ile örnekleme çağrısı yapan bir araç.
-- **Resource theft via sampling.**Sunucu, istemciyi saldırganın pay yükünü özetlemesini ister, kullanıcıya faturalar verir.
-- **Loop bombs.**Sunucu, sıkı bir döngü içinde örnekleme çağrısı yapıyor.
+- Kendini bildirmeyen, doğrulanmış başlık `clientInfo`- ...
+- Kaynaklı ürünlerin üretimi;
+- orijinal argümanların bir parçacığı;
+- Kısa bir sürede sona erer;
+- mevcut aşama ve onaylanmış orta değerler.
+
+Gizlilik gerekmediğinde HMAC kullanın. Müşteri durumu okumaması gerektiğinde doğrulanmış şifreleme kullanın. Kötü bir imza, geçerli olmayan değer, değiştirilmiş temel veya değiştirilmiş argümanlar ile reddedin `-32602`- Evet .
+
+Müşteri analiz veya değişiklik yapamaz.`requestState`Tek görevi tekrar deneme sırasında tam bir ip eklemek.
+
+## Model Seçenekleri İpuçlar
+
+`costPriority`- Evet .`speedPriority`ve`intelligencePriority`Bu seçenekler, olasılık dağılımları değildir ve bir tek kişiye toplamın gerekliliği yoktur.
+
+- Tutun .`includeContext`- ...`"none"`Eğer eski bir örnekleme akışını sürdürüyorsanız. Diğer bağlam modları sızma riskini arttırır ve kendileri geçersiz hale gelir.
+
+## Güvenlik Değişiklikleri
+
+Müşteri, gömülü örnekleme istekleri için güven sınırıdır.
+
+- Kullanıcıya, politika onay gerektirdiğinde, sunucu'nun modelden ne yapmasını istediğini gösterir.
+- Bir kötü amaçlı sunucu, başka türlü bir model harcama döngüsü oluşturabilir.
+- Dosya adı, URL veya araç giriş olarak kullanmadan önce her örnekleme cevabını doğrulayın.
+- Bir turda bayt ve simgeler sınırlandır.
+- Geçerli istemci yeteneklerinde açıklanmamış bir giriş istekini reddet.
+- Model çıkışını yetki kararlarından uzak tutun.
+- Kayıtlı istek içeriğini kaydetmeden, kaynak metodu ve giriş-istihaye anahtarını kaydet.
+
+`clientInfo`ve `serverInfo`İkisini de kimlik olarak asla kullanmayın.
 
 ```figure
 t3-sampling-flip
 ```
 
+## Yapın
+
+`code/main.py`Üçüncü taraf paketleri olmadan tam iki yönlü akışı uyguluyor:
+
+- `server/discover`Devamı`supportedVersions`, araç desteğini reklam eder ve önbelleğe işaretler gönderir.
+- `tools/list`Deterministik, cacheable bir `summarize_repo`nesne giriş şeması olan açıklayıcı.
+- `tools/call`istek açısından metadataları onaylar.
+- İlk sonuç da bu şekilde ortaya çıkıyor .`sampling/createMessage`Dosya seçimi için.
+- İlk tekrar deneme model sonuçını onaylar ve ikinci bir talebi yerleştirir.
+- HMAC korumalı `requestState`bağımsız talepleri arasında bir aşama geçirir.
+- Son sonuç kullanımı `resultType: "complete"`- Evet .
+
+Sahte ev sahibi modeli örneği belirleyici yapar.`fake_host_model`Gerçek bir ev sahibi bağladığında, sunucu tarafındaki durum makinesi belirleyici ve test edilebilir olmalıdır.
+
 ## Kullan
 
-`code/main.py`simülasyonlu bir "summarize_repo" aracı iki örnekleme turunu (pick-file, sonra özetle) çağrıştırır ve sahte istemci konserve cevapları iade eder. Harnes gösterir:
+Depo kökü:
 
-- Sunucu gönderir `sampling/createMessage`- Evet .`modelPreferences`- Evet .
-- Müşteri bir tamamlama gönderir.
-- Sunucu döngüsünü devam ettiriyor.
-- Aralık sınırlayıcı, araç çağrısı başına toplam örnekleme çağrılarını sınırlandırır.
+```bash
+cd phases/13-tools-and-protocols/11-mcp-sampling/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
 
-Neye bakılır:
+Beklenen kontrol noktaları:
 
-- Sunucu sadece bir aracı açığa çıkarır (`summarize_repo`); tüm akıl yürütme örnekleme çağrısında gerçekleşir.
-- Model tercihleri, müşterinin model seçimini ağırlaştırır; ipuçları tercih edilen modeller listesi yapar.
-- Çubuk açılıyor .`stopReason: "endTurn"`- Evet .
-- - Evet .`max_samples_per_tool = 5`Limit kaçış döngüsünü yakalar.
+- Discovery , `ttlMs`ve `cacheScope`- Evet .
+- Araç keşfi aynı sınıflandırılmış tanımlayıcıyı  ile gönderir`resultType`, sunucu kimliği ve önbelleğe işaretler.
+- Kayıp özellikler ve desteklenmeyen sürümler tam kullan `-32021`ve `-32022`hata verileri.
+- İdsiz bir bildirim JSON-RPC cevabını üretmez.
+- İstek kimlikleri `[1, 2, 3]`, her MRTR turunun bağımsız olduğunu kanıtlıyor.
+- İlk iki sonuç:`input_required`- Evet .
+- Son sonuç şu:`complete`Seçilen dosyaları ve özet içerir.
+- Yeniden deneme sırasında orijinal argümanları değiştirmek, talep durum kontrolünü başarısız eder.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-sampling-loop-designer.md`. LLM çağrılarına ( araştırma, özetleme, planlama) ihtiyaç duyan bir sunucu taraflı algoritma göz önüne alındığında, beceriler doğru model tercihleri, oran sınırları ve güvenlik onayları ile örnekleme tabanlı bir uygulamayı tasarlar.
+`outputs/skill-sampling-loop-designer.md`Şimdi bir göç planlayıcısıdır. İlk olarak örnekleme doğrudan model entegrasyonu için kaldırılmalı mı karar verir. Eğer uyumluluk gerekirse, MRTR turları, durum bağlama, kapasite kapısı, bütçe, doğrulama ve kaldırma planını üretir.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`Değiş .`max_samples_per_tool`2'ye kadar ve oran sınırının sınırını izleyin.
-
-2. SEP-1577 örneğe girme aracı varianını uygula: örneğe girme talebinde bir `tools`Array. Son tamamlama gönderilmeden önce bu araçları istemci taraflı döngü tarafından çalıştırıldığını kontrol edin.
-
-3. İnsan-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-`sampling/createMessage`İptal edilen aramalar, yazılmış bir reddedilme gönderir.
-
-4. Müşteri oturumuna göre tıklanmış bir kullanıcı oran sınırlayıcı ekleyin. Aynı kullanıcı tarafından aynı sunucu döngüleri bütçeyi paylaşmalıdır.
-
-5. Bir tasarım`summarize_pdf`Bu, örnekleme kullanarak parçaları seçmek için kullanılacak bir araç.`modelPreferences.intelligencePriority`0.1 vs. 0.9'da davranış değişimi?
+1. Dosya seçimi cevabını geçersiz JSON'a değiştirin. Sunucu geri döndürülmesini onaylayın `-32602`model çıkışına güvenmek yerine.
+2. Değişiklik`audience`İlk çağrı ve tekrar deneme arasında.
+3. Ev sahibi'nin özetini eleştirmesini isteyen üçüncü bir tur ekleyin.
+4. Sahte host çağrısını sunucuya ait bir model adaptörü ile değiştirerek örneklemeyi kaldırın. Onaylama, faturalama ve gözlemleme sorumluluklarının sunucuya geçeceğini listelenin.
+5. Son tarihten bir saniye sonra olan bir devlet değeri kullanarak bir sona erme testi ekleyin.
 
 ## Anahtar Terimler
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Sampling | "Server-to-client LLM call" | Server asks client's model for a completion |
-| `sampling/createMessage` | "The method" | JSON-RPC method for sampling requests |
-| `modelPreferences` | "Model priorities" | Cost / speed / intelligence weights plus name hints |
-| `includeContext` | "Cross-session leakage" | Soft-deprecated context inclusion mode |
-| SEP-1577 | "Tools in sampling" | Allow tools inside sampling for server-hosted ReAct |
-| Human-in-the-loop | "User confirms" | Client surfaces sampling request to user before running |
-| Loop bomb | "Runaway sampling" | Server-side infinite sampling loop; client must rate-limit |
-| Covert sampling | "Hidden reasoning" | Malicious server hides intent in sampling prompts |
-| Resource theft | "Using user's LLM budget" | Server forces client to spend on sampling it does not want |
-| `stopReason` | "Why generation halted" | `endTurn`, `stopSequence`, or `maxTokens` |
+| Term | Meaning in 2026-07-28 |
+|------|------------------------|
+| Sampling | Deprecated feature that asks the client's model for a completion |
+| MRTR | Stateless retry pattern for client input required during a request |
+| `InputRequiredResult` | Result with `resultType: "input_required"` |
+| `inputRequests` | Server-assigned map of embedded elicitation, sampling, or roots requests |
+| `inputResponses` | Current round's client results keyed like `inputRequests` |
+| `requestState` | Opaque server state echoed exactly by the client and verified by the server |
+| `resultType` | Required discriminator for modern MCP results |
+| Direct model integration | Recommended replacement for new servers that need model inference |
+| Capability gate | Rule that prevents sending an embedded request the client did not advertise |
+| Loop budget | Maximum rounds, tokens, bytes, time, and spend allowed for the operation |
+
+## Miras Uygunluğu
+
+2025-11-25'e bağlı bir istemci hala eski sunucu başlatılmış kullanılabilir.`sampling/createMessage`Bu davranışları sadece bir versiyon özel adaptörde tutun. Sessiyonlu yolu 2026-07-28 sunucusunun mimarisine dönüştürmeyin.
+
+Resmi SDK'ler modernleri çevirebilir `input_required`Bu şim uyumluluk sınırı, yeni seans bağımlı mantık ekleme iznidir.
 
 ## Daha Fazla Okumak
 
-- [MCP — Concepts: Sampling](https://modelcontextprotocol.io/docs/concepts/sampling) Örnek alma işinin yüksek düzeyde genel bakış
-- [MCP — Client sampling spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/client/sampling) Kanonik `sampling/createMessage`şekli
-- [MCP — GitHub SEP-1577](https://github.com/modelcontextprotocol/modelcontextprotocol) Spec Evolution Örnekleme araçları önerisi (deney)
-- [Unit 42 — MCP attack vectors](https://unit42.paloaltonetworks.com/model-context-protocol-attack-vectors/) Gizli örnekleme ve kaynak hırsızlığı örneği
-- [Speakeasy — MCP sampling core concept](https://www.speakeasy.com/mcp/core-concepts/sampling) Müşteri tarafındaki kod örnekleriyle yürüyüş
+- [MCP 2026-07-28 Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP 2026-07-28 changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [MCP Sampling deprecation](https://modelcontextprotocol.io/seps/2577-deprecate-roots-sampling-and-logging)
+- [MCP 2026-07-28 server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)

@@ -1,98 +1,182 @@
-# MCP Transport  stdio vs. Streamable HTTP vs. SSE Migration
+# MCP Transport: stdio ve stateless Streamable HTTP
 
-> stdio yerel olarak ve başka hiçbir yerde çalışır. Akışlı HTTP (2025-03-26) uzaktan standarttır. Eski HTTP + SSE taşımacılığı eskiye döner ve 2026 yılının ortalarında kaldırılır. Yanlış taşımacılığı seçmek bir göç gerektirir; doğru olanı seçmek, oturma sürekliliği ve DNS yeniden bağlama koruması ile uzaktan barındırılabilir bir MCP sunucusu satın alır.
+> Transport MCP mesajlarını taşır.`2026-07-28`, yerel studio ve uzaktan Streamable HTTP her ikisi de kendi kendini tanımlayan istekleri taşır.
 
 **Type:** Learn
-**Languages:** Python (stdlib, Streamable HTTP endpoint skeleton)
-**Prerequisites:** Phase 13 · 07, 08 (MCP server and client)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lessons 07 and 08
+**Time:** ~65 minutes
 
 ## Öğrenme Hedefleri
 
-- Stdio ve Streamable HTTP arasında yerleşim şekli (yerel vs uzak, tek süreç vs. filos) üzerine kurulmuş seçim yapın.
-- Akışlanabilir HTTP tek uç noktası örneğini uygulayın: istekler için POST, oturum akışı için GET.
-- Yaparım`Origin`DNS-i yeniden incelemek için doğrulama ve seans kimliği semantikleri.
-- Eski bir HTTP + SSE sunucusu, 2026'un ortalarında kaldırma süresi gelmeden önce Streamable HTTP'ye göç et.
+- Yerel çocuk süreçleri için stdio ve ağ hizmetleri için Streamable HTTP seçin.
+- Modern tek son nokta, sadece POST Streamable HTTP sözleşmesini uygulayın.
+- MCP sürüm, yöntem ve isim başlıklarını JSON-RPC bedenine karşı aynalayın ve doğrulayın.
+- İsteğe göre ve uzun ömürlü bir SSE teslimat `subscriptions/listen`Akışlar doğru.
+- Geçmiş davranışları modern olarak sunmadan oturum tabanlı ve eski HTTP+SSE dağıtımlarını göç edin.
 
 ## Sorun
 
-İlk MCP uzaktan taşıma (2024-11) HTTP+SSE'ydi: iki uç noktası, birisi istemcinin POST'ları için ve birisi sunucu-klient akışı için Server-Sent-Events kanalı. Çalıştı. Aynı zamanda çilekçiydi: her oturumda iki uç noktası, bazı CDN'lerin önünde kırılmış önbelleği ve bazı WAF'lerin saldırgan bir şekilde sona erdirdiği uzun ömürlü SSE bağlantılarına olan güçlü bir bağımlılık.
+Daha önce Streamable HTTP revizyondaki protokol müzakereyi bağlantı ve oturum davranışıyla birleştirdi.`Mcp-Session-Id`, bağımsız bir GET akışını ortaya çıkarmak, seans sonlandırılması için DELETE'yi kabul etmek ve SSE'yi yeniden başlatmak için `Last-Event-ID`- Evet .
 
-2025-03-26 spesifikasyonu, Streamable HTTP ile değiştirildi: bir son nokta, müşteri istekleri için POST, oturum akışı oluşturmak için GET, her ikisi de bir `Mcp-Session-Id`Header. O zamandan beri inşa edilen veya göç edilen her sunucu Streamable HTTP kullanıyor. Eski SSE modunun kullanımı sona erdi. Atlassian Rovo 30 Haziran 2026'da kaldırdı; Keboola 1 Nisan 2026'da; kalan çoğu işletme sunucusu 2026'ın sonuna kadar.
+MCP `2026-07-28`HTTP başlıkları yönlendirme ve politika için seçilen alanları yansıtır, ancak sunucu bu başlıkları yürütmeden önce vücuda karşı doğruluyor.
 
-Stdio hala yerel sunucular için önemlidir. Claude Desktop, VS Code ve her IDE şeklinde müşteri stdio üzerinden sunucuları doğurur. Doğru zihinsel model: stdio "bu makine" için, Streamable HTTP "ağ üzerinde".
+Sonuç daha kolay ölçeklenebilir ve mantık yürütülür. Ayrıca 2025 nakliyeyi akım olarak öğreten bir sunucunun yanlış bir başarısızlık ve güvenlik modeli öğrettiği anlamına gelir.
 
 ## Anlaşım
 
 ### studio
 
-- Çocuk işlemi taşımacılığı. Müşteri sunucuyu doğurur, stdin/stdout üzerinden iletişim kurar.
-- Bir satır başına bir JSON nesnesi.
-- Oturum kimliği yok; süreç kimliği oturumdur.
-- İhtiyacın yok (öğlenme sınırını çocuğun miras alması gerekir).
-- Uzak sunucular için asla kullanmayın  tünel için SSH veya socat gerekir, bu noktada Streamable HTTP kullanın.
+Studio bağlaması, müşteri tarafından başlatılan bir alt işlem için:
 
-### Akışlanabilir HTTP
+- Müşteri, stdin'e her satırda bir UTF-8 JSON-RPC mesajı yazar.
+- Sunucu, stdout'a her satırda bir UTF-8 JSON-RPC mesajı yazar.
+- Server stderr'e teşhis yazıyor.
+- Sistemi hızla stdin EOF'den çıkartıyor.
+- Her modern talebinde `params._meta`- Evet .
 
-Tek bir son nokta`/mcp`Üç HTTP yöntemi destekler:
+Bu süreç birçok arama için geçerli olabilir, ancak bu modern bir protokol oturumudur. Beklenmedik bir şekilde çıkarsa, uçuşta yapılan istekler kaybolur.
 
-- **POST /mcp.**Müşteri bir JSON-RPC mesajı gönderir. Sunucu, ya tek bir JSON cevabı ile veya bir veya daha fazla cevabın SSE akışı ile yanıt verir (bu talebe bağlı toplu yanıtlar ve bildirimler için yararlıdır).
-- **GET /mcp.**Client uzun ömürlü bir SSE kanalı açar.Server onu sunucu-klient istekleri (sampling, bildirimler, çağrışmalar) için kullanır.
-- **DELETE /mcp.**Müşteri açıkça oturumu sona erdirir.
+### 2026-07-28'de akışlanabilir HTTP
 
-Oturumlar `Mcp-Session-Id`başlık sunucu ilk yanıt üzerine ayarlar ve istemci sonraki her talebe yankı verir. Oturum kimlikleri kripto olarak rastgele olmalıdır (128+ bit); istemci tarafından seçilen kimlikler güvenlik için reddedilmektedir.
+Modern bir sunucu, bir MCP son noktasını ortaya çıkarır, örneğin `/mcp`, bu POST kabul eder.
 
-### Tek son nokta vs. iki
+Her JSON-RPC istek veya bildirim yeni bir HTTP POST'tur. Beden bir JSON-RPC mesajı içerir. Müşteriler sunucuya JSON-RPC yanıtları göndermez.
 
-Eski özellikten iki uç noktası modunun 2026 yılında hala çağrılabilir olması  özellik "miras uyumlu" olduğunu ilan eder. Ancak tüm yeni sunucular tek uç noktası olmalıdır. Resmi SDK'lar tek uç noktası yayar; sadece göç edilmemiş bir uzaktan bir iletişim kurarken miras modunu kullanın.
+Bir istek için sunucu aşağıdakileri gönderir:
 
-### `Origin`Valide ve DNS-i yeniden inceleme
+- `Content-Type: application/json`Bir JSON-RPC cevabı ile; veya
+- `Content-Type: text/event-stream`Bu talebe ilişkin bildirimlerle, ardından son JSON-RPC cevabı ile birlikte.
 
-Tarayıcılar MCP müşterileri değil (bugün), ama bir saldırgan bir tarayıcıyı POST'a ikna eden bir web sayfasını oluşturabilir `localhost:1234/mcp` Kullanıcının yerel MCP sunucusunun dinlediği yer.`Origin`, tarayıcı'nın aynı köken politikası onu kaydetmez çünkü `Origin: http://evil.com`geçerli çapraz kökenli.
+Kabul edilen bir bildirim için, sunucu geri gönderir `202 Accepted`Cesetsiz.
 
-2025-11-25 spesifikasyonu sunucuların , `Origin`Bu liste genellikle MCP istemci barındırıcısını içerir (`https://claude.ai`- Evet .`vscode-webview://*`) ve yerel kullanıcı arabirimleri için localhost varianları.
+Müşteriler her iki tepki türünü de reklam ediyor:
 
-### Oturum ID yaşam döngüsü
+```http
+Accept: application/json, text/event-stream
+```
 
-1. Müşteri ilk talebi olmadan gönderir .`Mcp-Session-Id`- Evet .
-2. Sunucu rastgele bir kimlik belirler, setler `Mcp-Session-Id`Cevap başlığı.
-3. Müşteri , tüm sonraki talepleri ve `GET /mcp`Akıntı için.
-4. Oturum sunucu tarafından iptal edilebilir; müşteri sonraki isteklerde 404'i görür ve yeniden başlatmalıdır.
-5. Müşteri açıkça oturumu temiz kapatmak için silmek olabilir.
+### Sadece POST, sadece POST anlamına gelir.
 
-### Kalıcı ve yeniden bağlan
+Modern Akışlı HTTP'nin bağımsız bir GET akışı ve DELETE oturum son noktası yoktur.
 
-SSE bağlantıları düşüyor. müşteri aynı ile yeniden GET'e geçerek yeniden kurar `Mcp-Session-Id`. Server , kesinti sırasında kayıp olan olayları sıraya koyacak (makul bir pencerede) ve `last-event-id`Başlık, müşteri yankı veriyor.
+- `GET /mcp`Devamı`405 Method Not Allowed`- Evet .
+- `DELETE /mcp`Devamı`405 Method Not Allowed`- Evet .
+- `Mcp-Session-Id`İlgilenir ve asla kalıplanmaz.
+- `Last-Event-ID`modern akışların yeniden başlatılamaması nedeniyle göz ardı edilir.
 
-13 · 13 aşaması, uzun süreli çalışmaların tam bir oturum yeniden bağlantı kurmasına izin veren Görevleri kapsar.
+Eğer bir istek ölçeği akışı son cevabından önce kesilse, istemci bu uçuşta istek kaybetmiştir. Yeniden deneme güvenli olduğunda yeni bir JSON-RPC kimliği ile yeni bir istek gönderebilir. Akım yeniden başlatmaya çalışmamalıdır.
 
-### Geriye doğru uyumlulık sondası
+### Doğrulama
 
-Eski ve yeni sunucuları desteklemek isteyen bir müşteri:
+Sunucular onaylıyor `Origin`DNS yeniden bağlanmasını önlemek için gelen bağlantılardaki başlık mevcutsa ve açıkça izin verilmiyorsa, geri gönder `403 Forbidden`. Tarayıcı olmayan bir müşteri , bu bilgiyi kaybedebilmektedir .`Origin`, resmi taşıma kuralları tarafından izin verilir.
 
-1. - Evet .`/mcp`- Evet .
-2. Eğer cevap `200 OK`JSON veya SSE ile, bu Streamable HTTP.
-3. Eğer cevap `200 OK`- Evet .`Content-Type: text/event-stream`Ve bir `Location`başlık ikinci bir son noktaya işaret eder, bu eski HTTP+SSE; `Location`- Evet .
+Yerel sunucular bağlanmalıdır `127.0.0.1`Ağ hizmetleri hala her istek için kimlik doğrulama ve yetki verilmesi gerektirir.
 
-### Cloudflare, ngrok ve hosting
+Kanonik yapılandırmadan sonra tam bir köken eşleşmesini kullanın.`origin.startswith("https://trusted.example")`Güvenli değiller çünkü saldırgan kontrolü altında olan ekleri kabul edebilirler.
 
-2026 yılında uzaktan MCP sunucuları Cloudflare Workers (MCP Agents SDK'leri ile), Vercel Fonksiyonları veya konteynerleştirilmiş Node / Python üzerinde çalışmaktadır. Anahtar: barındırma işleminiz SSE GET için uzun ömürlü HTTP bağlantıları desteklemesi gerekir. Vercel'in ücretsiz seviyesi 10 saniyelik bir sınırlama yapar ve uygun değildir. Cloudflare Workers belirsiz akışları destekler.
+### Gerekli HTTP metadata başlıkları
 
-### Kapı bileşimi
+Her modern POST talebi şunları içerir:
 
-Bir kapı (Fase 13 · 17) ile birden fazla MCP sunucusu karşısında, kapı, sesyon kimliklerini ve multipleksleri akıntıya geri yazarak tek bir akış HTTP son noktasıdır. Araçlar kapı katmanında birleştirilir; istemci tek bir mantıklı sunucu görür.
+```http
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: notes_search
+```
 
-### Nakliye başarısızlık modları
+Başlık kuralları:
 
-- **stdio SIGPIPE.**Çocuk işlem ölümü yazma ortasında SIGPIPE yükseltir; sunucular temiz çıkmalı. Müşteriler EOF'i tespit etmeli ve seansın ölü olduğunu işaretlemeli.
-- **HTTP 502 / 504.**Cloudflare, nginx ve diğer vekiller bunları akıntılı bir başarısızlıkta yayar. Akışlanabilir HTTP istemcileri kısa bir yedeklemeden sonra bir kez tekrar denmelidir.
-- **SSE connection drop.**TCP RST, proxy timeout veya istemci ağ değişikliği akışı kapatır.`Mcp-Session-Id`ve seçmeli `last-event-id`Tekrar devam etmek için.
-- **Session revocation.**Sunucu bir seans kimliğini geçersiz kılar; müşteri bir sonraki istekle 404 görür. Müşteri tekrar el sıkışmalıdır.
-- **Clock skew.**Client'deki kaynak-TTL hesaplamaları sunucudan farklıdır.
+- `MCP-Protocol-Version`Gerekli ve eşit olmalıdır.`params._meta.io.modelcontextprotocol/protocolVersion`- Evet .
+- `Mcp-Method`Gerekli ve JSON-RPC'ye eşit olmalıdır `method`- Evet .
+- `Mcp-Name``tools/call`- Evet .`resources/read`ve`prompts/get`- Evet .
+- `Mcp-Name`eşit `params.name`veya`params.uri`için`resources/read`- Evet .
+- Başlık değerleri başlık isimleri başlıklara karşı duyarlı olmasa da, durumlara karşı duyarlıdır.
 
-### Akışlı HTTP'yi ne zaman atlatmak
+Güvenli olmayan veya ASCII olmayan `Mcp-Name`değerler tam UTF-8 Base64 sentinel kullanır:
 
-Bazı işletmeler, gRPC veya mesaj sırası taşımacılıklarının arkasında MCP sunucularını kendi ağları içinde dağıtır. Bu standart olmayan  MCP'nin spesifikasyonu bunları resmi olarak tanımlamıyor. Gateways, gRPC'yi içsel olarak kullanırken bir Streamable HTTP yüzeyini MCP istemcilerine açığa vurabilir. Dış yüzey spesifikasyonlarına uygun tutun; geçit çevirinin sahibi.
+```text
+=?base64?{Base64EncodedValue}?=
+```
+
+Sunucu, bu değerleri vücutla karşılaştırmadan önce çözüyor.
+
+Kayıp, yanlış biçimlendirilmiş veya eşleşmeyen ayna başlıkları HTTP'yi gönderir `400`JSON-RPC kodu ile `-32020`. Eğer başlık ve vücut sunucu desteklemeyen bir versiyon için anlaşılırsa, HTTP `400`- Evet .`-32022`ve tıpkı  gibi doğru hata verileri`{"supported":["2026-07-28"],"requested":"2027-01-01"}`- Evet .
+
+Bilinmeyen modern bir yöntem HTTP ' i gönderir `404`JSON-RPC ile `-32601`JSON-RPC vücudu önemlidir çünkü iki çağ istemcisi onu modern bir hatayı eski bir son nokta eksikliği ile ayırt etmek için kullanır.
+
+### İsteklere göre genişletilmiş SSE
+
+Bir sunucu, uzun süreli bir talebe göre SSE'yi seçebilir:
+
+```text
+POST tools/call id=41
+  <- notifications/progress related to id=41
+  <- notifications/progress related to id=41
+  <- JSON-RPC response id=41
+stream closes
+```
+
+Sunucu bu akışta bağımsız JSON-RPC isteklerini göndermemelidir. Örnekleme, çıkartma ve kök etkileşimleri Multi Round-Trip Arama sonuçlarını kullanır. Cevap akışı kapatmak bu istekleri iptal eder.
+
+SSE etkinlik kimliklerini tekrar oynatmak için eklemeyin. `Last-Event-ID`Tekrarlanmak modern revizyonun bir parçası değil.
+
+### Uzun süreli değişiklikler abonelik/dinleme kullanımı
+
+Değişiklik bildirimleri, bağımsız GET değil, istemci tarafından açılan bir istek kullanır:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "listen-1",
+  "method": "subscriptions/listen",
+  "params": {
+    "notifications": {
+      "toolsListChanged": true,
+      "resourceSubscriptions": ["notes://note-1"]
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+POST cevabı uzun ömürlü bir SSE akışıdır.`notifications/subscriptions/acknowledged`- Kabul, her değişiklik bildirimi ve son sonuç taşıma`io.modelcontextprotocol/subscriptionId`İçeride`_meta`Sunucu SSE yorumlarını tutıcı olarak yayınlayabilir. Akış düştüğünde, istemci yeniden yayınlar `subscriptions/listen`Yeni bir talebinin kimliği ile ilgili verileri yeniden düzenle.
+
+`resources/subscribe`ve `resources/unsubscribe`Modern bir bağlantıda kullanmayın.
+
+### Açıkça başvuru durumu
+
+Protokol seanslarını kaldırmak, durumla iş akışlarını yasaklamaz. Sunucu, bir açık olmayan durum elini çizebilir ve normal bir araç sonucu olarak geri verebilir. Müşteri, daha sonraki aramalarda açık bir argüman olarak bu elini geçer.
+
+Elleri doğrulanmış başlık ile bağlayın, onları denememeden, sona erdirerek ve her kullanım için yetki verin. Bu durum, taşıma ilişkisinde gizlenmek yerine uygulama katmanında görünür hale getirir.
+
+Gizli replik durumunun neden olduğu başarısızlık mekaniktir:
+
+1. A talebi 1 kopyasına ulaşır ve bu sürecin hafızasında bir taslak oluşturur.
+2. Cevap bir taslak eleştiriyi geri göndermez çünkü uygulanma bağlantıyı taslak tanımlamayı varsayır.
+3. B talebi yeni bir POST ve 2'ye ulaşır.
+4. Replik 2 geçerli protokol metadataları vardır ama taslakın adını ya da yüklenmesini mümkün kılmaz, bu nedenle iş akışı başarısız olur veya yanlış yerel nesne okur.
+5. Yapışkan yönlendirme, bir yeniden başlatma, başlatma, yeniden planlama veya başarısızlık sonrası bir sonraki istek geçene kadar semptomları düzeltir.
+
+Doğru sınırın iki parçası vardır. Protokol bağlamı her talepte kalır. Kalıcı uygulama durumu, müşterilere gönderilen bir sunucu-minted eldiven altında paylaşılan bir mağazada yaşar. Bir sonraki çağrıda, her kopya aynı kayıtları yükler ve yetki kayıtları doğrulanmış ana ve kiracıya bağlar. Replik belleği bir kaydı önbelleğe koyabilir, ancak doğruluk için gerekli olan tek kopya olamaz.
+
+Durum mekanizmasını ömür boyu seçin. İstediği yerel değişkenler bir çağrıya hizmet verebilir. Kısa bir MRTR devamı bütünlük korunan bir uygulama kullanabilir `requestState`. Bir taslak veya kalıcı görev açık bir eleştiri, ayrıca paylaşılan kalıcılık, sona erme, eşzamanlılık kontrolü ve idempotency gerektirir.
+
+### HTTP çift çağ uyumluluğu
+
+Modern ve eski sunucuları destekleyen bir istemci önce modern bir POST dener.`400`- Evet .`404`veya`405`, cesedi kontrol eder:
+
+- Bilinen modern JSON-RPC hatası sunucunun modern olduğunu kanıtlar.
+- Boş bir vücut veya tanınmamış bir cevap, eski bir HTTP+SSE sunucusu gösterir.`endpoint`olay.
+
+Bir sunucu, modern metadataları modern POST uygulamasına yönlendirerek ve eski müşteriler için ayrı eski son noktaları korarak göç sırasında her iki dönemi destekleyebilir.`2026-07-28`- Evet .
 
 ```figure
 tp-transport-handshake
@@ -100,49 +184,54 @@ tp-transport-handshake
 
 ## Kullan
 
-`code/main.py``http.server`Post, GET ve DELETE'yi işliyor.`/mcp`, setler`Mcp-Session-Id`İlk tepki üzerine onaylar.`Origin`Bu işlemci, ders 07 notları sunucunun gönderme mantığını tekrar kullanır.
+`code/main.py`Python standart kütüphanesi ile sınırlı, modern Streamable HTTP sunucusu uyguluyor.`subscriptions/listen`SSE akışı.
 
-Neye bakılır:
+```bash
+cd code
+python3 main.py --probe
+python3 -m unittest discover tests -v
+```
 
-- POST işlevi, JSON-RPC vücudu okuyor, gönderir ve JSON cevabını yazar (tek cevap varianti; SSE varianti yapısal olarak benzerdir).
-- - Evet .`Origin`kontrol öntanımlıyı reddediyor `http://evil.example`- Sonde ama kabul ediyor .`http://localhost`- Evet .
-- Oturum kimlikleri rastgele 128 bit altıbuçlı iplerdir; sunucu, hafızada oturum başına durumunu tutar.
+Sonda kontrolü:
+
+- geçersiz bir köken reddedildi;
+- Bir seans kimliği olmadan keşif başarılı olur;
+- `Mcp-Session-Id`ve `Last-Event-ID`İlgilenmezler.
+- Başlık eşleşmezliği gönderir `-32020`- ...
+- Desteklenmeyen versiyonları gönderir `-32022`Tam olarak`supported`ve `requested`veriler;
+- kabul edilen bir idsiz bildirim HTTP'yi gönderir `202`Vücutsız;
+- GET ve DELETE geri dönüşü`405`- ...
+- `subscriptions/listen`onay, bildirim ve nihai sonuçları abonelik kimliği taşıyan bir POST cevap akışıdır.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-mcp-transport-migrator.md`HTTP+SSE (meşru) MCP sunucusu verildiğinde, becerin sesyon kimliği sürekliliği, Kaynak kontrolleri ve geriye doğru uyumlu araştırma desteği ile Streamable HTTP'ye göç planı üretilmesi.
+Bu ders gemileri `outputs/skill-mcp-transport-migrator.md`Modern protokol seanslarını kaldırır, başlık-vücut doğrulama ekler, bağımsız GET'i `subscriptions/listen`, ve her miras köprüyü görünür olarak ayırır.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`- Bir mesaj gönder .`initialize`-`curl`ve `Mcp-Session-Id`Cevap başlığı. Başlığı yankı veren ikinci bir istek gönderin ve oturum devamlılığını doğrulayın.
-
-2. SSE akışını açan bir GET yöneticisi ekle.`notifications/progress`Aynı oturum kimliği ile tekrar bağlantı kurarak ve sunucu tarafından kabul edildiğini onaylayın.
-
-3. `last-event-id`Yeniden bağlantı kurduğunda, bu kimlikten sonra oluşan her olayı tekrar oynat.
-
-4. Uzaklaştırma`Origin`Wildcard modelini desteklemek için onaylama (`https://*.example.com`) ve kabul ettiğini onaylar.`https://app.example.com`Ama reddediyor.`https://evil.example.com.attacker.net`- Evet .
-
-5. Resmi kayıttan eski bir HTTP+SSE sunucusu alın (bir kaç tane var) ve göçü çizin: son nokta işlemesinde, oturum kimliği üretiminde ve başlık semantiğinde neler değişiklikler yapılır.
+1. Çıkar `Mcp-Method`HTTP'yi onayla`400`ve hata .`-32020`- Evet .
+2. Eşleşen başlık ve vücut versiyonunu gönder `2027-01-01`HTTP ' i onayla .`400`, hata`-32022`, ve kesin veriler .`{"supported":["2026-07-28"],"requested":"2027-01-01"}`- Evet .
+3. Base64 nöbetçisi gönder .`Mcp-Name`ASCII olmayan bir kaynak URI için.`params.uri`- Evet .
+4. Son cevabından önce son dinleme akışını kes ve yeni bir JSON-RPC kimliği ile yeniden yayınla ve yeniden düzenle araçları.
+5. Ping aracına açık bir iş akışı elini ekle. Bağlantı afinitesini kullanmadan bir yetki konusu ile bağla.
 
 ## Anahtar Terimler
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| stdio transport | "Local child process" | JSON-RPC over stdin/stdout, newline-delimited |
-| Streamable HTTP | "The remote transport" | Single-endpoint POST + GET + optional SSE, 2025-03-26 spec |
-| HTTP+SSE | "Legacy" | Two-endpoint model being removed in mid-2026 |
-| `Mcp-Session-Id` | "Session header" | Server-assigned random id echoed on every subsequent request |
-| `Origin` allowlist | "DNS-rebinding defense" | Reject requests whose Origin is not approved |
-| Single endpoint | "One URL" | `/mcp` handles POST / GET / DELETE for all session operations |
-| `last-event-id` | "SSE replay" | Header used to resume a dropped stream without missing events |
-| Backwards-compat probe | "Old vs new detection" | Client response-shape check that auto-selects transport |
-| Long-lived HTTP | "SSE streaming" | Server pushes events for minutes or hours on one TCP connection |
-| Session revocation | "Force re-init" | Server invalidates a session id; client must handshake again |
+| Term | Meaning |
+|------|---------|
+| stdio | Newline-delimited JSON-RPC over a client-launched subprocess |
+| Streamable HTTP | Single endpoint where each modern message is a new POST |
+| Request-scoped SSE | POST response stream containing related notifications and final response |
+| `subscriptions/listen` | Long-lived POST request for opted-in change notifications |
+| Header mismatch | HTTP `400` and JSON-RPC `-32020` when mirrored headers disagree with body |
+| Origin validation | DNS-rebinding defense for incoming connections, not authentication |
+| Explicit state handle | Application token passed as an ordinary argument instead of hidden session state |
+| Legacy bridge | Separate earlier-era behavior kept only for compatibility |
 
 ## Daha Fazla Okumak
 
-- [MCP — Basic transports spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) stdio ve Streamable HTTP için kanonik referans
-- [MCP — Basic transports spec 2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) Streamable HTTP'yi tanıtan düzeltme
-- [Cloudflare — MCP transport](https://developers.cloudflare.com/agents/model-context-protocol/transport/) İşçiler tarafından barındırılan Akışlanabilir HTTP kalıpları
-- [AWS — MCP transport mechanisms](https://builder.aws.com/content/35A0IphCeLvYzly9Sw40G1dVNzc/mcp-transport-mechanisms-stdio-vs-streamable-http) Deployment şekilleri arasındaki karşılaştırma
-- [Atlassian — HTTP+SSE deprecation notice](https://community.atlassian.com/forums/Atlassian-Remote-MCP-Server/HTTP-SSE-Deprecation-Notice/ba-p/3205484) Konkret göç tarihini örnek
+- [MCP Transport Overview](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
+- [MCP stdio Transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)
+- [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [MCP Subscriptions](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions)
+- [MCP 2026-07-28 Changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)

@@ -1,8 +1,8 @@
-# MCP Yöneticisi Üretimde  Kayıt, JWKS Refresh, Seyircilik Dönemi Tokens
+# Üretimdeki MCP Auth: Emitter-Bind Enrollment ve Tokens
 
-> 16. dersi, OAuth 2.1 durum makinesini hafızaya getirmiş. 2026 yılına kadar, gerçek bir org'a gönderdiğiniz her MCP sunucusu üretim yazarının arkasında oturuyor: sınırsız bir müşteri nüfusuna kadar ölçeklenen müşteri kayıtları (Müşteri Kimliği Metadata Belgeleri önce, geriye doğru uyumlu bir geri dönüş olarak dinamik müşteri kayıtları), yetki sunucu metadata keşfi (RFC 8414 * veya * OpenID Connect Discovery), JWKS önbelleği güncelleme sabah 3'te bir kırılmaz. token doğrulama ve kitle arası yeniden oynamayı reddeden izleyicilerle desteklenen tokenler. Bu ders, tüm yüzeyi üç rol ile modeller  bir yetki sunucusu, bir kaynak sunucusu (MCP sunucusu) ve bir istemci  böylece keşiften doğrulanmış bir araç çağrısına kadar her atışı takip edebilirsiniz.
+> Ders 16 OAuth 2.1 devlet makinesi inşa etti. Bu ders MCP 2026-07-28 için üretim sınırlarını sertleştirir: Önce Client ID Metadata Belgeler, sadece uyumluluk için geçersiz dinamik kayıt, yetki- yanıt emiten onay, emiten anahtarı müşterilerinin kimliklerini, JWKS yenilenmesi ve her devletsiz istek üzerinde izleyiciler tarafından dayalı tokenler.
 >
-> **Spec note (2025-11-25):**Kasım 2025 MCP yetkililiği spesifikasyonu Dynamic Client Registration'ı `SHOULD`- ...`MAY`ve yapılmış**Client ID Metadata Documents (CIMD)**Bu ders, hem spesifikasyonun öncelikli sırasıyla hem de kodun bir süreçte tamamen kendiliğinden olduğu için DCR'yi yürüyüş için tutmaktadır.
+> **Spec note (2026-07-28):**Dinamik Müşteri Kayıtlaması, Müşteri Kimliği Metadata Belgelerinin yararına geçersiz hale getirilmiştir. DCR uyumluluk mekanizması olarak kalır. Kullanıldığında, müşteri doğru olduğunu belirtir `application_type`Bir müşteri mevcut RFC 9207 ' i onaylar .`iss`yetki sunucu emitenler arasında kimlik kimliklerini değerlendirir ve asla tekrar kullanmaz.
 
 **Type:** Build
 **Languages:** Python (stdlib)
@@ -12,23 +12,39 @@
 ## Öğrenme Hedefleri
 
 - RFC 8414 metadataları üzerinden yetki sunucusu bulun ve sözleşmeyi doğrulayın.
-- RFC 7591 dinamik müşteri kayıtlarını uygulayın, böylece MCP müşterileri yöneticinin müdahalesi olmadan kayıt olur.
+- Müşteri Kimliği Metadata Belgesini kaydet ve eski DCR'yi geri dönüş olarak izole et.
+- RFC 9207' yi geçerli kılmak `iss`, yetki sunucu emitenin anahtar kayıtları ve emitenin ek kaynaklı anahtar tokenleri.
 - JWKS anahtarlarını bir programda saklayın ve yenilenti yapın ki imza doğrulama anahtarın devrilmesi sırasında hayatta kalsın.
 - RFC 8707 kaynak göstergeleri kullanarak tek bir MCP kaynağına tokenler bağlayın ve karışık bir vekil yeniden kullanımı reddedin.
-- Üç rolü temiz bir şekilde ayırın  yetki sunucusu, kaynak sunucusu, müşteri  böylece her biri sadece ona ait olan kontrolleri uyguluyor.
-- IdP yetenekleri matrisini okuyun ve idP'nin MCP'nin yazar profiliyi tatmin edemediği durumlarda dağıtmayı reddedin.
+- JWT doğrulama veya belirti içgörüsü seçin, iptal tazeliğini tanımlayın ve kimlik bağımlılıkları bulunmadığında güvenli bir şekilde başarısız olun.
+- Yetki sunucusu, kaynak sunucusu ve istemciyi ayırın böylece her biri sadece kendi kontrollerini uygulayabilir.
+- Yetki sunucusunu dağıtım kontrol listesi ile karşılaştırın ve güvenli olmayan kayıt veya token yeniden kullanımı reddedin.
 
 ## Sorun
 
 Ders 16 simülatörü OAuth 2.1'i bellekte çalışır. Üretim sadece bellek simülatörü görmeyen üç işletim boşluğuna sahiptir.
 
-İlk boşluk kayıt. Gerçek bir org yüzlerce MCP sunucusu ve binlerce MCP istemcisi çalışır. Operatörler her Cursor kullanıcısını bir OAuth istemcisi olarak el kayıt etmez. 2025-11-25 spesifikasyonu müşterilere bunu çözmek için öncelikli bir emir verir: önceden kayıtlı bir kullanıcı kullanın `client_id`Eğer varsa, kullanın **Client ID Metadata Document**(klient kontrol ettiği HTTPS URL ile kendini tanımlar ve yetki sunucusu metadata * çekir) yoksa geri döner **RFC 7591 dynamic client registration**(Müşterek * bir * itti)`POST /register`ve bir `client_id`CIMD, DNS kökleşmiş bir güven modeli korurken her sunucuya göre kayıtları tamamen kaldırırken önerilen varsayılan yöntemdir. DCR geriye doğru uyumluluk için saklanır. İkisi de giriş noktalarını yetki sunucusunun metadatalarından keşfeder:`client_id_metadata_document_supported`CIMD için, `registration_endpoint`DCR için.
+İlk boşluk kayıt ve kredi izolesi. Gerçek bir organizasyon yüzlerce MCP sunucusu ve binlerce MCP istemcisi çalıştırabilir. 2026-07-28'deki revizyona göre bir **Client ID Metadata Document**: müşteri, tanımlayıcı olarak kontrol ettiği bir yolla HTTPS URL kullanır ve yetki sunucusu metadata çekir. RFC 7591 dinamik kayıt sadece eski uyumluluk yolu olarak kalır. DCR kaçınılmaz olduğunda, istek doğru olduğunu ilan eder `application_type`. Müşteri , kayıtları izin sunucu emitenin ve erişim tokenlarını `(issuer, resource)`Değişen bir emiten yeni bir kayıt anlamına gelir ve farklı bir kaynak ise farklı bir kitle için belirtilmiş bir token anlamına gelir.
 
 İkinci boşluk anahtar dönüştürülmesidir. JWT doğrulama, yetki sunucusunun imza anahtarlarına bağlıdır, JSON Web Key Set (JWKS) olarak yayınlanır. Yetki sunucusu bunları bir programda döndürür (sık sık saatte, bazen olay tepkisi altında daha hızlı). Bir kez JWKS'i başlatırken getiren bir MCP sunucusu, dönüş penceresine kadar doğrulamayı başarır  sonra yeniden başlatıncaya kadar her istek başarısız olur. Üretim kabloları JWKS'i önbelleğe kaydedilen bir değere sahip, önceki anahtarların sona ermesinden önce önbelleği üstü yazır ve önbelleğe daha yeni bir anahtar tarafından imzalanan bir token geldiğinde önbelleğe kaydedilen durum için önbelleğe geri dönme kaydını getirir.
 
 Üçüncü boşluk, kitle bağlayıcılığıdır.16 ders RFC 8707 kaynak göstergeleri tanıttı.`token.aud`Bu, bir sunucu için amaçlanan bir token tutan bir MCP sunucusu (veya kötü niyetli bir istemci) bu token'ı aynı güven ağında başka bir sunucuya karşı oynamasından korunmak için tek savunma.
 
 Bu ders, her boşluğu bir beton parçası üzerinde haritası yapar. Metadata belgesi bir HTTP son noktasıdır. JWKS önbelleği güncelleme programlı bir iş ve anahtar değerli bir önbelleğe sahiptir. JWT doğrulama, herhangi bir aracı göndermeden önce kaynak sunucusu tarafından çalıştırılan bir rutindir. Üç rolü ayrı tutun ve her biri sadece sahip olduğu kontrolleri uyguluyor: yetki sunucusu anahtarları çıkarır ve döndürür, kaynak sunucusu önbelleği ve onaylar, istemci keşfeder ve kayıt yapar.
+
+## Uygulama: Ders 16'dan sonra üretim uygulanması
+
+[Lesson 16: MCP Security with OAuth 2.1](../../16-mcp-security-oauth-2-1/docs/en.md)Bu ders ikinci bir OAuth akışını tanımlamaz. Bu sözleşmeler var olduktan sonra başlar ve dağıtılan bir kaynak sunucusu anahtar dönüşüm, açık olmayan token doğrulama, iptal, bağımlılık başarısızlığı, dağıtım ve olay tepkisi sırasında bunları nasıl uyguluyor sorar.
+
+Üretim sınırı daha dar ve daha operasyonel:
+
+- JWT yolu, sabit bir emitenin, algoritmanın, imza anahtarının, izleyicinin, zaman taleplerinin ve her talebin kapsamını doğruluyor.
+- Açıklama olmayan bir token yolu, emitenin doğrulanmış içsel gözlem son noktasını çağırır ve geri gönderilen aktif durumu, kitle veya kaynak, sona ermesi, konu ve kapsamı doğruluyor.
+- İptal politikası, bir tanıklık bilgisinin ne kadar hızlı çalışmayı bırakması gerektiğini ve hangi önbelleğin bu gerçeği geciktirebildiğini belirler.
+- Başarısızlık politikası keşif, JWKS, iç gözlem veya iptal altyapısı bulunmadığında ne olacağını belirler.
+- Emitent metadata, anahtar seti veya içten bakış tepkisi, token talepleri, politika versiyonu ve reddedilme nedeni, token'ı saklamadan sonuçları yönlendirdiği kanıt kayıtları.
+
+Bu ayrım dersleri birleştirir. 16. dersi akışı kanıtlar. 18. dersi bir token'ın gerçek bir MCP istek yoluna ulaştıktan sonra güvenilir kalıp reddedildiğini kanıtlar.
 
 ## Anlaşım
 
@@ -42,7 +58,9 @@ Bir belge .`/.well-known/oauth-authorization-server`Bir müşterinin ihtiyaç du
   "authorization_endpoint": "https://auth.example.com/authorize",
   "token_endpoint": "https://auth.example.com/token",
   "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
+  "client_id_metadata_document_supported": true,
   "registration_endpoint": "https://auth.example.com/register",
+  "authorization_response_iss_parameter_supported": true,
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
@@ -53,11 +71,14 @@ Bir belge .`/.well-known/oauth-authorization-server`Bir müşterinin ihtiyaç du
 
 Bir MCP kaynak URL zinciri keşfi verilen bir istemci: `oauth-protected-resource`RFC 9728'den (resurs sunucusunun belgesinden) emitenin adı verilir, sonra `oauth-authorization-server`(Bu RFC) her son noktayı isimlendirir.
 
+Bir yollu bir kaynak tanımlayıcısı için, bu yolun önüne bilinen segment ekleyin.`https://mcp.example.com/team/server`                  `https://mcp.example.com/.well-known/oauth-protected-resource/team/server`- Ekle .`/.well-known/...`Kaynak yolu yanlış olduktan sonra.
+
 MCP için bir IDP'ye güvenmeden önce onayladığın sözleşme:
 
 - `code_challenge_methods_supported`içerir .`S256`Spec açık: eğer bu alan **absent**, yetki sunucusu PKCE ve müşteriyi desteklemiyor **MUST**Başlamayı reddediyor.
 - `grant_types_supported`içerir .`authorization_code`ve reddeder .`password`ve `implicit`- Evet .
-- En az bir kayıt yolu ilan edilmiştir: `client_id_metadata_document_supported: true`(CIMD, tercih edilir)**or** `registration_endpoint`Ya sözleşmeyi yerine getirir, artık DCR'yi zorlamıyorsunuz.
+- En az bir kayıt yolu mevcut: `client_id_metadata_document_supported: true`(CIMD, tercih edilen), önceden kayıtlı bir müşteri veya`registration_endpoint`(RFC 7591 uyumluluğu azalmış)
+- - Eğer`authorization_response_iss_parameter_supported`Doğru, müşteri geri gönderilen RFC 9207'yi istiyor.`iss`ve yeniden yönlendirme öncesi kaydedilen emitenle tam olarak karşılaştırır.
 - `response_types_supported`Tam olarak .`["code"]`OAuth 2.1. için.
 
 - Eğer`S256`Eğer PKCE'nin * hiçbir * kayıt yolu reklam edilmiyorsa ve önceden kayıtlı değilseniz `client_id`, kayıt edemezsiniz; görev açıklaması yanlış, kod değil.
@@ -87,6 +108,7 @@ Müşteriye konutlanan metadata belgesi:
   "client_id": "https://app.example.com/oauth/client.json",
   "client_name": "Example MCP Client",
   "client_uri": "https://app.example.com",
+  "application_type": "native",
   "redirect_uris": ["http://127.0.0.1:7333/callback", "http://localhost:7333/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
@@ -96,6 +118,8 @@ Müşteriye konutlanan metadata belgesi:
 
 - Evet .`client_id`belgedeki değer **MUST**Servis edilen URL'e eşit (ve yetki sunucusu bunu doğruluyor; eşleşmeyenler reddediliyor).`client_id_metadata_document_supported: true`RFC 8414 metadatalarında.
 
+Mevcut CIMD sözleşmesi için, `client_id`- Evet .`client_name`, ve boş olmayan bir`redirect_uris`Array gereklidir. Müşteri tanımlayıcısı bir yollu mutlak HTTPS URL'dir. `application_type`DCR'nin kopyasını yapmayın.`application_type`Tercih edilen CIMD yoluna.
+
 İki güvenlik faktörü açıkça açık:
 
 - **SSRF.**Yetki sunucusu saldırgan tarafından sağlanan bir URL'yi alır. Sunucu tarafındaki istek sahteliğine karşı savunmalıdır (işçi / yöneticisi son noktalarına hiçbir şekilde alınmaz).
@@ -103,15 +127,18 @@ Müşteriye konutlanan metadata belgesi:
 
 CIMD'nin sunucu tarafındaki durumuna ihtiyacı olmadığı için, DCR'nin talep ettiği şekilde durmak için bir kayıtci yoktur. Müşteri tarafı sadece okunur: metadata belgeleri statik bir HTTPS uç noktasından servis edin ve yetki sunucusu çekmesine izin verin.
 
-### RFC 7591  Dinamik Müşteri Kayıtlama (Başlamayı / Geriye Dönüştürme Uygunluğu)
+Yetki sunucu operatörü zaten bir müşteri kimliği sağlamışsa, otomatik kayıt yaptırmadan önce bu emitenin ölçüsünde kayıt yaptırın. Aksi takdirde CIMD'yi tercih edin. Emitenin önceden kayıt yapamayacağı veya CIMD'yi kullanamayacağı durumlarda sadece geçersiz olan DCR'yi kullanın.
 
-DCR artık bir `MAY`CIMD'yi henüz desteklemeyen 2025-11-25 öncesi dağıtımlar ve IDPs ile geriye doğru uyumluluk için korunmaktadır. Bu olmadan (ve CIMD veya önceden kayıt olmadan), her MCP istemcisi (Cursor, Claude Desktop, özel bir ajan) IdP yöneticisi ile bant dışı bir değişime ihtiyaç duyar. DCR ile, istemci gönderiler:
+### RFC 7591: Geçmişteki uyumluluk kayıtları
+
+DCR 2026-07-28'deki düzeltildiklerinde geçersiz hale geldi. CIMD'yi tüketemeyen ve önceden kayıt pratik olmayan yetki sunucuları için tutun.
 
 ```json
 POST /register
 Content-Type: application/json
 
 {
+  "application_type": "native",
   "redirect_uris": ["http://127.0.0.1:7333/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
@@ -136,7 +163,7 @@ Sunucu cevap verir:`client_id`ve bir `registration_access_token`Sonraki güncell
 }
 ```
 
-`token_endpoint_auth_method: none`kullanıcı cihazında çalışan MCP istemciler için doğru varsayılan.`client_id`Sadece  hayır `client_secret`PKCE, kamu müşterilerinin ihtiyaç duyduğu mülkiyet kanıtı sağlar.
+`application_type`Bir loopback masaüstü istemcisi açıklıyor`native`; bir sunucu barındırılmış istemci açıklamasını yapar `web`HTTPS yönlendirmesi URI'lerini kullanıyor. `token_endpoint_auth_method: none`Bu, yerel bir müşterinin için doğru varsayımdır.`client_id`Sadece PKCE'nin sahip olduğu kanıtını sağlaması gerekmektedir.
 
 Üç üretim tuzağı:
 
@@ -152,34 +179,36 @@ Ders 16 şekli belirledi. üretim kural: her token talebi içerir `resource=<can
 
 PKCE, OAuth 2.1'de zorunlu.`code_challenge`ve `code_verifier`. Sunucu, verifikatör olmadan veya kaydedilen meydan okumaya hash yapmayan bir verifikatör ile herhangi bir token talebini reddeder.
 
-### MCP Spec 2025-11-25 Yazar Profili
+### MCP 2026-07-28 yetki profili
 
-MCP spesifikasyonu (2025-11-25) bir MCP sunucusunun yetki katmanının ne yapması gerektiği hakkında kesin:
+Mevcut MCP reviziyonu, MCP nakliyesi devresiz hale getirirken OAuth kaynak-sörver sınırını korur. Kimlik kararını önbelleğe koyacak bir protokol seansı yoktur. Bu nedenle yetki katmanı her talebi bağımsız olarak doğruluyor:
 
 - RFC 9728 korunan kaynak metadatalarını uygula ve konumunu ya `WWW-Authenticate: Bearer resource_metadata="..."`401 ' de başlık**or**Tanınmış URI `/.well-known/oauth-protected-resource`(SEP-985 başlığı bilinen bir geri dönüş ile seçkin yaptı).`authorization_servers`alanı**MUST**En az bir sunucuya isim verin.
 - Tokenleri sadece  üzerinden kabul edin`Authorization: Bearer ...`- Evet .**every**sorgu  asla sorgu dizisinde, asla yalnızca oturum başlangıcında doğrulanmaz.
 - Geçerlileştir`aud`- Evet .`iss`- Evet .`exp`, ve istek başına gerekli alanlar .**MUST**Tokenin özel olarak ona (seyirciye) gönderildiğini onaylayın; eksik veya eşleşmemiş bir not`aud`reddedildi, asla bir wildcard olarak değerlendirilmedi.
 - 401/403'te geri dön.`WWW-Authenticate: Bearer`taşımacılık`error=...`, `resource_metadata="<PRM-URL>"`parametre (metadata belgesinin URL'si, *aklı kaynak değil*) ve `scope="..."`- Evet .`insufficient_scope`Not: parametre `resource_metadata`, bir keşif işaretçisi  yok `resource`Çabada bir parametredir.
 - Yetki sunucusu keşif kabul eder **either**RFC 8414 OAut metadata **or**OpenID Connect Discovery 1.0; müşteriler öncelik sırasıyla her iki tanınmış eklentiyi denemeleri gerekir.
-- Müşteri (server değil) **mix-up attacks**Bu , beklenenleri kaydeder .`issuer``iss`PKCE tek başına karışmayı durdurmaz, çünkü istemci kendi kodunu teslim eder `code_verifier`Neye yönlendirilmişse yönlendirilmiş olsun.
+- Müşteri (server değil) **mix-up attacks**Bu , beklenenleri kaydeder .`issuer``iss`PKCE'nin tek başına karışımı durdurmaz, çünkü müşteri kendi `code_verifier`Neye yönlendirilmişse yönlendirilmiş olsun.
+- Bir müşteri krediteleri bir yetki sunucu emitenine aittir.`client_id`, kayıt simgesi veya erişim simgesi.
+- CIMD, kayıt için tercih edilen mekanizmadır. DCR geçersiz hale geldi; uyumluluk DCR talebi hala doğru olduğunu belirtir `application_type`- Evet .
 
 OAuth 2.1 taslakı altyapıdır; RFC 8414/7591/8707/9728/9207 + RFC 7636 + CIMD yüzeyidir; MCP spesifikasyonu profilidir.
 
-### IdP yetenekleri matrisi
+### Uygulama yetenekleri kontrol listesini
 
-Her bir IDP tam MCP profilin desteklenmemektedir. Aşağıdaki matris 2025-11-25 özellikleri için gerçek kapasite ifadelerini belgelendirir. Bu bir * dağıtım kapısı * bir önerme değil.
+Satıcı özellikleri tabloları hızla eski hale gelir. Bunun yerine gerçekte dağıtmak istediğiniz yetki sunucusu tarafından gönderilen metadataları kontrol edin. Geçit mekanik:
 
-CIMD 2025-11-25 spesifikasyonunda gönderildi ve temel OAuth taslakı yalnızca Ekim 2025'te kabul edildi, bu nedenle satıcı desteği hala geliyor  aşağıdaki "CIMD" 'bunu bugün nerede bulduğunuzu kontrol edin, kiracıınızda' olarak değerlendirin, kalıcı bir açıklama değil.
+| Check | Required decision |
+|---|---|
+| Discovered issuer | Exact HTTPS issuer expected by policy |
+| PKCE | `S256` advertised; otherwise stop |
+| Enrollment | CIMD preferred, pre-registration accepted, DCR only as deprecated compatibility |
+| Authorization response | Validate RFC 9207 `iss` when present or advertised |
+| Resource binding | Token request carries `resource`; resource server requires the matching `aud` |
+| Credential storage | Key client IDs and registration credentials by issuer; key access tokens by issuer plus resource |
+| DCR compatibility | Declare `native` or `web`; reject redirect URIs that do not fit the declared application type |
 
-| IdP category | AS metadata (8414/OIDC) | CIMD | RFC 7591 DCR | RFC 8707 resource | RFC 7636 S256 PKCE | Notes |
-|---|---|---|---|---|---|---|
-| Self-hosted (Keycloak) | yes | emerging | yes | yes (since 24.x) | yes | Reference IdP for the MCP profile in this lesson; full DCR path end-to-end, CIMD tracking the new spec. |
-| Enterprise SSO (Microsoft Entra ID) | yes | emerging | yes (premium tiers) | yes | yes | DCR availability differs by tenant tier; verify in target tenant before deploying. |
-| Enterprise SSO (Okta) | yes | emerging | yes (Okta CIC / Auth0) | yes | yes | DCR available on Auth0 (now Okta CIC); classic Okta orgs require admin pre-registration. |
-| Social login IdPs (generic) | varies | no | rarely | rarely | yes | Most social IdPs treat clients as static partners; no self-service enrollment. Use as identity source only, layer your own MCP-aware authorization server on top. |
-| Custom / homegrown | depends | depends | depends | depends | depends | If you ship your own, ship the full profile and prefer CIMD. Skipping PKCE or audience binding breaks the MCP auth contract. |
-
-Gösterme manifesti için reddedilme kuralı: seçilen IDP listesi bulunmuyorsa `S256`İçeride`code_challenge_methods_supported`PKCE'nin çökmüş moduna sahip değil. Kayıt daha yumuşak bir kapıdır: * bir * çalışma yolunu (bir önceden kayıtlı `client_id`- Evet .`client_id_metadata_document_supported: true`, veya bir `registration_endpoint`). DCR'nin yokluğu artık reddedilmeyi tetikleme değildir, çünkü CIMD veya önceden kayıt onu kapsayabilir.
+Bir ürün adı veya fiyat seviyesinden destek çıkarmayın. Bulunan belgeyi dağıtım kanıtlarında yakalayın ve zorunlu bir alan eksik olduğunda kapatılmayı bırakın.
 
 ### JWKS yenilenme örneği (AS'de dön, kaynak sunucusunda yenilen)
 
@@ -220,6 +249,37 @@ if not result["valid"]:
 
 `validate`JWT'yi çözüyor, JWKS önbelleğinden imza anahtarını çözüyor (bir defa sıfırlıyor), imza doğruluyor, sonra kontrol ediyor `iss`izin listesi karşısında,`aud`Bu sunucu'nun kanonik kaynağına karşı.`exp`, ve gerekli kapsamı  bir `WWW-Authenticate`İlk başarısızlıktan sonra bir rutin olarak kaynak sunucusunda tutmak, her giriş noktasının (her araç çağrısı, her taşıma) aynı kontrollerden geçmesi anlamına gelir.
 
+### Çürük simgeler, tahmin değil, içgörü kullanır
+
+Her erişim tokeni JWT değildir. Eğer emiten açık olmayan bir token'ı belgelese, kaynak sunucusu onu güvenilir iddialara dekode edemez. Tokeni emitenin RFC 7662 içsel gözlem son noktasına doğrulanmış bir arka kanal üzerinden gönderir ve gerektiriyor.`active: true`, beklenen emitenin bağlamı, tam MCP kitlesi veya kaynağı, sona ermemiş zaman talepleri ve belirli araç tarafından talep edilen kapsamlar.
+
+Emitent tarafından önbelleğe girme, tek yönlü bir token digest ve MCP kaynağı. Hiç de açık bir simgeyi bir günlük veya önbelleğe etiket olarak kullanmayın. Token'in en erken sona ermesi, emitenin önbelleği rehberliği ve dağıtımın iptal edilmesi yenilik amacı ile pozitif bir önbelleğe girmeyi bağlayın. Yeni yayınlanan bir token yanlış olarak hareketsiz kalmasın diye negatif önbelleği yeterince kısa tutun. Bir kaynak için bir sonuç, açık olmayan simge ipliği aynı olduğunda bile başka bir kaynağa yetki veremez.
+
+Saldırgan tarafından kontrol edilen token içeriğinden geçerlilik modunu seçmeyin. Valide edilen emitenin metadata ve dağıtım yapılandırmasına JWT'yi kendi kendine gözlem davranışına karşı pin yapın. JWT yolunda, pin kabul edilmiş algoritmalar ve güvenilir `jwks_uri`; asla sadece token başlığı tarafından seçilen bir anahtar URL veya algoritma takip etmeyin.
+
+### İptal yenilik sözleşmesi.
+
+RFC 7009 bir istemci bir yetki sunucusuna bir token'ı iptal etmesini istemesini sağlar. Bu taleb her kaynak sunucusunun zaten önbelleği altında bulunan kopyaları silmez. Maksimum kabul edilebilir iptal gecikmesini tanımlayın ve her önbelleği ona saygı gösterin.
+
+Açık olmayan jetonların dağıtılması, her yüksek riskli çağrıyı içtenlikle gözlemleyerek veya kısa bir pozitif önbelleği kullanarak daha sıkı bir iptal elde edebilir. Kendini koruyan JWT dağıtımları genellikle kısa erişim jetonlarının ömrünü, yenilenme jetonlarının iptal edilmesi, emitenin genelinde gerçekleşen olaylar için anahtarların geri çekilmesi ve acil yerel reddedilme için seçmeli bir konu, seans veya jeton-id denil listesi ile birleştirir. İmza edilen JWT, kaynak sunucusunun mevcut dış iptal kanıtı olmadıkça, sona erene kadar kriptografik olarak geçerli kalır.
+
+Logout, hesap etkisizleştirme, onay çekme ve olay tepkisi farklı tetikleyicilerdir ancak bir ölçülebilir ifade üzerinde birleşmelidir: en fazla ilan edilen iptal penceresinden sonra, her kopya tanıtım tanıtımını reddeder.
+
+### Bağımsızlık başarısızlığı açık bir karar gerektirir
+
+Asla bir istisna yöneticisi içinde kullanılabilirlik politikasını improviz etme.
+
+| Failure | Safe production behavior |
+|---|---|
+| Scheduled JWKS refresh fails, known `kid` remains in a still-valid bounded cache | Continue only within the declared stale-on-error window and emit degraded health evidence |
+| Token has an unknown `kid` and the one allowed refresh fails | Reject; never accept an unverifiable signature |
+| Introspection is unavailable | Fail closed for protected calls; do not convert network failure into `active: true` |
+| Protected-resource or issuer metadata changes unexpectedly | Stop new enrollment and token acquisition; keep only explicitly pinned, unexpired configuration under a bounded incident policy |
+| Revocation endpoint is unavailable | Report logout or revocation as incomplete, retain the credential locally as unusable when possible, and do not claim global revocation succeeded |
+| Clock source or claim type is invalid | Reject rather than widening skew until the token passes |
+
+Başarısızlıkları geçersiz kimliklerden ayrı olarak sınıflandırın. Bir bağımlılık kesintisi sağlık ve yeniden deneme politikası ile ilgili bir operasyonel hatadır. Kötü bir imza, emiten, izleyici, sona erme veya kapsam bir yetki reddedilmesidir. Her ikisi de araç yöneticisine ulaşmaz ve hiçbirisi token içeriğini denetim kanıtlarına sızdırmamalıdır.
+
 ### İzleyici tekrarlaması geçiş (erginlik belirtileri hakkı kısıtlaması)
 
 Sunucu A (`notes.example.com`) ve Server B (`tasks.example.com`Bu durum, bir kullanıcıya karşı bir saldırganın not tokenini alıp B sunucusu ile tekrar oynatması anlamına gelir.
@@ -254,6 +314,7 @@ PKCE tek başına karışıklığı durdurmaz, çünkü müşteri kendi`code_ver
 - **Scope upgrade race.**Aynı kullanıcı için iki eşzamanlı yükseltme akışı hem başarılı olabilir hem de farklı kapsamlı iki erişim jetonu üretebilir. Validasyoncı, bir TOCTOU penceresi oluşturan "kullanıcının mevcut kapsamı" 'yi aramak yerine, istek üzerinde sunulan jetonu kullanmalıdır.
 - **Registration token theft.**Sızmış bir şey .`registration_access_token`URI'leri yeniden yazmasına izin verir. Bu URI'leri sabitleştirir.
 - **`iss` not pinned.**Herhangi bir onaylayıcıyı kabul eder.`iss`saldırganın kendi yetki sunucusu kurmasına izin verir, hedef kitle için bir istemci kaydeder ve tokenler verir.`authorization_servers`list izin listesi; uygulayın.
+- **Credential or token cache collision.**Kaynaklar için yalnızca kaynaklar ile kayıt anahtarları kullanan bir istemci, bir yetki sunucusunun kimliğini diğerine sunar. Sadece emiten tarafından giriş tokenleri açan bir istemci, yanlış kitleye bir token oynatabilir. Valide edilmiş emiten tarafından anahtar kayıtları, anahtar erişim tokenleri tarafından tekrar oynanır.`(issuer, resource)`, ve emitenin değişmesiyle yeniden kayıt yaptırmak.
 
 ```figure
 t3-jwks-rotate
@@ -261,12 +322,24 @@ t3-jwks-rotate
 
 ## Kullan
 
-`code/main.py`Stdlib Python ve üç rol ile tüm üretim akışını yürür  `AuthorizationServer`- Evet .`ResourceServer`ve`Client`Akış:
+`code/main.py`Stdlib Python ile tüm üretim akışını yürütür ve üç rolü: `AuthorizationServer`- Evet .`ResourceServer`ve`Client`Akış:
+
+Depo kökü ile çalıştır:
+
+```bash
+cd phases/13-tools-and-protocols/18-mcp-auth-production
+python3 code/main.py
+python3 -m unittest discover -s code/tests -v
+```
+
+İlk komut, emitenin bağladığı kayıt ve token onayını basıyor.
+İkinci komut 18 kontrolden geçiyor.
+ağ dinleyicisi veya kimlik bilgileri yazar.
 
 1. Yetkililik sunucusu RFC 8414 metadatalarını `/.well-known/oauth-authorization-server`- Evet .
 2. MCP istemcisi metadata son noktasını arıyor ve kayıt seçeneklerini kontrol ediyor (`client_id_metadata_document_supported`CIMD için, `registration_endpoint`DCR için) ve `S256`PKCE desteği.
-3. Yürüyüş DCR geri dönüş yolunu alır: müşteri gönderiler `/register`(RFC 7591) ve bir `client_id`(CIMD istemcisi kendi HTTPS adresini sunar .`client_id`URL ve bu adımı atlayın.)
-4. MCP istemcisi PKCE korunan yetki kod akışını (RFC 7636)  ile çalıştırır.`resource`gösterge (RFC 8707).
+3. Müşteri, emitenin ölçümlü bir önceden kayıt için kontrol eder, aksi takdirde HTTPS Müşteri Kimliği Metadata Belgesini kullanarak kayıt yapar. Deprecated DCR ayrı olarak test edilebilir bir uyumluluk yöntemi olarak kalır.
+4. Müşteri onaylanmış emitenin kayıtlarını yapar, S256 meydan okumasını yapar, bir kez izin kodunu ve bir de `iss`, gönderilen emitenin doğrulanmasını onaylar ve kodu orijinal doğrulayıcı ve RFC 8707 ile satın alır `resource`gösterge.
 5. MCP istemcisi , MCP sunucusundaki bir aracı `Authorization: Bearer ...`- Evet .
 6. MCP sunucu çalıştırılıyor `validate`, JWKS önbelleğinden imza anahtarını çözmek.
 7. IdP bir anahtarı döndürür; programlı yenilenme JWKS'yi önbelleğe geri çeker.
@@ -289,19 +362,19 @@ Bu ders bize çok yararlı .`outputs/skill-mcp-auth.md`. MCP sunucu yapılandır
 
 4. RFC 7591'i okuyun ve ders için iki alan belirleyin `/register`Yöneticisi onaylamıyor.`software_statement`ve `redirect_uris`URI sistemi.)
 
-5. Bir müşteri kimliği metadata belgesinin yolu ekleyin.`client.json`Kimin ?`client_id`kendi URL'lerine eşit olur ve yetki sunucusu onu getirir ve doğrulayır (iptal ederse `client_id`≠ URL). CIMD müşterisinin kayıtlarını onaylayın.`register_client`- Arayın.
+5. İkinci bir yetki sunucusu ekleyin. Müşteri'nin bir emitenin anahtarı ile ayrı bir kayıt kaydettiklerini ve ilk emitenin tokenini yeniden kullanmayı reddettiğini onaylayın.`client_id`- Evet .
 
 6. Değerlendiriciye rastgele bir token gönder.`kid`ve onaylayın .`refresh_jwks`en fazla bir kez çalışır ve yetki sunucusunun anahtar sayısı büyümüyor. Sonra kasıtlı olarak geri dönüşü bir döner-ve-mint olarak yeniden kablo ve sahte token başına anahtar sayısının yükselişini izleyin  tekrar geri alınmayı sonra.
 
-7. Müşteri tarafı RFC 9207 uygulaması `iss`Karıştırma bölümünden kontrol: izin talebinden önce beklenen emitenin kaydını kaydetir, ardından izin cevabını reddeder.`iss`- Hayır.
+7. İkisiyle de DCR 'yi kullanmayı alıştırmak .`native`ve `web`HTTP yönlendirmesi URI ile web istemcisini ve tam bir loopback yönlendirmesi olmadan yerel istemcisini onaylayın.
 
 ## Anahtar Terimler
 
 | Term | What people say | What it actually means |
 |------|----------------|------------------------|
 | ASM | "OAuth metadata document" | RFC 8414 `/.well-known/oauth-authorization-server` JSON |
-| CIMD | "Client metadata URL" | Client ID Metadata Document — an HTTPS URL used as the `client_id`; the AS pulls the JSON. Recommended default since 2025-11-25 |
-| DCR | "Self-service client registration" | RFC 7591 `POST /register` flow; demoted to a `MAY` fallback in 2025-11-25 |
+| CIMD | "Client metadata URL" | Client ID Metadata Document: an HTTPS URL used as the `client_id`; the AS pulls the JSON. Preferred enrollment in MCP 2026-07-28 |
+| DCR | "Self-service client registration" | RFC 7591 `POST /register`; deprecated for current MCP and retained only for compatibility |
 | JWKS | "Public keys for JWT validation" | JSON Web Key Set, fetched from `jwks_uri`, indexed by `kid` |
 | Rotate vs refresh | "Updating the keys" | *Rotate* = AS mints/retires signing keys; *refresh* = resource server re-fetches the published set. Resource servers only ever refresh |
 | Resource indicator | "Audience parameter" | RFC 8707 `resource` parameter pinning the token to one server |
@@ -316,9 +389,8 @@ Bu ders bize çok yararlı .`outputs/skill-mcp-auth.md`. MCP sunucu yapılandır
 
 ## Daha Fazla Okumak
 
-- [MCP — Authorization spec (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization) MCP'nin yazar profili bu ders uygulanıyor
-- [MCP blog — One Year of MCP: November 2025 Spec Release](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/) 2025-11-25'te neler değişti (CIMD, XAA, DCR indirimi)
-- [Aaron Parecki — Client Registration in the November 2025 MCP Authorization Spec](https://aaronparecki.com/2025/11/25/1/mcp-authorization-spec-update) CIMD-over-DCR'nin mantıklılığı
+- [MCP authorization specification (2026-07-28)](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)- mevcut MCP yetkisi profilini
+- [MCP 2026-07-28 changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)- CIMD, emitenin onaylanması, DCR'nin geri alınması ve emitenin anahtarı doğrulama belgelerinin değiştirilmesi
 - [OAuth Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document-00)](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-00) CIMD
 - [RFC 8414 — OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414) Bulma sözleşmesi
 - [RFC 7591 — OAuth 2.0 Dynamic Client Registration Protocol](https://datatracker.ietf.org/doc/html/rfc7591) DCR (sıkıntı yolu)
@@ -326,4 +398,5 @@ Bu ders bize çok yararlı .`outputs/skill-mcp-auth.md`. MCP sunucu yapılandır
 - [RFC 8707 — Resource Indicators for OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc8707) Seyircilik
 - [RFC 9728 — OAuth 2.0 Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728) kaynak sunucu keşfi
 - [RFC 9207 — OAuth 2.0 Authorization Server Issuer Identification](https://datatracker.ietf.org/doc/html/rfc9207) `iss`Karışık saldırılara karşı savunma parametresi
-- [OAuth 2.1 draft](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1) konsolidasyon OAuth altyapısı
+- [RFC 7662: OAuth 2.0 Token Introspection](https://datatracker.ietf.org/doc/html/rfc7662)
+- [RFC 7009: OAuth 2.0 Token Revocation](https://datatracker.ietf.org/doc/html/rfc7009)

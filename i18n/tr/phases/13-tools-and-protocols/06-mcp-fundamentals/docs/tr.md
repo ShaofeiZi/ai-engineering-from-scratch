@@ -1,115 +1,158 @@
-# MCP Temellikleri  İlkeler, Yaşam Dönemi, JSON-RPC Üssü
+# MCP Temellikleri: İttifaksiz İstekler ve JSON-RPC
 
-> MCP'den önceki her entegrasyon bir kerelikti. İlk olarak Kasım 2024'te Anthropic tarafından gönderilen ve şimdi Linux Vakfı'nın Agentic AI Vakfı tarafından yönetilen Model Kontext Protokolü, keşif ve çağrıları standartlaştırır, böylece herhangi bir müşteri herhangi bir sunucuyla konuşabilir. 2025-11-25 spesifikasyonu altı primitif (üç sunucu, üç istemci), üç aşamalı bir yaşam döngüsü ve JSON-RPC 2.0 tel biçimi isimlendiriyor. Bunları öğrenin ve bu aşamada MCP bölümünün geri kalanı okuma haline gelir.
+> Modern MCP'de el sıkışması ve protokol seansı yoktur. Her talebin kendi başına anlaşılabilir, yetkilendirilebilir, yönlendirilebilir ve tekrar denenebilir kadar yeterli metadata taşıması gerekir.
 
 **Type:** Learn
-**Languages:** Python (stdlib, JSON-RPC parser)
-**Prerequisites:** Phase 13 · 01 through 05 (the tool interface and function calling)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lessons 01 through 05
+**Time:** ~55 minutes
 
 ## Öğrenme Hedefleri
 
-- Tüm altı MCP primitiflerini (söreleri, kaynakları, sunucuda istekler; kökler, örnekleme, istemci üzerinde çıkarma) isimlendirin ve her birine bir kullanım durumunu verin.
-- Üç aşamalı yaşam döngüsünü geçin (başlat, çalıştır, kapat) ve her aşamada hangi mesajı gönderenleri belirtin.
-- JSON-RPC 2.0 istek, yanıt ve bildirim zarflarını incelemek ve yayınlamak.
-- Hangi kapasite müzakere edildiğini açıklayın .`initialize`Bu, bir şey ve bu olmadan ne kırılır.
+- MCP'nin sunucu primitiflerini istemci tarafı özelliklerinden ayırt edin.
+- MCP için geçerli JSON-RPC 2.0 istekleri ve yanıtları oluştur `2026-07-28`- Evet .
+- Her talebe protokol versiyonu, istemci yetenekleri ve istemci kimliği ekleyin.
+- Kullanım`server/discover`ve elini tut .`UnsupportedProtocolVersionError`El sıkışmadan.
+- Tam bir sonuçla birlikte bir bağımsız talebi doğrulama ile takip edin.
 
 ## Sorun
 
-MCP'den önce, her araç kullanan ajanın kendi protokolü vardı. Cursor, MCP şeklinde ancak uyumsuz bir araç sistemine sahipti. Claude Desktop farklı bir ile gönderildi. VS Code'un Copilot uzantısı üçüncüsü vardı. "Postgres sorgu" aracı oluşturan bir ekip aynı aracı üç kez yazdı, her biri farklı bir barındırma API'ye.
+Bir MCP sunucusu, aynı işlem veya HTTP çalışanında farklı özelliklere sahip farklı istemcilerden iki ardıcıl istek alabilir. Eğer sunucu önceki isteklerin açıklandığını hatırlarsa, yanlış izinleri uygulayabilir veya yanlış tel şeklini geri verebilir.
 
-Sonuç, bir kereli entegrasyonların Kambriyan patlaması ve ekosistem hızının bir tavanı oldu.
+MCP `2026-07-28`Bu, protokol çekirdeğinin devletsiz olduğunu gösterir. Bir sunucu, mevcut talebi bağlantı geçmişinden değil, mevcut talebi nasıl ele alacağını belirlemesi gerekir.
 
-MCP, bu durumu tel biçimini standartlaştırarak düzeltir. Her MCP istemcisinde tek bir MCP sunucusu çalışır: Claude Desktop, ChatGPT, Cursor, VS Code, Gemini, Goose, Zed, Windsurf, Nisan 2026'a kadar 300+ istemci. 110M aylık SDK indirme. 10,000+ kamu sunucuları. Linux Vakfı, yeni Agentic AI Vakfı altında Aralık 2025'te yönetim kurdu.
+Bu zihinsel modelde değişiklikler yapmaktadır. Eski dizide ilk bağlantı, ikinci el sıkışması, üçüncü işlemler vardı.
 
-Bu aşamada kullanılan spesifikasyon reviziyonu **2025-11-25**. Async Tasks (SEP-1686), URL modunun oluşturulması (SEP-1036), araçlarla örnekleme (SEP-1577), artışlı kapsam onay (SEP-835), ve OAuth 2.1 kaynak göstergesi semantiklerini ekler.
+1. Müşteri kendini tanımlama isteği gönderir.
+2. Sunucu bu talebin versiyonunu ve özelliklerini onaylar.
+3. Sunucu yöntemle ilgileniyor.
+4. Sunucu yazdırılmış bir sonuç veya JSON-RPC hatası gönderir.
+
+Bir sonraki talebinde aynı süreç sıfırdan tekrarlanır.
 
 ## Anlaşım
 
-### Üç sunucu ilkesi
+### Sunucu ilkesi
 
-1. **Tools.**Çıkanma eylemleri. 13. fazadan aynı 4 adımlı döngü.
-2. **Resources.**Açıklanan veriler. URI tarafından adreslenebilen sadece okunur içeriği: `file:///path`- Evet .`db://query/...`, özel programlar.
-3. **Prompts.**Tekrar kullanılabilir şablonlar. Host UI'de kesik komutlar; sunucu şablonu sağlar, istemci argümanları doldurur.
+MCP sunucuları üç temel primitif açıklar:
 
-### Üç müşteri ilkesi
+1. **Tools**model kontrolü olan eylemler,`tools/list`Ve çağırıldık .`tools/call`- Evet .
+2. **Resources**URI adresli veriler, `resources/list`ve `resources/read`- Evet .
+3. **Prompts** ile keşfedilen tekrar kullanılabilir şablonlar.`prompts/list`ve `prompts/get`- Evet .
 
-4. **Roots.**URI'lerin serveri dokunmasına izin verilir.
-5. **Sampling.**Server, bir tamamlama yapmak için istemcinin modelini talep eder. Server tarafından barındırılan ajan döngüleri sunucu taraflı API anahtarları olmadan etkinleştirir.
-6. **Elicitation.**Server, istemcinin kullanıcısını uçuş ortasında yapılandırılmış giriş için soruyor.
+Kökleri, örnekleme ve ağaç kesimi `2026-07-28`uyumluluk için bir schema, ama onlar eski. Yeni uygulamalar kökler için açık bir araç veya kaynak girişlerini, örnekleme için doğrudan model sağlayıcı API'lerini ve kayıt için stderr veya OpenTelemetry'yi kullanmalıdır. Bir sunucu giriş istekini geri gönderir ve istemci orijinal işlemini tekrar yaparken, birçok döngü yolculuğu istekleri aracılığıyla başlatma hala mevcuttur. Modern bir sunucu bağımsız bir JSON-RPC talebini asla başlatmaz.
 
-MCP'deki her yetenek bu altı yetenekten tam olarak birine aittir.
+### JSON-RPC zarfları
 
-### Kablo biçimi: JSON-RPC 2.0
+MCP JSON-RPC 2.0 kullanıyor:
 
-Her mesaj, bu alanlarla bir JSON nesnesi:
+- İstek: `{jsonrpc, id, method, params}`
+- Cevap:`{jsonrpc, id, result}`veya `{jsonrpc, id, error}`
+- İletişim: `{jsonrpc, method, params}`Hayır .`id`
 
-- İstekler: `{jsonrpc: "2.0", id, method, params}`- Evet .
-- Cevaplar: `{jsonrpc: "2.0", id, result | error}`- Evet .
-- İletişimler: `{jsonrpc: "2.0", method, params}`Hayır.`id`, hiç bir tepki beklenmiyor.
+Talep`id`Bir cevapla ilişkili. Protokol seansı oluşturmaz.
 
-Temel özellikte ~15 yöntem vardır, ilkel olarak gruplandırılır.
+### Gerekli talep metadataları
 
-- `initialize`- Ne ?`initialized`- Evet .
-- `tools/list`- Evet .`tools/call`
-- `resources/list`- Evet .`resources/read`- Evet .`resources/subscribe`
-- `prompts/list`- Evet .`prompts/get`
-- `sampling/createMessage`(server-klient)
-- `notifications/tools/list_changed`- Evet .`notifications/resources/updated`- Evet .`notifications/progress`
-
-### Üç aşamalı yaşam döngüsü
-
-**Phase 1: initialize.**
-
-Müşteri gönderir .`initialize`- ... ... ...`capabilities`ve `clientInfo`Sunucu kendi yanıtlarıyla cevap verir .`capabilities`- Evet .`serverInfo`- Ve konuşturduğu özellik versiyonu.`notifications/initialized`Bu durumda her iki taraf da müzakere edilen yeteneklere göre talep gönderebilir.
-
-**Phase 2: operation.**
-
-İki yönlü. Müşteri arıyor.`tools/list`O zaman keşfetmek için.`tools/call`Sunucu gönderebilir.`sampling/createMessage`Eğer bu yeteneği açıklarsa, sunucu gönderebilir.`notifications/tools/list_changed`Kullanıcı gönderebilir.`notifications/roots/list_changed`Kullanıcı kök kapsamını değiştirdiğinde.
-
-**Phase 3: shutdown.**
-
-Her iki taraf da nakliyeyi kapatır. MCP'de yapılandırılmış kapanış yöntemi yoktur; nakliye (studio veya Streamable HTTP, Fase 13 · 09) bağlantının son sinyalini taşıyor.
-
-### Kapasite müzakere
-
-`capabilities`- ... ...`initialize`El sıkışması sözleşme.
+Her modern talebin içinde bir `_meta`İçeride bir nesne`params`- ...
 
 ```json
 {
-  "tools": {"listChanged": true},
-  "resources": {"subscribe": true, "listChanged": true},
-  "prompts": {"listChanged": true}
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
-Sunucu yayınlanabileceğini açıkladı .`tools/list_changed`bildirim ve destek `resources/subscribe`Müşteri , kendi hakkını açıklayarak:
+Protokol sürümü ve istemci yetenekleri gereklidir. istemci kimliği önerilir. Bu kendi kendini rapor eden görüntüleme ve hata işlemleri verileri, güvenlik kimliği değil.
+
+Sunucu, bu değerlerden herhangi birini daha önceki bir istek, bir stdio süreci, bir HTTP bağlantısı veya tek başına bir nakliye başlığından çıkarmamalıdır.
+
+### Tam sonuçlar ve sunucu kimliği
+
+Her başarılı modern sonuç içerir .`resultType`Normal bir son sonuç kullanır.`"complete"`. Sunucular da sonuç metadatalarında kendilerini tanımlamalıdır:
 
 ```json
 {
-  "roots": {"listChanged": true},
-  "sampling": {},
-  "elicitation": {}
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "resultType": "complete",
+    "tools": [],
+    "ttlMs": 30000,
+    "cacheScope": "public",
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "notes-server",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
-Müşteri bildirmezse`sampling`, sunucu aramasın .`sampling/createMessage`. Simetrik: eğer sunucu açıklamadı `resources.subscribe`Müşteri, imzalamaya çalışmamalı.
+`tools/list`- Evet .`resources/list`- Evet .`prompts/list`- Evet .`resources/templates/list`- Evet .`resources/read`ve`server/discover`Bu sonuçlar, önbelleğe alınan sonuçlardır.`ttlMs`ve `cacheScope`Güvenli bir varsayım .`ttlMs: 0`ve `cacheScope: "private"`Listede bulunan öğelerin belirleyici bir sırayla olması gerekir, böylece eşdeğer yanıtlar sabit önbelleğe anahtarlar ve sabit model bağlamını oluşturur.
 
-Bu, ekosistem sürüklenmesini önler. Örneklemeyi desteklemeyen bir istemci hala geçerli bir MCP istemcisi; arama yapmayan bir sunucu `sampling`Bu özellikleri birlikte kullanmıyorlar.
+### El sıkışmadan keşfet
 
-### Yapılandırılmış içerik ve hata şekilleri
+Her modern sunucu uygulamalıdır .`server/discover`Müşteri , diğer bir yöntemden önce bu yöntemi arayabilir:
 
-`tools/call`bir `content`Tiplenen bloklar dizisi: `text`- Evet .`image`- Evet .`resource`. 13 · 14 aşamada MCP Apps eklenir (`ui://`Bu listeye eklenir.
+- `supportedVersions`
+- sunucu`capabilities`
+- seçmeli kullanımı `instructions`
+- Sonuç olarak sunucu kimliği `_meta`
+- Kayıtlı ipuçları
 
-Hatalar JSON-RPC hata kodlarını kullanır.`-32002`"Kaynak bulunamadı",`-32603`"İçki hata", ek olarak MCP spesifik hata verileri`error.data`- Evet .
+Bulma yararlı, ama bir kapı değil.`tools/list`Öncelikle, bu talebin protokol versiyonu ve özellikleri zaten var.
 
-### Müşteri yetenekleri vs araç çağrıları detayları
+İstediğiniz sürüm desteklenmiyorsa, sunucu JSON-RPC kodu gönderir `-32022`ile:
 
-Genel bir karışıklık:`capabilities.tools`Bu seçenekler, bir uygulama veya uygulama için kullanılabilir bir araç olarak kullanılır. Bu seçenekler, bir uygulama veya uygulama için kullanılabilir bir araç olarak kullanılır.
+```json
+{
+  "requested": "2027-01-01",
+  "supported": ["2026-07-28"]
+}
+```
 
-### Neden REST değil JSON-RPC?
+Müşteri karşılıklı desteklenen modern bir sürümü seçer ve yeni bir JSON-RPC istek kimliği ile tekrar dener.
 
-JSON-RPC 2.0 (2010) hafif bir iki yönlü protokoldür. REST istemci tarafından başlatılır. MCP'ye sunucu tarafından başlatılan mesajlar (sampling, bildirimler) gerekirdi, bu nedenle JSON-RPC simetrik talep / yanıt şekliyle doğal bir uyumluydu. JSON-RPC ayrıca HTTP'nin talep şeklini yeniden icat etmeden stdio ve WebSocket / Streamable HTTP üzerinde temiz bir şekilde oluşturur.
+### Tek talep yaşam döngüsü
+
+Modern bir talebi bu sırada izleyin:
+
+1. Birinci JSON-RPC zarfını inceleyin.
+2. - Evet .`jsonrpc`- Evet .`"2.0"`, bir `id`var.`method`bir ip ve `params`bir nesne.
+3. Versiyon dizilisi ve kapasite nesnesini `params._meta`; yanlış biçimlendirilmiş veya eksik olan metadata `-32602`- Evet .
+4. HTTP sınırında, versiyonu, yöntemi ve geçerli isim başlıklarını vücut ile karşılaştırın.`-32020`İki versiyon değerinden biri desteklenmemiş olsa bile.
+5. Dürüstlük belirledikten sonra, eşleşen ama desteklenmeyen bir versiyonu reddedin.`-32022`- Evet .
+6. Gerekli kapasiteleri kontrol edin ve sonra yolculuk edin.`method`ve yöntem-özel argümanları onaylamak.
+7. İşlemini yürütmeden önce beton işlemini doğrulayın ve onaylayın.
+8. Server kimliği ile tam bir sonuç iade edin.
+9. İstek ölçülü protokol metadatalarını unut.
+
+Bu emir iki bileşenin farklı çağrıları yorumlamasını engeller.`Mcp-Name: notes.read`Kaynaklar yerine getirilirken`params.name: notes.delete`Ayrıca yanlış biçimlendirilmiş giriş, başlık karışıklığı, sürüm müzakere, yetenek başarısızlığı, yetki ve işleme başarısızlığı da belirgin kanıtlar olarak saklanır.
+
+Stdin veya HTTP cevabını kapatmak, nakliye etkinliğini sona erdirir.
+
+### Açıkça miras verenlik
+
+Versiyonlar `2025-11-25`kullanımı`initialize`- Evet .`notifications/initialized`Bu davranış, iki çağdaki bir istemci eski bir sunucuyla konuşurken hâlâ geçerlidir.
+
+Zamanları ayrı tutun. Modern bir istek, istek başına gerekli metadata ile tanımlanır. Eski bir bağlantı yalnızca belgelemiş geri dönüş yolu yoluyla seçilir. Gönderme `initialize`bir  için default olarak`2026-07-28`- Sunucu.
+
+Stateless bu nedenle çağ-sözlü bir anlam taşır.`2026-07-28`Bu, protokol değişmezliği içeren bir süreçtir. Her sıradan talebin bağımsız olarak yorumlanabilmesi ve MCP oturumunun bulunmaması gerekir.`2025-11-25`Bu nedenle, uyumluluk adaptörü eski bağlantı durumunu koruyabilir. İki çağ uygulaması bir izin veren durum makinesi değildir.
+
+Bu iki anlam da kalıcı bir uygulama durumunu yasaklamaz. Bir iş akışı, görev veya taslak ortak bir mağazada açık olmayan bir eldivenin arkasında yaşayabilir. Müşteri bu eldivenini sıradan giriş olarak gönderir ve her kopya kullanımını doğruluyor ve yetkilendiriyor. Protokol bağlamı kaldırılan oturumun yerine bu mağazaya sızmamalıdır.
 
 ```figure
 mcp-tool-call
@@ -117,50 +160,47 @@ mcp-tool-call
 
 ## Kullan
 
-`code/main.py`en az bir JSON-RPC 2.0 analizörü ve emiten gönderir, sonra `initialize`→ `tools/list`→ `tools/call`→ `shutdown`Her zarfı doğrulamak için, daha fazla okuma bölümünde bağlantılı özelliklere karşılaştırın.
+`code/main.py`Modern MCP mesajlarını çerçeve olmadan oluşturur, onaylar, izler ve gönderir.
 
-Neye bakılır:
+```bash
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
 
-- `initialize`İkisi de yeteneklerini açıklıyor; cevap `serverInfo`ve `protocolVersion: "2025-11-25"`- Evet .
-- `tools/list`bir `tools`Array; her giriş `name`- Evet .`description`- Evet .`inputSchema`- Evet .
-- `tools/call`kullanımı `params.name`ve `params.arguments`- Evet .
-- Cevap`content`bir dizi `{type, text}`- Bloklar.
+Çıktıran üç değişken için dikkat edin:
+
+- Her talep tekrarlanır .`_meta`Alanlar.
+- Her başarılı sonuç`resultType: "complete"`ve sunucu kimliğini içerir.
+- Listenin sonucu belirleyici bir şekilde düzenlenmiş ve açık bir önbelleğe işaretler sunmaktadır.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-mcp-handshake-tracer.md`. MCP istemci-sörver etkileşiminin pcap tarzında bir transkripti verildiğinde, becerin her mesajın hangi primitif, hangi yaşam döngüsü aşamasını ve hangi yeteneğe bağlı olduğunu not eder.
+Bu ders gemileri `outputs/skill-mcp-handshake-tracer.md`Tarihi dosya adı sabit kalır, ancak eser artık bir devletsiz istek izleyicisi. Her mesajı bağımsız olarak denetler ve sadece gerçekte var olduğunda eski el sıkışması trafiğini etiketler.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`. Yetenek müzakerelerinin gerçekleşeceği çizgiyi belirleyin ve sunucu açıklamamasaydı ne değişeceğini açıklayın `tools.listChanged`- Evet .
-
-2. Parser ' i kaldır .`notifications/progress`Mesaj şekli:`{method: "notifications/progress", params: {progressToken, progress, total}}`Uzun süreli bir süreliğine yayın .`tools/call`devam ediyor ve müşteri yöneticisinin bir ilerleme çubuğunu görüntüleyeceğini onaylayın.
-
-3. MCP 2025-11-25 özelliklerini yukarıdan aşağıya okuyun. Tüm belge yaklaşık 80 sayfadır. Çoğu sunucuya ihtiyaç duyulmayan bir yetenek bayrağını belirleyin. İpucu: kaynak aboneliği ile ilgilidir.
-
-4. MCP'nin 2026 yol haritasında bunun için bir SEP taslağı vardır.
-
-5. GitHub'daki açık bir MCP sunucusu üzerinden bir seans günlüğünü analiz edin. İstediği karşı karşı cevap karşı bildirim mesajlarını sayın. Trafikin yaşam döngüsü karşı operasyonun ne kadar bölümü olduğunu hesaplayın.
+1. Bir istek protokol versiyonunu  olarak değiştirin.`2027-01-01`Hata kodunun doğru olduğunu onaylayın .`-32022`ve veriler desteklenen versiyonu reklam eder.
+2. Çıkar `io.modelcontextprotocol/clientCapabilities`Sunucu ilk istekten gelen özellikleri tekrar kullanmıyor.
+3. Hatırlatma araçları kayıtlarını tersine çevirin.`tools/list`Yine de aynı belirleyici sırayı geri verir.
+4. Değişiklik`cacheScope`-`public`- ...`private`. Her durumda yanıtın hangi yetki bağlamlarında tekrar kullanılabileceğini açıklayın.
+5. Seçeneği ekle `clientInfo`İstek geçerli kalmalıdır çünkü müşteri kimliği gerekmez, tavsiye edilir.
 
 ## Anahtar Terimler
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP | "Model Context Protocol" | Open protocol for model-to-tool discovery and invocation |
-| Server primitive | "What a server exposes" | tools (actions), resources (data), prompts (templates) |
-| Client primitive | "What a client lets servers use" | roots (scope), sampling (LLM callbacks), elicitation (user input) |
-| JSON-RPC 2.0 | "The wire format" | Symmetric request/response/notification envelopes |
-| `initialize` handshake | "Capability negotiation" | First message pair; servers and clients declare features they support |
-| `tools/list` | "Discovery" | Client asks server for its current tool set |
-| `tools/call` | "Invocation" | Client asks server to execute a tool with arguments |
-| `notifications/*_changed` | "Mutation events" | Server tells client that its primitive list has changed |
-| Content block | "Typed result" | `{type: "text" \| "image" \| "resource" \| "ui_resource"}` in tool result |
-| SEP | "Spec Evolution Proposal" | Named draft proposal (e.g. SEP-1686 for async Tasks) |
+| Term | Meaning |
+|------|---------|
+| Stateless protocol | Every request supplies the metadata needed to interpret it |
+| Request metadata | Version, client capabilities, and recommended client identity in `params._meta` |
+| `server/discover` | Mandatory server method for versions, capabilities, instructions, and identity |
+| `resultType` | Discriminator on every successful modern result |
+| Cacheable result | Result that includes required `ttlMs` and `cacheScope` hints |
+| Protocol era | Modern per-request metadata or legacy connection-scoped initialization |
+| Transport lifetime | Process, connection, or response-stream lifetime, not protocol session state |
+| `-32022` | Unsupported protocol version error with requested and supported versions |
 
 ## Daha Fazla Okumak
 
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) Kanonik özellik belgesi
-- [Model Context Protocol — Architecture concepts](https://modelcontextprotocol.io/docs/concepts/architecture) altı primitif zihinsel model
-- [Anthropic — Introducing the Model Context Protocol](https://www.anthropic.com/news/model-context-protocol) Kasım 2024'te başlatma tarihi
-- [MCP blog — First MCP anniversary](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/) Bir yıllık geriye bakış ve 2025-11-25 tarihleri değişikliği
-- [WorkOS — MCP 2025-11-25 spec update](https://workos.com/blog/mcp-2025-11-25-spec-update) SEP-1686, 1036, 1577, 835 ve 1724 özetleri
+- [MCP Architecture](https://modelcontextprotocol.io/specification/2026-07-28/architecture)
+- [MCP Base Protocol](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+- [MCP Server Discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP 2026-07-28 Changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)

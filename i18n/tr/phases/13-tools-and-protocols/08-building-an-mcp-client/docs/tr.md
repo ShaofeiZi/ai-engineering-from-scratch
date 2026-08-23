@@ -1,91 +1,171 @@
-# Bir MCP Müşteri Oluşturma  Bulma, Çağırma, Oturum Yönetimi
+# Bir MCP Müşteri Oluşturma: keşif, yönlendirme ve Çift Çağ Düşüşü
 
-> Çoğu MCP içeriği sunucu öğretim yayınları ve müşterinin el salladı. Müşteri kodu zor orkestrasyonun yaşadığı yerdir: süreç doğurma, kapasite müzakere, birden fazla sunucu arasında araç listesi birleşimi, örnekleme geri çağrıları, yeniden bağlantı ve isim alanı çarpışma çözümü. Bu ders, üç farklı MCP sunucusu ile model için tek düz bir araç isim alanına yükselen bir çok sunucu istemcisi oluşturur.
+> Modern bir MCP istemcisi her istekle sözleşmesini tekrarlar. En zor uyumluluk kararı eski bir sunucunun gerçekten eski olduğunu ve modern bir sunucunun bir hata rapor ettiğini bilmektir.
 
 **Type:** Build
-**Languages:** Python (stdlib, multi-server MCP client)
-**Prerequisites:** Phase 13 · 07 (building an MCP server)
-**Time:** ~75 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lesson 07
+**Time:** ~85 minutes
 
 ## Öğrenme Hedefleri
 
-- Bir çocuk süreci olarak bir MCP sunucusu oluşturun, tamamlayın `initialize`, ve bir gönderelim .`notifications/initialized`- Evet .
-- Sunucu başına oturum durumunu korumak (eğitimler, araç listesi, son kez görüntülenen bildirim kimlikleri).
-- Çarpışma işlemleri ile birden fazla sunucu listelerini bir isim alanına birleştirin.
-- Bir araç çağrısını sahip olduğu sunucuya yönlendirin ve yanıtı yeniden birleştirin.
+- Her MCP ' yi oluşturun .`2026-07-28`Mevcut metadata ile başvuru.
+- Sence stdio sunucuları `server/discover`ve karşılıklı desteklenen bir versiyonu seçin.
+- Sınırlı bir miras araştırmasını açıkça izin verilen yaşıtlar için izin verin.
+- Bir erkeği sadece pozitif bir sonucu doğrulttuktan sonra kabul et .`initialize`desteklenen bir inceleme sonucu.
+- Sessizce çarpışmaları üstü yazmadan belirleyici araç listelerini birleştirin.
+- Her bir aletin sahibi olan eşlerine protokol seanslarını icat etmeden arama yolu.
 
 ## Sorun
 
-Gerçek bir ajan barındırması (Claude Desktop, Cursor, Goose, Gemini CLI) birden fazla MCP sunucusu yükler. Bir kullanıcının bir dosya sistemi sunucusu, Postgres sunucusu ve GitHub sunucusu aynı anda çalışması olabilir.
+Bir ajan host genellikle birden fazla MCP sunucusuna konuşur. Her sunucuyu keşfetmek, araç kataloglarını birleştirmek, kopya isimlerini çözmek, rota çağrılarını yapmak ve ulaşım hatalarından kurtulmak gerekir.
 
-1. Her sunucuyu doğur.
-2. El sıkışın.
-3. Arama .`tools/list`Her birinde ve sonuçta düzeltmek.
-4. Modelle yayıldığında `notes_search`, birleşik isim alanında arayın ve doğru sunucuya yönlendirin.
-5. Herhangi bir sunucudan gelen bildirimleri yönet (`tools/list_changed`) engelleme yapmadan.
-6. - Nakliye başarısızlığı üzerine tekrar bağlan.
+- Evet .`2026-07-28`Değişiklik sabit duruma daha basit hale getirir çünkü her talep kendiliğinden içerir. Uygunluk başlangıç daha ince yapar. Bir istemci:
 
-Bu oyuncakları elle oynatmak ve kullanılabilir olmak arasında ayrım yapılır.
+- tercih edilen sürümü destekleyen modern bir sunucu;
+- Tanınan bir sürüm veya başlık hatası gönderen modern bir sunucu;
+- Hiç duymadığın bir miras sunucu .`server/discover`- ...
+- Alana kadar sessiz kalan bir miras sunucu .`initialize`- Evet .
+
+Her bir sonda hatası miras olarak değerlendirilmesi tehlikelidir. Yanlış biçimlendirilmiş modern bir taleb, aşırı yüklü bir sunucu, ölü bir süreç ve eski bir sunucu, aynı zaman sonunu veya bağlantı kapanmasını oluşturabilir. Bu sinyaller belirsizdir.
 
 ## Anlaşım
 
-### Çocuk işlemleri ile nesli
+### Bir akran, protokol oturumu değil
 
-`subprocess.Popen`- Evet .`stdin=PIPE, stdout=PIPE, stderr=PIPE`- Yapılandır .`bufsize=1`ve satır-satır okumalar için metin modunu kullanın. Her sunucu bir işlemdir; istemci bir işlem tutmaktadır `Popen`Sunucu başına.
+Her sunucu işlem veya son noktası için bir taşıma eş dosyası tutun:
 
-### Sunucu başına oturum durumu
+- taşıma elliği veya gönderme işlevi;
+- Seçilen protokol çağı ve versiyonu;
+- Son keşfedilen sunucu özellikleri;
+- son belirleyici araç listesi;
+- İlişki için bekleyen talebinin kimlikleri;
+- ulaşım sağlığı.
 
-A.`Session`Sunucu başına nesne:
+Bu müşteri hesaplama. Bu protokol oturum durumu değil. Modern MCP'de, sunucu hala her istek için mevcut sürüm ve özellikleri alır.
 
-- `process`Popen elini.
-- `capabilities` sunucu tarafından açıklanan`initialize`- Evet .
-- `tools`Sonuncusu .`tools/list`Sonuç.
-- `pending` Bir söz/geleceğe bir talebinin cevabını bekleyen bir kimliğin haritası.
+### Her modern talebi sıfırdan inşa et
 
-Talepler doğasıyla eşzamanlı değildir .`tools/call`A sunucusuna gönderilen A sunucusunun B'si çağrı sırasında olduğu sürece, bloklanmamalıdır.
+```python
+def modern_request(request_id, method, params, version, capabilities):
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "method": method,
+        "params": {
+            **params,
+            "_meta": {
+                "io.modelcontextprotocol/protocolVersion": version,
+                "io.modelcontextprotocol/clientCapabilities": capabilities,
+                "io.modelcontextprotocol/clientInfo": CLIENT_INFO,
+            },
+        },
+    }
+```
 
-### Birleştirilmiş isim alanı
+Bir bağlantı nesneye bir kez metadata eklemeyin ve teline ulaştığını varsayın. Son serileşmiş talebi damgalayın ve kontrol edin.
 
-Müşteri toplu araç listesini gördüğünde isimler çarpışabilir.`search`Müşterinin üç seçeneği var:
+### Modern keşif
 
-1. **Prefix by server name.** `notes/search`- Evet .`files/search`- Açık ama çirkin.
-2. **Silent first-come.**Daha sonra sunucuları `search`Daha önce olanları üstlenir.
-3. **Collision rejection.**İkinci sunucu yüklenmeyi reddedin, kullanıcıya bildirin.
+`server/discover`desteklenen sürümleri, sunucu yeteneklerini, talimatları, önbelleğe işaretleri ve önerilen sunucu kimliğini gönderir. Bir istemci en yüksek karşılıklı desteklenen modern sürümü seçer.
 
-Claude Desktop, sunucuya göre prefix kullanır. Cursor, açık bir hatayla çarpışma reddetimi kullanır. VS Code MCP, sunucuya göre prefix de kullanır.
+Discovery yalnızca modern bir istemci için seçmeli, ancak studio'da önerilmektedir. Bazı eski sunucular başlangıçtan önce bir işlem kabul eder, bu nedenle göndermek `tools/list`İlk olarak belirsiz bir başarı elde edebilirsiniz.`server/discover`Temiz bir çağ sınırını yaratıyor.
 
-### Yollama
+### Stdio uyumluluk sondası
 
-Birleştirildikten sonra, bir gönderme masa haritası `tool_name -> session`. Modelle isimli bir çağrı gönderir; müşteri oturumunu bulur ve bir `tools/call`O sunucu'nun stdin'ine mesaj gönderilir ve sonra cevap bekler.
+İki çağda bir stüdyo müvekkilesi gönderir.`server/discover`Diğer isteklerden önce tercih edilen modern metadata ile.
 
-### Örnekleme geri çağırma
+1. **DiscoverResult.**Sunucu modern. karşılıklı desteklenen bir sürümü seçin ve istek başına metadata ile devam edin.
+2. **Recognized modern error.**Sunucu modern.`-32022`, seçin `data.supported`Başlık veya yetenek hataları için, talebi düzeltin.`initialize`- Evet .
+3. **Ambiguous signal.**Tanınmayan bir JSON-RPC hatası, zaman sonlaması, bağlantı kapanması veya boş bir yanıt bir çağı tanımlamaz.
 
-Eğer sunucu `sampling``initialize`, gönderebilir .`sampling/createMessage`Müşteriye LLM'sini yürütmesini istemek.
+Tanınan modern protokol hataları şunları içerir:
 
-1. Örnek çözülene kadar bu sunucuya yapılan daha fazla talebi veya uygulamasını eşzamanlılığı destekleyen bir boru hattı engelle.
-2. LLM sağlayıcısını ara.
-3. Cevapı sunucuya geri gönder.
+- `-32020`BaşlıkTamışmazlık
+- `-32021`İhtiyaçlı Müşteri yeteneği eksik
+- `-32022`Desteklenmeyen ProtokolVersion
 
-11. ders sonundan sonuna kadar örnek almayı kapsar.
+Tanınan modern hatalar, eşleri miras bırakılmış izin listesindeyken bile modern kalır. Bir sunucu modern hata sözlüklerini anladığını kanıtladıktan sonra, gönderme `initialize`Bu bir aşağı derecede.
 
-### İletişim işlemi
+Tedavi etmeyin .`-32601`Bu, açıkça izin verilen bir eş eşini yalnızca bir eş eşliğin verilebilmesi için uygun hale getirir. Aynı kural bir zaman kesimi, bağlantı kapanması veya boş bir cevap için geçerlidir.
 
-`notifications/tools/list_changed`Yeniden çağrı anlamına gelir.`tools/list`- Evet .`notifications/resources/updated`İletişimler cevaplar üretmemelidir  onları oluşturmaya çalışmayın.
+### İzin verilme, işçinin niyeti, kanıt değil.
 
-Genel bir istemci hatası: okuma döngüsünü kapatmak `tools/call`Bir bildirim akışta otururken. Her mesajı bir kuyrukta atan arka plan okuyucu düğümünü kullanın; ana düğüm, devreye ve gönderilere gönderir.
+Miras uyumluluğu, bir sabitli eş eşya yapılandırmasının açık bir özelliği olmalıdır:
 
-### Yeniden bağlantı
+```python
+client.add_server("archive", archive_transport, allow_legacy=True)
+```
 
-Transport başarısız olabilir: sunucu çöktü, işletim sistemi işlemini öldürdü, stadio borusu kırıldı.
+Bu seçeneği yapılandırılmış komut veya son noktaya bağlayın.`allow_legacy=True`Açıklama sonucu belirsiz bir şekilde ortaya çıkınca başarısız olur ve asla almaz .`initialize`- Evet .
 
-- Sessizlikle sunucuyu yeniden başlatın ve el sıkın.
-- Başarısızlığı kullanıcıya bildirin. Kullanıcı görebilen oturumlar olan durumlu sunucular için tamam.
+İzin veren, arama izni verir.`initialize`taşımacılık zorunlu bir süre içinde, aşağıdaki tüm özellikleri gerektirir:
 
-13 · 09 aşaması, Streamable HTTP yeniden bağlantı semantiklerini kapsar; stdio daha basit.
+- bir JSON-RPC `2.0`Eşleşen talebinin kimliği ile cevap;
+- Tam olarak bir tane .`result`Ve hayır .`error`- ...
+- A.`protocolVersion`Müşteri'nin yapılandırılmış eski revizyondan oluşan seti;
+- bir nesne değerlendirici `capabilities`alan;
+- A.`serverInfo`Boş olmayan bir dizileri olan nesne `name`ve `version`Alanlar.
 
-### Kalıcı ve seans kimliği
+Zamanlama, bağlantı kapatılması, hata tepkisi, yanlış biçimlendirilmiş sonuç, eşleşmeyen kimlik veya desteklenmeyen bir düzeltme kapanmaz. Sadece yapısal olarak geçerli olumlu sonuçlar miras çağını seçer.`legacy_probe_timeout_ms`Transport adaptörüne; gerçek bir stdio veya HTTP adaptörü, bu süreyi sadece kaydetmek yerine uygulamalıdır.
 
-Akışlanabilir HTTP bir `Mcp-Session-Id`stdio'nun sesyon kimliği  işlem kimliği SESSION'dur.
+Seçilen çağı taşımacılık eşleri için önbelleğe koyun.
+
+### Miras uyumluluk dalıdır
+
+Sınırlı araştırma geçerli olumlu miras kanıtını döndürdükten sonra, müşteri seçilen miras versiyonunu bu değişiklikle tanımlanan şekilde kullanır:
+
+1. Cevap zarfını ve ilişki kimliğini kontrol edin.
+2. Tartışılmış revizyonun yapılandırılmış miras setinde olduğundan emin olun.
+3. Geçerli özellikleri ve sunucu kimliğini kaydet.
+4. Gönder .`notifications/initialized`Sadece tüm çeklerin geçtiği zaman.
+5. Bu nakliye ömrü için eski talep şekilleri kullanın.
+
+Bu dal bilinen eşcinsellerle birlikte çalışabilmek için var. Yeni sunucular veya yeni talepler için varsayılan tasarım değildir. Eğer nakliye yeniden başlanır veya son noktası değişirse, eşcins çağı önbelleğini atın ve yeniden müzakere edin.
+
+### Bulma ve önbelleğe alma araçları
+
+Her aktif yaşıt için arayın.`tools/list`Modern bir sonuç içerir .`resultType`- Evet .`ttlMs`ve`cacheScope`.Tamamlı izin bağlamında tazelik ipucuyu onurlandırın. İptal edildikten sonra veya aboneli bir listede değişiklik olayından sonra tekrar alın.
+
+Müşteriler kayıp bir kişiyi tedavi etmelidir .`resultType``"complete"`Daha önceki müzakere döneminden gelen bir yanıt için modern cache alanlarını gerektirmez.
+
+Sunucu belirleyici siparişleri geri göndermelidir. Müşteri ayrıca birleşmeden önce sıralamalıdır, böylece yerel kayıt sırası işlem başlatma zamanına bağlı değildir.
+
+### Çarpışma güvenli isim alanı birleşimi
+
+İki sunucu da her ikisini de ortaya çıkarabilir .`search`. Açıklanan politikayı seçin:
+
+1. **Prefix on collision.**İlk kanonik adını sakla ve daha sonraki çarpışmaları `<server>/<tool>`- Evet .
+2. **Reject on collision.**Doppelini yüklemeyin ve net bir yapılandırma hatası ortaya çıkmasın.
+3. **Silent overwrite.**Bu, hangi sunucu model tarafından seçilen eylemleri aldığını saklar.
+
+Hem kanonik hem de yerel isimleri saklayın.`tools/call`sahip sunucu tarafından açıklanan yerel adı kullanır.
+
+### Bir arama yönlendirme
+
+Routing bir aramak.
+
+```text
+canonical tool name
+  -> peer name + local tool name
+  -> new JSON-RPC request id
+  -> modern request metadata or explicit legacy shape
+  -> matching response id
+```
+
+Sahip olan taşımacılık kullanılamadığında arama gönderme.`tools/list`. Hızlı bir nakliye sırasında kaybedilen modern uçuş istekleri, operasyonun güvenlik politikası izin verdiğinde yeni bir JSON-RPC kimliği ile tekrar denebilir.
+
+### İletişim ve abonelik
+
+Modern listeler ve kaynak değişiklikleri sadece müşteri tarafından açılan bir listeye ulaşır `subscriptions/listen`Müşteri bildirim filtresini gönderir, bekler.`notifications/subscriptions/acknowledged`, ve bildirim metadatalarında bulunan dinleme istekinin kimliği ile olayları ilişkilendirir.
+
+Bağlantıyı kesince yeni bir dinleme talebi açın ve ilgili listeleri veya kaynakları yeniden düzenleyin.`Last-Event-ID`- Evet .
+
+### Sunucu tarafından başlatılan istekler yok
+
+Modern sunucular, örnekleme, çıkartma veya kök için bağımsız JSON-RPC istekleri ile müşteriyi çağırmazlar.`input_required`, ve müşteri yerleşik giriş isteklerini yerine getirdikten sonra orijinal talebi tekrar dener.
+
+Girdiyi yerine getirirken eşlerin yanıt okuyucularını engellemeyin. Bağlantıyı koruyun ve tekrar denemek için yeni bir JSON-RPC kimliği oluşturun.
 
 ```figure
 tp-client-merge
@@ -93,55 +173,55 @@ tp-client-merge
 
 ## Kullan
 
-`code/main.py`Bu işlem, üç simülasyonlu MCP sunucusu ile birlikte alt işlem olarak oluşturulur, her biri el sıkışır, araç listelerini birleştirir ve araç çağrılarını sağ olana yönlendirir. "Serverler" aslında oyuncak yanıtlayıcıları (gerçek LLM yok) çalışan diğer Python süreçleridir.
+`code/main.py`Bu sistem, iki modern eşe ve bir amaçlı olarak izin verilen miras eşe ile bağlantılıdır, sonra araçlarını birleştirir ve yönlendirir.
 
-- Üç başlangıç, her biri kendi yetenekleriyle.
-- Üç .`tools/list`Sonuçlar 7 araç isim alanına birleştirildi.
-- Araç adı üzerine kurulmuş bir yönlendirme kararı.
-- Ad alanı önlemleri ile engellenmiş bir çarpışma.
+```bash
+cd code
+python3 main.py
+python3 -m unittest discover tests -v
+```
 
-Neye bakılır:
+Testler normal demoların kaçırdığı sınırlar kanıtlıyor:
 
-- - Evet .`Session`Dataclass, her sunucu durumu temiz tutmaktadır.
-- Arka plan okuyucu dizisi ana dizini engellemeden stdout'taki her satırı temizler.
-- Gönderi masası basit bir şey .`dict[str, Session]`- Evet .
-- Çarpışma işlemleri açıkça belirlenir: iki sunucu aynı ismi açıkladığında, sonrakı bir önlükle yeniden adlandırılır.
+- modern istekler metadata tekrarlama yapar;
+- `-32022`Başlangıç olmadan modern keşifleri tekrar denemek;
+- Tanınan modern hatalar, izin verilen bir eş için bile asla aşağı derecede değil;
+- Zaman kesintileri, bağlantı kapanması, boş cevaplar ve tanınmamış hatalar tetiklenmez.`initialize`İzin verilmeyen;
+- İzin verilen bir eşe sadece geçerli, desteklenen bir mirasından sonra miras olur.`initialize`Sonuç;
+- yanlış biçimlendirilmiş ve desteklenmeyen miras sonuçları, eşcinselliği kullanılamaz hale getirir;
+- Başarılı bir şekilde seçilen bir dönem, nakliye ömrü için önbelleğe alınır.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-mcp-client-harness.md`MCP sunucularının (ad, komut, args) bir açıklama listesini göz önüne alarak, bu becerin onları oluşturan, araç listelerini birleştiren ve çarpışma çözünürlüğü ile yönlendirme işlevi gönderilen bir harnes üretir.
+Bu ders gemileri `outputs/skill-mcp-client-harness.md`Modern talep damgasını, studio çağında müzakereyi, belirleyici isim alanı birleşimini, yönlendirmeyi ve başarısızlıkla kapatılmış bir miras uyumluluğu dalını destekler.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`SIGTERM ile simülasyonlu sunucu süreçlerinden birini öldür ve müşteri EOF'i nasıl tespit ettiğini ve bu oturumun ölü olduğunu işaretlediğini gözlemle.
-
-2. İki sunucu ortaya çıktığında `search`, ikinciye adını değiştir .`<server>/search`- Gönderi tablosunu güncelle ve araç çağrılarının yolunu doğru şekilde doğrulay.
-
-3. Sunucu yeniden başlatmak için bağlantı havuzu tarzında bir yedekleme ekleyin: ardıcıl hatalarda eksponensel yedekleme, 30 saniyelik bir sınırlama, üç hata sonrasında kullanıcıya bir bildirim gönderin.
-
-4. 100 eşzamanlı MCP sunucusunu destekleyen bir istemci çizin. Basit gönderme diktini hangi veri yapısı değiştirir? (Tip: prefix isim boşluğu için trie, ayrıca sunucu başına araç sayımı için bir metrik.)
-
-5. Müşteriyi resmi MCP Python SDK'ye aktarın.`stdio_client`ve `ClientSession`. Kod, çoklu sunucu yönlendirmeyi korurken ~ 200 satırdan ~ 40 satırına küçülmelidir.
+1. Sahte bir sunucu dönüşü yapın .`-32022`Müşteriyi göndermek yerine başarısız olduğunu onaylayın`initialize`- Evet .
+2. Sahte bir miras sunucusu izin verin, sınırlı yapın.`initialize`Zamanı araştırıp, eşlerin kalıp kaldığını kanıtla.`unknown`ve kullanılamıyor.
+3. Ekle`cacheScope: "private"`iki yetki bağlamı için araç listeleri. Müşteriyi bir bağlamın önbelleğe alınmış sonucu diğerine asla paylaşmadığını doğrulayın.
+4. Çatışma politikasını reddetmeye değiştirin ve hatadaki her iki eş isimle başlatmayı başarısız edin.
+5. Son bir ekle `subscriptions/listen`Akım kaybı durumunda, yeni bir istek kimliği ile tekrar dinleyin ve yeniden düzenleme araçları kullanın.
 
 ## Anahtar Terimler
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP client | "The agent host" | Process that spawns servers and orchestrates tool calls |
-| Session | "Per-server state" | Capabilities, tool list, and pending-request bookkeeping |
-| Merged namespace | "One tool list" | Flat set of tool names across all active servers |
-| Namespace collision | "Two servers same tool" | Client must prefix, reject, or first-come the duplicate |
-| Routing | "Who gets this call?" | Dispatch from tool name to owning server |
-| Background reader | "Non-blocking stdout" | Thread or task that drains server stdout into a queue |
-| Sampling callback | "LLM-as-a-service" | Client handler for `sampling/createMessage` from server |
-| `notifications/*_changed` | "Primitive mutated" | Signal the client must re-discover or re-read |
-| Reconnection policy | "When server dies" | Restart semantics when transport fails |
-| Stdio session | "Process = session" | No session id; child process lifetime is the session |
+| Term | Meaning |
+|------|---------|
+| Peer | Client-side record for one server transport and its discovered data |
+| Protocol era | Modern per-request metadata or legacy initialization semantics |
+| Discovery probe | Initial `server/discover` used to identify the stdio era |
+| Recognized modern error | Error that proves modern behavior and forbids legacy fallback |
+| Legacy allowlist | Operator configuration permitting one bounded compatibility probe for a pinned peer |
+| Positive legacy evidence | Valid, correlated `initialize` result for an explicitly supported legacy revision |
+| Merged namespace | Canonical tool names across all active peers |
+| Collision policy | Prefix or reject rule for duplicate tool names |
+| Era cache | Selected modern or legacy behavior stored for one transport peer |
+| Transport recovery | Restart or reconnect, rediscover, relist, and retry safely with a new id |
 
 ## Daha Fazla Okumak
 
-- [Model Context Protocol — Client spec](https://modelcontextprotocol.io/specification/2025-11-25/client) Kanonik müşteri davranışları
-- [MCP — Quickstart client guide](https://modelcontextprotocol.io/quickstart/client)Python SDK ile hello-world istemci öğretmenliği
-- [MCP Python SDK — client module](https://github.com/modelcontextprotocol/python-sdk) referans `ClientSession`ve `stdio_client`
-- [MCP TypeScript SDK — Client](https://github.com/modelcontextprotocol/typescript-sdk) TS paralel
-- [VS Code — MCP in extensions](https://code.visualstudio.com/api/extension-guides/ai/mcp) VS Code'un birden fazla MCP sunucusunu tek bir editör host'ta nasıl çoğaltması
+- [MCP Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/)
+- [MCP Server Discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP stdio Transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)
+- [MCP Versioning](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning)
+- [MCP Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)

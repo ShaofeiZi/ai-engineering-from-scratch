@@ -1,186 +1,476 @@
-# Yetenekler ve Ajan SDKs  Antropik Yetenekler, AGENTS.md, OpenAI Apps SDK
+# Ajan yetenekleri: Portable sözleşme ve çalışma süresi sınırları
 
-> MCP, "ne tür araçlar var" diyor. "Beceriler, "bir görevi nasıl yapacağımı" söylüyor. 2026'da her iki katman da var. Anthropic'in Agent Skills (açık standart, Aralık 2025) gelişmiş açıklama ile SKILL.md olarak gemiye gönderilir. OpenAI'nin Apps SDK'si MCP + widget metadataları. AGENTS.md (şimdi 60,000+ repo) proje düzeyinde ajan bağlamı olarak repo kökeninde yer alır. Bu ders her birinin kapsamını belirler ve ajanlar arasında seyahat eden minimal bir SKILL.md + AGENTS.md paketi oluşturur.
+> Bir beceri daha iyi bir dosya adı ile uzun bir istek değil. Bir ajanın bağlamına bir çalıştırma süreci sözleşmesi aracılığıyla giren bir talimat, kaynak ve yürütülebilir yardımcılar paketi.
 
-**Type:** Learn
-**Languages:** Python (stdlib, SKILL.md parser and loader)
-**Prerequisites:** Phase 13 · 07 (MCP server)
-**Time:** ~45 minutes
+**Type:** Build
+**Languages:** Python (stdlib)
+**Prerequisites:** Phase 13 · 01 (The Tool Interface), Phase 13 · 05 (Tool Schema Design)
+**Time:** ~90 minutes
 
 ## Öğrenme Hedefleri
 
-- Üç katman ayırt edin: AGENTS.md (proje bağlamı), SKILL.md (yeniden kullanılabilir bilgi) ve MCP (üçereler).
-- YAML ön yazısı ve ilerleyen açıklama ile bir SKILL.md yazın.
-- Bilgiler dosya sistemini bir ajan çalıştırma süresine yükle.
-- Bir MCP sunucusu ve bir AGENTS.md ile bir beceri oluşturun böylece bir paket Claude Code, Cursor ve Codex'ta çalışır.
+- Bir ajan becerisini bir prompt, depot talimatları, bir araç, bir kanca, bir subagent veya bir eklenti ile karıştırmadan tanımlayın.
+- Mobil cihazı oku .`SKILL.md`Sözleşme ve çalıştırma süresi özel uzatmalardan ayırmak.
+- Bulma, seçim, etkinleştirme, kaynak yükleme, araç kullanımı ve doğrulama, yaşam döngüsü farklı aşamaları olarak açıklayın.
+- Bir yetenek paketi, bir iş zamanının bir ajanın kataloguna yerleştirilmeden önce doğrulanmalıdır.
+- Bir iş için bir beceri, MCP aracı, kanca, alt kod veya sıradan kod arasında seçim yapın.
+
+## On Dakikalık Başarılılık
+
+Uzun açıklama yapmadan önce bunu yapın.
+Tam bir incelemeci paketini gerçek bir ajan ev sahibi haline getirir, onu çağrıştırır,
+Bu, yaşam döngüsünü gözlemlenebilir bir sonuçla kanıtlar.
+
+### Gerçek ev sahibi laboratuvarına uçuş öncesi.
+
+Gerçek ev sahibi kontrol noktası Node.js'i gerektirir.`npx`Python 3, seçilmiş bir tane .
+yetenekli bir host ve seçtiğiniz projeye veya kullanıcı alanına erişim yazın
+Önce yerel komutları kontrol et:
+
+```bash
+node --version
+npx --version
+python3 --version
+```
+
+Kurulumdan önce hangi host ve kapsamı kullanacağınızı belirleyin.
+Bu dersleri web sitesinde okuyun veya devam edin
+Bu geri dönüş sözleşmeyi öğretir, ama
+host keşifini, çağrıyı, paketli metin uygulanmasını kanıtlamıyor veya
+Bu gözlemleri bekleyen olarak işaretle.
+
+### 1. Boş bir çalışma dizininden başlayın
+
+Çalışmayı öğrenmeye devam ettiğiniz herhangi bir ana dizininden bu komutları çalıştırın:
+
+```bash
+mkdir -p agent-skills-first-run
+cd agent-skills-first-run
+TARGET_ROOT="$(pwd -P)"
+printf 'TARGET_ROOT=%s\n' "$TARGET_ROOT"
+ls -A
+```
+
+Son komut hiçbir şey yazdırmamalı.
+Bu yüzden incelemenin açık bir sınırı var.
+
+İlk yeteneğin için bir dizin oluştur:
+
+```bash
+mkdir -p my-first-skill
+```
+
+Yaratmak`my-first-skill/SKILL.md`Bu içeriği ile:
+
+```markdown
+---
+name: my-first-skill
+description: Turn rough meeting notes into a compact decision record when the user asks to capture a technical decision.
+---
+
+# Decision record
+
+Extract the decision, context, alternatives, owner, and next review date.
+If the notes do not contain a decision, ask one clarifying question instead
+of inventing one.
+```
+
+Dosyayı amaçlı dizide oluşturduğunuzdan emin olun:
+
+```bash
+test -f my-first-skill/SKILL.md
+```
+
+Çıkış kodı 0 yok, dosya var demektir.
+
+### 2. Tam incelemeci paketini yükle
+
+İçeride kalın .`agent-skills-first-run`ve koş:
+
+```bash
+npx skills add rohitg00/ai-engineering-from-scratch --skill skill-contract-reviewer --full-depth
+```
+
+Kullanmakta olduğunuz ajan host ve kapsamını seçin.
+`skill-contract-reviewer`Ve yazdığı yer.`--full-depth`-
+Bu ders yeteneği referanslarla bir yuva bir paket,
+Senaryo ve bir sermaye.
+
+Yapıştır `SKILL_ROOT`Kurulucu tarafından bildirilen mutlak dizinine.
+Kurulmuş olan dizin olması `SKILL.md`, ders kaynağı değil
+Dizin ve mevcut çalışma alanı değil:
+
+```bash
+# Replace the placeholder with the destination printed by the installer.
+SKILL_ROOT="$(cd "/absolute/path/to/skill-contract-reviewer" && pwd -P)"
+test -f "$SKILL_ROOT/SKILL.md"
+printf 'SKILL_ROOT=%s\n' "$SKILL_ROOT"
+```
+
+Eğer ajan seansı zaten açılmışsa, yeni bir seans başlatın veya o ev sahibi'nin
+Her ev sahibi katalogunu sıfır yeniden yükler diye düşünmeyin.
+
+### 3. Açıkça çağırın.
+
+Kurulmuş ajanın içinde, `agent-skills-first-run`işçi olarak
+Dizin, host tarafından desteklenen sentaks kullanın:
+
+| Host | Explicit invocation |
+|---|---|
+| Codex | `skill-contract-reviewer`, or choose it from `/skills`, then provide the review request |
+| Claude Code | `/skill-contract-reviewer` followed by the review request |
+| Portable fallback | `Use skill-contract-reviewer to review the target package.` |
+
+ için yazdırılan mutlak değerleri kullanın`SKILL_ROOT`ve `TARGET_ROOT`- ...
+Uygulama işleminden önce ev sahibi tarafından genişletilmesini ve tam olarak
+çözülmüş komut, işlem çalışma dizine bağlı olmayan bir komut değil:
+
+```text
+Use skill-contract-reviewer to review <TARGET_ROOT>/my-first-skill. The installed bundle root is <SKILL_ROOT>. Run python3 <SKILL_ROOT>/scripts/check_skill.py <TARGET_ROOT>/my-first-skill. Before running it, show the fully resolved argv. Return the validation report, selected primitives, and one sentence for each selection. Include the resolved script path, resolved target path, cwd, argv, and exit code as execution evidence.
+```
+
+Çözümlü komut, yer tutmayan şekilinde olmalıdır:
+
+```bash
+python3 "/absolute/install/path/skill-contract-reviewer/scripts/check_skill.py" \
+  "/absolute/workspace/path/agent-skills-first-run/my-first-skill"
+```
+
+Başarılı bir sonuç üç özellikten de oluşur:
+
+1. Ev sahibi buldu .`skill-contract-reviewer`Adıyla.
+2. Değerlendirici paket sözleşmesini okuyor ve paket onaylayıcıyı çalıştırıyor.
+3. Cevap, yapısal hata olmadan onay raporu içerir.
+   Örnek, ek olarak haklı bir ilkel seçim.
+
+Yaptıkları kanıtlarda senaryo yolu, hedef yolu, cwd, tam adı da bulunmalıdır.
+Bu alanlar olmadan akıcı bir rapor
+Kurulan eş metni çalıştırdığını kanıtlayın.
+
+Ev sahibi yeteneğin bulunmadığını bildirirse, kurulumunu doğrulayın
+hedef, bir kez yeniden tarayın veya yeniden başlatın ve açıkça yapılan talebi tekrar deneyin.
+Kurulum başarısızlığını gizlemek için beceri tanımını yeniden yazmak.
+
+### 4. Sönem içeren seçim
+
+Yeni bir ajan dönüşü başlatın ve yeteneği isimlendirmeden aynı görevi girin:
+
+```text
+Review <TARGET_ROOT>/my-first-skill as a reusable agent package and tell me whether its package contract is valid.
+```
+
+Ev sahibi seçilen becerileri ortaya çıkarırsa, seçtiğini kaydet
+`skill-contract-reviewer`Ev sahibi yönlendirmeyi açığa çıkarmazsa,
+Açıkça çağrıda taşınabilir geri dönüş bulunmaktadır.
+
+### 5. Temizle.
+
+Sadece yüklenen incelemeci paketini kaldır:
+
+```bash
+npx skills remove skill-contract-reviewer
+```
+
+Kurulum sırasında kullanılan aynı host ve kapsamı seçin.
+Sessiyon, açık bir şekilde istek`skill-contract-reviewer`rapor etmelidir.
+- Bu kullanılamıyor.`my-first-skill`Sonraki dersler için veya
+Yolu bitirdikten sonra laboratuvar dizinine.
 
 ## Sorun
 
-Bir mühendis bir açıklama not yazma iş akışını çok adımlı bir istekle destekliyor: "En son birleşmiş PR'leri okuyun. Bölgeye göre gruplayın. Her birini özetleyin. Takımın tarzına göre bir değişim logunu yazın. Slack taslakına gönderin. "
+Ekibinizin güvenilir bir yayın iş akışı olduğunu varsayalım. Birleştirilmiş değişiklikleri bulur, göç notlarını kontrol eder, değişim kaydı güncelleyir, bir paket komutu çalışır ve bir inceleme kontrol listesini oluşturur.
 
-Şimdi Claude Code, Cursor ve Codex CLI'den bu iş akışını kullanmak istiyorlar.`.codex.md`Mühendis iş akışını üç kez kopyalayıp üç kopyası korur.
+Bu iş akışını bir istekle koymanın yapıştırması kolay ve çalıştırılması zor hale getirir. istekle sabit bir kimliğe, keşif kuralına, kaynak sınırına, test edilebilir paket şekline ve temel soruların cevabına sahip değildir: Kim çağırabilir? Modelin ne zaman seçmesi gerekir? Hangi senaryoları çalıştırabilir? Hangi dosyalara güvenilir?
 
-AGENTS.md ve SKILL.md birlikte bunu düzeltecek:
+Bu nedenle, her tekrar kullanılabilir talimatı bir beceri olarak değerlendirmek yanlış bir şeydir. deposu konvansiyonları, belirleyici otomasyon, dış araçlar, olay hakları ve delegasyonlu ajanlar farklı sorunları çözüyor.`SKILL.md`bir ev sahibi'nin belgelenmemiş davranışına bağlı olarak taşınabilir görünen bir dizin oluşturur.
 
-- **AGENTS.md**Bu programın başlamasından sonra, her uyumlu ajan, bu yazıyı okuyor. "Bu proje nasıl çalışır?
-- **SKILL.md**YAML ön maddesini (ad, açıklama) + işaretleme bedenini + seçmeli kaynakları.
-- **MCP**(Fase 13 · 06-14) becerinin kullanması gereken araçları ele alıyor.
-
-Üç kat, bir taşınabilir eser.
+İlk mühendislik görevi sınıflandırma. Nasıl paketleneceğine karar vermeden önce eserin ne olduğunu belirleyin.
 
 ## Anlaşım
 
-### AGENTS.md (agents.md)
+### Yetenekler prosedürel bilgiyi kodlamaktadır
 
-2025'in sonlarında başlatıldı, Nisan 2026'a kadar 60.000+ repo tarafından kabul edildi.
+Bir ajan yeteneği , giriş noktası olan bir dizindir .`SKILL.md`. Giriş dosyası, YAML ön maddesini ve ardından Markdown talimatlarını içerir. Dizin ayrıca referanslar, senaryolar ve varlıkları da içerebilir.
+
+```mermaid
+flowchart TD
+  B[release-readiness bundle] --> S[SKILL.md]
+  B --> R[references]
+  R --> RP[release-policy.md]
+  R --> CF[changelog-format.md]
+  B --> C[scripts]
+  C --> IR[inspect_release.py]
+  B --> A[assets]
+  A --> RC[release-checklist.md]
+```
+
+Markdown dosyası değil, dizin, dağıtılabilir birimdir.`SKILL.md`Kayıp referansları olan bir paket, ön malzemesi analiz edilse bile kırılmış.
+
+### Komşu soyutlamalar
+
+| Artifact | Primary job | Loaded or run when | What it should not impersonate |
+|---|---|---|---|
+| Prompt | Shape one model interaction | Included by an application or user | A versioned package with resources |
+| Repository instructions | Explain one codebase's standing rules | A coding runtime enters that scope | A reusable task workflow |
+| Agent skill | Supply reusable procedural knowledge | Explicit or implicit activation | A hard authorization boundary |
+| MCP tool | Expose a typed remote capability | The model or application calls it | A detailed operating procedure |
+| Hook | Run deterministic logic on an event | The declared event occurs | Probabilistic model routing |
+| Subagent | Delegate work with separate context and state | An orchestrator creates or calls it | A static instruction bundle |
+| Plugin | Distribute a larger runtime extension | The host installs or enables it | The portable skill contract itself |
+| Learned skill library | Store behavior discovered through experience | A policy retrieves a prior program or trajectory | A standards-based `SKILL.md` package |
+
+Bir serbest bırakma becerisi, ajanın bir serbest bırakmayı nasıl inceleyeceğini söyleyebilir. Bir MCP sunucusu serbest bırakma kayıtlarını ortaya koyabilir. Bir kanca doğrudan itmeyi yasaklayabilir. Bir alt görevli adayı bağımsız olarak denetebilir. Bu parçalar farklı sorumlulukları taşıdığı için oluşturulur.
+
+### "İltibat" kelimesi iki farklı fikre atfeder.
+
+Araştırma sistemleri bazen öğrenilmiş bir programa, başarılı bir yoldaki veya çevreye özgü bir politika fragmanı bir beceri olarak adlandırır. Bir ajan, keşif sırasında bu eserleri oluşturabilir, görev benzerliğiyle geri alabilir, uygulayabilir ve kitaptaki geri bildirimleri gözden geçirebilir.
+
+Bu mini-track'deki Agent Yetenek farklıdır. Bu, açıklanan dosya sistem sözleşmesi, katalog metadata, ilerici açıklama, çalıştırma zaman aracılığıyla çağrı ve host kontrolü araçları ile birlikte yazılmış bir paketdir.
+
+| Dimension | Agent Skill package | Learned skill library |
+|---|---|---|
+| Primary unit | `SKILL.md` directory | Program, policy, trajectory, or memory record |
+| Creation | Authored, generated, or curated | Usually discovered from environment experience |
+| Selection | Catalog description plus runtime policy | Retrieval or policy over task state |
+| Execution | Model follows instructions and calls host tools | Environment runs a stored behavior or code artifact |
+| Portability | Package contract can cross compatible hosts | Often tied to one environment and action space |
+| Evaluation | Routing, artifact, safety, and host compatibility | Reward, success rate, transfer, and library growth |
+
+Her iki fikir de tekrar kullanılabilir yetkinlik paketini içerir.
+
+### Uygulanabilir çekirdek
+
+Agent becerileri özellikleri iki ön madde alanı gerektirir:
+
+```yaml
+---
+name: release-readiness
+description: Inspect a release candidate when the user asks whether a version is ready to publish.
+---
+```
+
+`name`Bu özelliklerin isimlendirme kurallarına uymalı ve ana dizinle eşleşmelidir. `description`Bu bilgi, yeteneklerin ne yaptığını ve ne zaman uygulanacağını belirtmelidir.
+
+Aktarılabilir seçeneği alanlar:
+
+| Field | Purpose | Portability note |
+|---|---|---|
+| `license` | State the terms for the package | Core specification |
+| `compatibility` | State environmental requirements | Core specification |
+| `metadata` | Carry string-valued extension data | Core specification |
+| `allowed-tools` | Suggest pre-approved tools | Experimental; host support varies |
+
+Markdown organı, iş akışı, karar noktaları, başarısızlık davranışları ve destek kaynaklarına doğrudan yolları tanımlamalıdır.
 
 ```markdown
-# Project: my-service
+# Release readiness
 
-## Conventions
-- TypeScript with strict mode.
-- Use Pydantic for models on the Python side.
-- Tests run with `pnpm test`.
+Use this workflow for a release candidate, not for ordinary development builds.
 
-## Build and run
-- `pnpm dev` for local dev server.
-- `pnpm build` for production bundle.
+1. Read `references/release-policy.md`.
+2. Run `python3 scripts/inspect_release.py --format json`.
+3. Stop if the report contains a blocking failure.
+4. Produce the checklist from `assets/release-checklist.md`.
+5. Ask for approval before any publish or tag action.
 ```
 
-Bu yazıyı, 2026 yılında tüm kodlama ajanları destekleyecek.
+### Çalışma süresi uzantıları ikinci katman
 
-### SKILL.md biçimi
+Bazı ev sahipleri ek ön madde veya eş yapılandırmayı kabul eder. Bu alanlar yararlı olabilir, ancak otomatik olarak taşınabilir değildir.
 
-Anthropic'in Ajan becerileri (Açık bir standart olarak Aralık 2025'te yayınlandı):
+| Behavior | Example host extension | Portable core? |
+|---|---|:---:|
+| Hide a skill from model routing while keeping direct user invocation | `disable-model-invocation` | No |
+| Hide a skill from the user's command menu while allowing model routing | `user-invocable` | No |
+| Show argument help in a command menu | `argument-hint` | No |
+| Run the skill in delegated context | `context`, `agent` | No |
+| Pin model or reasoning settings | `model`, `effort` | No |
+| Register lifecycle automation | `hooks` | No |
+| Disable implicit invocation in Codex | `agents/openai.yaml` policy | No |
+
+Her uzantıyı bir adaptör olarak değerlendirin. Temel iş akışını geçerli tutun, düşüşü belgeleyin ve onu tüketen barındırmayı test edin. Bir çalıştırma zamanı bilinmeyen bir alanı görmezden gelebilir, reddedebilir veya davranışları uygulamadan koruyabilir.
+
+### Ön madde , çalıştırılabilir metadata
+
+Metadata, beceri kurumu okumanın öncesinde sistem davranışını değiştirir.
+
+- Bir bozukluk .`name`keşif başarısız olabilir.
+- - Kısıtlı .`description`yanlış istekleri yönlendirebilir.
+- Sadece insan bayrağı, modelin kataloğundan yeteneği çıkarır.
+- Bir araç tahsisinin sahibi izin istemesini değiştirebilir.
+- Bir bağlam ayarı, yürütmeyi ayrı bir ajan oturumuna taşıyabilir.
+
+Konfigurasyon kodu gibi ön maddeyi gözden geçirin. Onu doğrulayın, versiyon verin ve davranışlarını değerlendirmelere dahil edin.
+
+### Yetenek yaşam döngüsü
+
+```mermaid
+flowchart LR
+  D[Discover package] --> V[Validate metadata and layout]
+  V --> C[Publish catalog entry]
+  C --> S{Select?}
+  S -->|explicit user request| A[Activate]
+  S -->|implicit model match| A
+  S -->|no match| N[Leave unloaded]
+  A --> B[Load SKILL.md body]
+  B --> R[Read required resources]
+  R --> T[Request tools or run scripts]
+  T --> E[Return evidence and artifact]
+  E --> Q[Verify result]
+```
+
+Her ok kendi başarısızlık modlarına sahip bir sınırdır.
+
+1. **Discovery**yapılandırılmış yerlerde olası paketler bulur.
+2. **Validation**Katalog yayınlanmadan önce yanlış biçimlendirilmiş veya güvenli olmayan paketleri reddeder.
+3. **Cataloging**- ... bir kompaktı ortaya çıkarır .`name`ve `description`- Tam paket değil.
+4. **Selection**yetkinliğin uygun olup olmadığını belirler.
+5. **Activation**Vücudun model görebilir bir bağlamına yüklenmesi.
+6. **Disclosure**referansları veya varlıkları yalnızca bir şubenin ihtiyaç duyduğu zaman okuyor.
+7. **Execution**host araçlarını host'ın izin ve izole kuralları altında kullanır.
+8. **Verification**üretilen eser, modelin iddialarından bağımsız olarak kontrol edilir.
+
+Bu aşamaların çökmesi kötü zihinsel modellere neden olur. Bulunan bir beceri aktif değildir.
+
+### Bilgiler ve araçlar ortogonal
+
+MCP, "Bu uygulama hangi yetenekleri arayabilir ve onların şemaları nelerdir?" diye cevap verir.
+
+```mermaid
+flowchart TB
+  U[User goal] --> K[Activated skill]
+  K --> P[Procedure and decision rules]
+  P --> M[MCP or local tool]
+  M --> O[Observation]
+  O --> P
+  P --> A[Artifact]
+  A --> V[Verification]
+```
+
+Bu özellik bir aracı adlayabilir, ancak ev sahibi gerçek yetenek kayıtlarına sahip. Eğer araç yoksa, yetenek bir düşüş veya başarısızlık belirtmelidir. Bu asla bir yeteneğin adının oluşturulduğunu ima etmelidir.
+
+### Bilgiler ve deposu talimatları farklı alanlardır
+
+Depo talimatları zaten bulunduğunuz ortamı tanımlar: komutlar, konvansiyonlar, oluşturulan dosyalar ve sınırlar. Bir beceri birçok depose içinde oluşabilecek bir görev için tekrar kullanılabilir bir prosedür sağlar.
+
+Her ikisi de geçerli olduğunda, aktif kullanıcı talebi ve deposu kuralları beceriyi kısıtlar.
+
+### Yetenekler birbirini içeri almaz
+
+Bir beceri ajanı diğerini çağrıştırmaya yönlendirebilir, ancak bu dil düzeyinde bir ithalat değildir. İkinci beceri hala çalıştırma süresi keşfi, uygunluk, etkinleştirme, izinler ve bağlam yönetimi yoluyla geçer.
+
+Gözetilebilir iş akışı kenarları olarak beceri arası bağımlılıkları yazın:
 
 ```markdown
----
-name: release-notes-writer
-description: Write a changelog entry for the latest merged PRs following this project's style.
----
-
-# Release notes writer
-
-When invoked, run these steps:
-
-1. List PRs merged since the last tag. Use `gh pr list --base main --state merged`.
-2. Group by label: feature, fix, chore, docs.
-3. For each PR in each group, write one line: `- <title> (#<num>)`.
-4. Draft the release notes and stage them in CHANGELOG.md.
-
-If the user says "ship", run `git tag vX.Y.Z` and `gh release create`.
-
-## Notes
-
-- Never include commits without a PR.
-- Skip "chore" entries from the public changelog.
+After producing the candidate changelog, invoke the `release-risk-review` skill.
+Pass the candidate path and require a blocking or non-blocking verdict.
+If that skill is unavailable, stop and report the missing dependency.
 ```
 
-Ön madde, beceri kimliğini açıklar.
+Bu bağımlılığı test edilebilir hale getirir ve ev sahibi politikaları uygulamaya geçirme şansı verir.
 
-### Gelişmiş açıklama
+## Yapın
 
-Yetenekler, ajanın sadece gerektiğinde alacağı alt kaynaklara atıfta bulunabilir.
+`code/main.py`Bu sistem, standartlara yönelik küçük bir onaylayıcı ve bir eser seçicisi uyguluyor.
 
+Validasyoncu aşağıdakileri ortaya çıkarır:
+
+- `parse_frontmatter(text)`Metadataları vücuttan ayırmak için.
+- `validate_skill_text(text, directory_name, allowed_runtime_extensions=())`Gerekli alanları, isimlendirme, bilinmeyen uzantıları, vücut varlığı ve taşınabilir sınırları kontrol etmek için.
+- `ValidationIssue`ve `SkillReport`Bir çürük boolean yerine yapılandırılmış kanıtları geri göndermek.
+- `FrontmatterSyntaxError`Güvenli bir şekilde yorumlanamayacak bir giriş için.
+
+Seçiciler açığa çıkarır `TaskShape`ve `select_primitives(task)`Bir görevin ihtiyaçlarını sıradan kod, depot talimatları, bir beceri, bir kanca, bir alt-gen veya bir MCP aracı ile haritasıyor.
+
+Laboratuvarı çalıştır:
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+cd phases/13-tools-and-protocols/22-skills-and-agent-sdks
+python3 code/main.py
+python3 -m unittest discover -s code/tests -v
 ```
-skills/
-  release-notes-writer/
-    SKILL.md
-    style-guide.md
-    template.md
-    scripts/
-      generate.sh
+
+Bu komut blokuna yerel bir klon gerek ve içeriden herhangi bir yerden başlamalı .
+Bu klon öyle.`git rev-parse --show-toplevel`deposu kökü çözmek için.
+
+Demo, bir geçerli taşınabilir beceri, bir host genişletilen beceri, bir geçersiz paket ve birkaç görev biçimi kararı için JSON yazdırırır. Sorun kodlarını inceleyin.
+
+### Valide etmem için gerekli olan emirler
+
+Daha derin içeriği kurallarından önce ucuz yapısal gerçekleri doğrulayın:
+
+```mermaid
+flowchart LR
+  F[Frontmatter delimiters] --> Y[Scalar metadata]
+  Y --> N[Name and directory match]
+  N --> R[Required fields]
+  R --> X[Known extensions]
+  X --> B[Body and resource rules]
 ```
 
-SKILL.md, "stil kuralları için stil-guide.md'yi görün". diyor. Ajan stil-guide.md'i yalnızca yetenek aktif olarak çalıştırıldığında çekir. Bu, modelin ihtiyaç duymayabileceği ayrıntılarla isteklenmeyi önler.
-
-### Dosya sistemi keşfi
-
-Ajan çalıştırma zamanları SKILL.md dosyaları için bilinen dizinleri tarar:
-
-- `~/.anthropic/skills/*/SKILL.md`
-- Proje`./skills/*/SKILL.md`
-- `~/.claude/skills/*/SKILL.md`
-
-Güçlendirme klasör adı ve ön madde ile yapılır `name`Claude Code, Anthropic Claude Agent SDK ve SkillKit (çapış ajan) hepsi bu örneği izler.
-
-### Antropik Claude Ajan SDK
-
-`@anthropic-ai/claude-agent-sdk`(TypeScript) ve `claude-agent-sdk`(Python) seans başlamasındaki becerileri yükle, onları çalıştırma süresi içinde çağırabilir "ajanlar" olarak ortaya çıkar.
-
-### OpenAI Apps SDK
-
-Ekim 2025'te başlatıldı; doğrudan MCP'de inşa edildi. OpenAI'nin önceki Bağlantıları ve Özel GPT Eylemlerini tek bir geliştiriciler yüzeyi altında birleştirir.
-
-- Bir MCP sunucusu (üçergeleri, kaynakları, istekleri).
-- Ayrıca ChatGPT'nin kullanıcı aracına ait meta veriler.
-- Ayrıca seçeneği olan MCP Uygulamaları `ui://`Etkin yüzeyler için kaynak.
-
-Aynı protokol, daha zengin bir UX.
-
-### SkillKit üzerinden ajanlar arası taşınabilirlik
-
-SkillKit gibi araçlar ve benzer ajan çaplı dağıtım katmanları tek bir SKILL.md'i 32+ AI ajanının her birinin (Claude Code, Cursor, Codex, Gemini CLI, OpenCode, vb.) ana formatına çevirir.
-
-### Üç katlı yığın
-
-| Layer | File | Loaded when | Purpose |
-|-------|------|-------------|---------|
-| AGENTS.md | repo root | session start | project-level conventions |
-| SKILL.md | skills directory | skill invoked | reusable workflow |
-| MCP server | external process | tools needed | callable actions |
-
-Üçü de oluşturulur: ajan seansın başlaması sırasında AGENTS.md okuyor, kullanıcı bir beceri çağrıştırıyor, beceri talimatları MCP araç çağrılarını içerir, ajan bir MCP istemcisi üzerinden gönderir.
-
-```figure
-t3-skill-layers
-```
+Bu sıralama ikinci hataların ilk kırık değişkenini gizlemesini engeller.
 
 ## Kullan
 
-`code/main.py`STDlib SKILL.md analiz ve yükleme cihazı kullanıyor.`./skills/`YAML ön maddesini ve işaretleme bedenini analiz eder ve yetenek isimleriyle belirlenen bir dikte oluşturur.`release-notes-writer`Adıyla.
+Bir beceri yazmadan önce, bu karar kartını doldurun:
 
-Neye bakılır:
+| Question | If yes | Likely primitive |
+|---|---|---|
+| Does this need reusable model judgment across several steps? | The procedure is stable but decisions vary | Skill |
+| Must this happen every time an event fires? | Missing one execution is unacceptable | Hook or application code |
+| Does the model need an external capability with typed inputs? | The operation lives outside model context | Tool or MCP server |
+| Does the work need isolated context, state, or ownership? | A separate worker returns a bounded result | Subagent |
+| Is this guidance specific to one repository? | It describes local commands and constraints | Repository instructions |
+| Is one interaction enough? | No package lifecycle is needed | Prompt |
 
-- YAML ön maddesini minimal bir stdlib analizörü ile analiz ediliyor (hayır)`pyyaml`bağımlılık).
-- Bilgi vücudu sözde saklanır. Ajan çağrısı üzerine sistem uyarısına hazırlanır.
-- Bir  `read_subresource`İsteğe bağlı olarak referans dosyaları çeken bir işlev.
+Birçok üretim iş akışı birden fazla satır kullanır. Kart bir eser her mülkiyet sağlıyor gibi davranmasını engeller.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-agent-bundle.md`. İş akışı verildiğinde, beceriler, ortaklıklara taşınabilir olan SKILL.md + AGENTS.md + MCP-server-blueprint paketini oluşturur.
+Bu ders , `skill-contract-reviewer`Altında bir paket`outputs/`İçeriğinde:
+
+- bir taşınabilir`SKILL.md`önerilen beceri paketini gözden geçirir;
+- taşınabilir sözleşme ve ilkel seçim için referans kontrol listeleri;
+- Determinizm doğrulama metni;
+- Görev şekli, istekleri, becerileri, araçları, hakları, sıradan kodları ve alt kısımları kapsayan cihazlar.
+
+Sadece giriş dosyası değil, tüm paketleri yükle:
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/install_skills.py /tmp/aiefs-skills --phase 13 --type skill
+```
+
+Kurs yükleyici, her kopyalanan 13. aşama yeteneğini rapor eder ve yazar:
+`/tmp/aiefs-skills/manifest.json`Bu temiz yer paket şeklini kontrol eder .
+Yukarıdaki ilk başarı döngüsü gerçek bir ev sahibi içinde keşif ve çağrı kontrol eder.
+
+Aşağıdaki dersler yaşam döngüsünün her aşamasını derinleştirir. 24 ders keşif ve ilerleyici açıklama oluşturur. 25 ders çağıran politika ve yönlendirme oluşturur. 26 ders, izinleri kum kutularından ayırır. 27 ders tüm paketi değerlendirilmiş bir serbest bırakma eseri haline getirir.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`İkinci bir beceri ekle .`skills/`ve yükleme cihazının onu aldığını onayla.
-
-2. Bu kurs repo için bir AGENTS.md yaz. Test komutları, stil konvensiyonları ve 13. aşama zihinsel modeli dahil edin.
-
-3. Ekibinizin iç belgeleriyle çok adımlı bir iş akışını SKILL.md'e aktarın.
-
-4. Bu, çevirme yüzeyinin SkillKit otomatikleri.
-
-5. Antropic Agent Skills blog yazısını okuyun. Claude Agent SDK'de bu dersin yükleme cihazının kapsamadığı bir özelliği belirleyin.
+1. Kendi ekibinizden beş iş akışını sınıflandırın .`TaskShape`Birden fazla ilkel seçtiğin her davası savunabilirsin.
+2. 500 karakterli bir testin olduğunu kanıtlayan sınırlar testlerini ekleyin`compatibility`değer geçer ve 501 karakterlik bir değer bir özellik hatası olarak başarısız olur.
+3. İzin listesine bir çalıştırma süresi uzantısı ekleyin. Aynı dosyanın sadece taşınabilir bir beceriyle hala ayırt edilebilir olduğunu kanıtlayan bir test yazın.
+4. 400 satırlı bir istekle bölün .`SKILL.md`Bir referans, bir senaryo sözleşmesi ve bir çıkış şablonu.
+5. Bir MCP aracı bulunmayan bir beceri için bir başarısızlık tepkisi tasarlayın.
+6. Var olan bir beceriyi gözden geçirin ve her cümleyi yönlendirme, prosedür, politika, referans işaretçisi veya çıkış sözleşmesi olarak etiketleyin.
 
 ## Anahtar Terimler
 
 | Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| SKILL.md | "The skill file" | YAML frontmatter plus markdown body, loaded by agent runtime |
-| AGENTS.md | "Repo-root agent context" | Project-level conventions file read on session start |
-| Progressive disclosure | "Lazy-load sub-resources" | Skill body references files pulled only when needed |
-| Frontmatter | "YAML block at top" | Metadata (name, description) in `---` delimiters |
-| Claude Agent SDK | "Anthropic's skill runtime" | `@anthropic-ai/claude-agent-sdk`, loads skills and routes |
-| OpenAI Apps SDK | "MCP + widget meta" | OpenAI's dev surface built on MCP plus ChatGPT UI hooks |
-| Skill discovery | "Filesystem scan" | Walk known dirs for SKILL.md, key by name |
-| Cross-agent portability | "One skill many agents" | Translate one SKILL.md to 32+ agents via SkillKit-style tools |
-| Agent Skill | "Portable know-how" | Reusable task template outside MCP's tool concept |
-| Apps SDK | "MCP plus ChatGPT UI" | Connectors and Custom GPTs unified on MCP |
+|---|---|---|
+| Agent skill | "A saved prompt" | A discoverable directory of procedural instructions and optional resources |
+| Portable core | "Fields every runtime shares" | The contract defined by the Agent Skills specification |
+| Runtime extension | "Extra frontmatter" | Host-specific configuration whose behavior requires a compatible adapter |
+| Activation | "The skill ran" | The skill body entered model-visible context; execution may come later |
+| Skill dependency | "Import another skill" | A runtime-mediated invocation edge with availability and policy checks |
+| Tool contract | "A function schema" | Inputs, outputs, permissions, side effects, errors, and evidence for a capability |
 
 ## Daha Fazla Okumak
 
-- [Anthropic — Agent Skills announcement](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) Aralık 2025'te başlatılmak
-- [Anthropic — Agent Skills docs](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) SKILL.md biçimi referansı
-- [OpenAI — Apps SDK](https://developers.openai.com/apps-sdk) ChatGPT için MCP tabanlı geliştiriciler platformu
-- [agents.md](https://agents.md/) AGENTS.md biçimi ve kabul listesi
-- [Anthropic — anthropics/skills GitHub](https://github.com/anthropics/skills) Resmi beceri örnekleri
+- [Agent Skills specification](https://agentskills.io/specification)taşınabilir dizin ve ön ürün sözleşmesi için.
+- [Agent Skills best practices](https://agentskills.io/skill-creation/best-practices)kapsam, talimatlar ve kaynak örgütlemesi için.
+- [OpenAI: Build skills](https://learn.chatgpt.com/docs/build-skills)Codex'un mevcut keşif ve çağrı davranışları için.
+- [Claude Code skills](https://code.claude.com/docs/en/skills)Bir çalıştırma süresi için çağrı, argüman, araç ve delegasyonlu bağlam uzantıları.

@@ -1,177 +1,303 @@
-# Kökler ve Yüklenme  Uçuş kapsamı ve uçuş ortasında kullanıcı girişleri
+# Açık Görebilirlik ve Vatandaşı Olmayanlar Hakkında İstek
 
-> Kötü kodlanmış yollar bir kullanıcı farklı bir projeyi açtığında kırılır. Kullanıcı yeterince belirtilmediğinde önceden doldurulmuş araç argümanları bozulur. Kökler sunucuyu kullanıcı kontrolü altında bulunan bir URI setiye bağlar; arama aracı çağrısının ortasında arama işlemleri durdurulur ve kullanıcıdan bir form veya URL üzerinden yapılandırılmış giriş istenebilir. İki müşteri ilkesi, ortak MCP başarısızlık modları için iki düzeltme. SEP-1036 (URL modunun çıkartılması, 2025-11-25) H1 2026  test SDK sürümleri üzerinden deneysel olarak kullanılır.
+> MCP 2026-07-28'de kökler eski haline geldi ve hiçbir zaman güvenlik sandbox değildi. Görünür araç argümanlarına veya kaynak URI'lerine boyut koyun, sunucuda yetkilendirin ve bir araçın kullanıcı girişine gerçekten ihtiyacı olduğunda MRTR kullanın. Kullanıcı kararı görür, model elini görür ve her sunucu örneği tekrar denemeyi işleyebilir.
 
 **Type:** Build
-**Languages:** Python (stdlib, roots + elicitation demo)
-**Prerequisites:** Phase 13 · 07 (MCP server)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 11 (stateless MRTR)
+**Time:** ~60 minutes
 
 ## Öğrenme Hedefleri
 
-- İtiraf et .`roots`ve cevap ver .`notifications/roots/list_changed`- Evet .
-- Sunucu dosya işlemlerini açıklanan kök kümesi içinde URI'lere sınırlandırın.
-- Kullanım`elicitation/create`Kullanıcıya araç çağrısı sırasında bir onay veya yapılandırılmış giriş istemek.
-- Form mod ve URL modunun oluşturulması arasında seçim yapın (sonuncu deneysel; sürükleme riski belirtilmiştir).
+- Geçmişte kullanılmış Kökleri açık çalışma alan parametreleri, kaynak URI'leri veya sunucu yapılandırması ile değiştirin.
+- Yetkililik, yol kısıtlaması ve işletim sistemi sandboxing'den ayrı kapsam ipuçları.
+- Sunuç biçimi `elicitation/create`MRTR üzerinden`input_required`Sonuç.
+- Arama başına müşteri yeteneklerinde çağrıyı destekleme desteklerini reklam edin ve desteklenmeyen modları reddedin.
+- Geçerlileştir`accept`- Evet .`decline`ve`cancel`- Evet. - Evet.
+- Yıkıcı onayı doğrulanmış bir başlık, orijinal argümanlar, aday seti ve sona ermesi ile bağlayın.
 
-## Sorun
+## İki Sorun Birbirine Benziyor
 
-İki tane beton hata. MCP sunucusu üretim sırasında vuruldu.
+Notlar aracı bu isteği alır: "Eski TPS raporunu sil".
 
-**Broken path assumption.**Sunucu , `~/notes`. Farklı bir makine üzerinde notları olan bir kullanıcı `~/Documents/Notes`sessizce başarısız olan bir araç çağrısı alır (fayl bulunmaz) veya daha kötüsü, yanlış yere yazılır.
+Sunucu iki farklı soruya cevap vermeli.
 
-**Missing argument the user would know.**Kullanıcı "eski TPS rapor notunu sil" sorusunda model arar.`notes_delete(title: "TPS report")`Bu araç tahmin edemez. "Kahkaha açık" ile başarısız olmak sinir bozucu; üçü üzerinde çalışmak felaketli.
+1. Bu operasyon hangi çalışma alanına dokunabilir?
+2. Kullanıcı üç eşleşen nottan hangisini kastediyordu?
 
-Kökler ilkini düzeltir: müşteri açıklamasını yapar `initialize`URI'lerin serveri dokunabilir. URI'lerin bir dizi. URI'lerin biriki serveri ayarlanır:`elicitation/create`Kullanıcıya hangisini seçmesini istemek için.
+Birincisi kapsam ve yetki. İkincisi etkileşimli belirsizlik. Onları karıştırmak tehlikeli tasarımlara yol açar, örneğin müşteri tarafından sağlanan bir klasörü aramacı'nın içindeki her şeyi silebileceğini kanıtlamak gibi.
 
-## Anlaşım
+## Kökler Göçme Yüzeyi
 
-### Kökler
+Daha önceki MCP revizyondaki bir istemci Roots'u reklamlamasına ve listenin değiştirildiği zaman bir sunucuyu bilgilendirmesine izin verdi. Roots bilgi rehberliğiydi.
 
-Müşteri bir kök listesini açıklar `initialize`- ...
+MCP 2026-07-28 iptal edildi `roots/list`ve `notifications/roots/list_changed`Yeni tasarımlar için.
+
+- A.`workspaceUri`veya `directory`Araç argümanı, arama başına alan değişirken.
+- Bir kaynağı hedef alan operasyonda bir kaynak URI.
+- Bir dağıtımın bir sabit çalışma alanına sahip olduğu zaman sunucu yapılandırması.
+- Bir işlem sandbox veya kilitli dosya sistemi, kodun teknik olarak kaçamayacağı zaman.
+
+Eğer mevcut bir 2026-07-28 entegrasyonunun hala ihtiyacı varsa `roots/list`Depolama penceresi sırasında, sunucu MRTR'ye ekler `inputRequests`Bu bir göç adaptörüdür; yeni işleyiciler bunun yerine açık bir kapsam kabul etmeli.
+
+Model açık bir elini görebilir ve tekrarlayabilir. Gizli taşıma oturumlarının kapsamını incelemek, tekrarlamak, denetlemek ve yönlendirmek daha zor.
+
+### Üç katlı kural
+
+Açık bir URI hala kendini onaylamaz.
+
+1. **Authorization:**Bu doğrulanmış yöneticinin bu çalışma alanını kullanmasına izin veriliyor mu?
+2. **Containment:**Normal hedef URI'si yetkili çalışma alanının sınırları içinde mi kalır?
+3. **Sandbox:**İşletim sistemi, tehlikeli bir sunucunun kaçmasını engelleyebilir mi?
+
+Çalıştırılabilir sunucu yetkili çalışma alanı URI'lerinin izin listesi tutar, yüzde kodlanmış yolları normalleştirir, gerçek bir yol-komponent sınırı kontrol eder ve silmeden hemen önce tutumu tekrar kontrol eder.
+
+Saçmalamlı string prefix kontrolleri yanlış:
+
+```text
+allowed:   file:///work/notes
+attacker:  file:///work/notes-evil/secret.md
+traversal: file:///work/notes/%2e%2e/private.md
+```
+
+Her iki düşman yol da yanıltıcı bir iple başlar. Önce yol bileşenlerini normallaştırın, sonra da yol bileşenlerini karşılaştırın. Bir üretim dosya sistemi sunucusu ayrıca sembolik bağlantı yarışlarına ve platform-spesifik yol semantiğine karşı savunmalıdır.
+
+## İhtiyaç Hala Var Ama Verim Değişti
+
+Elicitation ,  sırasında kullanıcı girişlerini toplamak için mevcut istemci özelliğidir .`tools/call`- Evet .`prompts/get`veya`resources/read`. Metod adı kalır `elicitation/create`- Sınır akışının yönü değişti.
+
+2026-07-28 sunucusu ters bir JSON-RPC talebi göndermez.`InputRequiredResult`- ...
 
 ```json
 {
-  "capabilities": {"roots": {"listChanged": true}}
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "delete_choice": {
+        "method": "elicitation/create",
+        "params": {
+          "mode": "form",
+          "message": "Choose one matching note and confirm deletion.",
+          "requestedSchema": {
+            "type": "object",
+            "properties": {
+              "note_id": {
+                "type": "string",
+                "enum": ["note-3", "note-7", "note-14"]
+              },
+              "confirm": {"type": "boolean"}
+            },
+            "required": ["note_id", "confirm"]
+          }
+        }
+      }
+    },
+    "requestState": "integrity-protected-delete-state"
+  }
 }
 ```
 
-Sunucu aramayabilir `roots/list`- ...
-
-```json
-{"roots": [{"uri": "file:///Users/alice/Documents/Notes", "name": "Notes"}]}
-```
-
-Sunucular kökleri sınır olarak değerlendirmelidir: köklü set dışında okunan veya yazılan herhangi bir dosya reddedilmektedir. Bu istemci tarafından uygulanmaz (sunucu hala kullanıcı güvendiği koddur), ancak spesifikasyonlara uygun sunucular bunu onurlandırır.
-
-Kullanıcı bir kök eklediğinde veya kaldırdığında, istemci gönderir `notifications/roots/list_changed`- Sunucu tekrar arıyor .`roots/list`Ve sınırlarını güncelleyecek.
-
-### Neden kökleri bir müşteri ilkel
-
-Roots, kullanıcı'nın onay modelini temsil ettiği için istemci tarafından açıklanır. Kullanıcı Claude Desktop'a "bu not sunucusu bu iki dizine erişim sağlayın" dedi.
-
-### Çözüm: Form modunun varsayılanı
-
-`elicitation/create`bir form şeması ve doğal dil sorgulaması alır:
+Host formunu gösterir. Kullanıcı kabul edebilir, açıkça reddedebilir veya reddedebilir.`tools/call`Yeni bir kimlik ile:
 
 ```json
 {
-  "method": "elicitation/create",
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
   "params": {
-    "message": "Delete 'TPS report'? Multiple notes match; pick one.",
-    "requestedSchema": {
-      "type": "object",
-      "properties": {
-        "note_id": {
-          "type": "string",
-          "enum": ["note-3", "note-7", "note-14"]
-        },
-        "confirm": {"type": "boolean"}
-      },
-      "required": ["note_id", "confirm"]
+    "name": "notes_delete",
+    "arguments": {
+      "workspaceUri": "file:///Users/alice/Documents/Notes",
+      "title": "TPS report"
+    },
+    "inputResponses": {
+      "delete_choice": {
+        "action": "accept",
+        "content": {"note_id": "note-14", "confirm": true}
+      }
+    },
+    "requestState": "integrity-protected-delete-state",
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {
+        "elicitation": {"form": {}}
+      }
     }
   }
 }
 ```
 
-Müşteri bir form gönderir, kullanıcının cevabını toplar, gönderir:
+İki çağrı arasında protokol oturumı yoktur. Sunucu yankılanmış durumu doğruluyor, beklenen şema ile karşı yanıtı doğruluyor, seçilen notun imzalanan aday seti içinde olup olmadığını kontrol ediyor, çalışma alanını yeniden yetkilendiriyor, içeriği tekrar kontrol ediyor ve ardından silmektedir.
+
+## İhtiyaçla Yetenekleri müzakere edilir
+
+Form modunun çağrısını destekleyen bir müşteri şöyle diyor:
 
 ```json
 {
-  "action": "accept",
-  "content": {"note_id": "note-14", "confirm": true}
+  "io.modelcontextprotocol/clientCapabilities": {
+    "elicitation": {"form": {}}
+  }
 }
 ```
 
-Üç olası eylem:`accept`(kullanıcı doldurmuş), `decline`(kullanıcı kapattı), `cancel`(kullanıcı tüm araç çağrısını iptal etti).
+Boş bir çıkış yeteneği.`"elicitation": {}`, sadece biçim uyumluluğu destekle eşdeğer kalır.`"elicitation": {"form": {}}`Ayrıca form modunu da destekler. Sadece URL açıklaması, `"elicitation": {"url": {}}`Sunucu, önceki bir talepte reklam yapılmış olsa bile mevcut istek yeteneklerinden uzak bir mod eklemeyecektir.
 
-Form şemaları düz  yuvalanmış nesneler v1'de desteklenmez. SDK'lar tipik olarak tek katmandan daha karmaşık bir şeyi reddeder.
+Her talebinde de bir tane var .`io.modelcontextprotocol/protocolVersion`. Kayıp veya ipsiz bir versiyon gönderildi .`-32602`Desteklenmeyen bir dizileri gönderir .`-32022`Tam olarak`supported`ve `requested`Veriler. Kayıp veya sadece URL'li arama destekleri gönderiler `-32021`- Evet .`data.requiredCapabilities` ayarlanmıştır`{"elicitation":{"form":{}}}`- Evet .
 
-### Çözüm: URL modusu (SEP-1036, deneysel)
+JSON-RPC olmadan bir zarf `id`Bu, bir JSON-RPC başarısı veya hata cevabı vermeden işlenir. Streamable HTTP'de kabul edilen bir bildirim alır `202 Accepted`Cesetsiz.
 
-2025-11-25'te yeni.
+`clientInfo`Bu durum, teşhis için dahil edilmelidir, ancak kendiliğinden bildirilmektedir ve kullanıcıyı yetki için tanımlayamaktadır.
+
+Sunucu uygulaması `server/discover`ve geri dönüşleri`supportedVersions`, yetenekleri,`ttlMs`ve`cacheScope`- Evet .`resultType: "complete"`Modern tasarım için Roots'u reklam etmiyor.`tools/list`Bu sonuç belirleyici değerini gönderir .`notes_delete`Deskriptör, geçerli bir nesne `inputSchema`, sunucu kimliği metadataları ve kamu kaş ipuçları.
+
+## Form Modu
+
+Form modunda kullanılabilir iletişim için tasarlanmış kısıtlı JSON Şeması kullanılır. Kök bir nesnedir ve özellikleri düz primitif alanlar veya desteklenen enum dizileri. Derinlikle örülmüş nesneler ve genel amaçlı belge şemeleri bir onay iletişimine ait değildir.
+
+Şekil modunu kullan:
+
+- Birkaç adaydan birini seçmek;
+- yıkıcı bir operasyonun doğrulanması;
+- Duygusal olmayan tercihler toplamak;
+- Küçük sayıda değer toplamak, model değil kullanıcı tarafından karar verilmelidir.
+
+Parolalar, API anahtarları, erişim jetonları veya ödeme yetenekleri için form modunu kullanmayın. Bu sırlar MCP istemcisi üzerinden geçecek ve günlüklere veya model bağlamına ulaşabilir.
+
+Sunucu geri gönderilen içeriği tekrar doğruluyor. Müşteri taraflı form doğruluğu UX'yi iyileştirir, ancak güven yaratmaz.
+
+## URL Modu
+
+URL modu, bant dışı etkileşim için güvenli bir web URL gönderir:
 
 ```json
 {
   "method": "elicitation/create",
   "params": {
-    "message": "Sign in to GitHub",
-    "url": "https://github.com/login/oauth/authorize?client_id=..."
+    "mode": "url",
+    "message": "Connect the report service to continue.",
+    "url": "https://mcp.example.com/connect/report-service"
   }
 }
 ```
 
-Müşteri bir tarayıcıda URL'yi açar, tamamlanmasını bekler, kullanıcı geri döndüğünde geri döner.
+Bu, üçüncü taraf yetkisi gibi, hassas bilgiler doğrudan bir sunucu kontrolü altında bulunan web akışına gitmesi gerektiğinde kullanılır. Müşteri tam hedef yeri gösterir ve açmadan önce onay alır. URL'yi önceden almamalıdırır.
 
-Sürükleme riski notu: SEP-1036 yanıt şekli hala ayarlanıyor; bazı SDK'lar geri çağrı URL'sini geri verir, bazıları tamamlama jetonunu geri verir.
+Bir `accept`cevap, kullanıcı tarafından URL'yi açmaya kabul edilen anlamına gelir. Dış akışın tamamlandığını kanıtlamaz. Yeniden denediğinde, sunucu kendi durumunu kontrol eder ve ya tamamlar veya başka bir tane gönderir `input_required`Sonuç.
 
-### Eğer çıkarma doğru bir araçsa
+URL başlatılması, MCP istemcisi ve MCP sunucusu arasındaki yetkililiğin yerini almıyor. MCP sunucusu tarafından kullanıcı adına gerçekleştirilmesi gereken bir dış etkileşim için.
 
-- Yıkıcı eylemlerden önce kullanıcı onaylaması (yıkıcı ipucu + uyarma).
-- Açıklama (N eşleşenlerden birini seçin).
-- İlk çalıştırma ayarları (API anahtarları, dizinler, tercihler).
-- OAuth tarzı akışları (URL modunda).
+## Cevap Şubeleri
 
-### Eğer bir şey yanlış olursa
+Eylemleri, isimsiz olarak değil ürün kararları olarak değerlendirin:
 
-- Modelin prozda isteyebileceği bir araç için gerekli argümanları doldurmak.
-- Yüksek frekanslı aramalar.Konuşmayı kesmek için bir düğümün içinde çalıştırmayın.
-- Server, gerçekten sonra doğrulayabilecek her şeyi doğrula, bir hata gönder, modelin kullanıcıya metinde sormasına izin ver.
+| Action | Meaning | Safe server behavior |
+|--------|---------|----------------------|
+| `accept` | User submitted the interaction | Validate content and continue |
+| `decline` | User explicitly refused | Return a complete, non-error refusal outcome |
+| `cancel` | User dismissed or could not finish | Stop safely and allow a later retry |
 
-### İnsan-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-da-
+Kayıp içeriği asla onay olarak yorumlamayın. İptalini tekrarlanan bir istek döngüsüne dönüştürmeyin.
 
-MCP'nin "insan döngüsü" modeli için birlikte örnekleme ve örnekleme imkanı sunar. Bir sunucu ajan döngüsü, kullanıcı giriş (dönüşleme) veya model mantıklaşması (dönüşleme) için duraklayabilir.
+## Yıkıcı MRTR Devleti Koruma
+
+İhtiyaclı listeler sadece bir istek veya imzalanmamış Base64 değeri içinde yaşanamaz. Bir istemci gönderdiği her şeyi kontrol eder.
+
+Ders, aşağıdakileri içeren bir devlet yükü imzalar:
+
+- doğrulanmış başlık;
+- Kaynaklı yöntem;
+- `workspaceUri`ve `title`- ...
+- Formulamda gösterilen izin verilen not kimlikleri;
+- İşlem aşaması;
+- Kısa sürede.
+
+Mutasyon öncesi, sunucu aynı zamanda canlı not kaydını kontrol eder. Bu, silme yarışlarını ve form gösterildikten sonra çalışma alanının dışına taşındığı bir hedefi yakalar.
+
+Tek seferlik bir finansal veya geri dönüşü olmayan bir eylem için, HMAC tek başına geçerli bir durumun sona ermeden sonra tekrarlanmasını engellemez. Bir nonce'yi her işlemci örneği paylaşan bir tekrarlama mağazasında tam bir kez saklayın ve tüketin. Ders, sınırlı, TTL-kısaltılmış bir depo enjekte eder ve hafıza silinmesini yaparken atomik iddiasını tutar. Bir üretim veritabanı, nonce iddiası ve mutasyonunu bir işlem veya eşdeğer koşullu yazma sınırı ile birleştirmelidir.
+
+İlişkiyi, nonce talep etmeden önce doğrulayın.`cancel`Mutasyon yapmaz ve süresi sona erene kadar tekrar çalışılabilir hale getirir.`decline`Son derece son derece kötüdür, bu yüzden ders hiçbir şeyi silmeden nonce'yi tüketir.
 
 ```figure
 t3-roots-boundary
 ```
 
+## Yapın
+
+`code/main.py`modern bir `notes_delete`araç:
+
+- `tools/list`Gerekli çalışma alanı ve başlık şeması ile belirlenmiş, önbelleğe geçebilir bir tanımlayıcı gönderir.
+- Kapsam açık bir şekilde belirlenmiştir.`workspaceUri`- Tartışmak.
+- Sunucu yapılandırması, ders başkanı için bu çalışma alanını yetkilendirir.
+- URI normallaştırması, önbellek karışıklığını ve kodlanmış geçişleri reddeder.
+- Her yıkıcı silme form modunun çıkarılmasını gerektirir.
+- Çözüm içeriye gidiyor .`resultType: "input_required"`- Evet .
+- İmzalanmış .`requestState`Tam aday listesini ve orijinal argümanları bağlar.
+- Enjekte edilen tekrarlama depoları, sunucu durumları arasında aynı kabul edilen veya reddedilen durumu reddeder.
+- Yeniden deneme yeni bir talebinin kimliğini kullanır ve gönderir `resultType: "complete"`- Evet .
+
+Veri depoları hafıza içindedir, bu yüzden protokol davranışını incelemek kolaydır.
+
 ## Kullan
 
-`code/main.py`Not sunucusunu genişletiyor:
+Depo kökü:
 
-- `roots/list`sunucu'nun root list değiştirilmiş bildirimlerden sonra tekrar sorduğu cevap.
-- A.`notes_delete`kullanan araç`elicitation/create`Birden fazla not eşleşince anlaşılmazlık çıkarmak.
-- A.`notes_setup`URL modunun oluşturulmasını kullanarak ilk çalıştırma yapılandırma sayfasını açan bir araç (simülasyon).
-- Açıklanan köklerin dışında URI'lerde işlem yapmayı reddeden bir sınır kontrolü.
+```bash
+cd phases/13-tools-and-protocols/12-mcp-roots-and-elicitation/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
 
-Demo üç senaryoyu içerir: mutlu yol (bir maç), belirsizlik (üç maç, tetikleme yangınları), kökten çıkmış yazma (reddedildi).
+Beklenen kontrol noktaları:
+
+- Discovery, Köksüz Araçlar için reklam yapıyor.
+- Araç keşfi gönderileri `notes_delete`- Evet .`resultType`, sunucu kimliği ve önbelleğe işaretler.
+- İstek kimliği`1`formunu gönderir `inputRequests.delete_choice`- Evet .
+- İstek kimliği`2`İmzalanmış durumun yankılarını verir ve silinmeyi tamamlar.
+- Bir önbellek yolu ve kodlanmış bir geçiş yolu her ikisi de tutuluşu başarısız eder.
+- Değişmiş bir başlık orijinal onay durumunu tekrar kullanamaz.
+- Bir düşüş notu değişmez bırakır.
+- Not ve tekrarlama durumunu paylaşan iki sunucu nesnesi, her ikisi de bir onaylamayı yürütemez.
+- Boş ve açık form açıklamaları çalışırken sadece URL desteği doğru bir şekilde gönderir `-32021`form gereksinimleri.
+- Desteklenmeyen sürüm hataları tam olarak kullanılır `-32022`Veriler şekli.
+- İdsiz bir bildirim JSON-RPC cevabını üretmez.
 
 ## Gönder
 
-Bu ders bize çok yararlı .`outputs/skill-elicitation-form-designer.md`Kullanıcı onayına veya belirsizliğe ihtiyaç duyabilecek bir araç göz önüne alındığında, beceri başlatma formu şeması ve mesaj şablonu tasarlanır.
+`outputs/skill-elicitation-form-designer.md`Açık kapsamı, yetki kontrolleri, MRTR formu, yanıt dalları ve devlet bağlamasını tasarlıyor. Eski Kökleri kum kutu gibi tedavi etmeyi veya form modunda sır toplamayı reddediyor.
 
 ## Egzersizler
 
-1. Çık .`code/main.py`. Açıklama yolu tetikle; simülasyonlu kullanıcı cevabının araçta geri yönlendirilmesini onaylayın.
-
-2. Yeni bir araç ekle `notes_archive`UX'yi kontrol edin: bu, metinde tekrar soran modelle nasıl karşılaştırılır?
-
-3. İlk kez OAuth akışı için URL modunun çıkartılmasını uygulayın. Drift riskini not edin ve SDK sürüm koruyucu ekleyin.
-
-4. Uzaklaştırma`roots/list`İşlem: bir bildirim geldiğinde, sunucu, şimdi kullanılabilirliği dışındaki açık dosya elelerini atomik olarak yeniden okumalı ve yeniden taramalı.
-
-5. GitHub'da SEP-1036 sorunu tartışma temesini okuyun.
+1. Anıtlı tekrarlama depoyu SQLite ile değiştirin. Nonce'yi talep etmek ve notayı silmek için bir işlem kullanın, sonra iki işlemin her ikisinin de commit olamayacağını kanıtlayın.
+2. Ekle`url`Bu nedenle, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde de, diğer ülkelerde, diğer ülkelerde de, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde ve diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde ve diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde, diğer ülkelerde de, diğer ülkelerde, ülkelerde de, diğer ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, ülkelerde, kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat kat`inputResponses`- Evet .
+3. Hatırlatma not haritasını geçici bir SQLite veritabanı ile değiştirin. Mutasyon işleminin içindeki yetki ve içeriği tekrar kontrol edin.
+4. Gerçek bir dosya sistemi uygulaması için sembolik bağlantı politikası ekleyin. URI leksikal kısıtlaması tek başına simlink kaçışını neden durduramayacağını açıklayın.
+5. Modern MRTR işlemcilerin çıkışını eski sunucu başlatılmış çıkışlara harcayacak bir 2025-11-25 adaptörü tasarlayın.
 
 ## Anahtar Terimler
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Root | "Consent boundary" | URI the client has allowed the server to touch |
-| `roots/list` | "Server asks for scope" | Client returns the current root set |
-| `notifications/roots/list_changed` | "User changed scope" | Client signals the root set has mutated |
-| Elicitation | "Ask the user mid-call" | Server-initiated request for structured user input |
-| `elicitation/create` | "The method" | JSON-RPC method for elicitation requests |
-| Form mode | "Schema-driven form" | Flat JSON Schema rendered as a form in the client UI |
-| URL mode | "Browser redirect" | SEP-1036 experimental; opens a URL and waits |
-| `accept` / `decline` / `cancel` | "User response outcomes" | Three branches the server handles |
-| Disambiguation | "Pick one" | Common elicitation use case when a tool has N candidates |
-| Flat form | "Top-level properties only" | Elicitation schemas cannot nest |
+| Term | Meaning in 2026-07-28 |
+|------|------------------------|
+| Roots | Deprecated informational workspace hints, not authorization or sandboxing |
+| Explicit scope | Workspace, directory, or resource handle visible in request arguments |
+| Containment | Normalized path-component check that keeps a target inside a boundary |
+| Elicitation | Client feature for obtaining user input during an MCP operation |
+| Form mode | In-band structured user input using a restricted flat schema |
+| URL mode | Out-of-band interaction for sensitive or external workflows |
+| MRTR | Stateless input-required result followed by a fresh retry |
+| `requestState` | Opaque state echoed exactly and integrity-checked by the server |
+| Decline | Explicit user refusal |
+| Cancel | Dismissal or incomplete interaction without approval |
+
+## Miras Uygunluğu
+
+2025-11-25'e bağlı bir yaşıt için.`roots/list`- Evet .`notifications/roots/list_changed`, ve canlı sunucu tarafından başlatıldı `elicitation/create`Adaptör varlığını etiketlenir. Eski bir Kök listesi sunucu yetkisi geçmesine izin vermeyin ve protokol seans varsayımlarını modern işlemciye taşımayın.
 
 ## Daha Fazla Okumak
 
-- [MCP — Client roots spec](https://modelcontextprotocol.io/specification/draft/client/roots) Kanonik kök referansı
-- [MCP — Client elicitation spec](https://modelcontextprotocol.io/specification/draft/client/elicitation) Kanonik kaynaklama referansı
-- [Cisco — What's new in MCP elicitation, structured content, OAuth enhancements](https://blogs.cisco.com/developer/whats-new-in-mcp-elicitation-structured-content-and-oauth-enhancements) 2025-11-25 eklemeleri yürüyüş yolu
-- [MCP — GitHub SEP-1036](https://github.com/modelcontextprotocol/modelcontextprotocol) URL modunda başlatma önerisi (deney, sürükleme riski)
-- [The New Stack — How elicitation brings human-in-the-loop to AI tools](https://thenewstack.io/how-elicitation-in-mcp-brings-human-in-the-loop-to-ai-tools/) UX yürüyüş
+- [MCP 2026-07-28 Elicitation](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation)
+- [MCP 2026-07-28 Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP 2026-07-28 Roots deprecation](https://modelcontextprotocol.io/specification/2026-07-28/client/roots)
+- [MCP 2026-07-28 server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
