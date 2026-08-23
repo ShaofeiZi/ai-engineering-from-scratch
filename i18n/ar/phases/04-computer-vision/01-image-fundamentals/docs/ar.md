@@ -12,7 +12,7 @@
 - شرح كيف يتم تحويل المشهد المستمر إلى بيكسل ولماذا تحدد قرارات العينات/الكميات السقف على كل نموذج متدفق
 - قراءة، قطع، ومعاينة الصور كمتصفحات NumPy وتبديل بشكل متساوٍ بين تصميمات HWC و CHW
 - تحويل بين RGB ، مقياس الرمادي ، HSV ، و YCbCr وتبرير لماذا يوجد كل مساحة لون
-- تطبيق المعالجة المسبقة على مستوى البيكسل (تطبيق الطبيعية، وتوحيد، وتغيير الحجم، القناة الأولى) بالضبط كما يتوقع مشعل
+- تطبيق معالجة مسبقة على مستوى البيكسل (تطبيق الطبيعية، وتوحيد، وتغيير الحجم، القناة الأولى) بالضبط كما تتوقع نماذج رؤية PyTorch المتدربة مسبقا
 
 ## المشكلة
 
@@ -202,13 +202,12 @@ conv-output-size
 
 ## بناءها
 
-### الخطوة الأولى: قم بتحميل صورة وتفحص شكلها
+### الخطوة الأولى: قم ببناء تنصر الصورة وتفحص شكلها
 
-استخدم Pillow لتحميل أي JPEG أو PNG، وتحويل إلى NumPy، وتطبيق ما لديك.
+ابدأ بتصوير مصطنعي محدد بحيث يتم تشغيل المختبر الأول خارج الاتصال مع NumPy فقط. تشكيل الملفات هو حدود منفصلة: بمجرد أن يعيد مفكّر JPEG أو PNG بعصائر RGB ، فإن كل عملية تنسور أدناه هي نفسها.
 
 ```python
 import numpy as np
-from PIL import Image
 
 def synthetic_rgb(h=128, w=192, seed=0):
     rng = np.random.default_rng(seed)
@@ -220,8 +219,6 @@ def synthetic_rgb(h=128, w=192, seed=0):
     return np.clip(rgb, 0, 255).astype(np.uint8)
 
 arr = synthetic_rgb()
-# Or load from disk:
-# arr = np.asarray(Image.open("your_image.jpg").convert("RGB"))
 
 print(f"type:   {type(arr).__name__}")
 print(f"dtype:  {arr.dtype}")
@@ -231,7 +228,7 @@ print(f"max:    {arr.max()}")
 print(f"pixel at (0, 0): {arr[0, 0]}")
 ```
 
-الناتج المتوقع: `shape: (H, W, 3)`،`dtype: uint8`، نطاق`[0, 255]`هذا هو التمثيل القنوني على القرص سواء كانت البايتات تأتي من كاميرا، أو مُشعّر JPEG، أو مولد صناعي.
+الناتج المتوقع: `shape: (H, W, 3)`،`dtype: uint8`، نطاق`[0, 255]`هذا هو التمثيل القنوني المفكّر سواء كانت البايتات تأتي من كاميرا أو مُفكّر الصور أو هذا المُولد الصناعي
 
 ### الخطوة الثانية: تقسيم القنوات وإعادة ترتيب التخطيط
 
@@ -270,15 +267,16 @@ def rgb_to_hsv(rgb):
 
     h = np.zeros_like(cmax)
     mask = delta > 0
-    rmax = mask & (cmax == r)
-    gmax = mask & (cmax == g)
-    bmax = mask & (cmax == b)
+    argmax = np.argmax(rgb_f, axis=-1)
+    rmax = mask & (argmax == 0)
+    gmax = mask & (argmax == 1)
+    bmax = mask & (argmax == 2)
     h[rmax] = ((g[rmax] - b[rmax]) / delta[rmax]) % 6
     h[gmax] = ((b[gmax] - r[gmax]) / delta[gmax]) + 2
     h[bmax] = ((r[bmax] - g[bmax]) / delta[bmax]) + 4
     h = h * 60.0
 
-    s = np.where(cmax > 0, delta / cmax, 0)
+    s = np.divide(delta, cmax, out=np.zeros_like(delta), where=cmax > 0)
     v = cmax
     return np.stack([h, s, v], axis=-1)
 
@@ -326,58 +324,93 @@ print(f"roundtrip max pixel diff: {max_diff}    # should be 0 or 1")
 
 يجب أن يكون متوسط كل قناة قريبًا من الصفر ، std قريبًا من واحد. زوج التحكم / التخفيض هو بالضبط ما يفعله كل مشعل`transforms.Normalize`المكالمة تعمل تحت الغطاء
 
-### الخطوة 5: قم بإعادة الحجم باستخدام ثلاث طرق إقطاع
+### الخطوة 5: إعادة الحجم من الصفر
 
-مقارنة أقرب، مليوني، و ثنائي الكوب على مقياس عالي حتى يكون الفرق مرئي.
+الجوار الأقرب كل إحداثيات الخروج إلى بيكسل مصدر واحد. تحصل التقاطع المزدوج على البيكسلات الأربعة المحيطة وتدمجها عن بعد. تستخدم كلا التطبيقات أدناه إحداثيات مرتبطة مع نقاط النهاية بحيث تبقى البيكسلات المصدرة الأولى والأخيرة ثابتة.
 
 ```python
-target = (arr.shape[0] * 3, arr.shape[1] * 3)
+def resize_coordinates(source_length, target_length):
+    if target_length == 1:
+        return np.zeros(1, dtype=np.float32)
+    return np.linspace(0, source_length - 1, target_length, dtype=np.float32)
 
-nearest = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.NEAREST))
-bilinear = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BILINEAR))
-bicubic = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BICUBIC))
+def nearest_resize(image, target_height, target_width):
+    y = np.rint(resize_coordinates(image.shape[0], target_height)).astype(int)
+    x = np.rint(resize_coordinates(image.shape[1], target_width)).astype(int)
+    return image[y[:, None], x[None, :]]
+
+def bilinear_resize(image, target_height, target_width):
+    y = resize_coordinates(image.shape[0], target_height)
+    x = resize_coordinates(image.shape[1], target_width)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    y1 = np.minimum(y0 + 1, image.shape[0] - 1)
+    x1 = np.minimum(x0 + 1, image.shape[1] - 1)
+    wy = (y - y0)[:, None, None]
+    wx = (x - x0)[None, :, None]
+
+    source = image.astype(np.float32)
+    top = source[y0[:, None], x0[None, :]] * (1 - wx)
+    top += source[y0[:, None], x1[None, :]] * wx
+    bottom = source[y1[:, None], x0[None, :]] * (1 - wx)
+    bottom += source[y1[:, None], x1[None, :]] * wx
+    result = top * (1 - wy) + bottom * wy
+    return np.clip(np.rint(result), 0, 255).astype(image.dtype)
+
+target_height = arr.shape[0] * 3
+target_width = arr.shape[1] * 3
+nearest = nearest_resize(arr, target_height, target_width)
+bilinear = bilinear_resize(arr, target_height, target_width)
 
 def local_roughness(x):
     gy = np.diff(x.astype(float), axis=0)
     gx = np.diff(x.astype(float), axis=1)
     return float(np.abs(gy).mean() + np.abs(gx).mean())
 
-for name, out in [("nearest", nearest), ("bilinear", bilinear), ("bicubic", bicubic)]:
+for name, out in [("nearest", nearest), ("bilinear", bilinear)]:
     print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
 ```
 
-أقرب نقاط أعلى على الخشعة لأنه يحافظ على الحواف الصلبة. بلينير هو الأكثر سلاسة. بيكوبيك يجلس في المنتصف، الحفاظ على الحادة الملاحظة دون آثار خطوات السلم.
+يصل الجهاز القريب إلى أعلى درجات في الصلابة لأنه يحافظ على الحواف الصلبة. يعد التخطين أكثر سلاسة لأن كل بكسل جديد يجمع بين موقعين على كل محور. يمتد الشريك القابل للعمل نفس الفكرة المنفصلة إلى أربعة جيران لكل محور باستخدام جوهر كابت كيتمول-روم ، ثم يقوم بطبع جميع النتائج الثلاثة دون مكتبة الصور.
 
 ## استخدمها
 
-`torchvision.transforms`يجمع كل شيء أعلاه في خط أنابيب واحد يمكن تركيبه.`preprocess_imagenet`نعم، بالإضافة إلى الحجم والحصول.
+يقوم PyTorch بنفس العمليات على الجهازات المجهزة. يقوم الرمز أدناه بتغيير حجم الجانب الأقصى ، ويحصل على محاصيل مركزية ، ويعدّد كل قناة ، ويُنتج الجهاز النيوبي المجهز المُتدرب من قبل.
 
 ```python
 import torch
-from torchvision import transforms
-from PIL import Image
+import torch.nn.functional as F
 
-img = Image.fromarray(synthetic_rgb(256, 256))
+image_hwc = torch.from_numpy(synthetic_rgb(256, 320))
+batch = image_hwc.permute(2, 0, 1).unsqueeze(0).float() / 255.0
 
-pipeline = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+height, width = batch.shape[-2:]
+scale = 256 / min(height, width)
+resized_height = round(height * scale)
+resized_width = round(width * scale)
+batch = F.interpolate(
+    batch,
+    size=(resized_height, resized_width),
+    mode="bilinear",
+    align_corners=False,
+    antialias=True,
+)
 
-x = pipeline(img)
-print(f"tensor type:  {type(x).__name__}")
-print(f"tensor dtype: {x.dtype}")
-print(f"tensor shape: {tuple(x.shape)}      # (C, H, W)")
-print(f"per-channel mean: {x.mean(dim=(1, 2)).tolist()}")
-print(f"per-channel std:  {x.std(dim=(1, 2)).tolist()}")
+top = (resized_height - 224) // 2
+left = (resized_width - 224) // 2
+batch = batch[:, :, top:top + 224, left:left + 224]
 
-batch = x.unsqueeze(0)
-print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a model")
+mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+batch = (batch - mean) / std
+
+print(f"tensor dtype: {batch.dtype}")
+print(f"batched shape: {tuple(batch.shape)}")
+print(f"per-channel mean: {batch.mean(dim=(0, 2, 3)).tolist()}")
+print(f"per-channel std:  {batch.std(dim=(0, 2, 3)).tolist()}")
 ```
 
-أربعة خطوات، في هذا الترتيب الدقيق:`Resize(256)`يُقَدِّم الجانب الأقصر إلى 256 `CenterCrop(224)`يأخذ مساحة 224 × 224 من الوسط`ToTensor()`تقسم بـ 255 وتبادل HWC إلى CHW`Normalize`يخص متوسط ImageNet ويقسمه ب std. عكس هذا الترتيب يغير بصمت ما يصل إلى النموذج.
+أربعة خطوات، في هذا الترتيب الدقيق: تحويل البايت إلى العائمة وتبادل HWC إلى NCHW، وتغيير حجم الجانب الأقصى إلى 256، اتخاذ 224x224 المحاصيل المركزية، ثم خصم متوسط ImageNet وتقسم بحسب انحرافها القياسي. عكس هذا الترتيب يغير بصمت ما يصل إلى النموذج.
 
 ## أرسله
 
@@ -388,7 +421,7 @@ print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a m
 
 ## التمارين
 
-1. **(Easy)**تحميل JPEG مع OpenCV (`cv2.imread`) و مع وسادة. طبع كل من الشكليات والبيكسل في `(0, 0)`. شرح الفرق بين القناة والترتيب ، ثم كتابة تحويل خط واحد يجعل صف OpenCV متطابقة مع وسادة واحدة.
+1. **(Easy)**إخلق 2x2 RGB `uint8`تحويل HWC إلى CHW و العودة، طباعة كلا الشكليين، وإثبات رحلة ذهاب و ذهاب يحافظ على كل القيمة.
 2. **(Medium)**اكتب`standardize(img, mean, std)`و العكس الذي يمر معاً`roundtrip_max_diff <= 1`يجب أن تعمل وظائفك على صورة واحدة في HWC وعلى مجموعة في NCHW مع نفس المكالمة.
 3. **(Hard)**خذ ثلاث قنوات ImageNet الموحد التنسور وتشغيله من خلال 1x1 Conv الذي يتعلم مزيج وزنه من RGB في قناة واحدة على نطاق الرمادي.`[0.299, 0.587, 0.114]`، تجميدهم ، وتحقق من ان المخرج يطابق دليلك`rgb_to_grayscale`ما هي التحوّلات الكلاسيكية الأخرى في الفضاء اللونية التي يمكن كتابتها كتحوّل 1x1؟
 
