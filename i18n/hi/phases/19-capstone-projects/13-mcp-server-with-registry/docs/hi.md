@@ -1,152 +1,356 @@
-# कैपस्टोन 13  रजिस्ट्री और गवर्नेंस के साथ एमसीपी सर्वर
+# कैपस्टोन 13: रजिस्ट्री और गवर्नेंस के साथ स्टेटलेस एमसीपी सर्वर
 
-> मॉडल कॉन्टेक्स्ट प्रोटोकॉल भविष्य नहीं रहा और 2026 में डिफ़ॉल्ट टूल-यूज स्पेसिफिकेशन बन गया। एंथ्रोपिक, ओपनएआई, गूगल और हर प्रमुख आईडीई जहाज एमसीपी क्लाइंट। Pinterest ने एमसीपी सर्वर के अपने आंतरिक पारिस्थितिकी तंत्र को प्रकाशित किया। एएआईएफ रजिस्ट्री ने क्षमता मेटाडेटा को औपचारिक रूप दिया।`.well-known`. AWS ECS ने संदर्भ स्टेटलेस तैनाती प्रकाशित की। ब्लॉक के हंस-एजेंट ने होस्ट किए गए सहायक के अंदर एक ही प्रोटोकॉल रखा। 2026 उत्पादन आकार हैः StreamableHTTP परिवहन, OAuth 2.1 स्कोप, OPA नीति गेटिंग, और एक रजिस्ट्री जो प्लेटफॉर्म टीमों को सर्वर का पता लगाने, सत्यापित करने और सक्षम करने की अनुमति देता है। इसे अंत से अंत तक बनाएं।
+> उत्पादन एमसीपी एक सर्वर प्रक्रिया नहीं है। यह अनुबंधों की एक श्रृंखला हैः प्रकाशित मेटाडेटा, लाइव डिस्कवरी, एक राज्यहीन अनुरोध कूपन, प्राधिकरण, नीति, लेखा परीक्षा और तैनाती सबूत।
 
 **Type:** Capstone
-**Languages:** Python (server, via FastMCP) or TypeScript (@modelcontextprotocol/sdk), Go (registry service)
-**Prerequisites:** Phase 11 (LLM engineering), Phase 13 (tools and MCP), Phase 14 (agents), Phase 17 (infrastructure), Phase 18 (safety)
-**Phases exercised:**P11 · P13 · P14 · P17 · P18
-**Time:** 25 hours
+**Languages:** Python and TypeScript reference models; any production language
+**Prerequisites:** Phase 11, Phase 13, Phase 14, Phase 17, and Phase 18
+**Required MCP deep dives:** [Lesson 28: Tool Contracts](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md),[Lesson 29: Reliability](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md),[Lesson 30: Registry Supply Chain](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)और [Lesson 31: Conformance Operations](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)
+**Protocol target:**एमसीपी `2026-07-28`
+**Time:** ~25 hours
+
+## सीखने के लक्ष्य
+
+- राज्य रहित एमसीपी अनुरोध और परिणाम कूपन को लागू करें।
+- रजिस्ट्री मेटाडेटा को लाइव प्रोटोकॉल डिस्कवरी से अलग रखें।
+- निर्धारक, कैश-जागरूक उपकरण खोज निर्माण।
+- प्रत्येक उपकरण कॉल के लिए जारीकर्ता, दर्शक, दायरा और अनुमोदन नीति को लागू करें।
+- सत्र आत्मीयता के बिना Streamable HTTP को तैनात करें।
+- वायर, प्राधिकरण, नीति, रजिस्ट्री और ऑडिट सीमाओं पर व्यवहार का प्रमाण दें।
+
+## आवश्यक एमसीपी आवश्यक मार्ग
+
+इस कपास्टोन को उत्पादन के लिए तैयार होने से पहले क्रमशः चार जुड़े चरण 13 पाठों को पूरा करेंः
+
+1. [Lesson 28](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)यह सर्वर द्वारा प्रदर्शित किए जाने वाले उपकरण, स्कीम, सामग्री, पृष्ठीकरण, पूरा, रूटिंग और त्रुटि अनुबंध को परिभाषित करता है।
+2. [Lesson 29](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)रद्द दौड़, समय सीमा, अशक्तता, दबाव, पुनः प्रयास, और फिर से कनेक्ट व्यवहार को परिभाषित करता है।
+3. [Lesson 30](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)नामस्थान, उत्पत्ति, प्रवेश पिन, रजिस्ट्री स्थिति, बहाव, लेजर और रूलबैक प्रमाण को परिभाषित करता है।
+4. [Lesson 31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)स्वर्ण और नकारात्मक प्रतिलेखन, सख्त संस्करण युग, एसडीके अंतर जांच, प्रॉक्सी प्रूफ, संपादन, स्वास्थ्य और रिलीज गेटिंग को परिभाषित करता है।
+
+कैपस्टोन उन कलाकृतियों को एकीकृत करता है. यह उन्हें एक खुश पथ एसडीके परीक्षण के साथ प्रतिस्थापित नहीं करता है.
 
 ## समस्या
 
-एमसीपी उपकरण-उपयोग की भाषा बन गया। क्लाउड कोड, कर्सर 3, एम्प, ओपनकोड, जेमिनी सीएलआई, और हर प्रबंधित एजेंट अब एमसीपी सर्वर का उपभोग करते हैं। उत्पादन चुनौतियां सर्वरों को बनाने में नहीं हैं (फास्टएमसीपी इसे आसान बनाता है) लेकिन उद्यम आवश्यकताओं के साथ उन्हें पैमाने पर तैनात करनाः प्रति किरायेदार ओएथ स्कोप, विनाशकारी उपकरणों पर ओपीए नीति, स्ट्रीमएबलएचटीपी स्टेटलेस स्केलिंग, खोज के लिए एक रजिस्ट्री, ऑडिट लॉग प्रति उपकरण कॉल। Pinterest के आंतरिक MCP पारिस्थितिकी तंत्र और AAIF रजिस्ट्री विनिर्देश 2026 बार सेट करते हैं।
+एक आंतरिक मंच को केवल पढ़ने के लिए डेटा टूल और राज्य-बदलने वाले टूल का एक छोटा सेट चाहिए। डेवलपर्स को सर्वर की खोज करने, कैसे कनेक्ट करने, इसकी लाइव क्षमताओं का निरीक्षण करने और केवल उन ऑपरेशनों को कॉल करने में सक्षम होना चाहिए जिन्हें उन्हें उपयोग करने के लिए अधिकृत किया गया है।
 
-आप एक एमसीपी सर्वर बनाएंगे जो 10 आंतरिक उपकरणों (पोस्टग्रेस केवल पढ़ने के लिए, एस 3 लिस्टिंग, जिरा, रैखिक, डेटाडॉग, आदि) को उजागर करता है, प्लेटफॉर्म की खोज के लिए एक रजिस्ट्री यूआई, और विनाशकारी उपकरणों के लिए एक मानव-अनुमोदित गेट। लोड परीक्षण StreamableHTTP क्षैतिज स्केलिंग प्रदर्शित करता है। ऑडिट ट्रेल एक उद्यम सुरक्षा समीक्षा को संतुष्ट करता है।
+मुश्किल हिस्सा एक फ़ंक्शन को पंजीकृत नहीं करना है मुश्किल हिस्सा छह अलग-अलग सत्यों को संरेखित करना हैः
 
-## अवधारणा
+1. `server.json`सर्वर स्थापित या पहुँचा जा सकता है जहां बताता है।
+2. `server/discover`जो लाइव प्रक्रिया अब समर्थन करता है।
+3. प्रत्येक अनुरोध बताता है कि प्रोटोकॉल संशोधन और ग्राहक क्षमताओं का उपयोग करता है।
+4. प्राधिकरण एक कॉल करने वाले को सही जारीकर्ता, संसाधन और दायरे से बंधाता है।
+5. नीति तय करती है कि क्या यह विशिष्ट कार्रवाई चल सकती है।
+6. लेखा परीक्षा साक्ष्य रिकॉर्ड करता है कि सीमा पार क्या हुआ बिना रहस्य या संवेदनशील उपयोगिताओं के लीक किए।
 
-MCP 2026 संशोधन स्ट्रीमबलएचटीपी को डिफ़ॉल्ट परिवहन के रूप में अनिवार्य करता है। पहले के स्टीडियो-और-एसएसई प्रारूप के विपरीत, स्ट्रीमबलएचटीपी डिफ़ॉल्ट रूप से स्टेटलेस हैः एक एकल एचटीटीपी एंडपॉइंट जेएसओएन-आरपीसी अनुरोधों को स्वीकार करता है, प्रतिक्रियाओं को स्ट्रीम करता है, और अधिसूचनाओं के लिए लंबे समय तक चलने वाले कनेक्शन का समर्थन करता है। स्टेटलेस का मतलब है कि लोड बैलेंसर के पीछे क्षैतिज रूप से स्केलेबल।
+यदि इनमें से कोई भी बहता है, तो प्लेटफ़ॉर्म एक सर्वर को सूचीबद्ध कर सकता है जो पहुंच नहीं सकता है, एक असंगत क्लाइंट को रूट कर सकता है, किसी अन्य संसाधन के लिए एक टोकन को स्वीकार कर सकता है, या अपेक्षित समीक्षा के बिना विनाशकारी कार्रवाई का खुलासा कर सकता है।
 
-प्राधिकरण OAuth 2.1 है प्रति उपकरण स्कोप के साथ. एक टोकन स्कोप जैसे है`jira:read`,`s3:list`,`postgres:query:readonly`. एमसीपी सर्वर उपकरण कॉल के समय स्कोप की जांच करता है, न कि केवल सत्र की शुरुआत। उच्च जोखिम वाले उपकरणों के लिए, सर्वर किसी भी कॉल को अस्वीकार करता है जिसका स्कोप नहीं बढ़ाया गया है `approved:by:human`पिछले N मिनट के भीतर  कि ऊंचाई एक Slack समीक्षा कार्ड से आता है।
+## दो खोज परतें
 
-रजिस्ट्री एक अलग सेवा है. प्रत्येक MCP सर्वर एक`.well-known/mcp-capabilities`दस्तावेज़ अपने उपकरण मैनिफेस्ट, परिवहन URL, लेखक आवश्यकताओं के साथ। रजिस्ट्री सर्वेक्षण, सत्यापन और सूचकांक। प्लेटफॉर्म टीमों को यह देखने के लिए रजिस्ट्री UI का उपयोग किया जाता है कि कौन से उपकरण उपलब्ध हैं, उन्हें किस दायरे की आवश्यकता है, और कौन सी टीमें उन्हें मालिक हैं।
+रजिस्ट्री और लाइव एमसीपी सर्वर अलग-अलग सवालों के जवाब देते हैं।
 
-## वास्तुकला
+| Layer | Contract | Question it answers |
+|---|---|---|
+| Publication | `server.json` and Registry API | What is this server, where is its package or remote endpoint, and how is it configured? |
+| Runtime | `server/discover` | Which protocol versions, capabilities, extensions, and server identity does this process support? |
 
-```
-MCP client (Claude Code, Cursor 3, ...)
-          |
-          v
-StreamableHTTP over HTTPS (JSON-RPC + streaming)
-          |
-          v
-MCP server (FastMCP) behind load balancer
-          |
-   +------+------+---------+----------+------------+
-   v             v         v          v            v
-Postgres    S3 listing  Jira       Linear     Datadog
-(read-only) (paged)     (read)     (read)     (query)
-          |
-   +------+-------------+
-   v                    v
- OPA policy gate   destructive tool MCP (separate server)
-                        |
-                        v
-                   human approval via Slack
-                        |
-                        v
-                   audit log (append-only, per-tenant)
+आधिकारिक रजिस्ट्री में एक संस्करण का उपयोग किया जाता है `server.json`एक रिमोट प्रविष्टि एक Streamable HTTP URL का नाम दे सकती हैः
 
-  registry service
-     |
-     v  GET /.well-known/mcp-capabilities from each server
-     v
-     UI: search / validate / enable-disable / ownership
+```json
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.example/internal-readonly",
+  "title": "Internal Read-Only Tools",
+  "description": "Read-only incident and data lookup tools.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.internal.example.com/readonly"
+    }
+  ]
+}
 ```
 
-## स्टैक
+रजिस्ट्री स्कीम संस्करण और एमसीपी प्रोटोकॉल संशोधन स्वतंत्र हैं. एक तारीख को दूसरे से मेल खाने के लिए फिर से न लिखें. प्रत्येक दस्तावेज़ को अपने स्वयं के अनुबंध के अनुसार मान्य करें।
 
-- सर्वर फ्रेमवर्क: फास्टएमसीपी (पाइटन) या `@modelcontextprotocol/sdk`(टाइपस्क्रिप्ट)
-- परिवहनः HTTPS (अराजकता रहित) पर StreamableHTTP
-- Auth: OAuth 2.1 के साथ कार्यभार पहचान SPIFFE / SPIRE के माध्यम से
-- नीति: ओपीए/रेगो नियम प्रति उपकरण; नीति निर्णय सेवा अनुरोध पर
-- रजिस्ट्रीः स्वयं-होस्ट, खपत `.well-known/mcp-capabilities`प्रपत्र
-- मानव अनुमोदनः विनाशकारी उपकरणों के लिए स्लैक इंटरैक्टिव संदेश
-- तैनातीः AWS ECS Fargate या Fly.io, प्रति किरायेदार एक सर्वर या किरायेदार स्कोपिंग के साथ साझा
-- ऑडिटः प्रति कॉल वंशावली के साथ संरचित JSONL प्रति किरायेदार बाल्ट
+योजना वैधता नामस्थान स्वामित्व साबित नहीं करता है। एक प्रकाशक सत्यापित के लिए`example.com`रिवर्स DNS नाम स्थान का उपयोग करता है `com.example/*`रजिस्ट्री प्रमाणीकरण प्रवाह उस स्वामित्व साबित करता है. डोमेन लेबल को उनके सामान्य क्रम में नाम एक अलग नाम स्थान रखने.
+
+स्टडीलिब मॉडल `validate_registry_document`कार्य एक आंशिक दूरस्थ प्रोफ़ाइल सत्यापनकर्ता है। यह आवश्यक अधिकारी की जांच करता है `name`,`description`और `version`फ़ील्ड; वैकल्पिक `title`; प्रकाशित नाम और लंबाई की सीमाएँ; ठोस संस्करण का आकार; और प्रत्येक `streamable-http`या `sse`रिमोट के HTTP(S) URL आकार. यह भी एक गैर-खाली आवश्यकता होती है `remotes`सूची क्योंकि इस capstone हमेशा एक रिमोट पर जीवित-सुनता।`validate_publisher_namespace`सत्यापित प्रकाशक डोमेन के साथ अलग से नाम की जांच करता है, जबकि `validate_runtime_alignment`प्रकाशन का नाम और संस्करण लाइव के साथ तुलना करता है `serverInfo`. आधिकारिक योजना केवल पैकेज रिकॉर्ड और अधिक दूरस्थ क्षेत्रों का समर्थन करती है. प्रकाशन से पहले, आधिकारिक JSON योजना या `mcp-publisher`; इस निर्भरता मुक्त उपसमूह को पूर्ण योजना सत्यापन के रूप में प्रस्तुत न करें।
+
+सर्वर को लागू करना होगा `server/discover`; एक क्लाइंट इसे अन्य तरीकों से पहले कॉल कर सकता है. यह कैपस्टोन क्लाइंट अंत बिंदु को हल करने के बाद ऐसा करता है, और वर्तमान प्रोटोकॉल संशोधन और लाइव क्षमताओं को प्राप्त करता हैः
+
+```json
+{
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "com.example/internal-readonly",
+      "version": "1.0.0"
+    }
+  },
+  "ttlMs": 3600000,
+  "cacheScope": "public"
+}
+```
+
+एक निजी कैटलॉग अतिरिक्त स्वामित्व, समीक्षा या जीवनचक्र डेटा को सूचकांकित कर सकता है, लेकिन उसे उन डेटा को एमसीपी वायर फ़ील्ड या रूट के रूप में आविष्कार नहीं करना चाहिए `server.json`जब सार्वजनिक कस्टम मेटाडेटा आवश्यक हो, तब रजिस्ट्री के `_meta.io.modelcontextprotocol.registry/publisher-provided`विस्तार और 4 केबी की सीमा के भीतर रहना।
+
+## बिना नागरिकता वाले एमसीपी कोर
+
+एमपीसी संशोधन `2026-07-28`प्रोटोकॉल सत्रों को हटा देता है और `initialize`/`notifications/initialized`यह भी हटा देता है`Mcp-Session-Id`. .
+
+प्रत्येक अनुरोध में प्रोटोकॉल संदर्भ होता है `params._meta`:
+
+```json
+{
+  "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+  "io.modelcontextprotocol/clientCapabilities": {},
+  "io.modelcontextprotocol/clientInfo": {
+    "name": "internal-platform-client",
+    "version": "1.0.0"
+  }
+}
+```
+
+संस्करण और क्षमताएं अनुरोध तथ्य हैं, कनेक्शन तथ्य नहीं। एक लोड बैलेंसर विभिन्न स्वस्थ प्रतिकृतियों को लगातार अनुरोध भेज सकता है क्योंकि प्रतिलिपि संदेश से अनुरोध को मान्य कर सकती है।
+
+सामान्य परिणामों में शामिल हैं `resultType: "complete"`. सर्वर को अपनी पहचान दर्ज करनी चाहिए `_meta.io.modelcontextprotocol/serverInfo`प्रत्येक परिणाम पर. एक गायब या गैर स्ट्रिंग प्रोटोकॉल संस्करण अमान्य पैरामीटर है `-32602`. त्रुटि `-32022`केवल एक आपूर्ति स्ट्रिंग के लिए है जो समर्थित नहीं है, के साथ ठीक `{"supported": ["2026-07-28"], "requested": "..."}`इसके आंकड़ों के रूप में।
+
+### छिपाया जा सकता खोज
+
+`tools/list`एक ही प्रभावी उपकरण सेट के लिए निर्धारक होना चाहिए। परिणाम में शामिल हैंः
+
+- `ttlMs`, ग्राहक के लिए ताजापन संकेत;
+- `cacheScope`, या `public`या `private`.
+- एक स्थिर उपकरण क्रम ताकि समान सूचियों शीघ्र कैश का पुनः उपयोग कर सकें;
+- `resultType: "complete"`और सर्वर पहचान मेटाडेटा।
+
+प्रति उपयोगकर्ता प्राधिकरण को सामान्य रूप से उत्पन्न करना चाहिए `cacheScope: "private"`. साझा सार्वजनिक कैश के पीछे उपयोगकर्ता-विशिष्ट उपकरण दृश्यता न रखें।
+
+## स्ट्रीम करने योग्य HTTP
+
+एक नेटवर्क सर्वर एक MCP एंडपॉइंट को उजागर करता है जो POST स्वीकार करता है। प्रत्येक JSON-RPC अनुरोध या सूचना को अपना POST मिलता है।
+
+एक अनुरोध के लिए, सर्वर या तो एक JSON वस्तु या उस अनुरोध के लिए स्कोप की SSE धारा लौटाता है। एक लंबे समय तक चलने वाला `subscriptions/listen`अनुरोध में परिवर्तन सूचनाएँ शामिल हैं। कोई स्टैंडअलोन GET स्ट्रीम, सत्र DELETE, सत्र हेडर या `Last-Event-ID`वर्तमान परिवहन में पुनः खेलें।
+
+प्रत्येक अनुरोध में निम्नलिखित शामिल हैंः
+
+- `MCP-Protocol-Version`, शरीर के मेटाडेटा से मेल लेना;
+- `Mcp-Method`, JSON-RPC विधि से मेल खाती है;
+- `Mcp-Name`के लिए`tools/call`,`resources/read`और `prompts/get`.
+- `Accept: application/json, text/event-stream`. .
+
+निर्दिष्ट के साथ असंगत दर्पण हेडर अस्वीकार `-32020`त्रुटि। मान्य करें `Origin`, स्थानीय विकास सर्वर को लूपबैक से बांधें, दूरस्थ क्लाइंट को प्रमाणित करें, और बंद अनुरोध-स्कोप एसएसई प्रतिक्रिया को रद्द के रूप में व्यवहार करें।
+
+```mermaid
+flowchart LR
+  R[Registry API] --> J[server.json]
+  J --> C[MCP client]
+  C --> D[server/discover]
+  C --> L[tools/list]
+  C --> G[Authorization and policy gateway]
+  G --> RO[Read-only MCP replicas]
+  G --> RW[State-changing MCP replicas]
+  RO --> A[Audit sink]
+  RW --> H[Approval record]
+  RW --> A
+```
 
 ```figure
 cf-mcp-gate
 ```
 
+## प्राधिकरण और नीति
+
+परिवहन मेटाडेटा प्राधिकरण नहीं है. प्रत्येक कॉल पर प्राधिकरण को मान्य करें.
+
+दूरस्थ सर्वर के लिएः
+
+1. संरक्षित संसाधन मेटाडेटा खोजें।
+2. उस संसाधन के लिए प्राधिकरण सर्वर का चयन करें।
+3. ग्राहक पंजीकरण के लिए क्लाइंट आईडी मेटाडेटा दस्तावेजों को प्राथमिकता दें. गतिशील क्लाइंट पंजीकरण को संगतता समर्थन के रूप में देखें।
+4. प्राधिकरण के दौरान संसाधन संकेतक भेजें।
+5. एक लौटा दी गई पुष्टि करें `iss`प्रवाह के लिए दर्ज किए गए प्राधिकरण सर्वर के प्रति मूल्य।
+6. जारीकर्ता द्वारा प्रमुख ग्राहक क्रेडेंशियल। कभी भी जारीकर्ता के बीच पंजीकरण डेटा का पुनः उपयोग न करें।
+7. MCP सर्वर पर टोकन जारीकर्ता, दर्शक या संसाधन, समाप्ति और दायरे को मान्य करें।
+8. ठोस उपकरण और तर्क पर एक दूसरा नीतिगत निर्णय लागू करें।
+
+उपकरण के रूप में टिप्पणी `readOnlyHint`और `destructiveHint`ग्राहकों को जोखिम में मदद करें। वे विश्वसनीय प्राधिकरण नियंत्रण नहीं हैं।
+
+### अनुमोदन एक रिकॉर्ड है, एक जादुई दायरा नहीं
+
+एक राज्य-बदलने वाले कॉल को अभिनेता, उपकरण, सामान्यीकृत तर्क या पाचन, लक्ष्य वातावरण, समाप्ति और एक बार या दोहराने वाले उपयोग नीति के लिए बाध्य अनुमोदन रिकॉर्ड की आवश्यकता होती है। अकेले चैट संदेश अनुमोदन का प्रमाण नहीं है।
+
+पायथन मॉडल सॉर्ट की गई कुंजी के साथ कैनोनिक JSON हैश करता है, फिर टोकन विषय, उपकरण नाम, सर्वर URL और समाप्ति के साथ उस पचाने को बांधता है। हैंडलर चलाने से पहले एक भी तर्क बदलने के बाद रिकॉर्ड को फिर से खेलना विफल रहता है। अनुमोदन अलग सबूत है, न कि एक्सेस टोकन में जोड़ा गया दायरा।
+
+उच्च जोखिम वाले उपकरण को एक अलग रूप से समीक्षा योग्य सतह पर रखें जब यह विस्फोट त्रिज्या को काफी कम करता है। यदि क्रेडेंशियल, नीति, तैनाती पहचान और ऑडिट नियंत्रण भी अलग हैं तो ही पृथक करना उपयोगी है।
+
 ## इसे बनाओ
 
-1. **Tool surface.**10 आंतरिक उपकरण प्रदर्शित करेंः पोस्टग्रेस केवल पढ़ने के लिए क्वेरी, एस 3 सूची ऑब्जेक्ट्स, जिरा खोज / प्राप्त, रैखिक खोज / प्राप्त, डेटाडॉग मीट्रिक क्वेरी, पेजरड्यूटी ऑन-कॉल खोज, गिटहब केवल पढ़ने के लिए, संज्ञा खोज, स्लैक खोज, सेल्सफोर्स पढ़ने। प्रत्येक उपकरण में एक टाइप स्कीमा और एक स्कोप लेबल है।
+### 1. प्रकाशन मॉडल मेटाडेटा
 
-2. **FastMCP server.**उपकरण स्थापित करें. StreamableHTTP परिवहन कॉन्फ़िगर करें. OAuth टोकन अंतर्दृष्टि और दायरा प्रवर्तन के लिए एक मध्यवेयर जोड़ें.
+स्कीम बनाएँ और वैध करें `server.json`. प्रकाशक के लिए प्रमाणित नामस्थान के अंदर एक स्थिर नाम, प्लस संस्करण, विवरण, आधिकारिक `repository`या `packages`यदि लागू हो तो मेटाडेटा, और रिमोट या स्टूडियो ट्रांसपोर्ट। पर्यावरण-विभेद्य इनपुट के रूप में रहस्य बनाए रखें, कभी भी शाब्दिक मान नहीं।
 
-3. **OPA policy.**प्रति उपकरण नीतिः किस सीमाओं द्वारा कॉल की अनुमति दी जाती है, PII को संपादित करने के लिए क्या लागू होता है, उपयोगिता भार आकार के कैप क्या लागू होते हैं। निर्णय सेवा हर उपकरण कॉल पर बुलाया जाता है।
+### 2. प्रत्यक्ष खोज को लागू करें
 
-4. **Registry service.**मतगणना करने वाली अलग-अलग गो या टीएस सेवा `.well-known/mcp-capabilities`पंजीकृत सर्वर से, JSON योजना के साथ मान्य करता है, और एक सूची / खोज / सत्यापित / सक्षम करने योग्य UI उजागर करता है।
+कार्यान्वयन`server/discover`किसी भी सुविधा आरपीसी से पहले। समर्थित प्रोटोकॉल संस्करणों, क्षमताओं, एक्सटेंशन और सर्वर पहचान का विज्ञापन करें। `-32022`. .
 
-5. **Capability manifest.**प्रत्येक सर्वर उजागर करता है `.well-known/mcp-capabilities`के साथः उपकरण सूची, लेखक आवश्यकताओं, परिवहन URL, मालिक टीम, SLO.
+### 3. देशहीन लिफाफा लागू करें
 
-6. **Destructive tool separation.**उत्परिवर्तन राज्य (जिरा बनाएँ, रैखिक बनाएँ, पोस्टग्रेस लिखें) के उपकरण एक और अधिक सख्त auth प्रवाह के साथ एक दूसरे MCP सर्वर पर रहते हैंः टोकन में एक होना चाहिए `approved:by:human`स्लैक कार्ड के माध्यम से 15 मिनट के भीतर दायरा बढ़ाया गया।
+प्रत्येक अनुरोध में प्रोटोकॉल संस्करण और क्लाइंट क्षमताओं की आवश्यकता होती है।`resultType`प्रत्येक परिणाम में सर्वर की पहचान. प्रारंभ स्थिति, कनेक्शन-स्कैन क्षमता कैश, और सत्र पहचानकर्ताओं को हटा दें.
 
-7. **Audit log.**प्रति किरायेदार केवल जोड़ने के लिए JSONL: `{timestamp, user, tool, args_redacted, response_redacted, outcome}`. लिखने से पहले प्रेसिडियो के माध्यम से पीआईडी को संपादित करें.
+### 4. उपकरण सतह का निर्माण
 
-8. **Load test.**StreamableHTTP पर 100 समवर्ती क्लाइंट। एक दूसरी प्रतिकृति जोड़कर क्षैतिज स्केलिंग प्रदर्शित करें; सत्र चिपचिपाहट के बिना लोड बैलेंसर को पुनः वितरित करें।
+दो केवल-पढ़ने के उपकरण और एक राज्य-बदलने के उपकरण के साथ शुरू करें। प्रत्येक को एक सीमित JSON योजना, सटीक विवरण, निर्धारात्मक परिणाम आकार और ईमानदार टिप्पणी दें। आउटपुट योजनाओं को जोड़ें जब ग्राहक संरचित परिणामों पर भरोसा करते हैं।
 
-9. **Conformance tests.**दोनों सर्वरों के खिलाफ आधिकारिक MCP अनुरूपता सूट चलाएं. सभी अनिवार्य अनुभागों को पास करें.
+### 5. कैश- जागरूक सूची जोड़ें
 
-## इसका प्रयोग करें
+ के साथ स्थिर क्रम में उपकरण वापस`ttlMs`और `cacheScope`. कैश समाप्ति और सूची परिवर्तन सूचना व्यवहार को अलग से अभ्यास करें।
 
+### 6. प्राधिकरण और नीति जोड़ें
+
+जारीकर्ता, दर्शकों, समाप्ति और दायरा को मान्य करें। प्रत्येक उपकरण कॉल के लिए नीति निर्णय चलाएं। उच्च जोखिम वाले कार्यों के लिए सटीक अनुमोदन को बाध्य करें। एक हैंडल को निष्पादित करने से पहले अनुपलब्ध या अप्रचलित अनुमोदनों को अस्वीकार करें।
+
+### 7. अलग रजिस्टर और रनटाइम वैलिडेशन
+
+स्थैतिक को मान्य करें `server.json`रिकॉर्ड, फिर दूरस्थ अंत बिंदु जांच के साथ `server/discover`. रिपोर्ट ड्रिफ्ट जब प्रकाशित रिमोट, पहचान, संस्करण या आवश्यक क्षमताएं लाइव प्रक्रिया से असहमत होती हैं।
+
+### 8. लेखा परीक्षा प्रमाण जोड़ें
+
+अभिनेता, जारीकर्ता, संसाधन, उपकरण, नीति निर्णय, अनुरोध पहचानकर्ता, ट्रैक संदर्भ, विलंबता और परिणाम रिकॉर्ड करें। दृढ़ता से पहले संवेदनशील तर्कों और परिणामों को पुनः लिखें या पचाने। मॉडल दृश्यमान संदर्भ से बाहर ऑडिट सिंक रखें।
+
+### 9. क्षैतिज स्केलिंग का अभ्यास करें
+
+लोड बैलेंसर के पीछे दो स्टेटलेस प्रतिकृतियां रखें। कम से कम 100 समवर्ती अनुरोध भेजें। यह प्रदर्शित करें कि सटीकता आत्मीयता पर निर्भर नहीं करती है। यदि किसी उपकरण को क्रॉस-कॉल की स्थिति की आवश्यकता है, तो एक स्पष्ट अस्पष्ट हैंडल का निर्माण करें और इसे साझा टिकाऊ प्रणाली में स्टोर करें।
+
+### 10. असली तार पार
+
+वास्तविक सर्वर बाइनरी के खिलाफ अनुरूपता जांच करें। केवल एसडीके ऑब्जेक्ट्स को नहीं, बल्कि अनुरोध हेडर और जेएसओएन निकायों को कैप्चर करें। गलत संस्करण, हेडर असंगतता, अनुपलब्ध दायरा, गलत दर्शक, गलत रूपरेखा वाले तर्क, हैंडल विफलता, रद्द करना और कैश समाप्ति का अभ्यास करें।
+
+## आवश्यक साक्ष्य पैक
+
+एक सबमिशन अपूर्ण है जब तक कि इसमें सभी पांच साक्ष्य वर्ग शामिल नहीं हैंः
+
+| Evidence | Minimum proof | Source lesson |
+|---|---|---|
+| Wire | Redacted raw headers and JSON-RPC bodies for golden and negative cases, including metadata type failure, header mismatch, unsupported version, missing or unknown `resultType`, notification no-response, and response ID matching | [Lesson 31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md) |
+| Proxy | The same stable case run directly and through the deployed intermediary, with ingress, origin, and egress status and body digests; prove protocol errors are not collapsed into generic 500 responses and streaming is not buffered | [Lessons 29](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md) and [31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md) |
+| Admission | Verified publisher namespace, immutable Registry record digest, artifact or remote provenance, live `server/discover` identity and capability observation, descriptor pin, current Registry status, and admission-ledger event | [Lesson 30](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md) |
+| Retry | A cancellation-versus-completion race, explicit timeout, safe read retry, mutation idempotency key, reconnect refetch, and proof that request cancellation cannot silently become durable task cancellation | [Lesson 29](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md) |
+| Rollback | Exact previous version, admission and artifact digests, descriptor pin, active Registry status, current health window, route restoration result, and redacted decision evidence | [Lessons 30](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md) and [31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md) |
+
+रिलीज़ के साथ संपादित पैक का एक डाइजेस्ट स्टोर करें। यदि कोई वर्ग गायब है, तो रिलीज़ को रखें। प्रक्रिया में डिस्पैचर से प्रॉक्सी व्यवहार का अनुमान न लगाएं, रजिस्ट्री उपस्थिति से प्रवेश न करें, एक नई JSON-RPC आईडी से सुरक्षा पुनः प्रयास करें, या पिछले तैनाती से रॉलबैक तैयारता न करें।
+
+## स्थानीय संदर्भ मॉडल
+
+पायथन मॉडल रजिस्ट्री मेटाडेटा, रिवर्स-डीएनएस प्रकाशक नामस्थान सत्यापन, प्रकाशन-टू-रनटाइम पहचान जांच, लाइव डिस्कवरी, निर्धारक उपकरण सूची, प्रति अनुरोध मेटाडेटा, विश्वसनीय-प्रदाता, दर्शक, समाप्ति और दायरा जांच, कार्रवाई-बाउंड अनुमोदन, एक दस्तावेजीकृत आंशिक रजिस्ट्री सत्यापन, नीति, और नेटवर्क सॉकेट खोले बिना लेखा परीक्षा प्रदर्शित करता हैः
+
+```bash
+cd phases/19-capstone-projects/13-mcp-server-with-registry
+python3 code/main.py
+python3 -m unittest discover -s code/tests -v
 ```
-$ curl -H "Authorization: Bearer eyJhbGc..." \
-       -X POST https://mcp.internal.example.com/ \
-       -d '{"jsonrpc":"2.0","method":"tools/call",
-            "params":{"name":"postgres.readonly","arguments":{"sql":"SELECT 1"}}}'
-[registry]   capability validated: postgres.readonly v1.2
-[policy]    scope postgres:query:readonly present; allowed
-[audit]     logged: user=u42 tool=postgres.readonly outcome=ok
-response:    { "result": { "rows": [[1]] } }
+
+टाइपस्क्रिप्ट परियोजना एमसीपी एसडीके के बिना स्टूडियो पर स्टेटलेस जेएसओएन-आरपीसी आकार को उजागर करती है।`tools/call`पथ द्वारा विज्ञापित समान सीमांत इनपुट योजनाओं को लागू करता है `tools/list`; ज्ञात उपकरण के लिए अमान्य तर्क एक पूर्ण परिणाम देता है `isError: true`निष्पादक को बुलाए बिनाः
+
+```bash
+cd phases/19-capstone-projects/13-mcp-server-with-registry/code/ts
+npm install
+npm run typecheck
+npm test
+npm run demo
+```
+
+ये मॉडल स्थानीय अनुबंध तर्क साबित करते हैं। वे HTTP हेडर, OAuth एक्सचेंज, रजिस्ट्री प्रकाशन, OPA एकीकरण, लोड बैलेंसिंग या कलेक्टर रसीद को साबित नहीं करते हैं।
+
+## तार उदाहरण
+
+```http
+POST /mcp HTTP/1.1
+Host: mcp.internal.example.com
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: postgres.readonly
+Authorization: Bearer REDACTED
+
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "tools/call",
+  "params": {
+    "name": "postgres.readonly",
+    "arguments": {"sql": "SELECT 1"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "internal-platform-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
 ```
 
 ## इसे भेजें
 
-`outputs/skill-mcp-server.md`OAuth 2.1 स्कोप और OPA गेटिंग के साथ आंतरिक उपकरणों के लिए एक उत्पादन-ग्रेड MCP सर्वर + रजिस्ट्री + ऑडिट परत।
+एक भंडारण जहाज जिसमें शामिल हैंः
 
-| Weight | Criterion | How it is measured |
-|:-:|---|---|
-| 25 | Spec conformance | StreamableHTTP + capability manifest passes MCP conformance tests |
-| 20 | Security | Scope enforcement, OPA coverage across every tool, secret hygiene |
-| 20 | Observability | Per-tool-call audit log with PII redaction |
-| 20 | Scale | 100-client load test horizontal scale demonstration |
-| 15 | Registry UX | Discover / validate / enable-disable workflow |
-| **100** | | |
+- एक योजना-मान्य `server.json`.
+- केवल-पढ़ने और राज्य बदलने वाले सर्वर सतहें;
+- `server/discover`, निर्धारक `tools/list`, और नीतिगत-गॉट`tools/call`.
+- दो आदान-प्रदान योग्य प्रतिकृति के साथ एक स्ट्रीम करने योग्य HTTP तैनाती;
+- प्राधिकरण और अनुमोदन को एकीकृत करना;
+- रजिस्ट्री प्रकाशक या निजी रजिस्ट्री एपीआई एडाप्टर;
+- नीतिगत परिभाषाएं और कार्रवाई-बंद अनुमोदन रिकॉर्ड;
+- लेखा परीक्षा के आउटपुट और निशान प्रसार को संपादित किया गया;
+- तार और प्रॉक्सी विफलता का प्रमाण;
+- प्रवेश, पुनः परीक्षण, स्वास्थ्य, और रूलबैक सबूतों को संपादित पैक का एक पाचन के साथ।
+
+| Weight | Criterion | Evidence |
+|---:|---|---|
+| 25 | Protocol correctness | Stateless request metadata, discovery, results, headers, and negative cases |
+| 20 | Authorization | Issuer, audience, expiry, scope, and action-bound approval cases |
+| 15 | Registry integrity | Valid `server.json`, publication record, live discovery probe, and drift report |
+| 15 | Policy and safety | Allow, deny, malformed, stale approval, and sensitive-data cases |
+| 15 | Scale and reliability | Two replicas, no affinity dependency, cancellation, timeout, and recovery |
+| 10 | Auditability | Redacted receiver-side audit and trace evidence |
 
 ## व्यायाम
 
-1. एक नया उपकरण जोड़ें (संयोजन खोज) इसे कोर सर्वर को छूने के बिना रजिस्ट्री सत्यापन प्रवाह के माध्यम से भेजें।
-
-2. एक OPA नीति लिखें जो Postgres क्वेरी के परिणामों को नामित स्तंभों से सम्पादित करता है `email`,`ssn`या `phone`. एक जांच प्रश्न के साथ अभ्यास.
-
-3. स्थानीय विलंबता पर स्ट्रीम करने योग्य HTTP बनाम स्टिडियो बेंचमार्क करें। प्रति कॉल रिपोर्ट p50/p95.
-
-4. प्रति किरायेदार कोटा लागू करेंः प्रति किरायेदार प्रति उपकरण प्रति मिनट अधिकतम N कॉल। दूसरे OPA नियम के माध्यम से लागू करें।
-
-5. MCP अनुरूपता सूट को  से चलाएं[mcp-conformance-tests](https://github.com/modelcontextprotocol/conformance)और हर असफलता को ठीक करना।
+1. लाइव सर्वर को अपरिवर्तित छोड़ते हुए प्रकाशित रिमोट URL बदलें. रजिस्ट्री सत्यापन रिपोर्ट को सटीक बहाव बनाएं।
+2. भेजें`tools/list`दो बार समान इनपुट के साथ और साबित बाइट-स्थिर उपकरण क्रम.`ttlMs`और ताज़ा.
+3. एक वैध शरीर को एक अलग के साथ भेजें `MCP-Protocol-Version`हेडर. वापसी `-32020`और नीति या उपकरण का उपयोग न करें।
+4. केवल-पढ़ने के लिए सर्वर के लिए एक टोकन मचाएं और इसे राज्य-बदलने वाले सर्वर को प्रस्तुत करें। प्रूफ ऑडियंस सत्यापन संचालक चलाने से पहले विफल हो जाता है।
+5. एक सामान्य तर्क को एक सामान्य तर्क को एक सामान्य तर्क को एक सामान्य तर्क के साथ जोड़ें। एक फ़ील्ड को बदलें और पुष्टि करें कि अनुमोदन को दोहराया नहीं जा सकता है।
+6. लगातार कॉल को बारी-बारी से प्रतिकृतियों पर रूट करें. जहां भी वर्कफ़्लो को निरंतरता की आवश्यकता होती है, वहां छिपे हुए प्रक्रिया मेमोरी को स्पष्ट साझा हैंडल से बदलें।
+7. अनुरोध-स्कोप एसएसई कनेक्शन को तोड़ें और एक नई JSON-RPC अनुरोध आईडी के साथ पुनः प्रयास करें।`Last-Event-ID`पुनर्प्राप्ति पथ का उपयोग किया जाता है।
 
 ## प्रमुख शर्तें
 
 | Term | What people say | What it actually means |
-|------|-----------------|------------------------|
-| StreamableHTTP | "2026 MCP transport" | Stateless HTTP + streaming; replaces SSE + stdio for networked servers |
-| Capability manifest | "Well-known doc" | `.well-known/mcp-capabilities` with tool list, auth, transport URL |
-| OPA / Rego | "Policy engine" | Open Policy Agent for authorizing tool calls against external rules |
-| Scope elevation | "Approved-by-human" | Short-lived scope granted via Slack approval, required for destructive tools |
-| Registry | "Tool discovery" | Service that indexes MCP servers from their capability manifests |
-| Workload identity | "SPIFFE / SPIRE" | Cryptographic service identity for OAuth token issuance |
-| Conformance suite | "Spec tests" | Official MCP test battery for StreamableHTTP + tool manifest correctness |
+|---|---|---|
+| Stateless MCP | "No state anywhere" | No protocol session; cross-call state is explicit and server-managed |
+| `server.json` | "The tool manifest" | Registry metadata for naming, packaging, configuration, and transports |
+| `server/discover` | "The handshake" | A normal mandatory RPC for live versions and capabilities, not a session initializer |
+| Cache scope | "Can I cache it?" | Whether a cacheable result is safe for shared or private reuse |
+| Policy decision | "The token allows it" | A separate decision over actor, tool, target, arguments, and context |
+| Approval record | "A human clicked yes" | Evidence bound to one actor and consequential action under an expiry policy |
+| Explicit handle | "A session ID" | Ordinary application data for named server-managed state, not protocol connection state |
 
 ## आगे पढ़ना
 
-- [Model Context Protocol 2026 Roadmap](https://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/) StreamableHTTP, क्षमता मेटाडेटा, रजिस्ट्री
-- [AAIF MCP Registry spec](https://github.com/modelcontextprotocol/registry) 2026 रजिस्ट्री स्पेसिफिकेशन
-- [AWS ECS reference deployment](https://aws.amazon.com/blogs/containers/deploying-model-context-protocol-mcp-servers-on-amazon-ecs/) संदर्भ उत्पादन की तैनाती
-- [Pinterest internal MCP ecosystem](https://www.infoq.com/news/2026/04/pinterest-mcp-ecosystem/) संदर्भ आंतरिक तैनाती
-- [Block `goose` MCP usage](https://block.github.io/goose/) संदर्भ एजेंट खपत पैटर्न
-- [FastMCP](https://github.com/jlowin/fastmcp) पायथन सर्वर फ्रेमवर्क
-- [Open Policy Agent](https://www.openpolicyagent.org/) नीति इंजन संदर्भ
-- [SPIFFE / SPIRE](https://spiffe.io) कार्यभार पहचान संदर्भ
+- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [Server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
+- [Official Registry server.json requirements](https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md)
+- [Official Registry OpenAPI contract](https://registry.modelcontextprotocol.io/openapi.yaml)
