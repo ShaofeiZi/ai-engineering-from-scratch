@@ -107,7 +107,7 @@
 - 基于JSON的有效载荷,与所有现代工具兼容.
 - 法律法师可以在没有手编码的托学的情况下解释的自然语言内容.
 - 网络堆运输 (HTTP,SSE,WebSocket).
-- 通过自我描述文件 (MCP) 发现能力`listTools`作为一个"A2A代理卡"
+- 通过现场MCP发现能力`server/discover`,我还在.
 
 为了更轻松地实现,更宽松的意图语义.
 
@@ -207,5 +207,5 @@ python3 code/main.py
 - [Liu et al. — A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, ANP](https://arxiv.org/html/2505.02279v1)2025年可信调查,将现代规格与FIPA遗产联系起来
 - [FIPA ACL Message Structure Specification (fipa00037)](http://www.fipa.org/specs/fipa00037/)批准的2000年包裹格式
 - [FIPA Communicative Act Library Specification (fipa00037)](http://www.fipa.org/specs/fipa00037/)完整的表演目录
-- [MCP specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)现代工具使用等效`request`现在,我们要去.`query-ref`
+- [MCP specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28)目前无国有工具使用等价`request`现在,我们要去.`query-ref`
 - [A2A specification](https://a2a-protocol.org/latest/specification/)现代代理同等的合同网和订阅通知
