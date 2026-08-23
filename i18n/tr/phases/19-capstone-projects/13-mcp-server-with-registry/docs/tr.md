@@ -1,152 +1,356 @@
-# Capstone 13  MCP Server'ı Kayıt ve Yönetim ile
+# Kapstone 13: Kayıt ve yönetim ile İletişimsiz MCP Server
 
-> Model Kontext Protokolü geleceğin bir parçası olmaya devam etti ve 2026'da standart araç kullanım özellikleri haline geldi. Anthropic, OpenAI, Google ve tüm büyük IDE gemisi MCP müşterileri. Pinterest, MCP sunucularının iç ekosistemini yayınladı. AAIF Registry, yetenek metadatalarını resmileştirdi `.well-known`AWS ECS referans stateless dağıtım yayınladı. Block'un kaz ajanı aynı protokolü barındırılmış bir asistanın içine koydu. 2026 üretim şekli: StreamableHTTP taşımacılığı, OAuth 2.1 kapsamları, OPA politika kapısı ve platform ekiplerinin sunucuları keşfetmesine, doğrulamasına ve etkinleştirmesine izin veren bir kayıt.
+> Üretim MCP bir sunucu işlem değil, bir zincir sözleşme: yayınlanabilir metadata, canlı keşif, devletsiz bir talep zarfı, yetki, politika, denetim ve dağıtım kanıtı.
 
 **Type:** Capstone
-**Languages:** Python (server, via FastMCP) or TypeScript (@modelcontextprotocol/sdk), Go (registry service)
-**Prerequisites:** Phase 11 (LLM engineering), Phase 13 (tools and MCP), Phase 14 (agents), Phase 17 (infrastructure), Phase 18 (safety)
-**Phases exercised:**P11 · P13 · P14 · P17 · P18
-**Time:** 25 hours
+**Languages:** Python and TypeScript reference models; any production language
+**Prerequisites:** Phase 11, Phase 13, Phase 14, Phase 17, and Phase 18
+**Required MCP deep dives:** [Lesson 28: Tool Contracts](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)- Evet .[Lesson 29: Reliability](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)- Evet .[Lesson 30: Registry Supply Chain](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)ve[Lesson 31: Conformance Operations](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)
+**Protocol target:**MCP `2026-07-28`
+**Time:** ~25 hours
+
+## Öğrenme Hedefleri
+
+- Devletsiz MCP talebi ve sonuç zarfını uygulayın.
+- Kayıt metadatalarını canlı protokol keşifinden ayrı tutun.
+- Deterministik, önbelleğe dikkat eden bir araç keşfi oluşturun.
+- Her araç çağrısı için yayıncı, izleyici, kapsam ve onay politikasını uygulayın.
+- Sesyon yakınlığı olmadan Akışlanabilir HTTP'yi dağıtın.
+- Tel, yetki, politika, kayıt ve denetim sınırlarında davranışları kanıtlayın.
+
+## Gerekli MCP Ön Gerekli Yol
+
+Bu temel taşın üretime hazır olarak değerlendirilmeden önce, bağlantılı dört 13. aşama dersini sırayla tamamlayın:
+
+1. [Lesson 28](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)Bu sunucu tarafından açıklanması gereken araç, şema, içerik, sayfalama, tamamlama, yönlendirme ve hata sözleşmelerini tanımlar.
+2. [Lesson 29](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)iptal yarışlarını, tarihlerini, idempotency'yi, geri baskıyı, yeniden denemeyi ve yeniden bağlantı kurmayı tanımlar.
+3. [Lesson 30](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)isim alanını, kökenini, giriş çubuğunu, kayıt durumunu, sürüklemeyi, büyüklüğü ve geri dönüş kanıtlarını tanımlar.
+4. [Lesson 31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)Altın ve negatif transkriptleri, sıkı sürüm çağları, SDK farklılık kontrolleri, vekil kanıt, düzenleme, sağlık ve serbest bırakma kaplamaları tanımlar.
+
+Kap taşı bu eserleri birleştirir. Onları bir mutlu yol SDK testi ile değiştirmez.
 
 ## Sorun
 
-MCP, araç kullanımı lingua franca haline geldi. Claude Code, Cursor 3, Amp, OpenCode, Gemini CLI ve her yönetilen ajan şimdi MCP sunucularını kullanıyor. Üretim zorlukları, sunucuların oluşturulması değil (FastMCP bunu kolaylaştırır), ancak işletme gereksinimleriyle birlikte ölçekte dağıtmak: kiracı başına OAuth kapsamları, yıkıcı araçlar üzerindeki OPA politikası, StreamableHTTP devletsiz ölçeklendirme, keşif için bir kayıt, araç çağrısı başına denetim günceleri. Pinterest'in iç MCP ekosisteminin ve AAIF Kayıt Spec'inin 2026 barını belirlediği.
+İç bir platformda sadece okunur veri araçları ve küçük bir set durum değişken araçlar gerekir. Geliştiriciler sunucuyu keşfedebilmeli, nasıl bağlanacağını anlayabilmeli, canlı özelliklerini kontrol etmeliydi ve sadece kullanma yetkisi olan işlemleri çağırabilmelidirler.
 
-10 iç araç (Postgres sadece okuma, S3 listing, Jira, Linear, Datadog, vb.) açığa çıkaran bir MCP sunucusu, platform keşfi için bir kayıtlı kullanıcı kullanımı ve yıkıcı araçlar için bir insan onaylı kapısı inşa edeceksiniz.
+Zor kısmı bir fonksiyonu kaydetmektir. Zor kısmı altı farklı gerçeği bir arada tutmaktır:
 
-## Anlam
+1. `server.json`Sunucunun nerede yüklenebileceği veya ulaşılabileceği belirtildi.
+2. `server/discover`canlı sürecin şimdi desteklediğini söylüyor.
+3. Her istek hangi protokol değişikliklerini ve istemci yeteneklerini kullanıyor.
+4. Yetki, bir arayanı doğru yayıncı, kaynak ve kapsamlara bağlar.
+5. Bu özel eylemin yürütülebilir mi, politikası karar verir.
+6. Denetim kanıtları, sırları ve hassas yükleri sızdırmadan sınırı geçenleri kaydeder.
 
-MCP 2026 revizyonu, StreamableHTTP'i varsayılan nakliye olarak görevlendirir. Daha önceki stdio- ve SSE biçiminden farklı olarak, StreamableHTTP varsayılan olarak devletsizdir: tek bir HTTP son noktası JSON-RPC isteklerini kabul eder, cevapları akışlar ve bildirimler için uzun ömürlü bağlantıları destekler.
+Bu tür hareketlerden herhangi biri geçerse, platform erişilemez bir sunucu listesi, uyumsuz bir istemci yönlendirme, başka bir kaynak için yapılan bir token kabul veya beklenen inceleme olmadan yıkıcı bir eylem ortaya koyabilir.
 
-Yetki, araç başına alanlar olan OAuth 2.1'dir.`jira:read`- Evet .`s3:list`- Evet .`postgres:query:readonly`MCP sunucusu, arama alanını yalnızca seans başlaması değil, araç çağrısı sırasında kontrol eder. Yüksek riskli araçlar için sunucu, alanı                                                                                                                                                                                                                                              `approved:by:human`Son N dakika içinde  bu yüksekliğin Slack inceleme kartından geldiği.
+## İki keşif katmanı
 
-Kayıt ayrı bir hizmettir. her MCP sunucusu bir`.well-known/mcp-capabilities`Bu, bir araç açıklaması, taşıma URL'si, yazar gereksinimleri ile birlikte belgeler oluşturur.
+Kayıt ve canlı MCP sunucusu farklı sorulara cevap verir.
 
-## Mimarlık
+| Layer | Contract | Question it answers |
+|---|---|---|
+| Publication | `server.json` and Registry API | What is this server, where is its package or remote endpoint, and how is it configured? |
+| Runtime | `server/discover` | Which protocol versions, capabilities, extensions, and server identity does this process support? |
 
-```
-MCP client (Claude Code, Cursor 3, ...)
-          |
-          v
-StreamableHTTP over HTTPS (JSON-RPC + streaming)
-          |
-          v
-MCP server (FastMCP) behind load balancer
-          |
-   +------+------+---------+----------+------------+
-   v             v         v          v            v
-Postgres    S3 listing  Jira       Linear     Datadog
-(read-only) (paged)     (read)     (read)     (query)
-          |
-   +------+-------------+
-   v                    v
- OPA policy gate   destructive tool MCP (separate server)
-                        |
-                        v
-                   human approval via Slack
-                        |
-                        v
-                   audit log (append-only, per-tenant)
+Resmi Kayıt , bir versiyonu kullanıyor `server.json`Uzak giriş, Akışlanabilir HTTP URL'nin adını verebilir:
 
-  registry service
-     |
-     v  GET /.well-known/mcp-capabilities from each server
-     v
-     UI: search / validate / enable-disable / ownership
+```json
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.example/internal-readonly",
+  "title": "Internal Read-Only Tools",
+  "description": "Read-only incident and data lookup tools.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.internal.example.com/readonly"
+    }
+  ]
+}
 ```
 
-## Yüküm
+Registry şema sürümü ve MCP protokolü revizyoni bağımsızdır.Bir tarihini diğerine eşleştirmek için yeniden yazmayın. Her belgeyi kendi sözleşmesine göre doğrulayın.
 
-- Sunucu çerçevesini: FastMCP (Python) veya `@modelcontextprotocol/sdk`- Evet .
-- Nakliye: StreamableHTTP üzerinden HTTPS (stateless)
-- Auth: OAuth 2.1 ile SPIFFE / SPIRE üzerinden iş yükü kimliği
-- Politikası: Araç başına OPA / Rego kuralları; talep üzerine politika kararları veren hizmet
-- Kayıt: kendi kendine konutlanmış, tüketilen `.well-known/mcp-capabilities`Manifestolar
-- İnsan onaylaması: Yıkıcı araçlar için Slack etkileşimli mesajı
-- Uygulama: AWS ECS Fargate veya Fly.io, kiracı başına bir sunucu veya kiracı alanı ile paylaşılan
-- Denetim: Aramalar için düzenli JSONL bir kiracılık çöpü
+Şema geçerliliği isim alanı sahipliğini kanıtlamaz.`example.com`Ters DNS isim alanını kullanıyor `com.example/*`Registry doğrulama akışı bu mülkiyetini kanıtlar.
+
+Stdlib modelinin `validate_registry_document`Bu işlevi amaçlı olarak kısmi bir uzaktan profil doğrulayıcıdır.`name`- Evet .`description`ve`version`alanlar; seçmeli `title`; yayınlanan isim ve uzunluk kısıtlamaları; beton versiyon şekli; ve her `streamable-http`veya `sse`Uzak mesafenin HTTP(S) URL şekli.`remotes`Çünkü bu kap taşı her zaman uzaktan bir izleyiciyi canlı izler.`validate_publisher_namespace`Adı doğrulanmış yayıncı alanına karşı ayrı olarak kontrol ederken `validate_runtime_alignment`Yayın adı ve versiyonu canlı ile karşılaştırır `serverInfo`Resmi şema ayrıca paket kayıtlarını ve daha uzaktaki alanları da destekler. Yayınlanmadan önce tüm belgeyi resmi JSON Şema ile onaylayın veya `mcp-publisher`; bu bağımlılıktan uzak alt kümeni tam schema doğrulama olarak sunmayın.
+
+Sunucu uygulamalıdır `server/discover`Bu capstone istemcisi, son noktayı çözünce bunu yapar ve mevcut protokol gözden geçirme ve canlı özellikleri alır:
+
+```json
+{
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "com.example/internal-readonly",
+      "version": "1.0.0"
+    }
+  },
+  "ttlMs": 3600000,
+  "cacheScope": "public"
+}
+```
+
+Özel bir katalog ek mülkiyet, inceleme veya yaşam döngüsü verilerini indeksleyebilir, ancak bu verileri MCP tel alanları veya kök olarak icat edemez.`server.json`Yayınlanan kayıtların yanında kurumsal politikaları saklayın.`_meta.io.modelcontextprotocol.registry/publisher-provided`Genişleme ve 4 KB sınırının içinde kalmak.
+
+## Ülkesiz MCP Core
+
+MCP revizi `2026-07-28`protokol seanslarını ve `initialize`- Ne ?`notifications/initialized`El sıkışması.`Mcp-Session-Id`- Evet .
+
+Her talebinin protokol bağlamı vardır .`params._meta`- ...
+
+```json
+{
+  "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+  "io.modelcontextprotocol/clientCapabilities": {},
+  "io.modelcontextprotocol/clientInfo": {
+    "name": "internal-platform-client",
+    "version": "1.0.0"
+  }
+}
+```
+
+Versiyon ve özellikler bağlantı gerçekleri değil, talep gerçekleri. Bir yük dengeleyici, farklı sağlıklı kopyalara ardı ardına talep gönderebilir, çünkü her iki kopya da mesajın kendisinden istekleri doğrulayabilir.
+
+Sıradan sonuçlar `resultType: "complete"`.Serverler kimliklerini yerleştirmelidir .`_meta.io.modelcontextprotocol/serverInfo`Kayıp veya ipsiz protokol versiyonu geçersiz parametrelerdir.`-32602`- Hata .`-32022`Sadece desteklenmeyen bir satır için, tam olarak `{"supported": ["2026-07-28"], "requested": "..."}`Verileri olarak.
+
+### Gizlenebilir keşif
+
+`tools/list`Aynı etkili araç seti için belirleyici olmalıdır.
+
+- `ttlMs`, müşterinin tazeliği için bir ipucu;
+- `cacheScope`- Ya da ...`public`veya `private`- ...
+- Aynı listelerin hızlı önbellekleri yeniden kullanabilmesi için sabit bir araç sırası;
+- `resultType: "complete"`ve sunucu kimliği metadataları.
+
+Kullanıcı başına izin normalde üretmek gerekir `cacheScope: "private"`. Kullanıcıya özel araç görünürlüğünü paylaşılmış bir kamu önbelleği arkasına koyma.
+
+## Akışlanabilir HTTP
+
+Bir ağ sunucusu, POST kabul eden bir MCP son noktasını ortaya çıkarır. Her JSON-RPC talebi veya bildirim kendi POST'unu alır.
+
+Bir istek için sunucu, bir JSON nesnesi veya bu istek için kapsamlı bir SSE akışı gönderir.`subscriptions/listen`Başvuruda seçilen değişiklik bildirimleri bulunur.`Last-Event-ID`Geçerli taşımacılıkta tekrar oynayın.
+
+Her talebinde şunlar yer alır:
+
+- `MCP-Protocol-Version`, vücut metadataları ile eşleşir;
+- `Mcp-Method`, JSON-RPC yöntemine eşleşir;
+- `Mcp-Name`için`tools/call`- Evet .`resources/read`ve`prompts/get`- ...
+- `Accept: application/json, text/event-stream`- Evet .
+
+Belirtilen ile eşleşmeyen ayna başlıkları reddet `-32020`hata. doğrulama`Origin`, yerel geliştirme sunucularını loopback'e bağlamak, uzaktan istemcileri doğrulama ve kapalı istek skoplu SSE cevabını iptal olarak ele almak.
+
+```mermaid
+flowchart LR
+  R[Registry API] --> J[server.json]
+  J --> C[MCP client]
+  C --> D[server/discover]
+  C --> L[tools/list]
+  C --> G[Authorization and policy gateway]
+  G --> RO[Read-only MCP replicas]
+  G --> RW[State-changing MCP replicas]
+  RO --> A[Audit sink]
+  RW --> H[Approval record]
+  RW --> A
+```
 
 ```figure
 cf-mcp-gate
 ```
 
+## Yetki ve politika
+
+Transport metadataları yetki değil.
+
+Uzak sunucular için:
+
+1. Korunan kaynak metadatalarını keşfet.
+2. Bu kaynak için yetki sunucusu seçin.
+3. Müşteri Kayıtı için Müşteri Kimliği Metadata Belgeleri tercih edin.
+4. Yetkililik sırasında kaynak göstergesini gönder.
+5. Geri gönderilen bir veriyi doğrulayın `iss`Akış için kaydedilen yetki sunucusuna karşı değer.
+6. Emitent tarafından anahtar müşteri kimlikleri.
+7. MCP sunucusunda token emiten, kitle veya kaynak, sona erme ve kapsamı doğrulanmalıdır.
+8. Konkreti araç ve argümanlara ikinci bir politika kararı uygula.
+
+ gibi araç açıklamaları`readOnlyHint`ve `destructiveHint`Müşterilerin risk göstermesine yardımcı olmak.
+
+### Onaylama bir kayıt, sihirli bir alan değil
+
+Bir durum değişken çağrı, oyuncu, araç, normalleştirilmiş argümanlar veya sindirim, hedef ortam, sona erme ve bir kez veya tekrar kullanma politikasına bağlı bir onay kaydı gerekir.
+
+Python modeli, kanonik JSON'u sıralanmış anahtarlarla hash eder, sonra bu işlemin işareti konusu, araç adı, sunucu URL'si ve sona ermesi ile bağlanır. İşletmeci çalışmadan önce bir argüman bile değiştirdikten sonra kaydı tekrar oynatmak başarısız olur. Onaylama erişim işareti için eklenmiş bir alan değil, ayrı bir kanıttır.
+
+Yüksek riskli araçları patlama radyusunu önemli ölçüde azaltırken ayrı olarak gözden geçirilebilir bir yüzey üzerinde tutun. İtiraflar, politika, dağıtım kimliği ve denetim kontrolleri de ayrı ise ayrılık yararlıdır.
+
 ## Yapın
 
-1. **Tool surface.**10 iç araç açın: Postgres sadece okuyucu sorgu, S3 listesi nesneleri, Jira arama/alış, Düzsel arama/alış, Datadog metrik sorgu, PagerDuty on-call arama, GitHub sadece okuyucu, Notion arama, Slack arama, Salesforce okuma. Her araç bir yazılmış şema ve bir kapsam etiketine sahiptir.
+### 1. Model yayın metadataları
 
-2. **FastMCP server.**Araçları monte edin. StreamableHTTP nakliyeyi yapılandırın. OAuth token introspection ve kapsam uygulanması için bir middleware ekleyin.
+Şema oluştur ve onayla `server.json`. Yayıncı için doğrulanmış isim alanında sabit bir isim ekle, ek olarak versiyon, açıklama, resmi `repository`veya `packages`Metadata ve uzaktan veya stadio taşımacılığı.
 
-3. **OPA policy.**Araç başına Rego politikası: hangi alanlar çağırabilir, hangi PII redaksiyonu uygulanır, hangi payload boyutları sınırları uygulanır.
+### 2. Canlı keşif uygulaması
 
-4. **Registry service.**Seçim yapan ayrı bir Go veya TS hizmeti `.well-known/mcp-capabilities`kayıtlı sunuculardan, JSON Schema ile onaylar ve bir liste / arama / onay / etkinleştirme / devre dışı bir kullanıcı arazisini ortaya çıkarır.
+Uygulama`server/discover`RPC'den önce herhangi bir özellik. Desteklenen protokol sürümlerini, özelliklerini, uzantıları ve sunucu kimliğini reklam edin.`-32022`- Evet .
 
-5. **Capability manifest.**Her sunucu açığa çıkarır `.well-known/mcp-capabilities`Bu listeye: araç listesi, yazarlık gereksinimleri, taşıma adresleri, sahip ekibi, SLO.
+### 3. İttifaksiz zarfı uygula
 
-6. **Destructive tool separation.**Mutasyon durumunda bulunan araçlar (Jira yarat, Linear yarat, Postgres yaz) daha sıkı bir ot akışı olan ikinci bir MCP sunucusunda canlıdır: tokenler bir `approved:by:human`Slack kartı üzerinden 15 dakika içinde genişletilmiş bir alan.
+Her istek için protokol versiyonu ve istemci özelliklerini gerektirir.`resultType`Başlangıç durumunu, bağlantı ölçülü kapasite önbelleğini ve seans kimliklerini kaldırın.
 
-7. **Audit log.**Kiracı başına sadece eklenen JSONL: `{timestamp, user, tool, args_redacted, response_redacted, outcome}`- Presidio'dan önce bilgiyi düzenle.
+### 4. Araç yüzeyini oluştur
 
-8. **Load test.**StreamableHTTP'de 100 eşzamanlı istemci. İkinci bir kopya ekleyerek yatay ölçeklendirmeyi göster; oturma yapışkanlığı olmadan yük dengeleyici yeniden dağıtımı göster.
+İki sadece okuma araç ve bir durum değiştirme aracı ile başlayın. Her birine sınırlı bir JSON Şeması, kesin bir açıklama, belirleyici sonuç şekli ve dürüst notlar verin. Müşteriler yapılandırılmış sonuçlara güvendiğinde çıkış şemelerini ekleyin.
 
-9. **Conformance tests.**Resmi MCP uyumluluk paketini her iki sunucuya karşı çalıştırın.
+### 5. Önbellek bilgisi listesini ekle
 
-## Kullan
+Dönüş aletleri `ttlMs`ve `cacheScope`. Kayıtlı kaydın sona ermesi ve listesi değiştirme bildirimlerini ayrı ayrı kullanın.
 
+### 6. Yetki ve politika ekle
+
+Emitent, kitle, sonlama ve kapsamı doğrulayın. Her araç çağrısı için politika kararını yürütün. Onayları yüksek riskli eylemlere bağlayın. Bir yöneticini yürütmeden önce eksik veya eskisine sahip onayları reddedin.
+
+### 7. Ayrı kayıt ve çalıştırma süresi doğrulama
+
+Statik değerini doğrulayın `server.json`Kaydet, sonra uzak uç noktasını araştır `server/discover`. Yayınlanan uzaktan, kimlik, sürüm veya gerekli özellikler canlı işlemle aynı fikirde olmadığında rapor sürüşü.
+
+### 8. Denetim kanıtlarını ekle
+
+Aktör, emiten, kaynak, araç, politika kararı, talep kimliği, iz bağlamı, gecikme ve sonuç kaydını kaydedin. Dayanmadan önce hassas argümanları ve sonuçları yeniden yazın veya sindirin. Denetim sinkini model görünür bağlamdan dışarıda tutun.
+
+### 9. Düzsel ölçekleme uygulanması
+
+Bir yük dengeleyici arkasına iki stateless kopya koyun. En az 100 eşzamanlı istek gönderin. Doğruluğunun yakınlığa bağlı olmadığını gösterin. Bir araçın çapraz çağrı durumuna ihtiyacı varsa, açık bir açık bir açıklama olmayan bir eldiven hazırlayın ve paylaşılmış dayanıklı bir sistemde saklayın.
+
+### 10. Gerçek telin üzerinden geç .
+
+Gerçek sunucu ikili ile uyumluluk kontrollerini çalıştırın. Sadece SDK nesneleri değil, istek başlıklarını ve JSON bedenlerini yakalayın. Yanlış sürüm, başlık eşleşmezliği, eksik alan, yanlış kitle, yanlış biçimlendirilmiş argümanlar, işlemci başarısızlığı, iptal ve önbelleğin sona ermesi.
+
+## Gerekli Kanıt Paketi
+
+Bir ifade, beş kanıt sınıfını da içermeden eksiktir:
+
+| Evidence | Minimum proof | Source lesson |
+|---|---|---|
+| Wire | Redacted raw headers and JSON-RPC bodies for golden and negative cases, including metadata type failure, header mismatch, unsupported version, missing or unknown `resultType`, notification no-response, and response ID matching | [Lesson 31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md) |
+| Proxy | The same stable case run directly and through the deployed intermediary, with ingress, origin, and egress status and body digests; prove protocol errors are not collapsed into generic 500 responses and streaming is not buffered | [Lessons 29](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md) and [31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md) |
+| Admission | Verified publisher namespace, immutable Registry record digest, artifact or remote provenance, live `server/discover` identity and capability observation, descriptor pin, current Registry status, and admission-ledger event | [Lesson 30](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md) |
+| Retry | A cancellation-versus-completion race, explicit timeout, safe read retry, mutation idempotency key, reconnect refetch, and proof that request cancellation cannot silently become durable task cancellation | [Lesson 29](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md) |
+| Rollback | Exact previous version, admission and artifact digests, descriptor pin, active Registry status, current health window, route restoration result, and redacted decision evidence | [Lessons 30](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md) and [31](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md) |
+
+Edit edilen paketin bir parçacığını yayınla birlikte saklayın. Eğer herhangi bir sınıf eksikse, yayınlanmasını tutun. İşlem içindeki bir dispatcherden, kayıt kayıt varlığından kabulden, yeni bir JSON-RPC kimliğinden güvenlikten yeniden deneme veya önceki dağıtımdan geri dönüş hazırlığından proxy davranışı çıkarmayın.
+
+## Yerel İpuç Modelleri
+
+Python modeli, kayıt metadatalarını, ters DNS yayıncı isim alanı doğrulamalarını, yayınlama-işleme zamanı kimlik kontrollerini, canlı keşif, belirleyici araç listesi, talep başına metadata, güvenilir yayıncı, kitle, sona erme ve kapsam kontrollerini, eylem bağlı onayları, belgelenmiş bir kısmi kayıt onaylayıcısı, politika ve bir ağ soketi açmadan denetimlerini gösterir:
+
+```bash
+cd phases/19-capstone-projects/13-mcp-server-with-registry
+python3 code/main.py
+python3 -m unittest discover -s code/tests -v
 ```
-$ curl -H "Authorization: Bearer eyJhbGc..." \
-       -X POST https://mcp.internal.example.com/ \
-       -d '{"jsonrpc":"2.0","method":"tools/call",
-            "params":{"name":"postgres.readonly","arguments":{"sql":"SELECT 1"}}}'
-[registry]   capability validated: postgres.readonly v1.2
-[policy]    scope postgres:query:readonly present; allowed
-[audit]     logged: user=u42 tool=postgres.readonly outcome=ok
-response:    { "result": { "rows": [[1]] } }
+
+TypeScript projesi, statesiz JSON-RPC şeklini bir MCP SDK olmadan studio üzerinden ortaya çıkarır.`tools/call`yol , `tools/list`Bilinen bir araç için geçersiz argümanlar , `isError: true`İcracıyı çağırmadan:
+
+```bash
+cd phases/19-capstone-projects/13-mcp-server-with-registry/code/ts
+npm install
+npm run typecheck
+npm test
+npm run demo
+```
+
+Bu modeller yerel sözleşme mantığını kanıtlar. HTTP başlıklarını, OAuth değişimini, kayıt yayınını, OPA entegrasyonunu, yük dengelemesini veya koleksiyon makbuzunu kanıtlamaz.
+
+## Tel örneği
+
+```http
+POST /mcp HTTP/1.1
+Host: mcp.internal.example.com
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: postgres.readonly
+Authorization: Bearer REDACTED
+
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "tools/call",
+  "params": {
+    "name": "postgres.readonly",
+    "arguments": {"sql": "SELECT 1"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "internal-platform-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
 ```
 
 ## Gönder
 
-`outputs/skill-mcp-server.md`OAuth 2.1 kapsamları ve OPA kaplamaları ile iç araçlar için üretim derecesindeki MCP sunucusu + kayıt + denetim katmanı.
+Aşağıdakileri içeren bir deposu gönderin:
 
-| Weight | Criterion | How it is measured |
-|:-:|---|---|
-| 25 | Spec conformance | StreamableHTTP + capability manifest passes MCP conformance tests |
-| 20 | Security | Scope enforcement, OPA coverage across every tool, secret hygiene |
-| 20 | Observability | Per-tool-call audit log with PII redaction |
-| 20 | Scale | 100-client load test horizontal scale demonstration |
-| 15 | Registry UX | Discover / validate / enable-disable workflow |
-| **100** | | |
+- bir şema geçerli`server.json`- ...
+- Sadece okunur ve durum değişken sunucu yüzeyleri;
+- `server/discover`, Deterministik `tools/list`, ve politika kapalı `tools/call`- ...
+- İki değişken kopya ile akışlı HTTP dağıtım;
+- yetki ve onay entegrasyonu;
+- Bir kayıt yayıncısı veya özel kayıt API adaptörü;
+- politika tanımları ve eylemle ilgili onay kayıtları;
+- denetim sonuçları ve iz yayılması düzenlenmiş;
+- Kablo ve vekillik başarısızlığı kanıtları;
+- kabul, yeniden deneme, sağlık ve geri dönüş kanıtları, düzenlenmiş paketlerin bir parçacığı ile.
+
+| Weight | Criterion | Evidence |
+|---:|---|---|
+| 25 | Protocol correctness | Stateless request metadata, discovery, results, headers, and negative cases |
+| 20 | Authorization | Issuer, audience, expiry, scope, and action-bound approval cases |
+| 15 | Registry integrity | Valid `server.json`, publication record, live discovery probe, and drift report |
+| 15 | Policy and safety | Allow, deny, malformed, stale approval, and sensitive-data cases |
+| 15 | Scale and reliability | Two replicas, no affinity dependency, cancellation, timeout, and recovery |
+| 10 | Auditability | Redacted receiver-side audit and trace evidence |
 
 ## Egzersizler
 
-1. Yeni bir araç ekleyin (Confluence arama). Ana sunucuya dokunmadan kayıt kayıt kayıtları doğrulama akışından gönderin.
-
-2. Postgres sorgu sonuçlarını , isimli sütunlar içeren bir OPA politikası yazın `email`- Evet .`ssn`veya`phone`- Bir sonda sorusuyla egzersiz.
-
-3. Yerel gecikme için StreamableHTTP vs stdio değerlendirme.
-
-4. Kiracı başına kvote uygulanması: kiracı başına araç başına dakika başına maksimum N çağrı. İkinci bir OPA kuralıyla uygulanması.
-
-5. MCP uyumluluk paketini [mcp-conformance-tests](https://github.com/modelcontextprotocol/conformance)ve her başarısızlığı düzeltmek.
+1. Yaşam sunucusunu değiştirmeden yayınlanan uzaktan URL'yi değiştirin.
+2. Gönder .`tools/list`Aynı girişlerle iki kez ve bayt-stabil araç sırasını kanıtlayın.`ttlMs`Ve tazeleş.
+3. Geçerli bir vücut gönder .`MCP-Protocol-Version`Başlık.`-32020`Ve politika veya aracı kullanmayın.
+4. Sadece okunur sunucu için bir token hazırlayın ve durumu değiştiren sunucuya sunun.
+5. Bir onayı bir normal argüman harcamalarına bağlayın. Bir alanı değiştirin ve onayın tekrarlanamayacağını kanıtlayın.
+6. Ardından gelen çağrıları alternatif kopyalara yönlendirin. İş akışı devamlılığa ihtiyaç duyan her yerde gizli işlem belleğini açık bir paylaşılan eldivenle değiştirin.
+7. İstekle ölçülen bir SSE bağlantısını kes ve yeni bir JSON-RPC istek kimliği ile tekrar dene.`Last-Event-ID`kurtarma yolu kullanılır.
 
 ## Anahtar Terimler
 
 | Term | What people say | What it actually means |
-|------|-----------------|------------------------|
-| StreamableHTTP | "2026 MCP transport" | Stateless HTTP + streaming; replaces SSE + stdio for networked servers |
-| Capability manifest | "Well-known doc" | `.well-known/mcp-capabilities` with tool list, auth, transport URL |
-| OPA / Rego | "Policy engine" | Open Policy Agent for authorizing tool calls against external rules |
-| Scope elevation | "Approved-by-human" | Short-lived scope granted via Slack approval, required for destructive tools |
-| Registry | "Tool discovery" | Service that indexes MCP servers from their capability manifests |
-| Workload identity | "SPIFFE / SPIRE" | Cryptographic service identity for OAuth token issuance |
-| Conformance suite | "Spec tests" | Official MCP test battery for StreamableHTTP + tool manifest correctness |
+|---|---|---|
+| Stateless MCP | "No state anywhere" | No protocol session; cross-call state is explicit and server-managed |
+| `server.json` | "The tool manifest" | Registry metadata for naming, packaging, configuration, and transports |
+| `server/discover` | "The handshake" | A normal mandatory RPC for live versions and capabilities, not a session initializer |
+| Cache scope | "Can I cache it?" | Whether a cacheable result is safe for shared or private reuse |
+| Policy decision | "The token allows it" | A separate decision over actor, tool, target, arguments, and context |
+| Approval record | "A human clicked yes" | Evidence bound to one actor and consequential action under an expiry policy |
+| Explicit handle | "A session ID" | Ordinary application data for named server-managed state, not protocol connection state |
 
 ## Daha Fazla Okumak
 
-- [Model Context Protocol 2026 Roadmap](https://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/) StreamableHTTP, yetenek metadataları, kayıt
-- [AAIF MCP Registry spec](https://github.com/modelcontextprotocol/registry) 2026 kayıt özellikleri
-- [AWS ECS reference deployment](https://aws.amazon.com/blogs/containers/deploying-model-context-protocol-mcp-servers-on-amazon-ecs/) Referans üretiminin yerleştirilmesi
-- [Pinterest internal MCP ecosystem](https://www.infoq.com/news/2026/04/pinterest-mcp-ecosystem/) referans iç dağıtım
-- [Block `goose` MCP usage](https://block.github.io/goose/) Referans ajan tüketimi modeli
-- [FastMCP](https://github.com/jlowin/fastmcp) Python sunucu çerçevesini
-- [Open Policy Agent](https://www.openpolicyagent.org/) Politika motor referansı
-- [SPIFFE / SPIRE](https://spiffe.io) İş yükü kimlik referansı
+- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [Server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
+- [Official Registry server.json requirements](https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md)
+- [Official Registry OpenAPI contract](https://registry.modelcontextprotocol.io/openapi.yaml)
