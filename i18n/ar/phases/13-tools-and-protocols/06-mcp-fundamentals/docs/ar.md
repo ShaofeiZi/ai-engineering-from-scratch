@@ -1,115 +1,158 @@
-# أساسيات MCP  البدائيات، دورة الحياة، قاعدة JSON-RPC
+# أساسيات المفاوضات المشتركة: طلبات العدالة عن الجنسية و JSON-RPC
 
-> كل إدماج قبل (م.ك.بي) كان لمرة واحدة بروتوكول النموذجية للسياق، الذي أرسله شركة أنثروبيك لأول مرة في نوفمبر 2024، ويقوم الآن بإدارة مؤسسة "أجنتيك إيه إيه" لـ"لينكس" ، بتوحيد الاكتشاف والادعاء بحيث يمكن لأي عميل التحدث إلى أي خادم. تُسمي مواصفات 2025-11-25 ستة أسباب (ثلاثة خادمات، ثلاثة عملاء) ، ودورة حياة ثلاث مراحل، ونموذج أسلاك JSON-RPC 2.0. تعلم هذه و بقية الفصل من MCP في هذه المرحلة يصبح القراءة.
+> لا يوجد في MCP الحديث أي ضغط يد ولا جلسة بروتوكول. يجب أن يحمل كل طلب ما يكفي من البيانات المعدنية لفهمها وافق عليها ، وتوجيهها ، وإعادة تجربتها بمفردها.
 
 **Type:** Learn
-**Languages:** Python (stdlib, JSON-RPC parser)
-**Prerequisites:** Phase 13 · 01 through 05 (the tool interface and function calling)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lessons 01 through 05
+**Time:** ~55 minutes
 
 ## أهداف التعلم
 
-- أسمائ جميع أدوات MCP الأساسية الستة (الأدوات والموارد والإشارات على الخادم ؛ الجذور ، أخذ العينات ، الإجراءات على العميل) وقدم حالة استخدام واحدة لكل منها.
-- قم بمشي خلال دورة الحياة الثلاثة مراحل (إطلاق، تشغيل، إيقاف) وذكر من يرسل أي رسالة في كل مرحلة.
-- تحليل وإصدار غلافات طلبات وردات وإخطارات JSON-RPC 2.0.
-- شرح ما هو التفاوض في القدرة`initialize`هو و ما ينكسر بدونها
+- تمييز أساسيات خادم MCP عن ميزاتها من جانب العميل.
+- إعداد طلبات وردات JSON-RPC 2.0 صالحة لـ MCP `2026-07-28`. . .
+- ربط نسخة بروتوكول، قدرات العميل، و هوية العميل لكل طلب.
+- استخدام`server/discover`و التعامل`UnsupportedProtocolVersionError`بدون ضغط يد
+- تتبع طلب واحد مستقل من التحقق من التحقق من التحقق من النتيجة الكاملة.
 
 ## المشكلة
 
-قبل MCP ، كان لكل وكيل يستخدم الأدوات بروتوكول خاص به. كان لدى Cursor نظام أدوات على شكل MCP غير متوافق. شحن Claude Desktop مع واحد مختلف. امتداد VS Code Copilot كان لديه ثالث. قام فريق قام ببناء أداة " Postgres query " بكتابة نفس الأداة ثلاث مرات ، كل مرة إلى API مختلفة من المضيف. احتجت إعادة استخدامه إلى نسخ الكود.
+يمكن لمخادم MCP تلقي طلبين متتاليتين من عملاء مختلفين ، مع قدرات مختلفة ، على نفس العملية أو عامل HTTP. إذا تذكر الخادم ما أعلن عنه الطلب السابق ، فيمكن أن تطبق الإذنات الخطأ أو تعيد شكل الأسلاك الخطأ.
 
-وكانت النتيجة انفجار كامبري من التكاملات المفردة و السقف على سرعة النظام البيئي.
+المفوضية`2026-07-28`يزيل هذا الغموض. قاعدة البروتوكول غير ذات الوضع. يجب على الخادم أن يقرر كيفية التعامل مع الطلب الحالي من الطلب الحالي، وليس من تاريخ الاتصال.
 
-تقوم MCP بتصديق هذا الأمر من خلال قياس تنسيق الشبكة. يعمل خادم MCP واحد في كل عميل MCP: Claude Desktop ، ChatGPT ، Cursor ، VS Code ، Gemini ، Goose ، Zed ، Windsurf ، 300 + عميل بحلول أبريل 2026. يتم تنزيل SDK شهريًا بمقدار 110 مليون. 10,000 + خادم عام. تولت مؤسسة Linux الإدارة في ديسمبر 2025 تحت مؤسسة Agentic AI الجديدة.
+هذا يغير النموذج العقلي، السلسلة القديمة كانت الاتصال أولاً، الضغط الثاني، العمليات الثالثة. السلسلة الحديثة أسهل:
 
-المواصفات المستخدمة في هذه المرحلة هي **2025-11-25**. يضيف مهام التزامن (SEP-1686) ، وإجراءات إعادة استخدام وضع URL (SEP-1036) ، ومعينة مع الأدوات (SEP-1577) ، وموافقة النطاق المتزايدة (SEP-835) ، و OAuth 2.1 رمزية مؤشر الموارد. المرحلة 13 · 09 إلى 16 تغطي هذه التوسعات. هذه الدروس تتوقف في الأساس.
+1. العميل يرسل طلباً لوصف نفسه
+2. يقوم الخادم بتؤكيد نسخة الطلب وقدراته
+3. الخادم يتعامل مع الطريقة.
+4. يعيد الخادم نتيجة منخفضة أو خطأ JSON-RPC.
+
+الطلب التالي يكرر نفس العملية من الصفر.
 
 ## المفهوم
 
-### ثلاثة خادمات بدائية
+### أساسيات الخادم
 
-1. **Tools.**الإجراءات القابلة للدعوة نفس الحلقة من المرحلة 13 · 01.
-2. **Resources.**البيانات المكشوفة. محتوى القراءة فقط قابل للتعريف بواسطة URI: `file:///path`،`db://query/...`، مخططات مخصصة
-3. **Prompts.**القوالب قابلة للاستعمال. أوامر شاش في واجهة المستخدم المضيف؛ الخادم يوفر القوالب، والعميل يملأ الحجج.
+خادمات MCP تعرض ثلاثة بدائيات أساسية:
 
-### ثلاثة عملاء بدائيين
+1. **Tools**هي أفعال يتم التحكم فيها على النموذج، والتي تم اكتشافها مع `tools/list`ويتم استدعائها`tools/call`. . .
+2. **Resources**هي بيانات مع عنوان URI، والتي تم اكتشافها مع `resources/list`و تم استردادهم مع`resources/read`. . .
+3. **Prompts**هي نماذج قابلة للاستعمال، اكتشفت مع `prompts/list`وترجمة مع `prompts/get`. . .
 
-4. **Roots.**مجموعة من أوراي السماح للخادم باللمس. العميل يعلن عنهم؛ والخادم يحترمها.
-5. **Sampling.**يطلب الخادم نموذج العميل لإجراء إكمال. يسمح بتشغيل حلقات وكيل مضيفة على الخادم دون مفاتيح API من جانب الخادم.
-6. **Elicitation.**يطلب الخادم من مستخدم العميل إدخال مهيكلي في منتصف الرحلة. النماذج أو عناوين URL (SEP-1036).
+تبقى الجذور والاستعراض والقطع الأحيائية في `2026-07-28`مخططات التوافق، لكنها تعتبر من السن. يجب أن تستخدم التنفيذات الجديدة أدوات صريحة أو مدخلات موارد للجذر، و APIات مزود النموذج المباشرة للاستعراض، و stderr أو OpenTelemetry لتحقيق السجلات. لا يزال الإجراء متاحًا من خلال طلبات رحلة متعددة، حيث يعيد الخادم طلب إدخال والعميل عملية التشغيل الأصلية. الخادم الحديث لا يبدأ طلب JSON-RPC مستقل.
 
-كل قدرة في MCP تنتمي إلى واحدة من هذه الأجزاء السادسة بالضبط. المرحلة 13 · 10 إلى 14 تغطي كل واحدة عميقة.
+### غلافات JSON-RPC
 
-### تنسيق الأسلاك: JSON-RPC 2.0
+يستخدم MCP JSON-RPC 2.0:
 
-كل رسالة هي جسم JSON مع هذه الحقول:
+- الطلب:`{jsonrpc, id, method, params}`
+- رد: `{jsonrpc, id, result}`أو`{jsonrpc, id, error}`
+- الإخطار: `{jsonrpc, method, params}`بدون أي`id`
 
-- الطلبات:`{jsonrpc: "2.0", id, method, params}`. . .
-- الإجابات: `{jsonrpc: "2.0", id, result | error}`. . .
-- الإخطارات: `{jsonrpc: "2.0", method, params}`لا`id`لا يوجد رد متوقع
+الطلب`id`يرتبط رد فعل واحد. لا يخلق جلسة بروتوكول.
 
-المواصفات الأساسية لديها 15 طريقة ، المجموعة من قبل البدائية.
+### البيانات المطلوبة من الطلب
 
-- `initialize`- لا ، لا`initialized`(تصافيح يد)
-- `tools/list`،`tools/call`
-- `resources/list`،`resources/read`،`resources/subscribe`
-- `prompts/list`،`prompts/get`
-- `sampling/createMessage`(خادم إلى عميل)
-- `notifications/tools/list_changed`،`notifications/resources/updated`،`notifications/progress`
-
-### دورة حياة ثلاث مراحل
-
-**Phase 1: initialize.**
-
-العميل يرسل`initialize`مع`capabilities`و`clientInfo`الخادم يستجيب بمفرده`capabilities`،`serverInfo`و النسخة المحددة التي تتحدث بها العميل يرسل`notifications/initialized`من هنا فصاعداً، يمكن لأي طرف إرسال طلبات حسب القدرات المتفاوضة.
-
-**Phase 2: operation.**
-
-اتصالات العميل`tools/list`لاكتشافها، ثم `tools/call`الخادم قد يرسل`sampling/createMessage`إذا أعلنت هذه القدرة . قد يرسل الخادم`notifications/tools/list_changed`عندما يتغير مجموعة الأدوات العميل قد يرسل`notifications/roots/list_changed`عندما يغير المستخدم نطاق الجذر.
-
-**Phase 3: shutdown.**
-
-كل جانب يغلق النقل. لا توجد طريقة إيقاف مهيكلة في MCP؛ النقل (ستديو أو HTTP المباشر، المرحلة 13 · 09) يحمل إشارة نهاية الاتصال.
-
-### التفاوض حول القدرة
-
-`capabilities`في`initialize`اليدوية هو العقد. مثال من خادم:
+كل طلب حديث يحمل`_meta`الجهاز الداخلي`params`:
 
 ```json
 {
-  "tools": {"listChanged": true},
-  "resources": {"subscribe": true, "listChanged": true},
-  "prompts": {"listChanged": true}
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
-الخادم يعلن أنه يمكن أن يُبعث`tools/list_changed`الإخطارات والدعم `resources/subscribe`. العميل يوافق بإعلان نفسه:
+الإصدار البروتوكول والقدرات العميل مطلوبة. يوصى بهوية العميل. إنها بيانات عرض وتحليل التحريف ذاتية الإبلاغ، وليس اعتماد أمني.
+
+يجب على الخادم عدم استنتاج أي من هذه القيم من طلب سابق أو عملية استديو أو اتصال HTTP أو عنوان نقل وحده.
+
+### النتائج الكاملة و هوية الخادم
+
+كل نتيجة حديثة ناجحة تتضمن`resultType`النتيجة النهائية الطبيعية تستخدم`"complete"`يجب أن يُعرف الخوادم نفسها أيضاً في البيانات المعدنية الناتجة:
 
 ```json
 {
-  "roots": {"listChanged": true},
-  "sampling": {},
-  "elicitation": {}
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "resultType": "complete",
+    "tools": [],
+    "ttlMs": 30000,
+    "cacheScope": "public",
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "notes-server",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
-إذا لم يعلن العميل`sampling`، لا يجوز للخادم الاتصال`sampling/createMessage`التناظر: إذا لم يعلن الخادم`resources.subscribe`لا يجب على العميل أن يحاول الاشتراك
+`tools/list`،`resources/list`،`prompts/list`،`resources/templates/list`،`resources/read`و`server/discover`هي نتائج قابلة للتخفيض.`ttlMs`و`cacheScope`. الاختلالات الآمنة هي`ttlMs: 0`و`cacheScope: "private"`. يجب أن يكون عناصر القائمة مرتبة تحديدية بحيث تخلق الردود المتكافئة مفاتيح الاحتفاظ المستقرة و سياق النموذج المستقيم.
 
-هذا ما يمنع الانحراف في النظام الإيكولوجي. العميل الذي لا يدعم أخذ العينات لا يزال عميل MCP صالحاً.`sampling`لا يزال خادم MCP صالحة.
+### اكتشاف بدون ضغط يد
 
-### المحتوى المهيكلي وشكل الخطأ
+كل خادم حديث يجب أن ينفذ`server/discover`. العميل قد يطلبها قبل طريقة أخرى لاسترداد:
 
-`tools/call`يعود الـ`content`مجموعة من الكتل المخطوطة: `text`،`image`،`resource`. المرحلة 13 · 14 تضيف MCP Apps (`ui://`(UI) للتفاعل إلى تلك القائمة.
+- `supportedVersions`
+- الخادم`capabilities`
+- استخدام اختياري `instructions`
+- الهوية الخادم في النتيجة `_meta`
+- إشارات التخزين
 
-الخطأ يستخدم رموز الخطأ JSON-RPC. الإضافات المحددة حسب المواصفات: `-32002`"المورد لم يجد"`-32603`"خطأ داخلي"، بالإضافة إلى بيانات الخطأ الخاصة بمكسب`error.data`. . .
+الاكتشاف مفيد، لكنه ليس بوابة.`tools/list`أولاً لأن هذا الطلب يحمل بالفعل نسخة بروتوكولها وقدراتها.
 
-### قدرات العميل مقابل تفاصيل المكالمة في الأداة
+إذا لم يتم دعم النسخة المطلوبة ، يعيد الخادم رمز JSON-RPC `-32022`مع:
 
-خيبة أمل شائعة:`capabilities.tools`ما إذا كان العميل يدعم الإخطارات المتغيرة في قائمة الأدوات. ما إذا كان العميل سيستدع الأدوات المحددة هو خيار في الوقت التشغيلي الذي يقوده نموذجها ، وليس علامة قدرة. علامة قدرة هي عقد مستوى التفاصيل. اختيار النموذج هو محاكم.
+```json
+{
+  "requested": "2027-01-01",
+  "supported": ["2026-07-28"]
+}
+```
 
-### لماذا JSON-RPC وليس REST؟
+يختار العميل نسخة حديثة تدعمها المتبادلة ويجرب مرة أخرى مع معرف طلب JSON-RPC الجديد.
 
-JSON-RPC 2.0 (2010) هو بروتوكول خفيف ثنائي الاتجاه. REST هو المستهلك المبدع. MCP بحاجة إلى رسائل الخادم المبدع (مثالية، إشعارات) ، لذلك كان JSON-RPC مع شكله التوافقية طلب / رد مناسب طبيعي. JSON-RPC أيضا يكوّن نظيفا على ستديو و WebSocket / Streamable HTTP دون إعادة اختراع شكل طلب HTTP.
+### دورة حياة طلب واحد
+
+تتبع طلب حديث في هذا الترتيب:
+
+1. تحليل غلاف JSON-RPC واحد.
+2. تأكّد`jsonrpc`هو`"2.0"`، و`id`موجودة`method`هو سلسلة، و `params`هو كائن
+3. احتاج إلى موضوع سلسلة الإصدار والقدرة في `params._meta`؛ المعلومات المتحولة أو المفقودة هي`-32602`. . .
+4. عند حدود HTTP، مقارنة الإصدار، والطريقة، والعناوين الاسم المطبقة مع الجسم.`-32020`حتى عندما لا يتم دعم إحدى قيم الإصدارين.
+5. بعد أن يتم تأسيس المساواة، رفض نسخة متطابقة ولكن غير مدعومة مع `-32022`. . .
+6. تحقق من القدرات المطلوبة ثم اتجه`method`وتؤكد الحجج الخاصة بالوسيلة.
+7. تحديد المصداقية وافق على العملية الملموسة قبل أن يبدأ معالجها.
+8. أعد نتيجة كاملة مع هوية الخادم.
+9. انسى البيانات المعدلة للاتفاقية
+
+هذا الأمر يمنع اثنين من المكونات من تفسير المكالمات المختلفة.`Mcp-Name: notes.read`بينما الأصل ينفذ`params.name: notes.delete`كما أنها تحتفظ بإدخال غير مصمم، وارتباك الرأس، وتفاوض الإصدارات، وفشل القدرة، والإذن، وفشل المعاملة كدليل واضح.
+
+إغلاق stdin أو استجابة HTTP ينهي نشاط النقل. لا ينهي جلسة بروتوكول لأن MCP الحديث لا يوجد جلسة بروتوكول.
+
+### التوافق الصريح مع التراث
+
+الإصدارات من خلال `2025-11-25`استخدام`initialize`،`notifications/initialized`، وقدرات اتصال مستوى، وعلى سابقة Streamable HTTP، جلسات بروتوكول اختيارية. هذا السلوك لا يزال ذي صلة عندما يتحدث عميل عصر مزدوج إلى خادم قديم.
+
+حافظ على الفترات منفصلة. يتم تحديد طلب حديث عن طريق البيانات المطلوبة لكل طلب. يتم اختيار اتصال سابق فقط من خلال مسار العودة الموثوق. لا ترسل `initialize`كالتخلفة لـ`2026-07-28`الخادم
+
+لذلك، فإن "لا جنسية" لها معنى محدد في العصر.`2026-07-28`، هو بروتوكول غير متغير: كل طلب عادي يمكن تفسيره بشكل مستقل ولا توجد جلسة MCP.`2025-11-25`إن إعدادات التشغيل والتحديث والإمكانيات المفروضة تنتمي إلى اتصال، لذلك قد يحافظ مُعدل التوافق على حالة الاتصال القديمة. لا يعتبر تنفيذ عصر مزدوج جهازًا واحدًا مسموحًا. إنه جوهر حديث غير حكومي إلى جانب مُعدل قديم مع اتخاذ قرار تحديد صريح قبل تشغيل أي من المصفحات.
+
+لا يمنع أي من المعاني حالة التطبيق الدائمة. يمكن أن يعيش تدفق العمل أو المهمة أو مسودة خلف مسدس غير شفاف في متجر مشترك. يقوم العميل بإرسال هذا المسدس كإدخال عادي ، وتصديق كل نسخة وترخيص استخدامها. لا يجب أن يسرق سياق البروتوكول إلى ذلك المتجر كبديل للجلسة المزودة.
 
 ```figure
 mcp-tool-call
@@ -117,50 +160,47 @@ mcp-tool-call
 
 ## استخدمها
 
-`code/main.py`يرسل قناة JSON-RPC 2.0 الحد الأدنى والمبعث ، ثم يذهب `initialize``tools/list``tools/call``shutdown`التسلسل باليد، طباعة كل رسالة. لا نقل حقيقي، فقط أشكال الرسالة. مقارنة مع المواصفات المرتبطة في القراءة المتقدمة للتحقق من كل غلاف.
+`code/main.py`يقوم ببناء وتؤكيد وتتبع وإرسال رسائل MCP الحديثة دون إطار.
 
-ما الذي يجب أن ننظر إليه:
+```bash
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
 
-- `initialize`يعلن القدرات في كلا الطرقين ؛ الرد على ذلك`serverInfo`و`protocolVersion: "2025-11-25"`. . .
-- `tools/list`يعود الـ`tools`صف: كل مدخل لديه`name`،`description`،`inputSchema`. . .
-- `tools/call`استخدامات`params.name`و`params.arguments`. . .
-- ردّها`content`هو مجموعة من`{type, text}`الكتل.
+انتبه لثلاثة مستحيلات في الخروج:
+
+- كل طلب يكرر طلبه`_meta`الحقول
+- كل نتيجة ناجحة هي`resultType: "complete"`وتشمل هوية الخادم.
+- يتم ترتيب نتيجة القائمة بشكل محدد ولديها إشارات مخزن مخزن صريحة.
 
 ## أرسله
 
-هذا الدرس يُنتج`outputs/skill-mcp-handshake-tracer.md`. بالنظر إلى نسخة على شكل pcap للتفاعل بين العميل والخادم MCP ، فإن المهارة تعليقاً لكل رسالة مع أي مرحلة بدائية ، ومرحلة دورة الحياة ، والقدرة التي تعتمد عليها.
+هذه الدروس تُسافر`outputs/skill-mcp-handshake-tracer.md`. يظل اسم الملف التاريخي مستقراً، لكن الفن أصبح الآن متابعاً لطلبات بلا بيان، فإنه يُدقق كل رسالة بشكل مستقل ويعدّب حركة المرور القديمة فقط عندما تكون موجودة حقًا.
 
 ## التمارين
 
-1. أركض`code/main.py`تحديد الخط الذي يحدث فيه تفاوض القدرات ووصف ما الذي سيتغير إذا لم يعلن الخادم `tools.listChanged`. . .
-
-2. تمديد المصفح للتعامل معه`notifications/progress`. شكل الرسالة:`{method: "notifications/progress", params: {progressToken, progress, total}}`إصدرها أثناء التشغيل الطويل`tools/call`و تأكد من أن المدير العميل سيظهر شريط تقدم
-
-3. اقرأ المواصفات المحددة من أعلى إلى أسفل MCP 2025-11-25  المستند بأكمله حوالي 80 صفحة. حدد علامة القدرة الوحيدة التي لا تحتاجها معظم الخوادم. النصيحة: إنها تتعلق بتأمين الموارد.
-
-4. رسم على الورق البدائية ميزة افتراضية "عمل cron" من شأنها أن تنتمي إلى. (لمحة: يريد الخادم من العميل استدعائه في وقت محدد. لا أحد من البدائيات الستة يناسب اليوم.) خريطة الطريق 2026 من MCP لديها مشروع SEP لهذا.
-
-5. تحليل سجل جلسة واحدة من خادم MCP مفتوح على GitHub. احتساب طلب مقابل رد مقابل رسائل الإخطار. حساب ما هو جزء من حركة المرور مقابل العملية.
+1. تغيير نسخة بروتوكول طلب واحد إلى `2027-01-01`تأكد من أن رمز الخطأ هو`-32022`والبيانات تعلن عن النسخة المدعومة.
+2. إزالة`io.modelcontextprotocol/clientCapabilities`تأكد من أن الخادم لا يستخدم إمكانات الطلب الأول.
+3. قم بإعكس سجل أداة في الذاكرة. تأكيد `tools/list`لا يزال يعود نفس الترتيب التحديدي.
+4. التغيير`cacheScope`من`public`إلى`private`- شرح السياقات التي يمكن إعادة استخدام الاستجابة في كل حالة.
+5. إضافة اختيارية `clientInfo`اختبار التخلي عن المعلومات. يجب أن تظل الطلب صالحاً لأن هوية العميل توصي بها وليس مطلوبة.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP | "Model Context Protocol" | Open protocol for model-to-tool discovery and invocation |
-| Server primitive | "What a server exposes" | tools (actions), resources (data), prompts (templates) |
-| Client primitive | "What a client lets servers use" | roots (scope), sampling (LLM callbacks), elicitation (user input) |
-| JSON-RPC 2.0 | "The wire format" | Symmetric request/response/notification envelopes |
-| `initialize` handshake | "Capability negotiation" | First message pair; servers and clients declare features they support |
-| `tools/list` | "Discovery" | Client asks server for its current tool set |
-| `tools/call` | "Invocation" | Client asks server to execute a tool with arguments |
-| `notifications/*_changed` | "Mutation events" | Server tells client that its primitive list has changed |
-| Content block | "Typed result" | `{type: "text" \| "image" \| "resource" \| "ui_resource"}` in tool result |
-| SEP | "Spec Evolution Proposal" | Named draft proposal (e.g. SEP-1686 for async Tasks) |
+| Term | Meaning |
+|------|---------|
+| Stateless protocol | Every request supplies the metadata needed to interpret it |
+| Request metadata | Version, client capabilities, and recommended client identity in `params._meta` |
+| `server/discover` | Mandatory server method for versions, capabilities, instructions, and identity |
+| `resultType` | Discriminator on every successful modern result |
+| Cacheable result | Result that includes required `ttlMs` and `cacheScope` hints |
+| Protocol era | Modern per-request metadata or legacy connection-scoped initialization |
+| Transport lifetime | Process, connection, or response-stream lifetime, not protocol session state |
+| `-32022` | Unsupported protocol version error with requested and supported versions |
 
 ## المزيد من القراءة
 
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) الوثيقة المحددة القنوية
-- [Model Context Protocol — Architecture concepts](https://modelcontextprotocol.io/docs/concepts/architecture) النموذج العقلي الستة البدائية
-- [Anthropic — Introducing the Model Context Protocol](https://www.anthropic.com/news/model-context-protocol) نوفمبر 2024 نقطة الإطلاق
-- [MCP blog — First MCP anniversary](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/) التراجع لمدة عام وتغييرات المواصفات 2025-11-25
-- [WorkOS — MCP 2025-11-25 spec update](https://workos.com/blog/mcp-2025-11-25-spec-update) ملخص للـ SEP-1686 و 1036 و 1577 و 835 و 1724
+- [MCP Architecture](https://modelcontextprotocol.io/specification/2026-07-28/architecture)
+- [MCP Base Protocol](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+- [MCP Server Discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP 2026-07-28 Changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)

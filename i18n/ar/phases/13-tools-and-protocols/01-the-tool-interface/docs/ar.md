@@ -152,5 +152,5 @@ tp-tool-loop
 - [OpenAI — Function calling guide](https://platform.openai.com/docs/guides/function-calling) إشارة طائفية لإعلانات الأدوات وتشكيلات الدعوات على أسلوب OpenAI
 - [Anthropic — Tool use overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)كلويد`tool_use`- لا ، لا`tool_result`شكل الكتل
 - [Google — Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling) `functionDeclarations`و التفاصيل المتوازية في التوأم
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) التعميم المزود-الجهاز العلمي لمواجهة الأدوات
+- [Model Context Protocol — Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) التعميم الحالي غير الحكومي، المزود-الجهاد العادي لمواجهة الأدوات
 - [JSON Schema — 2020-12 release notes](https://json-schema.org/draft/2020-12/release-notes) اللغة النظامية كل أداة الحديثة API يتحدث

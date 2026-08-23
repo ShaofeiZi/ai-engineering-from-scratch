@@ -1,8 +1,8 @@
-# مؤلف MCP في الإنتاج  التسجيل ، JWKS Refresh ، رموز المشاهد
+# مؤلفة MCP في الإنتاج: التسجيل المرتبط بالمصدر والرموز
 
-> الدروس 16 أوقفت آلة حالة OAuth 2.1 في الذاكرة. بحلول عام 2026، كل خادم MCP الذي ترسل إليه إلى منظمة حقيقية يقع خلف إنتاج مؤلف: تسجيل العملاء الذي يتراوح إلى عدد لا حدود له من العملاء (وثائق المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم المستخدم التحقق من التحقق من الوهم، والوهم المضمنة للجمهور التي ترفض إعادة عرض الموارد المتعددة. هذه الدروس نموذج السطح الكامل مع ثلاثة أدوار خادم التصريح، خادم الموارد (خادم MCP) ، و عميل  بحيث يمكنك تتبع كل قفزة من اكتشاف إلى مكالمة أداة معتمدة.
+> دروس 16 بنيت آلة حالة OAuth 2.1. هذا الدروس يضيق حدود إنتاجها لمكب 2026-07-28: وثائق معرف العميل البيانات المعدنية أولاً ، وتسجيل ديناميكي مسبوق فقط للموافقة ، وتصديق المصدر من خلال الإذن-رد على الإصدار ، وإثباتات العميل المفتاحية للمصدر ، وتجديد JWKS ، والرموز المضمونة للجمهور على كل طلب غير حكومي.
 >
-> **Spec note (2025-11-25):**تم تخفيض مواصفات تصريحات المجموعة الممتدة في نوفمبر 2025 لتسجيل العملاء الديناميكي من `SHOULD`إلى`MAY`و صنع**Client ID Metadata Documents (CIMD)**الآلية الافتراضية الموصى بها للتسجيل. هذه الدروس تعلم كل من، في ترتيب الأولوية الخاصة، والرقم يحافظ على DCR للمشي من خلال لأنه يتمتع بنفسه بالكامل في عملية واحدة.
+> **Spec note (2026-07-28):**يتم تجاهل تسجيل العميل الديناميكي لصالح وثائق بيانات المستخدم. DCR لا يزال آلية التوافق. عند استخدامه، يعلن العميل صحيح `application_type`. العميل يؤكد أن RFC 9207 موجودة`iss`لا تستخدم أبداً إحصائيات الإعتماد عبر مستثمرين خادم الإذن.
 
 **Type:** Build
 **Languages:** Python (stdlib)
@@ -12,23 +12,39 @@
 ## أهداف التعلم
 
 - اكتشف خادم التصريح من خلال RFC 8414 البيانات المعدنية وتحقق من العقد.
-- تنفيذ تسجيل العملاء الديناميكي RFC 7591 بحيث يتم تسجيل العملاء من MCP دون تدخل الإداري.
+- تسجيل من خلال وثيقة بيانات المستخدم و عزل DCR المنتهية من التطبيق كخلف.
+- تصحيح RFC 9207 `iss`، تسجيلات رئيسية من قبل مستثمر خادم الترخيص، والرموز الرئيسية المرتبطة بالموارد من قبل مستثمر زائد الموارد.
 - حفظ وتجديد مفاتيح JWKS على جدول زمني بحيث يتم التحقق من التوقيع على ما يصل إلى إعادة المفتاح.
 - إضافة الرموز إلى مصدر واحد من MCP باستخدام مؤشرات مصدر RFC 8707 ورفض إعادة استخدام النائب المرتبط.
-- فصل الأدوار الثلاثة نظيفة  خادم الإذن، خادم الموارد، العميل  بحيث كل تنفذ فقط التحققات التي تنتمي إليها.
-- اقرأ ماتريكس قدرات IDP ورفض نشر عندما لا يمكن أن يرضي IDP ملف المستخدم من MCP.
+- اختر تأكيد JWT أو إشعار التفتيش، حدد طازجة الإلغاء، وفشل بأمان عندما لا توجد اعتمادات الهوية.
+- إفصلا الخادم المعتمد، الخادم الموارد، والعميل بحيث كل واحد ينفذ فقط التحققات الخاصة به.
+- مراجعة خادم الإذن ضد قائمة التحقق من التنفيذ ورفض التسجيل غير الآمن أو إعادة استخدام الرمز.
 
 ## المشكلة
 
 يدير محاكي الدروس 16 OAuth 2.1 في الذاكرة. إنتاج لديه ثلاث ثغرات تشغيلية لا يراها محاكي الذاكرة فقط.
 
-الفجوة الأولى هي التسجيل. يقوم منظمة حقيقية بتشغيل مئات خوادم MCP وآلاف عملاء MCP. لا يسجل المشغلون يدويا كل مستخدم Cursor كعميل OAuth. يمنح المواصفات 2025-11-25 العملاء أمرًا أولويًا لحل هذا: استخدام مستخدم مسجل مسبقًا `client_id`إذا كان لديك واحد، وإلا استخدم**Client ID Metadata Document**(العميل يحدد نفسه بـ عنوان HTTPS يسيطر عليه و خادم الإذن * يسحب* البيانات المعدنية) ، وإلا تعود إلى **RFC 7591 dynamic client registration**(العميل * يدفع * a `POST /register`و تتلقى`client_id`في الموقع) ، وإلا يطلب من المستخدم. CIMD هو الافتراض الموصى به لأنه يزيل التسجيل لكل خادم بالكامل مع الحفاظ على نموذج الثقة المتجذر في DNS. يتم الاحتفاظ بـ DCR للتوافق العكسي. كلاهما يكتشف نقاط دخولها من بيانات الميتامية لخادم الترخيص:`client_id_metadata_document_supported`لـ CIMD`registration_endpoint`لـ DCR
+الفجوة الأولى هي التسجيل والعزل المؤهل. يمكن أن تشغيل منظمة حقيقية مئات الخوادم MCP وآلاف العملاء MCP.**Client ID Metadata Document**: يستخدم العميل عنوان URL HTTPS مع مسار يسيطر عليه كمتعرفه ، ويجذب خادم الإذن البيانات المعدنية. يبقى تسجيل RFC 7591 الديناميكي فقط كمسار متوافقية مسبقاً. عندما يكون DCR لا مفر منه ، يعلن الطلب الصحيح `application_type`. يقوم العميل بتخزين التسجيلات تحت مستثمر خادم الإذن و توكنات الوصول تحت `(issuer, resource)`زوج: إصدار مُغيّر يعني تسجيل جديد، ومصدر مختلف يعني رمز محدد بشكل منفصل للجمهور.
 
 الفجوة الثانية هي دوران المفتاح يعتمد التحقق من JWT على مفاتيح توقيع خادم الائتمان، والتي يتم نشرها على أنها مجموعة مفاتيح ويب JSON (JWKS). يقوم خادم الإذن بتدوير هذه في جدول زمني (غالباً ما في الساعة، وأحياناً أسرع في حالة استجابة الحوادث). خادم MCP الذي يحصل على JWKS مرة واحدة في بدء يصدق بشكل جيد حتى نافذة الدوران  ثم كل طلب يفشل حتى إعادة تشغيل. سلك الإنتاج JWKS كمقيمة مخفية مع عمل التجديد الذي يغطي الاحتفاظ قبل انتهاء الفترة السابقة من المفاتيح، بالإضافة إلى إرجاع التقطيع على الاحتفاظ الفاشل للحالة التي يتم فيها توقيع رمز من قبل مفتاح أحدث من الاحتفاظ.
 
 الفجوة الثالثة هي الالتزام بالجمهور. قدم الدروس 16 مؤشرات الموارد RFC 8707. في الإنتاج، يصبح هذا المؤشر تحقيقاً صعباً للمطالبة على كل طلب. يقوم خادم MCP بالمقارنة `token.aud`ضد عنوان URL الموارد القنوني الخاص به ورفض عدم الموافقة مع HTTP 401. هذا هو الدفاع الوحيد ضد خادم MCP متجهة إلى الأمام (أو عميل ضار يحمل رمزًا مصممة لمخادم واحد) يعيد تشغيل هذا الشك ضد خادم آخر في شبكة الثقة نفسها.
 
 هذه الدروس ترسم كل فجوة على قطعة خرسانية من السطح. وثيقة البيانات المعدنية هي نقطة نهاية HTTP. تحديث التخزين التخزيني JWKS هو عمل مُجدد بالإضافة إلى التخزين التخزيني القيم المفتاحية. التحقق من JWT هو روتين يعمل عليه خادم الموارد قبل إرسال أي أداة. حافظ على الأدوار الثلاث منفصلة و كل واحد ينفذ فقط التحققات التي يملكها: خادم الإذن يصدر ويتناول المفاتيح، خادم الموارد تخزين وتؤكد، ويكشف العميل ويتسجل.
+
+## المجال: التنفيذ في الإنتاج بعد الدروس 16
+
+[Lesson 16: MCP Security with OAuth 2.1](../../16-mcp-security-oauth-2-1/docs/en.md)يمتلك جهاز حالة رمز التأذن ، PKCE ، اكتشاف الموارد المحمية ، مؤشرات الموارد ، وقرارات النطاق. هذه الدروس لا تحدد تدفق OAuth الثاني. تبدأ بعد وجود هذه العقود وتسأل كيف يواصل خادم الموارد المنشغول تطبيقها أثناء دوران المفاتيح ، وصحة الوهام غير الشفافة ، والإلغاء ، وفشل الاعتماد ، والإرسال ، والاستجابة للحوادث.
+
+الحدود الإنتاجية أصغر وأكثر تشغيلاً:
+
+- تتحقق مسار JWT من المصدر المثبت ، والخوارزمية ، ومفتاح التوقيع ، والجمهور ، والمدة ، والمدة على كل طلب أثناء تجديد JWKS بأمان.
+- يطلق مسار رمز غير شفاف على نقطة نهاية التفتيش الداخلي المصدر الموثقة ويمتحق حالة النشاط المرجعة أو الجمهور أو الموارد والانتهاء من الصلاحية والمسألة والطول.
+- سياسة الإلغاء تحدد سرعة توقف الإعتماد عن العمل وما الذي يمكن أن يؤخر ذلك.
+- سياسة الفشل تقرر ما يحدث عندما لا توجد البنية التحتية للاكتشاف أو JWKS أو التفتيش أو الإلغاء.
+- سجلات الأدلة التي أدت إلى إصدار البيانات الأساسية، ومجموعة مفاتيح أو استجابة للتفتيش، ومطالبات الوهم، ونسخة السياسة، وسبب الرفض دون تخزين الوهم.
+
+هذا التمييز يبقي الدروس قابلة للتكوين. الدروس 16 تثبت التدفق. الدروس 18 تثبت أن رمز يبقى موثوق، أو يرفض، بعد أن يصل إلى مسار طلب MCP الحقيقي.
 
 ## المفهوم
 
@@ -42,7 +58,9 @@
   "authorization_endpoint": "https://auth.example.com/authorize",
   "token_endpoint": "https://auth.example.com/token",
   "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
+  "client_id_metadata_document_supported": true,
   "registration_endpoint": "https://auth.example.com/register",
+  "authorization_response_iss_parameter_supported": true,
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
@@ -53,11 +71,14 @@
 
 العميل الذي تم إعطائه سلسلة URL للموارد MCP اكتشاف: `oauth-protected-resource`من RFC 9728 (وثيقة خادم الموارد) اسم المصدر ، ثم `oauth-authorization-server`(هذه المعلومات) تسمي كل نقطة نهاية العميل لا يرمز أبداً عنوان URL الموافقة
 
+لتحديد الموارد مع مسار، أدخل القطاع المعروف قبل ذلك المسار. على سبيل المثال، `https://mcp.example.com/team/server`يُحلّل البيانات المعدنية المُحَمَّنة في الـ `https://mcp.example.com/.well-known/oauth-protected-resource/team/server`. إضافة`/.well-known/...`بعد أن يكون مسار الموارد غير صحيح.
+
 العقد الذي تفحصه قبل أن تثق في شركة " إيد ب " لـ " م سي بي
 
 - `code_challenge_methods_supported`يشمل `S256`(PKCE لكل RFC 7636). التفاصيل واضحة: إذا كان هذا الحقل**absent**، لا يدعم خادم الإذن PKCE والعميل **MUST**رفضوا المضي قدماً
 - `grant_types_supported`يشمل `authorization_code`ورفض`password`و`implicit`. . .
-- يتم الإعلان عن مسار واحد على الأقل للتسجيل: `client_id_metadata_document_supported: true`(CIMD، تفضيل) **or** `registration_endpoint`إما يفي بالعقد، لم تعد بحاجة إلى الاحتفاظ بالبيانات.
+- هناك مسار واحد على الأقل للتسجيل: `client_id_metadata_document_supported: true`(CIMD، المفضلة) ، عميل مسجل مسبقًا، أو `registration_endpoint`(توافق RFC 7591 المتناقض).
+- إذا`authorization_response_iss_parameter_supported`صحيح، العميل يتطلب المرجع RFC 9207`iss`ويقارنها بالضبط مع المصدر المسجل قبل إعادة التوجيه.
 - `response_types_supported`هو بالضبط`["code"]`لـ OAuth 2.1.
 
 إذا`S256`إذا غيب، يرفض خادم MCP نشر ضد هذا IdP  لا يوجد وضع مهدّد ل PKCE. إذا *لا * طريق التسجيل يتم الإعلان عنه ولم يكن لديك تسجيل مسبق `client_id`لا يمكنك التسجيل أيضاً، إنّ مذكرة التنفيذ خاطئة، وليس الرمز.
@@ -87,6 +108,7 @@
   "client_id": "https://app.example.com/oauth/client.json",
   "client_name": "Example MCP Client",
   "client_uri": "https://app.example.com",
+  "application_type": "native",
   "redirect_uris": ["http://127.0.0.1:7333/callback", "http://localhost:7333/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
@@ -96,6 +118,8 @@
 
 - نعم`client_id`القيمة في الوثيقة **MUST**يُساوي عنوان URL الذي يتم خدمته منه (يؤكد خادم الإذن هذا ، يتم رفض عدم المطابقة). يعلن خادم الإذن عن الدعم مع `client_id_metadata_document_supported: true`في بياناتها المعدنية RFC 8414
 
+بالنسبة للعقد الحالي لـ CIMD ،`client_id`،`client_name`، و غير فارغ`redirect_uris`المعرف العميل هو عنوان HTTPS مطلق مع مسار. `application_type`قد يتم تضمينها، ولكنه ليس حقل إلزامي من CIMD. لا تنسخ متطلب DCR لـ `application_type`في مسار CIMD المفضل
+
 هناك حقائق أمنية واضحة حولها:
 
 - **SSRF.**يقوم خادم الإذن بتحويل عنوان URL المقدم من المهاجم. يجب أن يتحمي ضد مزيف طلبات جانب الخادم (لا توجد تحويلات إلى نقاط نهاية داخلية / إدارية).
@@ -103,15 +127,18 @@
 
 لأن CIMD لا تحتاج إلى حالة جانب الخادم ، لا يوجد مسجل للوقوف على الطريقة التي تتطلبها DCR. الجانب العميل يقرأ فقط: خدمة وثيقة البيانات المعدنية من نقطة نهاية HTTPS ثابتة ودع خادم الإذن يسحبها.
 
-### RFC 7591  تسجيل العميل الديناميكي (التوافق مع الخلف / الخلف)
+إذا كان مشغل خادم الترخيص قد قدم بالفعل معرفًا لعميل ، فاستخدم هذا التسجيل الذي يحدد مستوى المصدر قبل محاولة التسجيل التلقائي. وإلا تفضل CIMD. استخدم DCR القديم فقط عندما لا يستطيع المصدر استخدام إما التسجيل المسبق أو CIMD.
 
-د.سي. آر الآن`MAY`ويحتفظ المستخدمون مع المستخدمين المستخدمين في الموقع، من أجل التوافق الخلفي مع عمليات تنفيذ ما قبل عام 2025-11-25 و IDPs التي لا تدعم CIMD بعد. بدونها (وبلا CIMD أو التسجيل المسبق) ، يحتاج كل عميل MCP (Cursor، Claude Desktop، وكيل مخصص) إلى تبادل خارج النطاق مع إداري IdP. مع DCR، يقوم العميل بنشر:
+### RFC 7591: تسجيل التوافق المنتهي السن
+
+تم تجاهل DCR في مراجعة 2026-07-28. احتفظ به فقط لسيرفرات الائتمان التي لا تستطيع استهلاك CIMD وحيث يكون التسجيل المسبق غير عملي. يشارك عميل التوافق:
 
 ```json
 POST /register
 Content-Type: application/json
 
 {
+  "application_type": "native",
   "redirect_uris": ["http://127.0.0.1:7333/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
@@ -136,7 +163,7 @@ Content-Type: application/json
 }
 ```
 
-`token_endpoint_auth_method: none`هو الاختيار الافتراضي الصحيح لعملاء MCP التي تعمل على جهاز المستخدم.`client_id`فقط لا`client_secret`PKCE توفر دليل الممتلكات الذي يحتاجه العملاء العامون.
+`application_type`لا يُعدّ ديكوراتياً.`native`؛ يعلن عميل مضيف على خادم `web`و يستخدم إعادة توجيه HTTPS URIs. `token_endpoint_auth_method: none`هو الاختيار المسبق للعميل العام الأصلي.`client_id`فقط، مع تقديم PKCE دليل على امتلاكها.
 
 ثلاثة مشاكل في الإنتاج:
 
@@ -152,34 +179,36 @@ Content-Type: application/json
 
 PKCE إلزامية في OAuth 2.1. تدفق رمز الترخيص للدرس دائما يحمل `code_challenge`و`code_verifier`. يرفض الخادم أي طلب رمزية دون مؤكد أو مع مؤكد لا يختلف عن التحدي المخزن.
 
-### ميكب Spec 2025-11-25 ملف مؤلف
+### ملف تفويضات MCP 2026-07-28
 
-تُحدد مواصفات MCP (2025-11-25) ما يجب أن تفعله طبقة تفويضات خادم MCP:
+يحتفظ مراجعة MCP الحالية بالحدود الموارد-خادم OAuth مع جعل نقل MCP غير متعلقة. لا توجد جلسة بروتوكول لإخفاء قرار الهوية. وبالتالي فإن طبقة الإذن تؤكد كل طلب بشكل مستقل:
 
 - تنفيذ RFC 9728 المعلومات المتحفظة، وتوفير موقعها إما من خلال `WWW-Authenticate: Bearer resource_metadata="..."`الرأس على 401 **or**المعلومات المشهورة`/.well-known/oauth-protected-resource`(SEP-985 جعلت الرأس اختياريًا مع تعليق معروف) البيانات المعدنية `authorization_servers`الحقل**MUST**اسم خادم واحد على الأقل
 - تقبل الرموز فقط عبر `Authorization: Bearer ...`على**every**طلب  أبدا في سلسلة استفسارات، أبدا معتمدة فقط في بداية الجلسة.
 - تأكيدي`aud`،`iss`،`exp`و المجال المطلوب لكل طلب . الخادم**MUST**يؤكد أن الرمز تم إصداره خصيصاً له (الجمهور) ؛ اختفاء أو عدم مطابقة`aud`يتم رفضه، لا يعامل أبداً كخريطة.
 - في 401/403، العودة `WWW-Authenticate: Bearer`الحمل`error=...`،`resource_metadata="<PRM-URL>"`المعلم (URL الوثيقة البيانات المعدنية ، *ليس *المصدر العادي) ، و `scope="..."`على`insufficient_scope`(403) ملاحظة: المعلم هو `resource_metadata`، مؤشر اكتشاف  لا يوجد `resource`المعلم في التحدي.
 - الوصول إلى خادم الموافقة يقبل **either**RFC 8414 المعلومات المتحركة**or**OpenID Connect Discovery 1.0، يجب على العملاء تجربة كل من الإضافات المعروفة بالتالي في الترتيب الأولوي.
-- العميل (وليس الخادم) يدافع عن**mix-up attacks**: تسجل المتوقع `issuer`قبل إعادة توجيه وتؤكيد`iss`المعلم المسموح به-رد (RFC 9207) قبل استرداد الرمز. PKCE وحدها لا تتوقف عن الاختلط، لأن العميل يقدم `code_verifier`إلى أيّ نقطةٍ كانت تُوجّه إليها
+- العميل (وليس الخادم) يدافع عن**mix-up attacks**: تسجل المتوقع `issuer`قبل إعادة توجيه وتؤكيد`iss`القيمة المرجعة في رد الإذن الفعلي (RFC 9207) قبل استرداد الرمز. PKCE وحدها لا تتوقف عن الاختلط، لأن العميل يقدم `code_verifier`إلى أيّ نقطةٍ كانت تُوجّه إليها
+- إن إئتمان العميل ينتمي إلى أحد أصحاب الخادم المعتمد. إذا حل الاكتشاف إلى مصدر آخر، يقوم العميل بإعادة التسجيل بدلاً من تقديم القائمة القديمة `client_id`رمز التسجيل أو رمز الوصول
+- الميزة المفضلة للتسجيل هي CIMD. تمت إبطال الـ DCR؛ لا يزال طلب التوافق من الـ DCR يعلن عن الصواب `application_type`. . .
 
 مسودة OAuth 2.1 هي الأساس؛ RFC 8414/7591/8707/9728/9207 + RFC 7636 + CIMD هي السطح؛ وتحديد MCP هو الملف.
 
-### ماتريكس قدرات IDP
+### قائمة التحقق من قدرات الانتشار
 
-لا تدعم كل IDP ملف MCP الكامل. توثيق المصفوفة أدناه بيانات القدرة الفعلية اعتبارًا من مواصفات 2025-11-25. إنها * بوابة الانتشار * ، وليس توصية.
+يتم تعديل جدولات ميزات البائعين بسرعة. تحقق من البيانات المعدنية التي يعيدها خادم الإذن الذي ستقوم بتنفيذها بدلاً من ذلك. البوابة ميكانيكية:
 
-تم شحن CIMD في مواصفات 2025-11-25 وتم اعتماد مسودة OAuth الأساسية فقط في أكتوبر 2025 ، لذلك لا يزال دعم البائعين قادما  تعامل "CIMD" أدناه ك"أين تقف اليوم ، تحقق في مستأجرك ،" وليس بيان دائم.
+| Check | Required decision |
+|---|---|
+| Discovered issuer | Exact HTTPS issuer expected by policy |
+| PKCE | `S256` advertised; otherwise stop |
+| Enrollment | CIMD preferred, pre-registration accepted, DCR only as deprecated compatibility |
+| Authorization response | Validate RFC 9207 `iss` when present or advertised |
+| Resource binding | Token request carries `resource`; resource server requires the matching `aud` |
+| Credential storage | Key client IDs and registration credentials by issuer; key access tokens by issuer plus resource |
+| DCR compatibility | Declare `native` or `web`; reject redirect URIs that do not fit the declared application type |
 
-| IdP category | AS metadata (8414/OIDC) | CIMD | RFC 7591 DCR | RFC 8707 resource | RFC 7636 S256 PKCE | Notes |
-|---|---|---|---|---|---|---|
-| Self-hosted (Keycloak) | yes | emerging | yes | yes (since 24.x) | yes | Reference IdP for the MCP profile in this lesson; full DCR path end-to-end, CIMD tracking the new spec. |
-| Enterprise SSO (Microsoft Entra ID) | yes | emerging | yes (premium tiers) | yes | yes | DCR availability differs by tenant tier; verify in target tenant before deploying. |
-| Enterprise SSO (Okta) | yes | emerging | yes (Okta CIC / Auth0) | yes | yes | DCR available on Auth0 (now Okta CIC); classic Okta orgs require admin pre-registration. |
-| Social login IdPs (generic) | varies | no | rarely | rarely | yes | Most social IdPs treat clients as static partners; no self-service enrollment. Use as identity source only, layer your own MCP-aware authorization server on top. |
-| Custom / homegrown | depends | depends | depends | depends | depends | If you ship your own, ship the full profile and prefer CIMD. Skipping PKCE or audience binding breaks the MCP auth contract. |
-
-قاعدة رفض لخطوط التنفيذ: إذا لم يذكر IDP المختار `S256`في`code_challenge_methods_supported`، يرفض خادم MCP تشغيل  PKCE ليس لديه وضع متدهور. التسجيل هو بوابة أكثر لينة: تحتاج إلى * واحد * مسار عمل (موقع مسبقًا مسجل `client_id`،`client_id_metadata_document_supported: true`أو`registration_endpoint`غياب DCR وحده لم يعد سبب لرفض العمل، لأن CIMD أو التسجيل المسبق يمكن أن يغطي ذلك.
+لا تستنتج الدعم من اسم المنتج أو مستوى التسعير. احتفظ بالوثيقة المكتشفة في دليل التنفيذ وتغلق عندما لا يكون هناك حقل إلزامي.
 
 ### نمط إعادة التأهيل JWKS (التناوب في AS، التأهيل في خادم الموارد)
 
@@ -220,6 +249,37 @@ if not result["valid"]:
 
 `validate`يفكّر JWT، يحل مفتاح التوقيع من ذاكرة التخزين JWKS (تتجديد مرة واحدة في غياب) ، يصدق التوقيع، ثم يُحقق `iss`ضد قائمة الإذن`aud`ضد الموارد القنونية لهذا الخادم`exp`، والطاق المطلوب  إرجاع`WWW-Authenticate`التحدي في الفشل الأول. الحفاظ على روتين واحد على خادم الموارد يعني أن كل نقطة دخول (كل مكالمة أداة، كل نقل) تمر بنفس التحققات. لا توجد مسار يصل إلى أداة دون التحقق أولاً.
 
+### الوهم غير الشفاف يستخدم التفتيش الداخلي وليس التخمين
+
+ليس كل رمز الوصول هو JWT. إذا قام المصدر بتوثيق رمز غير شفاف، لا يمكن لخادم الموارد فك رموزه إلى مطالبات موثوقة. فإنه يرسل الرمز إلى نقطة نهاية مراقبة داخلية RFC 7662 للمصدر عبر قناة خلفية مصحوبة ويتطلب`active: true`، والسياق المتوقع للمصدر، والجمهور أو الموارد الدقيقة للمؤسسات المالية المعدنية، والمدة غير المتأخرة للمطالبات، والطول المطلوب من الأداة المحددة.
+
+التفتيش المتخفي من قبل المصدر، و إعادة إصدار رمز واحد، ومصدر MCP. لا تستخدم أبداً الرمز البيضاء كمنشور أو علامة التخزين. إرتبط بإدخال الاحتفاظ الإيجابي بأوائل انتهاء صلاحية الرمز، وإرشادات الاحتفاظ بإصدارها، و هدف الطفافة لإلغاء النشر. حافظ على الاحتفاظ بالخزينة السلبية قصيرة بما فيه الكفاية حتى لا تبقى رمزاً أصدر حديثاً غير نشطة بشكل خاطئ. لا يمكن لنتيجة لمصدر واحد أن تسمح بمصدر آخر حتى عندما يكون سلسلة الرمز غير المرئي متطابقة.
+
+لا تختار وضع التحقق من المحتويات الرمزية التي يتحكم بها المهاجم. قم بتحديد سلوك JWT مقابل التفتيش إلى البيانات المعدنية المصدرة المصدقة وتكوين التنفيذ. على مسار JWT ، تم قبول الخوارزميات وتثق بها.`jwks_uri`لا تتبع أبداً عنوان URL أو خوارزمية رئيسية تم اختيارها فقط من قبل عنوان الرمز.
+
+### الإلغاء هو عقد الطفولة
+
+RFC 7009 يسمح للعميل بطلب من خادم الإذن إلغاء رمز. هذا الطلب لا يمحو النسخ التي تم حفظها بالفعل من قبل كل خادم مصدر. حدد أقصى تأخير الإلغاء المقبول وجعل كل cache يحتفظ به.
+
+يمكن لنشر الوهم الغير مرئي تحقيق إلغاء أقوى من خلال التدقيق في كل مكالمة عالية المخاطر أو استخدام مخزن محفظة إيجابي قصير. عادة ما يجمع نشر JWT المستقلة بين عمر الوصول القصير للشعار مع إلغاء الشعار التجديد، والتقاعد المفتاحي للحوادث على مستوى المصدر، وقائمة موضوع أو جلسة أو رمز رمزية اختيارية لرفض الطوارئ المحلية. تبقى JWT الموقعة صالحة رمزيا حتى انتهاء صلاحيتها ما لم يكن لدى خادم الموارد دليل إلغاء خارجي حالي.
+
+إن تسجيل الدخول، وإبطال الحساب، وإسقاط الموافقة، والاستجابة للحوادث هي عوامل مختلفة ولكن يجب أن تتحرك على بيان واحد قابلة للقياس: بعد نافذة الإلغاء المعلنة على أقصى حد، ترفض كل نسخة الإئتمانات. اختبر هذه البيانة من خلال ميزان الحمل، وليس فقط ضد عملية واحدة دافئة.
+
+### فشل الإعتماد يحتاج إلى قرار مُعلن
+
+لا تتلاعب أبداً بسياسة الوصول داخل عامل الاستثناء
+
+| Failure | Safe production behavior |
+|---|---|
+| Scheduled JWKS refresh fails, known `kid` remains in a still-valid bounded cache | Continue only within the declared stale-on-error window and emit degraded health evidence |
+| Token has an unknown `kid` and the one allowed refresh fails | Reject; never accept an unverifiable signature |
+| Introspection is unavailable | Fail closed for protected calls; do not convert network failure into `active: true` |
+| Protected-resource or issuer metadata changes unexpectedly | Stop new enrollment and token acquisition; keep only explicitly pinned, unexpired configuration under a bounded incident policy |
+| Revocation endpoint is unavailable | Report logout or revocation as incomplete, retain the credential locally as unusable when possible, and do not claim global revocation succeeded |
+| Clock source or claim type is invalid | Reject rather than widening skew until the token passes |
+
+تصنيف الفشل بشكل منفصل عن الإثباتات غير صالحة. إنقطاع الاعتماد هو خطأ عملي مع سياسة الصحة وإعادة المحاولة. سوء التوقيع، المصدر، الجمهور، انتهاء الصلاحية، أو نطاق هو رفض الترخيص. لا يصل أي من أدوات المعاملة، ولا ينبغي أن تسرب محتويات الرمز إلى أدلة مراجعة.
+
 ### التشغيل المتكرر للجمهور (قيود على امتيازات الوصول إلى رموز الوصول)
 
 الخادم (`notes.example.com`) و الخادم ب (`tasks.example.com`) كلا التسجيل ضد نفس خادم الموافقة. الخادم A هو المخترق. المهاجم يأخذ رمز ملاحظات المستخدم ويعيد تشغيله ضد الخادم B.
@@ -254,6 +314,7 @@ PKCE وحدها لا تتوقف عن الارتباك، لأن العميل يق
 - **Scope upgrade race.**يمكن أن تنجح تدفقات تصعيد متزامنين لنفس المستخدم وتنتج رمزين وصولين ذوي نطاق مختلف. يجب على المؤكد استخدام الرمز المقدم على الطلب ، وليس البحث عن "نطاق المستخدم الحالي"  الذي يخلق نافذة TOCTOU.
 - **Registration token theft.**- تسريب`registration_access_token`يسمح للمهاجم بإعادة كتابة إعادة توجيه URIs. حدد هذه في حالة راحة؛ تطلب من العميل تقديم النص الصريح في كل تحديث؛ تدوير على الشك.
 - **`iss` not pinned.**مؤكد يقبل أي`iss`يسمح للمهاجمين بتقديم خادم تفويضهم الخاص، وتسجيل عميل للجمهور المستهدف، وإصدار رموز.`authorization_servers`القائمة هي القائمة المسموح بها، قم بتنفيذها.
+- **Credential or token cache collision.**يمكن للعميل الذي يقوم بمفاتيح تسجيلات فقط عن طريق الموارد تقديم هوية خادم تصريح واحد إلى آخر. يمكن للعميل الذي يقوم بمفاتيح وصول توكنات فقط عن طريق المصدر إعادة تشغيل رمز في جمهور خاطئ. يمكن تسجيلات مفتاح من قبل المصدر المعتمد، توكنات الوصول مفتاح من قبل `(issuer, resource)`، وإعادة تسجيل كلما تغير المصدر
 
 ```figure
 t3-jwks-rotate
@@ -261,12 +322,24 @@ t3-jwks-rotate
 
 ## استخدمها
 
-`code/main.py`يمر في كامل تدفق الإنتاج مع stdlib Python وثلاث أدوار  `AuthorizationServer`،`ResourceServer`و`Client`التدفق:
+`code/main.py`يمر في كامل تدفق الإنتاج مع stdlib Python و ثلاثة أدوار: `AuthorizationServer`،`ResourceServer`و`Client`التدفق:
+
+من جذور المخبأ، تشغيل:
+
+```bash
+cd phases/13-tools-and-protocols/18-mcp-auth-production
+python3 code/main.py
+python3 -m unittest discover -s code/tests -v
+```
+
+القيادة الأولى طباعة التسجيل المرتبط بالمصدر والتحقق من التحقق من الرمز
+النسخة الثانية تقرير ثمانية عشر عملية مرور. لا أحد من الأوامر يفتح
+المستمع للشبكة أو يكتب إشارات اعتمادية.
 
 1. خادم الإذن ينشر RFC 8414 البيانات الأساسية في `/.well-known/oauth-authorization-server`. . .
 2. العميل MCP يدعو نقطة نهاية البيانات المعدنية ويتحقق من خيارات التسجيل (`client_id_metadata_document_supported`لـ CIMD`registration_endpoint`لـ (DCR) و`S256`دعم PKCE
-3. المشي من خلال يأخذ طريق الرد من DCR: العميل يرسل إلى `/register`(RFC 7591) ويتلقّى`client_id`(مستهلك CIMD سيقدم بدلاً من ذلك HTTPS الخاص به `client_id`URL و تخطي هذه الخطوة.)
-4. يقوم عميل MCP بتشغيل تدفق رموز الترخيص المحمية من PKCE (RFC 7636) مع `resource`مؤشر (RFC 8707).
+3. يبحث العميل عن تسجيل مسبق يحدد من قبل المصدر، وإلا يسجل مع وثيقة بيانات المستخدم HTTPS. DCR المهدر لا يزال طريقة توافق قابلة للتحقق بشكل منفصل.
+4. يقوم العميل بتسجيل المصدر المعتمد، وخلق تحد S256، ويتلقى رمز تصريح لمرة واحدة بالإضافة `iss`، يؤكد أن المصدر المرجع ، ويستبدل الرمز مع المؤكد الأصلي و RFC 8707 `resource`مؤشر
 5. العميل MCP يدعو أداة على خادم MCP مع `Authorization: Bearer ...`. . .
 6. يعمل خادم MCP `validate`، حل مفتاح التوقيع من ذاكرة التخزين JWKS.
 7. يدور IDP مفتاحاً؛ والإعادة المخطط لها تجذب JWKS مرة أخرى إلى التخزين الآلي.
@@ -289,19 +362,19 @@ t3-jwks-rotate
 
 4. اقرأ RFC 7591 وتحدد مجالات الدروس`/register`المدير لا يؤكد. إضافة التحقق.`software_statement`و`redirect_uris`نظام URI)
 
-5. إضافة طريق بيانات المستخدم المستخدم.`client.json`الذي`client_id`يساوي عنوان URL الخاص به ، ويحصل على خادم الإذن على الحصول عليه والتحقق منه (رفض إذا `client_id`≠ URL) تأكيد أن عميل CIMD يسجل بدون أي `register_client`اتصل
+5. إضافة خادم تصريح ثان. تأكيد العميل تخزين تسجيل منفصل مفتاح المصدر ويرفض إعادة استخدام رمز المصدر الأول أو `client_id`. . .
 
 6. إثبت إصلاح الدولية إرسال مؤكداً رمزياً مع إصدار عشوائي`kid`و تأكيد`refresh_jwks`يبدأ في التشغيل مرة واحدة على الأكثر وعدد المفاتيح في خادم الترخيص لا ينمو ثم أعيد إعادة تشغيل الركود إلى دورة وذرة ومشاهدة ارتفاع عدد المفاتيح لكل رمز مزيف
 
-7. تنفيذ RFC 9207 من جانب العميل `iss`التحقق من قسم الخلط: تسجيل المصدر المتوقع قبل طلب الترخيص ، ثم رفض رد الترخيص الذي `iss`لا يطابق
+7. ممارسة DCR المعتاد مع كلتا`native`و`web`المستخدمين. تأكيد عميل الويب مع إعادة توجيه HTTP URI و عميل الأصلي دون إعادة توجيه اللوبك بالضبط يتم رفضها.
 
 ## الشروط الرئيسية
 
 | Term | What people say | What it actually means |
 |------|----------------|------------------------|
 | ASM | "OAuth metadata document" | RFC 8414 `/.well-known/oauth-authorization-server` JSON |
-| CIMD | "Client metadata URL" | Client ID Metadata Document — an HTTPS URL used as the `client_id`; the AS pulls the JSON. Recommended default since 2025-11-25 |
-| DCR | "Self-service client registration" | RFC 7591 `POST /register` flow; demoted to a `MAY` fallback in 2025-11-25 |
+| CIMD | "Client metadata URL" | Client ID Metadata Document: an HTTPS URL used as the `client_id`; the AS pulls the JSON. Preferred enrollment in MCP 2026-07-28 |
+| DCR | "Self-service client registration" | RFC 7591 `POST /register`; deprecated for current MCP and retained only for compatibility |
 | JWKS | "Public keys for JWT validation" | JSON Web Key Set, fetched from `jwks_uri`, indexed by `kid` |
 | Rotate vs refresh | "Updating the keys" | *Rotate* = AS mints/retires signing keys; *refresh* = resource server re-fetches the published set. Resource servers only ever refresh |
 | Resource indicator | "Audience parameter" | RFC 8707 `resource` parameter pinning the token to one server |
@@ -316,9 +389,8 @@ t3-jwks-rotate
 
 ## المزيد من القراءة
 
-- [MCP — Authorization spec (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization) ملف المشاريع المختلفة هذا الدروس تنفيذ
-- [MCP blog — One Year of MCP: November 2025 Spec Release](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/) ما تغير في 2025-11-25 (CIMD، XAA، تخفيض DCR)
-- [Aaron Parecki — Client Registration in the November 2025 MCP Authorization Spec](https://aaronparecki.com/2025/11/25/1/mcp-authorization-spec-update) منطقية CIMD-over-DCR
+- [MCP authorization specification (2026-07-28)](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)- ملف تفويضات المخططات المختلفة الحالي
+- [MCP 2026-07-28 changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)- CIMD، وصح المصدّر، إيقاف DCR، وتغييرات تصريحات المصدّر المحدّدة
 - [OAuth Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document-00)](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-00) CIMD
 - [RFC 8414 — OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414)عقد اكتشاف
 - [RFC 7591 — OAuth 2.0 Dynamic Client Registration Protocol](https://datatracker.ietf.org/doc/html/rfc7591) DCR (مسار العودة)
@@ -326,4 +398,5 @@ t3-jwks-rotate
 - [RFC 8707 — Resource Indicators for OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc8707) إضافة الجمهور
 - [RFC 9728 — OAuth 2.0 Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728) اكتشاف الخادم الموارد
 - [RFC 9207 — OAuth 2.0 Authorization Server Issuer Identification](https://datatracker.ietf.org/doc/html/rfc9207) الموقع `iss`المعلم الذي يحمي ضد الهجمات المختلطة
-- [OAuth 2.1 draft](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1) الأساسية الموحدة لـ OAuth
+- [RFC 7662: OAuth 2.0 Token Introspection](https://datatracker.ietf.org/doc/html/rfc7662)
+- [RFC 7009: OAuth 2.0 Token Revocation](https://datatracker.ietf.org/doc/html/rfc7009)

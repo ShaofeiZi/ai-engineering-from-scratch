@@ -1,169 +1,303 @@
-# أمن المخططات المشتركة II  OAuth 2.1، مؤشرات الموارد، الأهداف الزائدة
+# إذن MCP: CIMD، إلتزام المصدر، PKCE، والتحقيق
 
-> تحتاج خوادم MCP عن بعد إلى تصريح ، وليس مجرد تصديق. تتماشى مواصفات 2025-11-25 مع مؤشرات OAuth 2.1 + PKCE + الموارد (RFC 8707) + البيانات المعدنية المستخدمة في الموارد المحمية (RFC 9728). يضيف SEP-835 موافقة نطاق متزايدة مع تصريح تصويب على 403 WWW-Authenticate. هذه الدروس تنفيذ تدفق الصعود كجهاز حالة حتى تتمكن من رؤية كل قفزة.
+> طلب MCP عن بعد غير مصدر للدولة، ولكن تفويضها ليس مجهولا. ربط كل إعتمادات إلى المصدر الذي خلقها وكل رمز إلى الموارد التي تتلقىها.
 
 **Type:** Build
-**Languages:** Python (stdlib, OAuth state machine simulator)
-**Prerequisites:** Phase 13 · 09 (transports), Phase 13 · 15 (security I)
-**Time:** ~75 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13 · 09 (transports), Phase 13 · 15 (security)
+**Time:** ~90 minutes
 
 ## أهداف التعلم
 
-- تمييز خادم الموارد عن مسؤوليات خادم الموافقة.
-- إشغال تدفق رمز تفويض OAuth 2.1 المحمية من PKCE.
-- استخدام`resource`(RFC 8707) و البيانات المعدنية المستخدمة في الموارد المحمية (RFC 9728) لمنع الهجمات المرتبطة بالخلط.
-- تنفيذ تصريحات التطوير: يستجيب الخادم 403 مع WWW-Authenticate بطلب نطاق أعلى؛ يقوم العميل بإعادة طلب موافقة المستخدم ومحاولات جديدة.
+- اكتشاف خادمات الائتمان من خلال البيانات المعدنية الموارد المحمية.
+- تفضل وثائق بيانات المستخدم على تسجيل العميل الديناميكي القديم.
+- أعلن الحق`application_type`عندما يكون مسار التوافق مع DCR لا مفر منه.
+- تأكيد رد الإذن `iss`وتعزل الإثباتات حسب المصدر.
+- استخدم PKCE، مؤشرات الموارد، تأكيد الجمهور، والطول المتزايد.
+- إرسال طلبات المكتب المعتمدة 2026-07-28 بدون جلسات البروتوكول.
 
 ## المشكلة
 
-أرسلت MCP المبكرة (قبل عام 2025) خوادم بعيدة مع مفاتيح API ad-hoc أو حتى بدون auth. تمكنت مواصفات 2025-11-25 من إغلاق الفجوة مع ملف OAuth 2.1 الكامل.
+قد يقرأ خادم MCP عن بعد السجلات الخاصة، أو يكتب أنظمة خارجية، أو يؤدي إلى عمل مكلف. يخبر المصادقة من قدم شهادة اعتماد. يجب على الائتمان أيضًا الإجابة:
 
-ثلاثة احتياجات في العالم الحقيقي:
+- أي خادم تصريح أصدر هذه الإصدارات؟
+- أي مصدر من MCP هو رمز؟
+- أي عميل وإعادة توجيه URI أكملت التدفق؟
+- أي عمليات المستخدم قد وافق عليها؟
+- هل هذا الطلب الدقيق لا يزال يناسب هذا الموافقة؟
 
-- **Ordinary remote servers.**يقوم المستخدم بتثبيت خادم MCP عن بعد يسمح له بالوصول إلى Notion / GitHub / Gmail. OAuth 2.1 مع PKCE هو الشكل الصحيح.
-- **Scope escalation.**خادم ملاحظات منح `notes:read`يمكن أن تحتاج لاحقاً`notes:write`بدلاً من إعادة القيام بالعمل بأكمله، يطلب التكثيف (SEP-835) نطاق إضافي.
-- **Confused deputy prevention.**يحتفظ العميل برمز من أجل الجمهور من أجل الخادم A. الخادم A هو ضار ويحاول تقديم الرمز إلى الخادم B. مؤشرات الموارد (RFC 8707) وضع الرمز إلى الجمهور المقصود.
+ملف تفويض 2026-07-28 يزيد من صرامة تسجيل العملاء ومعالجة المصدرين. يفضل وثائق بيانات المستخدم، يرفض تسجيل العملاء الديناميكي، يتطلب الحق `application_type`على DCR، تؤكد استجابات المصدر RFC 9207، وتمنع إعادة استخدام المراجع بين المصدرين.
 
-OAuth 2.1 ليست جديدة. ما هو جديد هو ملف تعريف MCP: تدفقات مطلوبة محددة (رمز الترخيص + PKCE فقط؛ لا ضمنية، لا توجد إئتمانات العميل حسب الافتراض) ، مؤشرات الموارد إلزامية على كل طلب رمزية، ومعلومات المعلومات المستخدمة في الموارد المحمية التي يتم نشرها حتى يعرف العملاء أين يذهبون.
+هذه القواعد تكملة الـ "جوهر" غير الحكومي.`Mcp-Session-Id`. . .
 
 ## المفهوم
 
-### الأدوار
+### تعرف على الأدوار الثلاثة
 
-- **Client.**عميل MCP (Claude Desktop، Cursor، إلخ).
-- **Resource server.**خادم MCP (لاحظات ، GitHub ، Postgres ، أي شيء).
-- **Authorization server.**إصدار رموز. قد تكون نفس الخدمة مثل خادم الموارد أو IDP منفصل (Auth0, Keycloak, Cognito).
+- **MCP client:**يرسل طلبات نيابة عن صاحب الموارد.
+- **MCP resource server:**يقبل رمز الوصول و يخدم نقطة نهاية MCP.
+- **Authorization server:**يثبت أصحاب الموارد، ويجمع الموافقة، ويصدر رموز.
 
-في ملف تعريف MCP، يمكن أن تكون الخوادم الموارد والإذن نفس المضيف ولكن يجب أن يتم التمييز بينها بواسطة عناوين URL.
+يمكن تشغيل خادم الموارد وخادم الترخيص معاً، ولكن إبقاء تحديداتهم ومسؤوليات التحقق من التحقق منفصلة.
 
-### رمز الترخيص + PKCE
+### التأليف ينطبق على HTTP
 
-التدفق:
+تطبق تخصيص تفويضات MCP على النقلات القائمة على HTTP. يعمل خادم استوديوه محلي تحت حدود ثقة العملية والنظام التشغيلي. لا تضيف تدفق OAuth المتنقل مزيف إلى الاستوديوه فقط من أجل التناظر.
 
-1. العميل يخلق`code_verifier`(الصدفة) و `code_challenge`(SHA256)
-2. العميل يُعيد المستخدم إلى `/authorize?response_type=code&client_id=...&redirect_uri=...&scope=notes:read&code_challenge=...&resource=https://notes.example.com`. . .
-3. موافقة المستخدم . سيرفر الإذن يُعيد إلى `redirect_uri?code=...`. . .
-4. رسائل العميل إلى `/token?grant_type=authorization_code&code=...&code_verifier=...&resource=...`. . .
-5. يقوم خادم التأذن بتؤكيد hash المحقق ضد التحدي المخزن وإصدار رمز الوصول.
-6. العميل يستخدم الرمز: `Authorization: Bearer ...`في كل طلب إلى خادم الموارد.
+لـ Streamable HTTP عن بعد، أرسل رمز المحمل في `Authorization`العنوان على كل طلب. لا تضعه أبدا في عنوان URL.
 
-PKCE يمنع هجمات إيقاف رمز التأليف. مؤشرات الموارد تمنع رمز العملة من أن تكون صالحة في أماكن أخرى.
+### ابدأ بمعلومات البيانات المعدنية المستخدمة في الموارد المحمية
 
-### البيانات المعدنية الموارد المحمية (RFC 9728)
-
-سرفير الموارد ينشر `.well-known/oauth-protected-resource`الوثيقة:
+يقوم خادم الموارد بنشر RFC 9728 البيانات الوصفية:
 
 ```json
 {
-  "resource": "https://notes.example.com",
+  "resource": "https://notes.example.com/mcp",
   "authorization_servers": ["https://auth.example.com"],
-  "scopes_supported": ["notes:read", "notes:write", "notes:delete"]
+  "scopes_supported": ["notes:delete", "notes:read", "notes:write"]
 }
 ```
 
-يكتشف العميل خادم الإذن من خادم الموارد. يقلل من التكوين  لا يحتاج العميل إلا إلى عنوان URL للموارد.
+يبدأ العميل من عنوان URL الموارد MCP ، ويستلم هذا الوثيقة ، ويختار خادم الإذن المعلن ، ثم يستلم بيانات الميتاء OAuth أو OpenID Connect لهذا الخادم.
 
-### مؤشرات الموارد (RFC 8707)
+الحفاظ على مسار الموارد عند بناء RFC 9728 URL معروفة.`https://notes.example.com/mcp`، هذا الدروس يستخدم`https://notes.example.com/.well-known/oauth-protected-resource/mcp`. أترك`/mcp`يمكن للاستحقاق اختيار البيانات المعدنية لمصدر محمي مختلف من نفس المنشأ.
 
-`resource`المعلم في طلب الشكلة يضع الرأي المقصود للشكلة. الشكلة المصدرة تحتوي على `aud: "https://notes.example.com"`خادم آخر من (م سي بي) يتلقى هذه الشيكات`aud`ورفضها.
+لا تخمين خادم الائتمان من اسم مضيف. لا تتبع مستثمرًا اكتشف من جسم خطأ غير معتمد. احتفظ بسياسة يود العميل الثقة في مستثمرين.
 
-### نموذج النطاق
+### التحقق من بيانات المستخدم المعتمدة
 
-المرافق هي سلسلة منفصلة عن الفضاء.
+يجب أن تكشف البيانات الوصفية نقاط النهاية والتحكمات المدعومة:
 
-- `notes:read`،`notes:write`،`notes:delete`
-- `admin:*`لقدرات الإدارة (استخدام محدود)
-- `profile:read`لتحديد الهوية
-
-يجب أن يكون اختيار النطاق أقل امتيازاً: اطلب ما تحتاجه الآن، وتقدم قدمًا عندما تحتاج إلى المزيد.
-
-### تصريح التطوير (SEP-835)
-
-منح المستخدمين `notes:read`يطلبون من العميل حذف ملاحظة، ويقول الخادم:
-
+```json
+{
+  "issuer": "https://auth.example.com",
+  "authorization_endpoint": "https://auth.example.com/authorize",
+  "token_endpoint": "https://auth.example.com/token",
+  "code_challenge_methods_supported": ["S256"],
+  "authorization_response_iss_parameter_supported": true,
+  "client_id_metadata_document_supported": true
+}
 ```
-HTTP/1.1 403 Forbidden
+
+احتاج S256 ل PKCE. سجل سلسلة المصدر الدقيقة. هذه القيمة الدقيقة تصبح مفتاح التسجيل وتخزين الرمز.
+
+### اتبع أولوية التسجيل
+
+استخدم معلومات العميل المسجلة مسبقاً عندما يكون لدى العميل علاقة صريحة بالفعل مع المصدر المختار. وإلا تفضل وثائق بيانات بيانات المستخدم عندما يعلن خادم الترخيص عن الدعم. استخدم DCR فقط كإعلان إعاقة التوافق القديمة ، ثم استدعاء معلومات العميل إذا لم تكن أي من هذه الآليات متاحة.
+
+### تفضيل وثائق بيانات المستخدم
+
+يمنح وثيقة بيانات المستخدم المستخدم (Client ID Metadata Document) خادم الإذن عنوان URL HTTPS الذي هو هو هو معرف العميل وموقع بياناتها المستخدمة:
+
+```json
+{
+  "client_id": "https://client.example.com/oauth/metadata.json",
+  "client_name": "Notes desktop client",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"]
+}
+```
+
+خادم الإذن يحصل على الوثيقة ويمتحقه.`client_id`يجب أن يكون عنوان URL HTTPS مع مسار، والقيمة داخل الوثيقة يجب أن تكون مساوية لهذا عنوان URL بالضبط.`client_id`،`client_name`و`redirect_uris`. .`application_type`يظهر في هذا المثال لكنه ليس متطلب من CIMD. استخدامها الإلزامي الجديد هو على وجه التحديد طريق DCR.
+
+تعامل استلام الوثيقة كعملية حساسة لـ SSRF. حل وتؤكيد الوجهة المقصودة ، ورفض العناوين الخلفية والخاصة والمنطقة المحلية والمنع عن الإرسال ، والتحقق مرة أخرى بعد إعادة التوجيهات وتغييرات DNS ، وتحديد الإعادة التوجيهات والبايتات والوقت ، وتطلب JSON ، ووفقاً فقط لتحكمات التخزين الآلي HTTP الموثقة. تعامل `client_name`و غيرها من حقل العرض كنص غير موثوق به.
+
+يزيل CIMD الحاجة إلى وضع معرف ديناميكي جديد لكل اتصال أول. لا يزيل إعادة توجيه التحقق من المعلومات الرقمية، أو سياسة المصدر، أو موافقة المستخدم.
+
+### DCR هو مسار التوافق
+
+لا يزال تسجيل العميل الديناميكي متاحًا لمستخدمات الإذن القديمة ، لكنه قد انتهى من الصلاحية للتنفيذات الجديدة من MCP.
+
+عند استخدام DCR، أعلن `application_type`:
+
+```json
+{
+  "client_name": "Notes desktop client",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"]
+}
+```
+
+- مستخدمي سطح المكتب والهاتف المحمول وخط الأوامر و الخلفية`native`. . .
+- استخدام تطبيقات المتصفح المضيفة عن بعد `web`وإعادة توجيهات HTTPS عن بعد.
+
+إغلاق الحقل يمكن أن يكون بطبيعة الحال `web`في تنفيذ تسجيل OpenID Connect وإجراء إعادة توجيه محكمة للخلفية فشل.
+
+حافظ على رمز DCR وراء قرار التراجع الصريح. لا تقع بعد فشل تصحيح CIMD التعسفي. قد يحول هذا فشل الأمن إلى مسار تسجيل أضعف.
+
+### إرشادات الوصف للمصدر
+
+تخزين مواد التسجيل التي يكتبها المصدر تحت عنوان المصدر الدقيق:
+
+```text
+issuer_credentials[issuer] = pre_registered_or_dcr_client
+tokens[(issuer, resource)] = access_token
+```
+
+إذا كان اكتشاف الموارد المحمية يتغير من`https://auth-one.example`إلى`https://auth-two.example`لا ترسل أبداً سر العميل للمصدر الأول، أو هوية العميل DCR، أو رمز الوصول للتسجيل، أو رمز التجديد، أو رمز الوصول للثاني. يجب على عملاء DCR المسجلين مسبقاً واستخدام إثباتات اعتماد صادرة عن المصدر الجديد.
+
+يختلف هوية عميل CIMD لأنه URL HTTPS المضيفة ذاتياً ، وليس بطاقة اعتماد تم تصنيفها من قبل خادم التصريح. نفس URL CIMD محمولة: يقوم مصدر موثوق جديد بتحويل وثيقة وتؤكيدها دون إعادة تسجيل DCR. لا تزال ردود الطلبات والرموز يتم التحقق منها وتخزينها تحت المصدر الجديد.
+
+### رمز الترخيص مع PKCE
+
+التدفق التفاعلي هو:
+
+1. توليد طاقة عالية من الانتروبيا`code_verifier`. . .
+2. استنتاج S256 `code_challenge`. . .
+3. أرسل طلب التأذن مع الدقة`client_id`،`redirect_uri`،`scope`،`code_challenge`و`resource`. . .
+4. تلقي رد على الموافقة يحتوي على `code`و عندما يتم توفيرها`iss`. . .
+5. تأكيدي`iss`ضد المصدر المسجل الدقيق قبل استخدام أي حقل استجابة.
+6. تبادل الرمز مع `code_verifier`، نفس إعادة توجيه URI ، والشيء نفسه `resource`. . .
+7. تخزين الرمز الناتج تحت `(issuer, resource)`. . .
+
+- نعم`resource`يظهر المعلم من RFC 8707 في كل من طلبات التأذن والرمز. يحدد URI خادم MCP القنوية.
+
+### تأكيدي`iss`بالضبط
+
+يمنع RFC 9207 من خلط رد تصريح من مصدر واحد مع رد من مصدر آخر.
+
+متى`iss`إذا كان موجوداً، قم بمقارنةها مع المصدر المسجل دون طيّة الحالة، وتغييرات التقطيعات التالية، وإزالة منفذ افتراضي، أو تطبيع تشفير النسبة المئوية. في حالة عدم التطابق، لا تتصرف على الرمز أو حتى تعرض تفاصيل الخطأ التي يتحكم بها المهاجم من تلك الاستجابة.
+
+خادم تصريح يتضمن `iss`الإعلانات`authorization_response_iss_parameter_supported: true`العملاء الحاليون لا يزالون يصدقون هدية`iss`حتى عندما يفتقد هذا الإعلان
+
+### تأكيد الجمهور في خادم MCP
+
+يقبل خادم الموارد فقط الرموز المصدرة لنفسه:
+
+```text
+token.issuer == configured_authorization_server
+token.audience == canonical_mcp_resource
+```
+
+تتلقى الرموز غير صالحة أو انتهت صلاحيتها أو أصدرها بشكل خاطئ أو الجمهور الخطأ 401. لا يجوز لمخادم MCP قبول أو نقل الرموز المخصصة لخدمة أخرى.
+
+### طلب أصغر نطاق للشحن
+
+ابدأ من النطاق المطلوب الآن. إذا كانت أداة لاحقة تتطلب المزيد، يعود الخادم 403 مع تحد النطاق المعتمد:
+
+```text
 WWW-Authenticate: Bearer error="insufficient_scope",
-    scope="notes:delete", resource="https://notes.example.com"
+  scope="notes:delete",
+  resource_metadata="https://notes.example.com/.well-known/oauth-protected-resource/mcp"
 ```
 
-يرى العميل خطأ insufficient_scope، ويقوم بإجراء حوار الموافقة على النطاق الإضافي، ويقوم بتدفق OAuth الصغير له، ويعيد محاولة الطلب مع رمز جديد.
+يقوم العميل بتفسير الإذن الجديد، ويحصل على موافقة، ويقوم بتدفق الإذن الجديد مع مجموعة النطاق المشترك، ويعيد تجربة طلب MCP مع معرف JSON-RPC الجديد.
 
-### التحقق من صحة الجمهور
+لا نفترض أن النطاق المتحدّث هو مجموعة فرعية من`scopes_supported`التحدي هو المعتمد للعملية الحالية.
 
-كل طلب: عمليات التحقق من الخادم`token.aud == self.resource_url`هذا يمنع إعادة استخدام الرمز عبر الخادم
+### التأذن والسلك المتحكم في المعلومات المتحركة
 
-### الرموز القصيرة الأجل والدورة
+دعوة أداة مصرح بها لا تزال تحتوي على غلاف الطلبات الكاملة الحالية:
 
-يجب أن تكون رموز الوصول قصيرة الأمد (بالمعتاد 1 ساعة). يتم تدوير رموز التجديد في كل عملية تجديد. يقوم العميل بتعامل التجديد الصامت في الخلفية.
+```text
+POST /mcp
+Authorization: Bearer <access-token>
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: notes.delete
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "tools/call",
+  "params": {
+    "name": "notes.delete",
+    "arguments": {"id": "note-7"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "oauth-lesson-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+الوهم يسمح للمدير، البيانات المطلوبة تتفاوض على سلوك البروتوكول، ولا أحد يبدل الآخر.
+
+تأكيد الأسلاك في ترتيب ثابت: JSON-RPC وأنواع البيانات المعدنية، رأس والجسم المساواة، ثم دعم البروتوكول. إضطرابات توجيه أو نسخة رأس يعود HTTP 400 مع `-32020`. إذا كان الرأس والجسم يوافقون على نسخة غير مدعومة، أعيد HTTP 400 مع `-32022`و`data`بالضبط`{"supported":["2026-07-28"],"requested":"<actual>"}`. طريقة غير معروفة تعيد HTTP 404 مع `-32601`. . .
+
+كل خطأ في الطلب، بما في ذلك 401 رمز غير صالح و 403 نطاق غير كاف، هو غلاف خطأ JSON-RPC مع الطلب الأصلي `id`. معلومات الاسترداد المهيكلة تنتمي إلى خطأ اختياري `data`.`WWW-Authenticate`لا يزال عنوان استجابة HTTP. الإخطار لا يحتوي على`id`، لذلك لا تتلقى جسم JSON-RPC. إشعار HTTP المقبول يعود 202 مع جسم فارغ.
+
+الخادم ينفذ `server/discover`وتعلن عن الأدوات، لذلك تنفيذ أيضاً الإجبارية`tools/list`طريقة. وصف الأدوات لها أسماء مستقرة، وصف، وجذر الكائن `inputSchema`القيم القائمة هي تحديدية وتعطي`resultType`، بيانات المستخدم المحدودة`ttlMs`و`cacheScope`. يمكن الحصول على قائمة أدوات اكتشافية ومستقلة عن المستخدم قبل الحصول على الموافقة. تطبق السياسة العادية والاحتفاظ بحفظ الاحتياطي الخاص إذا كان أي منها يختلف حسب الرقم.
 
 ### لا يوجد رمز عبر
 
-خادمات العينات (مرحلة 13 · 11) لا يجب أن تمرّر رمز العميل إلى خدمات أخرى. طلب العينات هو الحد.
+لا يجوز لخادم MCP إرسال رمز وصول MCP للعميل إلى API أسفل التيار. الحصول على رمز منفصل أسفل التيار مع الجمهور المناسب أو استخدام تصميم صريح لتبادل الرمز. يؤدي تأكيد الجمهور فقط عندما ترفض الخدمات الرمز المختص لشخص آخر.
 
-### الوقاية المرتبطة بالخلط
+### رموز التجديد
 
-الـ " " " الـ " " " الـ " " الـ " " الـ " " الـ " " الـ " " الـ " " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ " الـ "`aud`. العميل يلتزم بـ`client_id`كل طلب معتمد ضد كل منهما، ويقضي المواصفات صراحة نمط "موافقة الـ"التوين" القديم الذي كان شائعًا في النظم الإيكولوجية الأدوات البعيدة قبل نظام "م سي بي".
-
-### اكتشاف هوية العميل
-
-ينشر كل عميل MCP بياناته المعدنية في عنوان URL ثابت. يمكن لخوادم التأذن الحصول على وثيقة بيانات المعدنية العميل لاكتشاف إعادة توجيه URIs ومعلومات الاتصال. هذا يزيل تسجيل العميل اليدوي.
-
-### البوابات و OAuth
-
-مرحلة 13 · 17 تظهر كيفية تعامل بوابة المؤسسات مع OAuth: بوابة تحتفظ بإثباتات للخادمات المتقدمة ، يتم إصدار رموز للعميل من بوابة ، ولا تغادر رموز المتقدمة البوابة أبدًا. هذا يقلل نموذج الثقة  يقوم المستخدمون بالتوثيق مع البوابة مرة واحدة ؛ بوابة معالجة تصريحات الخادم N.
+إعادة إصدار الرموز اختياريًا. عند إصدارها، تخزينها سرية وتقوم بتفريغها حسب المصدر والموارد. لا نفترض وجودها. قم بتدويرها عندما يدعم خادم الإذن الدوران وتكتشف إعادة استخدام القيم غير صالحة.
 
 ```figure
 t3-scope-stepup
 ```
 
+## بناءها
+
+`code/main.py`هو بروتوكول في عملية ومحاكاة الترخيص. ينفذ اكتشاف الموارد المحمية، بيانات المستخدم المستخدم الموثوقة، تسجيل CIMD، إعادة التأمين في DCR، فحص نوع التطبيقات، PKCE، تصحيح المصدر، رموز محدودة بالموارد، زيادة نطاق،`server/discover`،`tools/list`، وطلب أداة بلا جنسية
+
+يتلقى النموذج أجسام الطلبات المتحسّسة و رؤوس التوجيه. إنه ليس مُعدّل HTTP كامل ولا يحلل `Content-Type`أو`Accept`. قم بتوصيله إلى مُعدّل HTTP المُباشر للدروس 09، الذي يتطلب `Content-Type: application/json`و`Accept`قيمة تحتوي على كلتا `application/json`و`text/event-stream`. . .
+
+إشغله
+
+```bash
+cd phases/13-tools-and-protocols/16-mcp-security-oauth-2-1
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
+
+وتظهر الخروج اكتشاف أولاً، وقبول CIMD، قراءة عادية، واثنين من مرحلتين منفصلة من النطاق، وتخزين المعلومات الموثوقة بمفتاح المصدر.
+
 ## استخدمها
 
-`code/main.py`يحاكي تدفق OAuth 2.1 الكامل كآلة حالة.
+خريطة كائنات المحاكاة إلى مكونات الإنتاج:
 
-- مُحقق رمز PKCE / توليد التحديات.
-- تدفق رمز التأذن مع مؤشر الموارد.
-- نقطة نهاية للبيانات المعدنية المستخدمة في الموارد المحمية
-- التحقق من الوهم مع التحقق من الجمهور.
-- - إضافة خطوة`insufficient_scope`. . .
-
-لا يوجد خادم HTTP في هذه الدروس، الآلة الحكومية تعمل في الذاكرة حتى تتمكن من تتبع كل قفزة. دروس البوابة في المرحلة 13 · 17 تشبيه إلى نقل فعلي.
+- `ResourceServer.protected_resource_metadata`يصبح نقطة نهاية RFC 9728
+- `AuthorizationServer.metadata`يصبح RFC 8414 أو OpenID Connect اكتشاف.
+- `Client.enroll`يصبح قرار CIMD بالإضافة إلى فرع صريح لموافقة DCR.
+- إثباتات العميل المُصدرة و`tokens_by_issuer_resource`تصبح سجلات مشفرة. URL CIMD قد تظل قابلًا للنقل بينما تظل نتائج تصريحها مرتبطة بالمصدر.
+- `ResourceServer.handle`يصبح البرمجيات المتوسطة التي تؤكد رؤوس MCP الحالية، والرمز، ومدى الأدوات قبل إرسال مع الحفاظ على كل خطأ الطلب في غلاف JSON-RPC المتناسب.
 
 ## أرسله
 
-هذا الدرس يُنتج`outputs/skill-oauth-scope-planner.md`. بالنظر إلى خادم MCP عن بعد مع الأدوات، تصميم المهارة مجموعة النطاق، وضع القواعد، وسياسة التطوير.
+هذه الدروس تُسافر`outputs/skill-oauth-scope-planner.md`. الآن تصمم أولوية التسجيل، وتخزين المراسلات الموثوقة المرتبطة بالمصدر، ونوع الطلبات، PKCE، مؤشرات الموارد، تحديات النطاق، والحدود الحالية لطلبات اللاعبين.
 
 ## التمارين
 
-1. أركض`code/main.py`تتبع تدفق الزيادة من المجالين لاحظ أي من القفزات تتكرر عند الزيادة
-
-2. إضافة دوران رمز التجديد: كل إعادة إصدار رمز تجديد جديد ويجعل القديم غير صالح. محاكاة رمز تجديد مسروق يستخدم بعد التجديد وتأكيد فشله.
-
-3. تنفيذ نقطة نهاية البيانات المعدنية المستخدمة في الموارد المحمية كرد HTTP حقيقي باستخدام stdlib http.server. مرآة نقطة نهاية /mcp من الدروس 09.
-
-4. تصميم تسلسل تسلسل نطاق لمخادم GitHub MCP: قراءة repo، كتابة PR، الموافقة على PR، دمج PR، الإدارة. استخدام تصعيد بين كل مستوى.
-
-5. اقرأ RFC 8707 و RFC 9728. حدد الحقل الواحد في 9728 الذي يستخدمه MCP بشكل مختلف عن مثال RFC.`scopes_supported`().
+1. إضافة دوران رمز التجديد ورفض إعادة استخدام رمز التجديد السابق.
+2. إضافة قائمة تصاريح المصدر. عند تغيير المصدر، إعادة استخدام فقط عنوان URL CIMD المحمول؛ رفض جميع الكتب والرموز المذكورة من قبل المصدر.
+3. إضافة انتهاء الصلاحية إلى رموز الترخيصات وتأكيد فشل التبادل المتأخر.
+4. قم ببناء خيار عميل الويب مع إعادة توجيه HTTPS عن بعد وقارن بيانات DCR الخاصة به مع العميل الأصلي.
+5. إضافة مصدر ثان تحت نفس المصدر. تأكد من لا يمكن استخدام رمز الوصول في المصدر الأول.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| OAuth 2.1 | "Modern OAuth" | Consolidated RFC that mandates PKCE and forbids implicit flow |
-| PKCE | "Proof-of-possession" | Code verifier + challenge defeating authorization-code interception |
-| Resource indicator | "Token audience" | RFC 8707 `resource` parameter pinning token to one server |
-| Protected-resource metadata | "Discovery doc" | RFC 9728 `.well-known/oauth-protected-resource` |
-| Step-up authorization | "Incremental consent" | SEP-835 flow for adding scopes on demand |
-| `insufficient_scope` | "403 with WWW-Authenticate" | Server signal to re-consent for a larger scope |
-| Confused deputy | "Token reuse across services" | Attack where a trusted holder forwards a token inappropriately |
-| Short-lived token | "Access token TTL" | Bearer that expires quickly; refresh token renews |
-| Scope hierarchy | "Least privilege stack" | Graduated scope set with step-up between levels |
-| Client ID metadata | "Client discovery doc" | URL at which the client publishes its own OAuth metadata |
+| Term | Meaning |
+|------|---------|
+| Protected-resource metadata | RFC 9728 document that identifies the resource and authorization servers |
+| CIMD | HTTPS metadata document whose URL is the OAuth client identifier |
+| DCR | Deprecated dynamic client enrollment retained for compatibility |
+| `application_type` | `native` or `web`, used to validate redirect URI rules |
+| PKCE | Verifier and S256 challenge that protect an intercepted authorization code |
+| `iss` | RFC 9207 authorization response issuer identifier |
+| Resource indicator | RFC 8707 parameter that binds a token request to an MCP resource |
+| Audience | Resource for which a token is valid |
+| Step-up | New consent and token issuance for an additional current-operation scope |
+| Issuer-bound credentials | Registration and token records isolated by exact authorization server issuer |
 
 ## المزيد من القراءة
 
-- [MCP — Authorization spec](https://modelcontextprotocol.io/specification/draft/basic/authorization) ملف المعلومات المختلفة المختلفة
-- [den.dev — MCP November authorization spec](https://den.dev/blog/mcp-november-authorization-spec/) إنجاز التغييرات التي ستحدث في الفترة من 2025 إلى 21-25
-- [RFC 8707 — Resource indicators for OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc8707) RFC المضمنة للجمهور
-- [RFC 9728 — OAuth 2.0 protected resource metadata](https://datatracker.ietf.org/doc/html/rfc9728) RFC وثيقة الاكتشاف
-- [Aembit — MCP OAuth 2.1, PKCE and the future of AI authorization](https://aembit.io/blog/mcp-oauth-2-1-pkce-and-the-future-of-ai-authorization/) عملية تدريجية - تدفقات - تدريجية
+- [MCP 2026-07-28 authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
+- [RFC 9728: OAuth 2.0 Protected Resource Metadata](https://www.rfc-editor.org/rfc/rfc9728)
+- [RFC 8707: Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707)
+- [RFC 9207: OAuth 2.0 Authorization Server Issuer Identification](https://www.rfc-editor.org/rfc/rfc9207)
+- [OAuth Client ID Metadata Document draft](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/)

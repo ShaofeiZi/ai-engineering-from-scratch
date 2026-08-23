@@ -1,152 +1,345 @@
-# الموارد والمطلوبات من MCP  التعرض السياقي خارج الأدوات
+# الموارد والمطالبة في MCP: السياق المُعالج للخادمات التي لا تملك ولاية
 
-> تستخدم أدوات 90% من اهتمام MCP. يحلّ البدائيّة الأخرى الخادمين مشاكل مختلفة. الموارد تعرض البيانات للقراءة؛ وتعرض الأوامر الشكلات قابلة للاستخدام المتكرر كأوامر شظيفة. يجب على العديد من الخوادم استخدام الموارد بدلاً من إغلاق القراءة في الأدوات، والإلهام بدلاً من سيرات العمل القوية في طلبات العميل. يطلق هذا الدروس قاعدة القرار ويمشي على الوصول إلى القواعد.`resources/*`و`prompts/*`رسائل
+> أدوات تقوم بعمليات. الموارد تعرض المحتوى المُعالج. تطلب من الحزمة نماذج الرسائل التي حددها المستخدم. خادم MCP جيد يحافظ على هذه العقود منفصلة ومتوقعة.
 
 **Type:** Build
-**Languages:** Python (stdlib, resource + prompt handler)
-**Prerequisites:** Phase 13 · 07 (MCP server)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lesson 07 (Building an MCP Server), Phase 13, Lesson 09 (MCP Transports)
+**Time:** ~60 minutes
 
 ## أهداف التعلم
 
-- قرر بين عرض القدرة كوسيلة أو مواردة أو طلب لنطاق معين.
-- تنفيذ`resources/list`،`resources/read`،`resources/subscribe`و التعامل`notifications/resources/updated`. . .
-- تنفيذ`prompts/list`و`prompts/get`مع نماذج الحجج.
-- التعرف عندما يظهر المضيف الإشارات كإرشادات التقاط مقابل سياق حقن تلقائي.
+- اختر من بين الأدوات والموارد والإشارات من نية المستهلك.
+- إعلان عن الموارد والسطح السريع من خلال الإجبارية `server/discover`. . .
+- بناء تحديدات `resources/list`و`prompts/list`النتائج
+- التطبيق`ttlMs`و`cacheScope`بدون تسريب بيانات محددة للمستخدم.
+- إرجاع خطأ JSON-RPC `-32602`لـ URI غير صالح أو مجهول للموارد.
+- افتح`subscriptions/listen`تحرك POST- ردود الفعل وتنسجم كل حدث عن طريق معرف الاشتراك.
+- تعامل محتوى الموارد والعلامات التشريعية على أنها خروج خادم غير موثوق بها.
 
-## المشكلة
+## ابدأ من المستهلك
 
-خادم MCP ساذج لتطبيق الملاحظات يضع كل شيء على غرار أدوات: `notes_read`،`notes_list`،`notes_search`هذا يحتوي على كل وصول إلى البيانات في دعوة أداة مدفوعة على النموذج.
+أسهل طريقة للاستخدام السيء لمكب هو البدء في كود التنفيذ. تصبح استفسار قاعدة البيانات أداة لأن الوظائف مألوفة. تصبح سير العمل القابل لإعادة الاستخدام مصدرًا لأنه يتم تخزينه في ملف. يصبح الإشارة سياسة مخفية لأن المضيف يمكنه حقنها.
 
-- يجب على النموذج أن يقرر ما إذا كان سيتصل`notes_read`لكل استفسار قد يستفيد من السياق
-- لا يمكن الاشتراك بالمحتوى القراءة فقط أو التدفق على لوحة الجانب المضيف.
-- لا يمكن أن تظهر واجهات تعريف العميل (فؤر إصدار الموارد في Cloud Desktop ، ومختار "شمل الملف" في Cursor) البيانات.
+ابدأ من يختار وما يتوقعه
 
-الانقسام الأيمن: تعرض البيانات كمورد، تعرض الإجراءات المتحولة أو الحاسوبية كأدوات، تعرض تدفقات العمل متعددة الخطوات قابلة للاستعمال كإشارات. لكل شيء بدائي لديه إمكانية UX الخاصة به ونمط الوصول الخاص به.
+| Primitive | Primary intent | Selection owner | Typical result |
+|---|---|---|---|
+| Tool | Perform an operation | Model or application | Structured action result |
+| Resource | Read content at a URI | Host, application, or user | Text or binary content |
+| Prompt | Start a reusable message workflow | User through host UI | One or more prompt messages |
 
-## المفهوم
+ملاحظة في`notes://note-1`هو مصدر لأنه محتوى قابل للتعديل. `delete_note`هو أداة لأنه يغير الحالة.`review_note`هو طلب لأن المستخدم يختار سير عمل مراجعة جاهز.
 
-### أدوات مقابل الموارد مقابل الطلبات قاعدة القرار
+لا تظهر عملية واحدة ككل ثلاثة فقط لتبدو كاملة. كل سطح إضافي يحتاج إلى اكتشاف، والإذن، والخزن الآلي، ومعالجة الأخطاء، والاختبارات، والوثائق.
 
-| Capability | Primitive |
-|------------|-----------|
-| User wants to search, filter, or transform data | tool |
-| User wants the host to include this data as context | resource |
-| User wants a templated workflow they can re-run | prompt |
+## غلاف العدالة 2026-07-28
 
-المبادئ التوجيهية: إذا كان النموذج يستفيد من استدعاءها في كل استفسار مرتبط، فهو أداة. إذا كان المستخدم يستفيد من ربطه إلى محادثة، فهو مصدر. إذا كان تدفق العمل متعدد الخطوات بأكمله هو الوحدة التي يريد المستخدم إعادة استخدامها، فهو طلب.
+هذا الدروس يهدف إلى مراجعة بروتوكول MCP `2026-07-28`لا توجد أي إضافة يد أو جلسة بروتوكول في هذا الملف . كل طلب يحمل نسخة بروتوكوله و قدرات العميل في محجوز`_meta`المفاتيح
 
-### الموارد
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "resources/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+```
 
-`resources/list`العائدات`{resources: [{uri, name, mimeType, description?}]}`. .`resources/read`يأخذ`{uri}`و العائدات`{contents: [{uri, mimeType, text | blob}]}`. . .
+يجب على الخادم تنفيذ`server/discover`. إعلانات النتيجة مدعومة
+الإصدارات، وقدرات الموارد والإسراع، و هوية التنفيذ،
+يُمكن لعميل أن يطلب طريقة أخرى مباشرة، لكن الاكتشاف يعطيه
+صورة دقيقة واحدة مستقرة قبل أن تبني واجهة اتصال.
 
-يمكن أن تكون الـ URI أي شيء يمكن إدراجه:
+```json
+{
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "resources": {"listChanged": true, "subscribe": true},
+    "prompts": {"listChanged": true}
+  },
+  "ttlMs": 3600000,
+  "cacheScope": "public"
+}
+```
 
-- `file:///Users/alice/notes/mcp.md`
-- `postgres://my-db/query/SELECT ...`
-- `notes://note-14`(نظام رسمي)
-- `memory://session-2026-04-22/recent`(محدد للخادم)
+نتيجة طبيعية`"resultType": "complete"`ردّة`_meta`يحدد تنفيذ الخدمة مع `io.modelcontextprotocol/serverInfo`هذه المعلومات مفيدة للتشخيص. انها ليست هوية تصديقة. طلب يحمل مراجعة غير مدعومة يعود`-32022`مع كل من مراجعة الطلب والإصلاحات المدعومة من الخادم.
 
-`contents[]`يدعم كل من النص والبيناري.`blob`كسلسلة مقفورة بـ base64 + a `mimeType`. . .
+العقد غير الحكومي يغير غرائز التصميم الخاصة بك. ليست القائمة يمكن أن تعتمد على اتصال سابق على اتصال واحد. قد تغير الإذن مجموعة مرئية لأن الإثباتات هي إدخال طلب، ولكن تاريخ الاتصال لا يجب.
 
-### الاشتراك في الموارد
+## الموارد هي عقود URI مستقرة
 
-إعلان`{resources: {subscribe: true}}`في القدرات. مكالمات العميل`resources/subscribe {uri}`. الخادم يرسل`notifications/resources/updated {uri}`عندما يتغير المصدر العميل يقرأ مجدداً
+الموارد هي المحتوى الذي يتم تحديده بواسطة URI. صمم URI قبل المدير.
 
-حالة الاستخدام: خادم ملاحظات يحتوي على موارد على ملفات على القرص. مشرف ملف يطلق إشعارات تحديث. سحب Claude Desktop الملف مرة أخرى إلى السياق عند تحرير خارج المضيف.
+خصائص URI الجيدة:
 
-### نماذج الموارد (2025-11-25 إضافة)
+- مستقر بما فيه الكفاية لتعليق أو تمرير بين الطلبات.
+- تم تحويل الاسم إلى نطاق الخادم
+- مستقل عن هوية العملية أو الاتصال.
+- تم التحقق من التحقق من الوصول إلى المخزن
+- مُصرح بكل قراءة
 
-`resourceTemplates`دعك تعرض نمط URI المعلم: `notes://{id}`مع`id`يمكن للعميل إكمال هويات التعرف على الموارد بشكل تلقائي في اختيار الموارد.
+`notes://note-1`هو أفضل من`note-1`لأن مساحة أسمائها واضحة. قد يستخدم خادم الملفات `file://`و لكن يجب أن تحقق حدود الإداريات المكوّنة بعد حل الروابط المُتَشابكة والجزء النسبي.
 
-### الإشارات
+`resources/list`يعيد الموارد المرئية حاليا للمدعو. يتم فرزها بمفتاح مستقرة مثل URI. النظام التحديدي يمنع إغفال الاحتفاظ السريع، وتغيير اللقطات الفورية، وUI المضيف التي تتفوق بين التحديثات.
 
-`prompts/list`العائدات`{prompts: [{name, description, arguments?}]}`. .`prompts/get`يأخذ`{name, arguments}`و العائدات`{description, messages: [{role, content}]}`. . .
+```json
+{
+  "resultType": "complete",
+  "resources": [
+    {
+      "uri": "notes://note-1",
+      "name": "Architecture decision",
+      "description": "Why the service uses a stateless boundary",
+      "mimeType": "text/markdown"
+    }
+  ],
+  "ttlMs": 300000,
+  "cacheScope": "public",
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "notes-server",
+      "version": "2.0.0"
+    }
+  }
+}
+```
 
-الإشارة هي قالب يملأ قائمة من الرسائل التي يطعمها المضيف نموذجها. على سبيل المثال ، `code_review`الإستعارة تأخذ`file_path`الحجج وتعطي تسلسل ثلاث رسائل: رسالة النظام، رسالة المستخدم مع جسم الملف، ومساعد الابتداء مع نموذج التفكير.
+`resources/read`يعيد عنصرًا أو أكثر من المحتوى. لا تعتبر URI غير معروفة قراءة فارغة ناجحة. تُخصص تخصيص الموارد الحالية URI غير صالحة أو غير معروفة للموارد إلى معايير JSON-RPC غير صالحة ، رمز `-32602`. . .
 
-### المضيفون والإشارات
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "error": {
+    "code": -32602,
+    "message": "Unknown or invalid resource URI",
+    "data": {
+      "uri": "notes://missing"
+    }
+  }
+}
+```
 
-كلود ديسكوب، VS Code، و Cursor تعرض الإشارات كإرشادات شقة في واجهة المحادثة. يكتب المستخدم `/code_review`ويحصل على الحجج من نموذج. استدعاء الخادم هو العقد بين "استخدم اختصار" و "استدعاء كامل المرسل إلى النموذج".
+هذا التمييز يسمح للعميل بفصل غياب من وثيقة فارغة سارية. كما يمنع الانكماش العشوائي إلى بحث أوسع.
 
-لا يدعم كل عميل الإشارات بعد  التفاوض على القدرة التحقق. يتم الإعلان عن خادم لديه القدرة السريعة ولكن العميل دون دعم سريع ببساطة لن يرى أوامر السلاش.
+### نماذج الموارد
 
-### إشعار "تغيير القائمة"
+نموذج الموارد يصف عائلة من المعلمات URIs. استخدم واحدة عند إدراج كل عنصر ملموس سيكون مكلفا أو غير محدود. على سبيل المثال، `notes://projects/{project}/decisions/{decision}`يخبر العميل كيفية تشكيل عنوان صالح دون إرجاع كل قرار
 
-كل من الموارد والإشارات الإرسال`notifications/list_changed`عندما يتغير المجموعة، خادم الملاحظات الذي استورد 20 ملاحظة جديدة يصدر`notifications/resources/list_changed`العميل يستدعي`resources/list`لجمع الإضافات
+لا يضعف الشكل التحقق من التحقق من المصادقة. تحليل المتغيرات، وتطبيق الإذن، وتنفيذ حدود الطول والشخصيات، وبناء استفسارات التخزين مع المعلمات المكتوبة. لا تخلق أبداً سلسلة تعسفية من ذيل URI في مسار نظام الملفات أو بيان قاعدة البيانات.
 
-### اتفاقيات نوع المحتوى
+### المحتوى ليس تعليم موثوق به
 
-النص: `mimeType: "text/plain"`،`text/markdown`،`application/json`. . .
-للثنائي: `image/png`،`application/pdf`، بالإضافة إلى`blob`المجال
-للتطبيقات MCP (الدرس 14): `text/html;profile=mcp-app`في`ui://`(URI)
+قد يحتوي نص الموارد على حقن سريع أو أسرار أو أوامر مضللة أو علامات غير مُصممة. يجب على المضيف الحفاظ على منشأ المحتوى الموارد ومعاملة المحتوى الموارد كبيانات. يجب على الخادم الحد من حجم المحتوى، وإرجاع نوع MIME دقيق، وتحرير الحقول التي لا يستطيع المُتصل الوصول إليها، وتجنب إرجاع السجلات غير ذات الصلة.
 
-### الموارد الديناميكية
+## الإشارات هي نماذج يتم التحكم فيها من قبل المستخدم
 
-لا يجب أن تتوافق URI الموارد مع ملف ثابت. `notes://recent`يمكن أن تعيد أحدث خمسة ملاحظات في كل قراءة.`db://query/users/active`يمكن تنفيذ استفسار معين. الخادم حر في حساب المحتوى بشكل ديناميكي.
+تم تصميم طلبات MCP لتحديد المستخدم صريح. يمكن للمضيف أن يعرضها كأوامر شرائح أو عناصر قائمة أو أزرار سير العمل. لا يتطلب البروتوكول واجهة اتصال واحدة.
 
-قاعدة: إذا كان العميل يمكن التخزين بواسطة URI، يجب أن يكون URI مستقرا. إذا كان الحسابات واحدة، يجب أن تتضمن URI طابع زمني أو غيره حتى لا يتبقى التخزين العميل.
+`prompts/list`يجب أن تكون محددة لنفس تصريح الطلب. كل عرض يحتاج إلى اسم ثابت وصف مفيد، وإعلانات الحجج التي تسمح للمضيف جمع المدخلات قبل `prompts/get`. . .
 
-### الاشتراك مقابل الاستطلاع
+```json
+{
+  "resultType": "complete",
+  "prompts": [
+    {
+      "name": "review_note",
+      "title": "Review a note",
+      "description": "Review one note for a named concern",
+      "arguments": [
+        {
+          "name": "uri",
+          "description": "The note resource URI",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "ttlMs": 600000,
+  "cacheScope": "public"
+}
+```
 
-العملاء الذين يمكنهم الاشتراك يحصلون على دعم الخادم عبر `notifications/resources/updated`. العملاء أو المضيفين الذين لا يدعمونها استبيان عن طريق إعادة القراءة. كلاهما متوافق مع المواصفات. إعلان قدرة الخادم يخبر العميل الذي يدعم.
+`prompts/get`يحل الحجج في الرسائل. لا يحل محل تعليمات النظام المضيف. يقرر المضيف كيفية إدخال الرسائل المرجعة في سياق النموذج ويضع سياسة الثقة الخاصة به في الأولوية العليا.
 
-تكلفة الاشتراك: حالة كل جلسة على الخادم (من الذي يتم الاشتراك به ما). الحفاظ على مجموعة الاشتراك محدودة؛ يجب أن يقطع العملاء من الاتصال.
+تأكيد الحجج المطلوبة في حدود الخادم. يجب أن تمر URI المطلوبة نفس فحص التأذن مثل قراءة الموارد المباشرة. لا تجعل من المطلوبة قناة جانبية حول وصول الموارد.
 
-### الإشارات مقابل الإشارات النظامية
+## إشارات الاحتفاظ بها هي جزء من الصواب
 
-لا تكون الإشعارات في MCP إشعارات نظامية. إشعارات نظام المضيف (تعليمات تشغيل خاصة بها) وإشعارات MCP (القوالب المقدمة من الخادم التي يستدعيها المستخدم) تعيش جنبا إلى جنب. لا يسمح عميل جيد بالسيطرة على الخادم بإشعارات نظامية خاصة به؛ بل يضعها.
+`ttlMs`يخبر العميل كم من الوقت يمكن إعادة استخدام النتيجة. `cacheScope`يصف من قد يشارك هذه القيمة المحفوظة.
+
+| Scope | Meaning | Typical use |
+|---|---|---|
+| `public` | May be reused across users when authorization permits | Public prompt catalog |
+| `private` | Bound to the requesting user or credential context | User-owned note content |
+
+اختر TTL من معدل تغيير البيانات وتلف التأخير. خمس دقائق قد تناسب كتالوجية استقالة عامة. قد تستغرق ملاحظة خاصة قراءة دقيقة واحدة.
+
+المخططات المحددة فقط `public`و`private`كـ`cacheScope`قيم. لتحقيق نتيجة سرية أو تتغير بسرعة، عودة `cacheScope: "private"`مع`ttlMs: 0`، ثم تطبيق أي قاعدة أكثر صرامة لا متجر في سياسة مخزن المضيف. `no-store`هو نفسه ليس مؤسسة إدارة الأعمال`cacheScope`قيمة
+
+لا تحل إشارات الاحتفاظ بالمكان أبداً محل الإذن. يجب أن يتضمن مفتاح الاحتفاظ بالمكان كل بعد طلب يغير المرئية ، بما في ذلك المستأجر والمستخدم ومدى الموقع ومؤشر البيانات. إذا لم يتمكن الاحتفاظ بالمكان المشترك من تعبير هذه الأبعاد بأمان ، فاستخدم `private`مع صفر TTL وسياسة عدم وجود متجر على مستوى المضيف.
+
+## الاشتراكات استخدام تدفق الاستجابة المفتوحة من العميل
+
+النمط الحديث للتسجيل يحل محل السابق `resources/subscribe`RPC والنقطة النهائية القديمة لحدث HTTP GET.
+
+العميل يرسل`subscriptions/listen`على HTTP Streamable هذا هو POST الذي يبقى استجابة مفتوحة كمتد SSE.`notifications`المواد هي قائمة السماح. يجب أن لا يقدم الخادم أنواع الإخطارات التي لم يتم طلبها.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "method": "subscriptions/listen",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    },
+    "notifications": {
+      "resourcesListChanged": true,
+      "promptsListChanged": true,
+      "resourceSubscriptions": [
+        "notes://note-1"
+      ]
+    }
+  }
+}
+```
+
+هو اسم الطلب هو اسم الاشتراك قبل أي حدث مطلوب، يقوم الخادم بإرسال `notifications/subscriptions/acknowledged`. فالتشريعه يحتوي فقط على مجموعة فرعية القبول بها الخادم
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/subscriptions/acknowledged",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/subscriptionId": 17
+    },
+    "notifications": {
+      "resourcesListChanged": true,
+      "resourceSubscriptions": [
+        "notes://note-1"
+      ]
+    }
+  }
+}
+```
+
+كل حدث لاحقا على هذا التيار يحمل نفس البيانات
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/resources/updated",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/subscriptionId": 17
+    },
+    "uri": "notes://note-1"
+  }
+}
+```
+
+الإخطار يقول أن الموارد تغيرت. العميل يقرأها مرة أخرى من خلال `resources/read`لا يفترض أن الحدث يحتوي على الوثيقة الجديدة.
+
+يمكن لمعظم الاشتراكات مشاركة قناة استوديو واحدة. يسمح معرف الاشتراك بالعميل بتخسيف عددها. عبر HTTP ، إغلاق تيار الاستجابة يلغي الاشتراك. يقوم الخادم الذي ينتهي من التدفق بإعجاب بإرجاع آخر `resultType: "complete"`رد مرتبط بالطلب الأصلي.
+
+لا تستخدم تدفق الاشتراك كجلسة بروتوكول. القراءة اللاحقة لا تزال طلبًا كاملًا يمكن أن يصل إلى أي حالة خادم صحية.
 
 ```figure
 t3-primitive-sort
 ```
 
-## استخدمها
+## المختبر التفاعلي
 
-`code/main.py`يطول خادم الملاحظات من الدروس 07 مع:
+استخدم الرقم لتصنيف خمسة قدرات من متابعة المشروع: تفاصيل الإصدار، إنشاء مشكلة، نموذج مراجعة السباق، سياسة المشروع، وإغلاق مشكلة. ثم تحدد أي القوائم يمكن تخزينها علنا، والتي يجب أن تبقى سرية، والموارد التي تستحق إشعارات تحديث.
 
-- الموارد لكل ملاحظة (`notes://note-1`، إلخ) مع `resources/subscribe`دعم
-- أ`review_note`الإشارة التي تعطي نموذج ثلاث رسائل.
-- محاكاة مراقب الملفات التي تنبعث`notifications/resources/updated`عندما يتم تعديل الملاحظة.
-- أ`notes://recent`مصدر ديناميكي يعيد دائماً آخر خمسة أرقام
+لكل تصنيف، اسم المختار. إذا كان النموذج يقوم بعمل، استخدم أداة. إذا كان المضيف يقرأ المحتوى الموجهة بـ URI، استخدم مصدر. إذا بدأ المستخدم سير عمل رسالة جاهز، استخدم طلب.
 
-أطلقي الظهور لترى التدفق الكامل
+## مختبر التدريب
 
-## أرسله
+تشغيل المحاكي من جذور المخبأ:
 
-هذا الدرس يُنتج`outputs/skill-primitive-splitter.md`نظراً لخادم MCP المقترح ، فإن المهارة تصنف كل قدرة كأداة / موارد / استشارة مع منطق.
+```bash
+cd phases/13-tools-and-protocols/10-mcp-resources-and-prompts/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
+
+تحقق من النسخة في هذا الترتيب:
+
+1. تأكّد`server/discover`يعلن عن المراجعة الحالية وكلا الإمكانيات.
+2. تأكد من أن نتائج القائمة مرتبة واستخدامها`resultType: "complete"`. . .
+3. تأكيد القائمة و نتائج القراءة تحمل إشارات مخزنية متعمدة.
+4. تغيير URI القراءة إلى `notes://missing`وراقب`-32602`. . .
+5. تأكيد تأكيد الاشتراك قبل حدث الموارد.
+6. تأكيد الحدث و إغلاقها بشكل لطيف كل من تحمل بطاقة الاشتراك`5`. . .
+
+نموذج Python لا يفتح اتصال HTTP حقيقي. إنه يمثل الرسائل التي يجب أن تضعها SDK على تيار الاستجابة المتفق على الطلب. استخدم SDK الرسمي للإطار والنقل في الإنتاج.
+
+## الأثاث المُرسل
+
+`outputs/skill-primitive-splitter.md`هو مراجعة تصميم قابلة لإعادة الاستخدام لانتخاب MCP البدائي. فإنه يفتتح الآن اكتشافات تحديدية، نطاق التخزين الآلي، سلوك URI غير صالح، وصفائم الاشتراك الحديثة.
+
+الدرس أيضاً سفن`assets/primitive-split.svg`، نسخة ثابتة من الحدود البدائية والإشتراك للدراسة غير متصلة.
+
+## تحقق من ذلك
+
+```bash
+cd phases/13-tools-and-protocols/10-mcp-resources-and-prompts/code
+python3 main.py
+python3 -m unittest discover tests -v
+```
+
+النتيجة المتوقعة: البرنامج الرئيسي يطبخ نسخة JSON ويقوم أمر الاختبار بإبلاغ عن اثني عشر اختبارا على الأقل.
+
+## اتصال كابستون
+
+استخدم هذا العقد عندما يعرض خادم الحجر النهائي المعرفة المقدمة للعنوان إلى جانب الإجراءات. تضم صورة مفاجئة من الكتالوج المحددة، وقراءة مصدر مصرح به، وحل واحد سريع، حالة URI غير صالحة، ونسخة الاشتراك واحدة.
+
+يجب أن تظهر أدلة أن أي قائمة تعتمد على تاريخ الاتصال وأن حدث الاشتراك لا يمنح أبداً الوصول إلى الموارد الأساسية.
 
 ## التمارين
 
-1. أركض`code/main.py`. لاحظ قائمة الموارد الأولية ، ثم قم بتحرير الملاحظة والتحقق من `notifications/resources/updated`حوادث الحرائق
-
-2. إضافة`resources/list_changed`المُصدِّر: عندما يتم إنشاء مذكرة جديدة، أرسل الإخطار حتى يجد العملاء مرة أخرى.
-
-3. صمم ثلاث إشارات لخادم GitHub MCP: `summarize_pr`،`triage_issue`،`release_notes`كل منهما مع مخططات الحوارات يجب أن يكون الجسم السريع قابلاً للتشغيل دون إصدار آخر
-
-4. خذ أداة موجودة في خادم الدروس 07 وتصنيف ما إذا كان يجب أن يبقى أداة أو يتم تقسيمها إلى زوج من الأدوات بالإضافة إلى الموارد. توجيه في جملة واحدة.
-
-5. اقرأوا المواصفات`server/resources`و`server/prompts`أجزاء. حدد الحقل الواحد في `resources/read`هذا نادرًا ما يُعيش فيه الناس ولكن معتمدًا على المواصفات`_meta`على محتوى الموارد.
+1. إضافة`notes://projects/{project}/notes/{id}`نموذج الموارد وتؤكد على كلا المتغيرين.
+2. إضافة صفحة إلى `resources/list`مع الحفاظ على النظام التحديدي
+3. تغيير مصدر واحد إلى `cacheScope: "private"`مع`ttlMs: 0`، إضافة سياسة عدم وجود متجر على مستوى المضيف، وتفسير التهديد الذي يبرر كلا التحكمين.
+4. إضافة اشتراك لتغيير قائمة الاستعلامات وإثبات عدم إرسال أي حدث عند حذف المرشح `promptsListChanged`. . .
+5. إعداد اشتراكات متزايدة و إثبات أن كل حدث يحمل معرف الطلب الصحيح.
+6. إضافة تفويض موضوع إلى المعاملة القراءة وإثبات إدخال التخزين الآلي لا يمكن أن تتقاطع الموضوعات.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Resource | "Exposed data" | URI-addressable content the host can read |
-| Resource URI | "Pointer to data" | Scheme-prefixed identifier (`file://`, `notes://`, etc.) |
-| `resources/subscribe` | "Watch for changes" | Client-opt-in server-push updates for a specific URI |
-| `notifications/resources/updated` | "Resource changed" | Signal to client that a subscribed resource has new content |
-| Resource template | "Parameterized URI" | URI pattern with completion hints for the host picker |
-| Prompt | "Slash-command template" | Named multi-message template with argument slots |
-| Prompt arguments | "Template inputs" | Typed parameters the host collects before rendering |
-| `prompts/get` | "Render template" | Server returns the filled-in message list |
-| Content block | "Typed chunk" | `{type: text \| image \| resource \| ui_resource}` |
-| Slash-command UX | "User shortcut" | Host surfaces prompts as commands starting with `/` |
+- **Resource:**المحتوى المُعَدَّى بـ URI الذي كشف عنه خادم MCP.
+- **Prompt:**نموذج رسائل يسيطر عليه المستخدم يتم عرضها من قبل خادم MCP.
+- **Deterministic list:**نتيجة اكتشاف مع عضوية مستقرة وتطلب نفس المدخلات الطلب.
+- **`ttlMs`:**تخزين مدة الطفولة في الميلي ثانية
+- **`cacheScope`:**الحدود المشتركة لنتائج مخزنة
+- **`subscriptions/listen`:**طلب طويل الأمد يقدم تدفق الاستجابة فيه إخطارات مختصة صراحة.
+- **Subscription ID:**هوية طلب الاستماع الأصلية، تكرر في بيانات البيانات المعلوماتية.
+- **Invalid parameters:**خطأ JSON-RPC `-32602`، يستخدم لـ URI غير صالح أو مجهول للموارد.
+- **Unsupported protocol version:**خطأ JSON-RPC `-32022`، بما في ذلك`supported`و`requested`الإصلاحات
+- **`server/discover`:**طريقة خادم إلزامية تعيد الإصلاحات المدعومة والقدرات والهوية والإشارات الاحتياطية الاختيارية.
 
 ## المزيد من القراءة
 
-- [MCP — Concepts: Resources](https://modelcontextprotocol.io/docs/concepts/resources) الموردات و URIs، الاشتراكات، والعلامات التشريعية
-- [MCP — Concepts: Prompts](https://modelcontextprotocol.io/docs/concepts/prompts) نماذج سريعة ودمج القيادة
-- [MCP — Server resources spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/resources) كامل `resources/*`إشارة الرسالة
-- [MCP — Server prompts spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/prompts) كامل `prompts/*`إشارة الرسالة
-- [MCP — Protocol info site: resources](https://modelcontextprotocol.info/docs/concepts/resources/) دليل المجتمع في توسيع الوثائق الرسمية
+- [MCP 2026-07-28 Resources](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
+- [MCP 2026-07-28 Prompts](https://modelcontextprotocol.io/specification/2026-07-28/server/prompts)
+- [MCP 2026-07-28 Subscriptions](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions)
+- [MCP 2026-07-28 Caching](https://modelcontextprotocol.io/specification/2026-07-28/basic/utilities/caching)

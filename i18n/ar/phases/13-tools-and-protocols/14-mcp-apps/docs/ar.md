@@ -1,216 +1,318 @@
-# تطبيقات MCP  الموارد التفاعلية من خلال UI `ui://`
+# تطبيقات MCP بشأن بروتوكول العدالة عن الجنسية
 
-> تُغطي أداة النتائج التي يتم عرضها من خلال الوكلاء فقط. تسمح تطبيقات MCP (SEP-1724, رسميًا 26 يناير 2026) بأداة بإرجاع HTML التفاعلي المعدن بالرمل المعدن في شكل إضافي في كود ستوب ، تشات جي بي تي ، كورسور ، غوز ، ووس كود. لوحات التحكم والأنماط والخرائط والمشاهد الثلاثية الأبعاد ، كلها من خلال امتداد واحد. هذه الدروس تمشي على `ui://`نظام الموارد،`text/html;profile=mcp-app`MIME، بروتوكول iframe-sandbox postMessage، والسطح الأمني الذي يأتي مع السماح لخادم عرض HTML.
+> النتيجة التفاعلية لا تزال أداة MCP وتبادل الموارد. يجعلها جوهر 2026-07-28 مستقلة عن التبادل ، في حين يضيف امتداد التطبيقات سطح المتصفح المعدن.
 
 **Type:** Build
-**Languages:** Python (stdlib, UI resource emitter), HTML (sample app)
+**Languages:** Python
 **Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 10 (resources)
 **Time:** ~75 minutes
 
 ## أهداف التعلم
 
-- أعد`ui://`المورد من مكالمة أداة وتعيين MIME الصحيحة والبيانات المعدنية.
-- إعلن واجهة تعريف المستخدم المرتبطة بالأداة مع `_meta.ui.resourceUri`،`_meta.ui.csp`و`_meta.ui.permissions`. . .
-- تنفيذ صندوق الرمل iframe postMessage JSON-RPC للاتصال من واجهة الوصول إلى المضيف.
-- تطبيق قواعد CSP والسياسة الإذن القابلة للتصدي للسياسة التي تحمي نفسها من الهجمات التي نشأت من UI.
+- إعلانات عن تطبيقات MCP من خلال `server/discover`وقدرات التوسع حسب الطلب.
+- إعلان`ui://`الموارد على أداة قبل أن يتم استدعاء الأداة.
+- أعيد نتائج الأداة والموارد الكاملة على سلك العزل 2026-07-28.
+- إفراز التطبيقات `ui/initialize`رسالة الجسر من ضغط يد من مركز MCP المزول.
+- تطبيق تصحيح الأصل، ورقعة الرملة، CSP، والإذن أقل امتيازات.
 
 ## المشكلة
 
-عصر 2025`visualize_timeline`يمكن أن يعيد أداة "هنا 14 ملاحظة منظمة بالتسلسل الزمني: ...". هذا فقرة. المستخدمون يريدون بالفعل جدول زمني تفاعلي. قبل تطبيقات MCP ، كانت الخيارات: API الويجيتات المحددة للعميل (ملفات كلود ، OpenAI Custom GPT HTML) ، أو لا UI على الإطلاق.
+النتيجة النصية يمكن أن تصف خط زمني. لا يمكن أن تعطى للمستخدم خط زمني يمكن أن تصفح، التفتيش، أو التصرف على.
 
-تطبيقات MCP (SEP-1724, تم شحنها في 26 يناير 2026) توفر معيار للعقد.`resource`التي هي URI `ui://...`و من هو`text/html;profile=mcp-app`. يقوم المضيف بتقديمها في إطار رمادي مع إطار CSP محدود ولا توفر إمكانية وصول إلى الشبكة إلا إذا تم منحها صراحة. يرسل واجهة الفور داخل إطار الإضافة رسائل إلى المضيف عبر لهجة JSON-RPC من خلال رسالة البريد الصغيرة.
+تُحل MCP Apps مشكلة العرض بإضافة اختيارية.`ui://`الموارد. يمكن للمضيف الحصول على هذه الموارد ومراجعتها قبل تشغيل الأداة ، وإرسالها في إيفريم مربع رمال ، والوساطة بين جميع إجراءات التطبيق عبر جسر JSON-RPC.
 
-كل عميل متوافق (كلود ديسكوب، تشات جي بي تي، غوز، VS Code) يعطي نفس `ui://`الموردة بنفس الطريقة. خادم واحد، حزمة HTML واحدة، واجهة المستخدم العالمية.
+تم تغيير بروتوكول الأساس في 2026-07-28. لا تغلف تطبيقًا في دورة حياة الاتصال القديمة:
+
+- لا يوجد جوهر`initialize`طلب أو`notifications/initialized`الإخطار
+- لا يوجد`Mcp-Session-Id`رأس
+- كل طلب يحمل نسخة بروتوكول و قدرات العميل في `params._meta`. . .
+- خادم تنفيذ `server/discover`حتى يتمكن العملاء من فحص الإصدارات والقدرات الأساسية والإضافات.
+- كل نتيجة ناجحة لها`resultType`التمييز
+- يستخدم HTTP المباشر POST واحد لكل طلب. نقاط دخول GET الحديثة و DELETE تعود 405.
+
+على جسر التطبيقات لا يزال هناك طريقة تسمى`ui/initialize`إنه ينتمي إلى لغة إيفريم "بوستماسج" لا يعيد إنشاء جلسة MCP الأساسية
 
 ## المفهوم
 
-### - نعم`ui://`نظام الموارد
+### بروتوكولين، ميزة واحدة
 
-أداة تعود:
+أبقوا الطبقات واضحة:
+
+1. النواة MCP تحمل `server/discover`،`tools/list`،`tools/call`،`resources/list`و`resources/read`. . .
+2. يعلن امتداد MCP Apps عن واجهة المستخدم ويحدد جسر iframe-to-host.
+3. قواعد مربع الرمل المتصفح تحد من ما يمكن للمستخدم الوصول إليه.
+
+هو هو .`io.modelcontextprotocol/ui`كلا النظاميين يختارون. العميل يرسل دعم التوسع داخل كائن القدرات على كل طلب:
 
 ```json
 {
-  "content": [
-    {"type": "text", "text": "Here is your notes timeline:"},
-    {"type": "ui_resource", "uri": "ui://notes/timeline"}
-  ],
-  "_meta": {
-    "ui": {
-      "resourceUri": "ui://notes/timeline",
-      "csp": {
-        "defaultSrc": "'self'",
-        "scriptSrc": "'self' 'unsafe-inline'",
-        "connectSrc": "'self'"
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {
+        "extensions": {
+          "io.modelcontextprotocol/ui": {}
+        }
       },
-      "permissions": []
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "timeline-host",
+        "version": "1.0.0"
+      }
     }
   }
 }
 ```
 
-المضيف ثم يُدعو`resources/read`على`ui://notes/timeline`و يُرجع:
+`clientInfo`يوصى به للتشخيص. إنها بيانات ذاتية الإبلاغ، وليس هوية تصريح.
+
+### اكتشاف قبل الترجمة
+
+نتيجة اكتشاف الخادم تعلن عن التوسع:
 
 ```json
 {
-  "contents": [{
-    "uri": "ui://notes/timeline",
-    "mimeType": "text/html;profile=mcp-app",
-    "text": "<!doctype html>..."
-  }]
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "tools": {},
+    "resources": {},
+    "extensions": {
+      "io.modelcontextprotocol/ui": {}
+    }
+  },
+  "ttlMs": 300000,
+  "cacheScope": "public",
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "timeline-app-server",
+      "version": "2.0.0"
+    }
+  }
 }
 ```
 
-### صندوق الرمال
+يجب على الخادم دعم الاكتشاف. لا يجبر العميل على استدعاء الاكتشاف قبل كل عمل لأن كل عمل يحمل قدراته الخاصة.
 
-المضيف يعطي HTML داخل مربع رمال`<iframe>`مع:
+### إعلان واجهة المستخدم على تعريف الأداة
 
-- `sandbox="allow-scripts allow-same-origin"`(أو أكثر صرامة لكل إعلان خادم)
-- يتم تطبيق CSP المعلن عن الخادم عبر عناوين الاستجابة.
-- لا يوجد كعك ولا مخزن محلي من أصل المضيف
-- الوصول إلى الشبكة محدودة`connectSrc`في مركز التجميع.
-
-### البروتوكول بعد الرسالة
-
-يتواصل iframe مع المضيف عبر `window.postMessage`. لغة صغيرة JSON-RPC 2.0:
-
-دائماً أبرز`targetOrigin`إلى أصل النظير الدقيق، والجانب المقبل يصدق`event.origin`ضد المُسَمِح قبل معالجة أيّ حمولة مفيدة.`"*"`على أي جانب من هذه القناة  يحمل الجسم مكالمات الأدوات وقراءة الموارد.
-
-```js
-// iframe to host  (pin to host origin)
-window.parent.postMessage({
-  jsonrpc: "2.0",
-  id: 1,
-  method: "host.callTool",
-  params: { name: "notes_update", arguments: { id: "note-14", title: "..." } }
-}, "https://host.example.com");
-
-// host to iframe  (pin to iframe origin)
-iframe.contentWindow.postMessage({
-  jsonrpc: "2.0",
-  id: 1,
-  result: { content: [...] }
-}, "https://iframe.example.com");
-
-// receiver on both sides
-window.addEventListener("message", (event) => {
-  if (event.origin !== "https://expected-peer.example.com") return;
-  // safe to process event.data
-});
-```
-
-أساليب الجانب المضيف المتاحة يمكن للمستخدم أن يدعو إليها:
-
-- `host.callTool(name, arguments)`يستخدم أداة الخادم
-- `host.readResource(uri)`يقرأ مصدر MCP.
-- `host.getPrompt(name, arguments)` يحضر نموذج سريع.
-- `host.close()`يرفض UI
-
-كل مكالمة ما زالت تمر عبر بروتوكول MCP وتتراث بإذن الخادم.
-
-### الإذن
-
-- نعم`_meta.ui.permissions`طلبات القائمة إضافية:
-
-- `camera` الوصول إلى كاميرا المستخدم (المستخدمة لمتصفحات البيانات المستخدمة في الوثائق).
-- `microphone` إدخال الصوت
-- `geolocation` موقع
-- `network:*` وصول شبكة أوسع من `connectSrc`فقط يسمح.
-
-كل إذن هو طلب يراه المستخدم قبل أن يعطي واجهة المستخدم.
-
-### مخاطر الأمن
-
-HTML في iframe ما زال HTML. سطح هجوم جديد:
-
-- **Prompt-injection via UI.**يمكن للمستخدم أن يظهر واجهة تعريف الخادم الخبيثة نصاً يشبه رسالة النظام ويخدع المستخدم. يجب أن يتميز تعريف المضيف بشكل مرئي بين واجهة تعريف الخادم من واجهة تعريف المضيف.
-- **Exfiltration via `connectSrc`.**إذا سمح لشركة التعاون المركزي`connect-src: *`يمكن للمستخدمين إرسال البيانات إلى أي مكان يجب أن تكون الإعدادات القاسية
-- **Clickjacking.**تتداخل واجهة المستخدم مع الكروم المضيف. يجب على المضيفين منع التلاعب بنشر z وتطبيق قواعد الضموضة.
-- **Steal focus.**يُستعمل واجهة المستخدم تركيز لوحة المفاتيح ويُلتقط الرسالة التالية. يجب على المضيفين إيقافها.
-
-المرحلة 13 · 15 تغطي هذه بشكل متعمق كجزء من أمن MCP؛ هذا الدروس يقدمها.
-
-### `ui/initialize`صلصة اليد
-
-بعد تحميل الإطار، فإنه يرسل `ui/initialize`على البريد
+العقد الحديث للتطبيقات يربط واجهة المستخدم بالداول في `tools/list`:
 
 ```json
-{"jsonrpc": "2.0", "id": 0, "method": "ui/initialize",
- "params": {"theme": "dark", "locale": "en-US", "sessionId": "..."}}
+{
+  "name": "notes_timeline",
+  "description": "Render a timeline of notes.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "_meta": {
+    "ui": {
+      "resourceUri": "ui://notes/timeline.html"
+    }
+  }
+}
 ```
 
-يستجيب المضيف مع القدرات و رمز جلسة. يستخدم واجهة البحث رمز جلسة في كل مكالمة مضيف لاحقة.
+هذه البيانات المعدنية المقدمة قبل الاتصال بشكل متعمد. يمكن للمضيف تحميل HTML مسبقًا ، والخزينة الآمنة ، ومراجعة الأمن قبل أن يطلب النتيجة عرضها. قد يتم قبول مفاتيح البيانات المعدنية المسطحة القديمة بواسطة رمز التوافق ، ولكن يجب أن تنشر الخوادم الجديدة المضغوطة `_meta.ui.resourceUri`النموذج
 
-### أسباب أسبريندر / أسبفريم SDK
+`tools/list`يمكن التخفيض في النواة الحالية.`ttlMs`و`cacheScope`استخدم`private`عندما تختلف الأدوات المرئية حسب المستخدم أو الوهم.
 
-يظهر SDK التطبيقات الموسعة اثنين من أسباب الراحة:
+### أعيد البيانات، ثم دع المضيف يربط الرؤية
 
-- `AppRenderer`(جانب الخادم)  يلف جزء React / Vue / Solid ويطلق `ui://`الموارد مع MIME والبيانات المعدنية الصحيحة.
-- `AppFrame`(جانب العميل)  يتلقى الموارد، يضم iframe، ويتوسط بعدMessage.
+يرد نداء الأداة المحتوى العادي بالإضافة إلى البيانات المهيكلة:
 
-يمكنك استخدام هذه أو تحويل HTML و JSON-RPC يدويا.
+```json
+{
+  "resultType": "complete",
+  "content": [
+    {"type": "text", "text": "Timeline ready."}
+  ],
+  "structuredContent": {
+    "notes": [
+      {"id": "note-1", "title": "Discover", "created": "2026-07-28"}
+    ]
+  },
+  "isError": false
+}
+```
 
-### حالة النظام البيئي
+المضيف يعرف بالفعل أي عرض ينتمي إلى الأداة. تجنب اختراع كتلة محتوى جديدة فقط لتكرار URI.
 
-أرسلت تطبيقات MCP في 26 يناير 2026. دعم العملاء اعتبارا من أبريل 2026:
+### استخدم التطبيق كمصدر
 
-- **Claude Desktop.**الدعم الكامل منذ يناير 2026.
-- **ChatGPT.**الدعم الكامل عبر بروتوكول التطبيقات SDK (المسألة الأساسية نفسها MCP Apps).
-- **Cursor.**التطبيق التجريبي؛ تمكين عبر الإعدادات.
-- **VS Code.**إنسانسيدبني فقط
-- **Goose.**دعم كامل
-- **Zed, Windsurf.**خريطة الطريق
+الخادم يعلن`resources`في اكتشاف، لذلك فإنه أيضا تنفيذ الالتزام`resources/list`العملية. إدخال القائمة التحديدية يتضمن URI القنوني ، والاسم المستقر ، والوصف ، ونوع MIME. نتيجة القائمة تتضمن `resultType`، بيانات المستخدم المعرفية`ttlMs`و`cacheScope`، تماماً مثل قائمة الأدوات التحديدية
 
-الخوادم في الإنتاج: لوحة التحكم، وتصور الخرائط، جداول البيانات، صانعي الرسوم البيانية، عرضات أجهزة إدارة التشغيل.
+المضيف يرسله`resources/read`على HTTP المباشر ، يكون الطلب:
+
+```text
+POST /mcp
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: resources/read
+Mcp-Name: ui://notes/timeline.html
+```
+
+يجب أن تتطابق قيم العنوان و جسم JSON- RPC. عدم التطابق هو خطأ بروتوكول `-32020`. . .
+
+النتيجة تحتوي على الموارد HTML ومشيرات التخزين:
+
+```json
+{
+  "resultType": "complete",
+  "contents": [
+    {
+      "uri": "ui://notes/timeline.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "text": "<!doctype html>...",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "connectDomains": [],
+            "resourceDomains": [],
+            "frameDomains": [],
+            "baseUriDomains": []
+          },
+          "permissions": {}
+        }
+      }
+    }
+  ],
+  "ttlMs": 60000,
+  "cacheScope": "public"
+}
+```
+
+### تخزين موارد واجهة المستخدم كمحتوى يمكن تنفيذه
+
+مواردة التطبيق لا يمكن التبادل مع النص العادي. إدخال التخزين الآلي يمكن تنفيذ رمز الجسر، وتقديم بيانات الأداة، وتطلب إجراءات منتظمة. مفتاحها من خلال القنوات القنونية `ui://`URI، والهوية والإصدار المعتمدة للخادم، وتحليل محتوى الموارد، والسياق المفوضية عندما `cacheScope`هو خاص. لا تستخدم أبداً مصدر خاص للتطبيق عبر المبادئ الرئيسية لأن HTML أو بياناتها المختلفة قد تختلف حتى عندما تكون URI متطابقة.
+
+إبطال الإدخال عندما يكون`ttlMs`انتهت صلاحية الوسيلة`_meta.ui.resourceUri`تغييرات ملزمة، أو تغييرات نسخة الخادم أو إدخال إشارة تصريح مسموح بها، أو إدخال إشارة تغيير الموارد معترف بها تسمية URI. إعادة التطبيق وإعادة تطبيق CSP ومراجعة الإذن قبل إعادة التثبيت. لا يجب أن تحتفظ إطار إيفري متجاوز السن بإذنات أوسع ببساطة لأن نسخة الموارد الجديدة لم تحملها بعد.
+
+### رفض الغامضة في الأسلاك قبل سياسة الميزات
+
+التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق.
+
+| Condition | HTTP | JSON-RPC error |
+|-----------|------|----------------|
+| Header and body version, method, or name disagree | 400 | `-32020` |
+| Header and body agree on an unsupported version | 400 | `-32022`, with `data` exactly `{"supported":["2026-07-28"],"requested":"<actual>"}` |
+| `resources/read` lacks the Apps extension capability | 400 | `-32021`, with `data.requiredCapabilities.extensions.io.modelcontextprotocol/ui` |
+| Method is unknown | 404 | `-32601` |
+
+إشعار JSON-RPC لا يحتوي على أي `id`، لذلك لا ينشر الخادم أبداً رد JSON-RPC لذلك. إشعار HTTP المقبول يعيد 202 مع جسم فارغ. يمكن أن يغير خطأ حالة HTTP ، ولكن لا يزال لا يمكن إنشاء جسم خطأ JSON-RPC لإشعار.
+
+### صندوق الرمل هو الحدود، وليس حكم الثقة
+
+مضيف يسيطر على iframe. لا يمكن للتطبيق قراءة ملفات تعريف الارتباط المضيف، التخزين المحلي، أو صفحة DOM مباشرة. يجب أن يعبر جميع الأعمال المميزة الجسر.
+
+استخدم هذه التشغيلات الافتراضية:
+
+- اترك جميع قوائم النطاقات CSP فارغة، ثم أضف فقط الأصول التي يحتاجها التطبيق. استخدام `connectDomains`لـ (بيتش) ، (إكس آر) ، و (ويب سوكت) ؛ استخدام `resourceDomains`للخطوط، والأساليب، والصور، والخطوط.
+- قم بتجميع الرمز والبيانات عندما يكون ذلك ممكناً
+- لا تطلب أي تصريح للكاميرا أو الميكروفون أو الموقع إلا إذا كان هناك شيء مرئي يحتاجه.
+- - أوراق`postMessage`إلى أصل أقرانه بالضبط ورفض الأحداث من كل أصل آخر
+- تعامل معدل الأدوات، نتائج الأدوات، نص الموارد، ورسائل الجسر كإدخال غير موثوق به.
+- الحفاظ على موافقة المستخدم في المضيف. لا يمكن أن يوافق الإطار على إجراءاتها التالية.
+
+لا تُنسخ ثابتاً`sandbox`يجب على المضيف اختيار العلامات بناءً على نموذج أصل التطبيق وتصميم عزله الخاص.
+
+المجال المسموح به لا يزال مسار التنفيذ`connectDomains: ["https://api.example.com"]`يعني أن أي نص يتم تنفيذه داخل التطبيق يمكنه إرسال البيانات المسموح بها هناك. يمنع التطابق الدقيق في المصدر الخلط في الوجهة، لكنه لا يقرر ما إذا كانت الحمولة المفيدة مناسبة. حافظ على إمكانية الوصول إلى الاتصال فارغة افتراضيًا ، وتجنب وضع رموز حامل في iframe ، وتشغيلات الضيقة من خلال المضيف عندما تكون عملية ، وتحديد حجم الاستجابة والطلب ، والتحقق من عمل المستخدم الذي أدى إلى كل طلب خارجي. العلاج`resourceDomains`بشكل منفصل عن`connectDomains`؛ يجب ألا يسمح الإذن بتحميل الخط أو النص بالتحميل التعسفي للبيانات.
+
+### جسر التطبيقات له دورة حياة خاصة به
+
+جسر التطبيقات هو لهجة JSON-RPC على `postMessage`يمكن أن يتبادل`ui/initialize`و`ui/*`الإخطارات ويمكن أن تتمثل في أساليب البحث الأساسية مثل`tools/call`. . .
+
+الرؤية تُرسل `ui/initialize`مع`appInfo`و`appCapabilities`المضيف يعيد قدراته و سياق المضيف. فقط بعد ذلك الإجابة يرسل عرض `ui/notifications/initialized`يجب على المضيف الانتظار لهذا الإخطار قبل إرسال الرسائل إلى المشاهدة.
+
+هذا الضغط المحلي يخلق جسرا بين إطار واحد و إطار مضيف واحد. لا يتفاوض على إصدار بروتوكول MCP ، أو يخلق حالة الخادم ، أو يخلق جلسة نقل. لاحظ المقبلة الدقيقة:`notifications/initialized`تم إزالة، بينما تطبيقات `ui/notifications/initialized`يظل طلبًا أساسيًا يتم إنشاؤه من خلال اتصال أداة جريدية هو طلب جديد مستقل مع معرف JSON-RPC الجديد ومعلومات بيانات الطلب الكاملة.
+
+### السياق المضيف والإجراءات والإلغاء
+
+يظل المضيف هو السلطة بعد تشغيل الجسر. يمكن للمشاهدة طلب إجراء أداة أو التنقل أو استخدام لوحة المقطوعة أو تأثير امتياز آخر فقط من خلال قدرة يعلن عنها المضيف. يؤكد المضيف الطلب المطبوع والمستخدم الحالي والهدف والحجج ، ويطبق سياسة الموافقة ، ويمكنه رفضه. تنقر زر نقرة رسالة الجسر صالحة على نية تعبير ؛ لا يمنح أي منها السلطة.
+
+تعامل الموضوع والحجم والوصول إلى النطاق المتغير للمضيف بدلاً من إدخال الإصدار المفرد:
+
+- تطبيق رموز الألوان والطباعة التي يقدمها المضيف، ثم التفاعل عندما تتغير تفضيلات الموضوع أو التناقض.
+- دع المشاهدة تقرير الأبعاد المرغوبة، ولكن دع المضيف القفز وتطبيق حجم iframe حتى المحتوى لا يمكن أن تفلت من التخطيط أو خلق التداخلات الخادعة.
+- الحفاظ على ترتيب لوحة المفاتيح، والتركيز المرئي، والأسماء المتاحة، وحالة قارئ الشاشة، والتباين الكافي، والزيادة، والسلوك الحد من الحركة داخل iframe.
+- إعادة اختبار نقل التركيز بين عناصر التحكم في المضيف و إدارة المشاهدة بعد تغيير الحجم وإعادة تقديمها.
+
+يمكن إلغاء القدرات أثناء فتح التطبيق لأن المستخدم يغير الحساب أو تغييرات في السياسة أو يتم تعقيد خادم أو يضييق المضيف الموافقة. تحقق من القدرة والإذن في وقت العمل ، وليس فقط خلال`ui/initialize`عند الإلغاء، رفض المكالمات المتميزة المنتظرة، وقف نشاط الشبكة الذي لم يعد يتناسب مع السياسة، تنظيف الحالة الحساسة المقدمة، وإعادة التثبيت أو العودة إلى النص عندما لا يتم قبول موارد واجهة المستخدم نفسها. يجب على عرض التعامل مع الرفض كنتيجة طبيعية، وليس محاولة أخرى حتى يستسلم المضيف.
+
+### الاحتمالات العائدة جزء من العقد
+
+لا يزال خادم مطلع على التطبيقات قادرًا على خدمة مضيفين لا يعلنون عن امتدادات واجهة المستخدم:
+
+- أعد نفس الأداة بدون `_meta.ui`في`tools/list`. . .
+- إحتفظ بنتيجة نصية مفيدة`tools/call`. . .
+- رفض`resources/read`لـ UI مع خطأ في القدرة المفقودة.
+- لا نفترض أبدا وجود iframe عند اتخاذ قرار بشأن إتمام الأداة.
 
 ```figure
 t3-ui-sandbox
 ```
 
+## بناءها
+
+`code/main.py`يقوم ببناء نموذج بروتوكول صغير في العملية دون SDK. يؤكد تغطية الطلب الحالية وقيم توجيه HTTP المباشرة ، ويعلن عن التطبيقات من خلال `server/discover`، يردد الأدوات والموارد، وينفذ الأداة، ويعمل على مصدر HTML مستقل.
+
+يتلقى النموذج أجسامًا تم تحليلها بالفعل و عناوين توجيه. إنه ليس مُعدلاً HTTP كاملاً ولا يحلل `Content-Type`أو`Accept`. استخدم الدروس 09 لتحويلات HTTP المباشرة الكاملة التي تتطلب `Content-Type: application/json`و`Accept`قيمة تحتوي على كلتا `application/json`و`text/event-stream`. . .
+
+إشغله
+
+```bash
+cd phases/13-tools-and-protocols/14-mcp-apps
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
+
+تحقق من أربعة أشياء في الخروج:
+
+1. كل مكالمة مستقلة
+2. كل طلب لديه`_meta`القدرات
+3. `resources/list`يعيد وصف مستقر قبل أي قراءة للموارد.
+4. كل نتيجة لها`resultType`و البيانات المعدنية لتحديد هوية الخادم
+5. لا يظهر أي معرف الجلسة الأساسية.
+
 ## استخدمها
 
-`code/main.py`يمتد خادم الملاحظات مع `visualize_timeline`الوسيلة التي تعيد `ui://notes/timeline`الموارد، بالإضافة إلى مدير للمعلومات`resources/read`على تلك الرسائل البيانية التي تعيد مجموعة HTML صغيرة ولكنها كاملة مع خط زمني SVG. HTML هي stdlib-نموذج  لا نظام بناء. يتم رسم postMessage في تعليقات JS لأن stdlib لا يمكن تشغيل متصفح.
+ابدأ بـ`server/discover`تأكّد`io.modelcontextprotocol/ui`يظهر في خريطة امتداد الخادم. ثم الاتصال `tools/list`مرتين، مرة مع قدرة التطبيقات ومرة بدونها. الإجابة الأولى تعلن الموارد. الثانية تظل أداة نصية فقط قابلة للاستخدام.
 
-ما الذي يجب أن ننظر إليه:
-
-- `_meta.ui`على الرد على الأداة يحمل المواردUri، CSP، الإذن.
-- HTML يعطي دون وصول إلى الشبكة؛ جميع البيانات مدرجة.
-- مكالمات جي إس`host.callTool`عبر`window.parent.postMessage`(موثقة ولكن غير فعالة في هذا التجربة المثيرة).
+اقرأ`ui://notes/timeline.html`. ابحث عن HTML`hostOrigin`و `event.origin`هذه الخطتين هي أدنى دليل مرئي على أن الجسر لا يستخدم هدفًا
 
 ## أرسله
 
-هذا الدرس يُنتج`outputs/skill-mcp-apps-spec.md`. بالنظر إلى أداة ستستفيد من واجهة المستخدم التفاعلية ، فإن المهارة تنتج عقد MCP Apps الكامل: `ui://`أوريتشال، CSP، الإذن، نقاط دخول البريد، وقائمة تفتيش أمنية.
+هذه الدروس تُسافر`outputs/skill-mcp-apps-spec.md`استخدمها لمراجعة عقد التطبيق قبل كتابة رمز الإطار. يضطر المؤلف إلى إشارة الغلاف الأساسي الحالي، ومفاوضات التوسع، والعودة إلى الوراء، ومصدر UI، وسياسة التخزين الآلي، و CSP، والإذن، وأساليب الجسر، وحدود الموافقة.
 
 ## التمارين
 
-1. أركض`code/main.py`و تحقق من HTML المنبعث. افتح HTML مباشرة في متصفح؛ التحقق من SVG تمثيل. ثم رسم العقد بعد الرسالة التي ستستخدمها UI للاتصال `host.callTool("notes_update", ...)`. . .
-
-2. ضيق الحاجز المركزي: إزالة`'unsafe-inline'`و استخدم سياسة النص غير القائمة على النص. ما هي التغييرات في رمز توليد HTML؟
-
-3. إضافة مصدر UI ثاني `ui://notes/editor`مع نموذج لتحرير ملاحظة في مكانها. عندما يقوم المستخدم بإرسالها، يطلق الإطار الإلكتروني`host.callTool("notes_update", ...)`. . .
-
-4. أودي على سطح الهجوم من واجهة المستخدم. أين يمكن لخادم ضار أن يُحقق محتوى؟ ما الذي يدافع عليه صندوق الرمل من iframe وما الذي لا يفعل؟
-
-5. اقرأ مواصفات SEP-1724 وتحدد قدرة واحدة في SDK MCP Apps لا تستخدمها تنفيذ اللعبة.
+1. تغيير قدرة العميل إلى خريطة امتداد فارغة. تأكيد `tools/list`يحتفظ بالأداة لكنه يزيل الالتزام بالواجهة
+2. أرسل`Mcp-Name: ui://notes/other.html`مع جسم يقرأ خط الزمن. تأكيد الخطأ`-32020`. . .
+3. تغيير الموارد إلى `cacheScope: private`. وصف حالة المستخدم المحددة التي تبرهن ذلك.
+4. تحرك النص إلى `https://static.example.com/app.js`إضافة هذا الأصل إلى`resourceDomains`ويشرح مخاطر سلسلة التوريد الجديدة
+5. إضافة `notes_open`أداة وتوجيه زر النقل من خلال المضيف. الحفاظ على موافقة المستخدم في المضيف.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP Apps | "Interactive UI resources" | SEP-1724 extension shipped 2026-01-26 |
-| `ui://` | "App URI scheme" | Resource scheme for UI bundles |
-| `text/html;profile=mcp-app` | "The MIME" | Content-type for MCP App HTML |
-| Iframe sandbox | "Render container" | Browser sandboxing of the UI with CSP and permissions |
-| postMessage JSON-RPC | "UI-to-host wire" | Tiny JSON-RPC-over-postMessage dialect for host calls |
-| `_meta.ui` | "Tool-UI binding" | Metadata linking a tool result to a UI resource |
-| CSP | "Content-Security-Policy" | Declares allowed sources for scripts, network, styles |
-| AppRenderer | "Server SDK primitive" | Converts a framework component into a `ui://` resource |
-| AppFrame | "Client SDK primitive" | Iframe mount helper that mediates postMessage |
-| `ui/initialize` | "Handshake" | First postMessage from UI to host |
+| Term | Meaning |
+|------|---------|
+| MCP Apps | Optional extension for interactive HTML rendered by an MCP host |
+| `io.modelcontextprotocol/ui` | Extension identifier advertised by both peers |
+| `ui://` | Resource scheme for an App's UI template |
+| `text/html;profile=mcp-app` | MIME type for MCP App HTML |
+| `server/discover` | Current RPC for protocol and capability discovery |
+| `resources/list` | Mandatory resource listing method when the server advertises resources |
+| `resultType` | Required discriminator for modern successful results |
+| `ui/initialize` | First Apps bridge request, separate from removed core initialization |
+| `ui/notifications/initialized` | Apps View readiness notification sent after the host responds |
+| CSP | Browser policy that restricts scripts, styles, images, and network origins |
+| Text fallback | Tool behavior retained for a host without Apps support |
 
 ## المزيد من القراءة
 
-- [MCP ext-apps — GitHub](https://github.com/modelcontextprotocol/ext-apps) تنفيذ مرجعي و SDK
-- [MCP Apps specification 2026-01-26](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx) وثيقة تحديد رسمية
-- [MCP — Apps extension overview](https://modelcontextprotocol.io/extensions/apps/overview) توثيق رفيع المستوى
-- [MCP blog — MCP Apps launch](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/) يناير 2026 نقطة الإطلاق
-- [MCP Apps API reference](https://apps.extensions.modelcontextprotocol.io/api/) إشارة SDK على النمط JSDoc
+- [MCP 2026-07-28 base protocol](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+- [MCP Apps overview](https://modelcontextprotocol.io/extensions/apps/overview)
+- [MCP Apps build guide](https://modelcontextprotocol.io/extensions/apps/build)
+- [Official extension support matrix](https://modelcontextprotocol.io/extensions/client-matrix)
