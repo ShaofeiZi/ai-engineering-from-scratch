@@ -1,45 +1,129 @@
 # نموذج بروتوكول السياق (MCP)
 
-> كل تطبيق LLM المبنى قبل عام 2025 اخترع مخطط أداة خاص به. ثم أرسلت Anthropic MCP ، اعتمدته Claude ، اعتمدته OpenAI ، وبحلول عام 2026 هو النموذج التشريعي الافتراضي لربط أي LLM بأي أداة أو مصدر بيانات أو وكيل. اكتب خادم MCP واحد وكل مضيف يتحدث إليه.
+> يمنح MCP مضيفًا لذكاء الاصطناعي بروتوكولًا واحدًا لاكتشاف واستدعاء الأدوات والموارد والإشارات. يجعل مراجعة 2026-07-28 هذا البروتوكول بلا بيانات: تتحرك القدرة والسياق الإصداري مع كل طلب ، وليس في ضغط يد متصل بالاتصال.
 
 **Type:** Build
 **Languages:** Python
 **Prerequisites:** Phase 11 · 09 (Function Calling), Phase 11 · 03 (Structured Outputs)
 **Time:** ~75 minutes
 
+## أهداف التعلم
+
+- تمييز مضيف MCP، العميل، الخادم، النقل، والخادم البدائي.
+- قم ببناء طلب JSON-RPC مع البيانات المعدنية المطلوبة من MCP 2026-07-28.
+- استخدام`server/discover`للتفتيش على الإصدارات والهوية والقدرات.
+- أعيد النتائج المكتوبة والمتخزنة من الأدوات والموارد والطلبات.
+- شرح كيفية تفاعل MCP العصري غير الحكومي مع خوادم عصر اليد.
+- اختر الحالة الآمنة، النقل، والحدود الموافقة للخادم.
+
 ## المشكلة
 
-تقوم بإرسال روبوت دردشة يحتاج إلى ثلاث أدوات: استفسار قاعدة البيانات، و API التقويم، وقارئ الملفات. تقوم بكتابة ثلاثة مخططات JSON لـ Claude. ثم تريد المبيعات نفس الأدوات في ChatGPT  تقوم بإعادة كتابتها لـ OpenAI `tools`بعد ذلك تضيف كورسور ، زيد ، وكود كلود  ثلاثة إعادة كتابة أخرى ، كل منها مع اتفاقيات JSON مختلفة بشكل دقيق. بعد أسبوع ، تضيف Anthropic حقلًا جديدًا ؛ تقوم بتحديث ستة مخططات.
+تطبيقك يحتاج إلى استفسار قاعدة البيانات، وعمل التقويم، وقارئ الملفات. بدون بروتوكول مشترك، يحتاج كل مضيف الذكاء الاصطناعي إلى اكتشاف مخصص، الدعوة، الأخطاء، النقل، والصبغ التفويض لتلك القدرات نفسها.
 
-كانت هذه هي الواقع قبل عام 2025. كل مضيف (الشيء الذي يدير ماجستير في العلوم) وكل خادم (الشيء الذي يعرض الأدوات والبيانات) أرسل بروتوكولات مخصصة. يعني التوسع المكاسبية ماتريكس تكامل N × M.
+يقلل MCP هذه المصفوفة التكاملية. يقوم الخادم بنشر سطح JSON-RPC القياسي. يمكن للعميل المتوافق اكتشاف سطحها وتقديمها إلى نموذج أو مستخدم، واستدعائها وتفسير النتيجة دون جهاز تعديل خاص للخادم.
 
-ينهار بروتوكول النموذج السياق هذه المصفوفة. تُحدد تطبيقات JSON-RPC. يُعرض خادم واحد الأدوات والموارد والإشارات. أي مضيف متوافق  Claude Desktop، ChatGPT، Cursor، Claude Code، Zed، وذيل طويل من إطاريات الوكيل  يمكنه اكتشافها ودعوها دون لزوم مخصص.
-
-اعتبارا من أوائل عام 2026، فإن MCP هو بروتوكول الأدوات والسياق الافتراضي عبر الثلاثة الكبرى (Anthropic، OpenAI، Google) وكل مجموعة من العملاء الرئيسية.
+الحدود المهمة سهلة الفشل. MCP تقييم الاتصالات. فإنه لا يقرر ما هي الأداة التي يجب أن يطلبها النموذج، أو جعل المحتوى غير الموثوق به آمنا، أو تحويل طلب بلا ولاية إلى حالة تطبيق دائمة. مضيفك والخادم لا يزال يمتلك تلك القرارات.
 
 ## المفهوم
 
-![MCP: one host, one server, three capabilities](../assets/mcp-architecture.svg)
+![MCP host, stateless request, and server primitives](../assets/mcp-architecture.svg)
 
-**The three primitives.**خادم MCP يكتشف بالضبط ثلاثة أشياء.
+### ثلاث خادمات بدائية
 
-1. **Tools** وظائف يمكن أن يطلق عليها النموذج. مقارنة بـ OpenAI `tools`أو من قبل شركة "أنثروبيك"`tool_use`لكل منها اسم وصف مدخلات مخطط JSON ومعامل
-2. **Resources** محتوى القراءة فقط يمكن أن يطلبه النموذج أو المستخدم (ملفات، صفوف قاعدة البيانات، استجابات API).
-3. **Prompts** إشارات قابلة للاستعمال المعدلة يمكن للمستخدم استدعاءها كاختصارات.
+1. **Tools**كل أداة لديها اسم وصف وإدخال مخطط JSON ومعامل.
+2. **Resources**يتم تسمية المحتوى، وترتيبات URI التي يمكن للعميل قراءتها.
+3. **Prompts**هي نماذج قابلة لإعادة الاستخدام يمكن للمضيف تعريضها للمستخدم.
 
-**The wire format.**JSON-RPC 2.0 عبر stdio، WebSocket، أو HTTP المباشر. كل رسالة هي `{"jsonrpc": "2.0", "method": "...", "params": {...}, "id": N}`أساليب الاكتشاف هي`tools/list`،`resources/list`،`prompts/list`أساليب الإستدعاء هي`tools/call`،`resources/read`،`prompts/get`. . .
+المضيف هو تطبيق الذكاء الاصطناعي. عميل MCP داخل هذا المضيف يتحدث إلى خادم واحد. النقل يحمل رسائل JSON-RPC بينهم.
 
-**Host vs client vs server.**المضيف هو تطبيق LLM (كلود ديسكوب). العميل هو مكون فرعي للمضيف الذي يتحدث إلى خادم واحد بالضبط. الخادم هو رمزك. يمكن لشريك واحد تركيب العديد من الخوادم في وقت واحد.
+### طلبات العدالة عن الجنسية تحل محل ضغط اليد
 
-### المصافحة
+إزالة MCP 2026-07-28 `initialize`و`notifications/initialized`. كما أنه يزيل جلسات على مستوى البروتوكول. كل طلب يحمل السياق اللازم لتفسيره في`params._meta`:
 
-كل جلسة تبدأ بـ`initialize`. يقوم العميل بإرسال نسخة بروتوكول وإمكانياته. يستجيب الخادم بإصداره، والاسم، ومجموعة الإمكانيات التي يدعمها (`tools`،`resources`،`prompts`،`logging`،`roots`كل ما بعد ذلك يتم التفاوض عليه ضد تلك القدرات
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "lesson-client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
 
-### ما هو MCP ليس
+نسخة البروتوكول و قدرات العميل مطلوبة. هويت العميل يوصى بها.`_meta`، يتم تشكيل حقل مطلوب مفقود أو حقل مطلوب مع النوع الخطأ بشكل خاطئ ويرد Params غير صالح (`-32602`) تعود سلسلة نسخة شكلت بشكل جيد لا يدعمها الخادم `UnsupportedProtocolVersionError`(`-32022`يمكن للخادم معالجة طلب صالح دون استعادة سجلات تفاوض سابقة.
 
-- لا API الاسترداد. RAG (المرحلة 11 · 06) لا يزال يقرر ما يجب سحب؛ MCP هو النقل لتعرض نتائج الاسترداد كموارد.
-- ليس إطار عميل. MCP هو المياه، الإطارات مثل LangGraph، PydanticAI، و OpenAI وكلاء SDK يجلس فوق ذلك.
-- لا يرتبط بـ"أنثروبيك". التطبيقات المحددة والمرجعية مفتوحة المصدر تحت قانون "الإنتروبيك"`modelcontextprotocol`الموقع
+لا يعني أن الطلب لا يمكن أن يحافظ على حالة.`Mcp-Session-Id`إذا كانت عملية العمل تحتاج إلى استمرارية، يقوم الخادم بتصميم مسدس غير شفاف، ويمر العميل هذا المسدس كحجة أداة عادية في المكالمات اللاحقة. لا يزال يجب التحقق من الائتمان في كل طلب.
+
+### إكتشاف واختيار الإصدار
+
+كل خادم حديث ينفذ`server/discover`النتيجة تعلن عن الإصدارات المدعومة والإمكانيات و هوية الخادم:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "complete",
+    "supportedVersions": ["2026-07-28"],
+    "capabilities": {
+      "tools": {},
+      "resources": {},
+      "prompts": {}
+    },
+    "ttlMs": 3600000,
+    "cacheScope": "public",
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "demo-server",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+قد يدعو العميل طريقة أخرى مباشرة وتتعامل مع خطأ النسخة ، ولكن اكتشاف يجعل عرض القدرة واختيار النسخة صريحًا. يعود نسخة غير مدعومة `UnsupportedProtocolVersionError`مع رمز`-32022`. بياناته تحتوي على`supported`، مجموعة من مراجعات الخادم ، و `requested`، والإصلاح الذي رفضته.
+
+في الاستديو، عميل من العصر المزدوج يبحث مع`server/discover`نتيجة اكتشاف أو خطأ معترف به في الوقت الحاضر مثل`UnsupportedProtocolVersionError`يحدد خادم حديث. أي خطأ أو توقيت وقت غير معترف به كحديث يسمح بالعودة إلى 2025-11-25`initialize`السلوك المتخلف هو رمز التوافق، وليس الافتراضي الحديث.
+
+### النتائج واضحة
+
+كل نتيجة جوهرية 2026-07-28 لديها`resultType`:
+
+- `complete`يعني أن العملية قد انتهت
+- `input_required`يعني أن الخادم يحتاج إلى رحلة ذهاب وإياب أخرى من خلال نمط طلبات رحلة ذهاب وراء متعددة. الخوادم الأساسية قد تعيد ذلك فقط من `tools/call`،`resources/read`أو`prompts/get`. . .
+
+يجب على العملاء التعامل مع نتيجة سابقة تُفشل`resultType`ككل
+
+يجب أن تشمل الخوادم`io.modelcontextprotocol/serverInfo`في كل نتيجة`_meta`هذه الهوية هي ذاتية الإبلاغ وتستخدم لعرض وتسجيل السجلات والتحريفات، وليس لاتخاذ قرارات أمنية.
+
+قائمة ونتائج القراءة تحمل أيضا `ttlMs`و`cacheScope`- تحديدية`tools/list`النظام بالإضافة إلى إشارة الطازجة يسمح للعملاء بحفظ الاكتشاف بأمان ويحسن استقرار الاكتشاف السريع. `cacheScope: public`تسمح بتخزين الاحتياطي المشترك`private`يقتصر إعادة الاستخدام على السياق المطلوب.
+
+### شكل الأسلاك والنقل
+
+يستخدم MCP JSON-RPC 2.0 عبر stdio أو Streamable HTTP.
+
+- طلب لديه`jsonrpc`،`id`،`method`و`params`. . .
+- الرد يطابق`id`و إما`result`أو`error`. . .
+- الإخطار لا يحتوي على`id`ولا يتوقع أي رد
+
+يكتشف HTTP المباشر الحديث نقطة نهاية واحدة تقبل POST. كل رسالة JSON-RPC تحصل على POST خاصة بها. تتلقى POST الطلب إما كائن JSON واحد أو سلسلة من أحداث Server-Sent التي تنتهي الطلب الذي ينتهي بالرد النهائي. تتلقى POST الإخطار المقبول HTTP 202 بدون جسم استجابة. هذا الإصلاح الأساسي لا يحدد أي إخطارات العميل إلى الخادم على HTTP المباشر.
+
+لا يوجد سلسلة MCP GET مستقلة ، نقطة نهاية جلسة DELETE ، `Mcp-Session-Id`أو`Last-Event-ID`إعادة تشغيل في 2026-07-28. إشعارات التغييرات طويلة الأمد تستخدم`subscriptions/listen`تحرير يظل استجابة مفتوحة كمتد.
+
+### إدخال العميل دون طلبات من الخادم
+
+الإصدارات القديمة تسمح للخادم بإرسال طلبات مثل `sampling/createMessage`،`roots/list`أو`elicitation/create`على سلسلة. البروتوكول الحالي يستخدم طلبات رحلة متعددة بدلاً من ذلك. دعوة أداة مؤهلة ، قراءة الموارد ، أو طلب الحصول على العائدات`resultType: input_required`مع واحدة على الأقل من `inputRequests`أو`requestState`. يقوم العميل بجمع أي مدخل مطلوب ، ويعيد تجربة الطريقة الأصلية مع معرف JSON-RPC الجديد والمرجع المقابلة `inputResponses`، ويعكس بالضبط`requestState`عندما تم توفير واحد.`inputRequests`كان هناك، المحاولة الإعادة تُغيب `inputResponses`. . .
+
+لا تزال الجذور، ومعينة، وتسجيل السجل وظيفية ولكنها قد تبدأ في التنفيذ، لذلك لا ينبغي على التنفيذات الجديدة تبنيها.`inputRequests`، أبداً كطلبات JSON-RPC مستقلة من خادم إلى عميل. تفضل معايير الملف أو السجلات الصريحة ، و URIs الموارد ، وتكوين الخادم ، وتكامل الموديل المزود مباشرة. استخدم stderr للتشخيص الاستوديوي و OpenTelemetry للتلفزيون الإنتاج.
 
 ```figure
 mcp-nxm-collapse
@@ -47,164 +131,137 @@ mcp-nxm-collapse
 
 ## بناءها
 
-### الخطوة الأولى: خادم MCP الحد الأدنى
+### الخطوة الأولى: تسجيل سطح الخادم
 
-الكمبيوتر الرسمي لـ Python SDK هو `mcp`(قبل ذلك)`mcp-python`) المستوى العالي`FastMCP`المساعد يزين المديرين
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("demo-server")
-
-@mcp.tool()
-def add(a: int, b: int) -> int:
-    """Add two integers."""
-    return a + b
-
-@mcp.resource("config://app")
-def app_config() -> str:
-    """Return the app's current JSON config."""
-    return '{"env": "prod", "region": "us-east-1"}'
-
-@mcp.prompt()
-def code_review(language: str, code: str) -> str:
-    """Review code for correctness and style."""
-    return f"You are a senior {language} reviewer. Review:\n\n{code}"
-
-if __name__ == "__main__":
-    mcp.run(transport="stdio")
-```
-
-يقوم ثلاثة مُزخّر بتسجيل الأسباب البدائية الثلاثة. تصبح إشارات النوع مخطط JSON الذي يراه المضيف. قم بتشغيله تحت كلود ديسكوب أو كلود كود مع إدخال الخادم يُشير إلى هذه الملفة.
-
-### الخطوة الثانية: الاتصال بخادم MCP من مضيف
-
-العميل الرسمي Python يتحدث JSON-RPC. إزواجها مع SDK الأنثروبيك يستغرق عشرة عشرات الخطوط.
+لا يزال التسجيل بسيطًا على الرغم من تغيير عقد الطلب:
 
 ```python
-from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp import ClientSession
+server = MCPServer("demo-server")
 
-params = StdioServerParameters(command="python", args=["server.py"])
-
-async def call_add(a: int, b: int) -> int:
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            result = await session.call_tool("add", {"a": a, "b": b})
-            return int(result.content[0].text)
-```
-
-`session.list_tools()`يعود نفس النظام الذي سيراه الجامعة. مضيفات الإنتاج تزريع هذه النظم في كل جولة حتى يمكن للنموذج إصدار`tool_use`الحظر الذي يقوم العميل بعد ذلك بإرساله إلى الخادم.
-
-### الخطوة 3: نقل HTTP المباشر
-
-ستديو جيد للمطورين المحليين. بالنسبة للأدوات النائية، استخدم HTTP  واحد POST لكل طلب، إختيار الأحداث المرسلة للخادم للتقدم، المدعومة منذ مراجعة مواصفات 2025-06-18.
-
-```python
-# Inside the server entrypoint
-mcp.run(transport="streamable-http", host="0.0.0.0", port=8765)
-```
-
-إعداد المضيف (Claude Desktop `mcp.json`أو كود كود`~/.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "demo": {
-      "type": "http",
-      "url": "https://tools.example.com/mcp"
+@server.tool(
+    "add",
+    "Add two integers.",
+    {
+        "type": "object",
+        "properties": {
+            "a": {"type": "integer"},
+            "b": {"type": "integer"}
+        },
+        "required": ["a", "b"]
     }
-  }
-}
+)
+def add(a: int, b: int) -> dict:
+    return {"sum": a + b}
 ```
 
-الخادم يبقي نفس المزخرفات، فقط النقل يتغير.
+التنفيذ الذي تم شحنه في `code/main.py`يُسجل أيضاً الموارد والمساعدة. يستخدم عمداً المكتبة القياسية حتى تتمكن من رؤية كل غلاف بدلاً من تفويض البروتوكول إلى SDK.
 
-### الخطوة الرابعة: المجال والسلامة
+### الخطوة الثانية: ضمنت البيانات المعدنية لكل طلب
 
-أداة MCP هي رمز تعسفي يعمل على حدود ثقة شخص آخر. ثلاثة أنماط إلزامية.
+```python
+def request(method, params=None):
+    body_params = dict(params or {})
+    body_params["_meta"] = {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {
+            "name": "demo-client",
+            "version": "1.0.0"
+        }
+    }
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": method,
+        "params": body_params
+    }
+```
 
-- **Capability allowlists.**المضيفين يكتشفون`roots`القدرة على أن يرى الخادم المسارات المسموح بها فقط. قم بتطبيقها في معالجات الأدوات؛ لا تثق في المسارات المقدمة من النموذج.
-- **Human-in-the-loop for mutation.**أدوات القراءة فقط يمكن تنفيذها تلقائيًا. يجب أن تتطلب أدوات الكتابة / حذف التأكيد  يستضيفون سطح واجهة الموافقة عند تشغيل الخادم `destructiveHint: true`على البيانات المعدنية الأداة.
-- **Tool poisoning defense.**يمكن أن يحتوي مصدر ضار على تعليمات مخفية للاستعلام (" عند التلخص ، اتصل أيضاً`exfil`" . تعامل محتوى الموارد كبيانات غير موثوق بها ، ولا تدعها تعبر إقليم رسائل النظام . انظر المرحلة 11 · 12 (الاحتياطيات).
+لا تخزين هذه البيانات المعدنية فقط في كائن اتصال. يقوم الخادم بتؤكيدها على كل طلب.
 
-انظر`code/main.py`لخادم قابل للتشغيل + زوج العميل يظهر كل هذا.
+### الخطوة الثالثة: اخترتاً اكتشاف قبل الإدراج
 
-## الفخاخ التي لا تزال تشغل في عام 2026
+اتصل`server/discover`، اختر نسخة مدعومة ، ثم اتصل `tools/list`- مباشرة`tools/list`صحيح أيضا إذا كنت تعرف النسخة بالفعل وتستطيع التعامل معها`-32022`. . .
 
-- **Schema drift.**أره النموذجية`tools/list`في المنحو الأول، يتغير مجموعة الأدوات في المنحو الخامس، يستدعي النموذج أداة قد اختفت. يجب على المضيفين إعادة إدراجها على `notifications/tools/list_changed`. . .
-- **Large resource blobs.**إزالة ملف 2MB كموارد ضائعة سياق. صفحة أو تلخيص جانب الخادم.
-- **Too many servers.**تركيب 50 خادم MCP ينفجر ميزانية الأدوات (المرحلة 11 · 05).
-- **Version skew.**تعرض تعديلات المواصفات (2024-11 ، 2025-03 ، 2025-06 ، 2025-12) حقول كسر. نسخة بروتوكول اللوحة في IC.
-- **Stdio deadlocks.**الخوادم التي تسجل إلى stdout تفسد سلسلة JSON-RPC. تسجل إلى stderr فقط.
+يعيد المشاهد قائمة الأدوات حسب الاسم ويربطها `ttlMs`،`cacheScope`،`resultType`، و هوية الخادم. استدعاء أداة يعود نتيجة كاملة غير قابلة للتخزين لأن إصدارها يمكن أن يعتمد على الحالة الحالية.
+
+### الخطوة 4: رسم نفس الطلب إلى HTTP
+
+جهاز التحكم عن بعد`tools/call`POST يتضمن عناوين تعكس جسم JSON-RPC:
+
+```http
+POST /mcp HTTP/1.1
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: add
+```
+
+- نعم`MCP-Protocol-Version`يجب أن يطابق العنوان الإصدار في `_meta`. .`Mcp-Method`مطلوب في كل طلب JSON-RPC ويجب أن يطابق `method`. .`Mcp-Name`مطلوب فقط ل`tools/call`،`resources/read`و`prompts/get`، حيث يجب أن يطابق اسم الأداة أو URI الموارد أو اسم العرض. يفتقد رأس مطلوب أو عدم التطابق يعيد HTTP 400 مع `HeaderMismatch`الرمز`-32020`. . .
+
+### الخطوة 5: فرض الأمان خارج حالة البروتوكول
+
+- تأكيد الموافقة والجمهور على كل طلب HTTP.
+- ربط الخوادم المحلية بأضيف محلي وتؤكد`Origin`على HTTP المباشر
+- قم بتشخيص أدوات الطفرة مع `destructiveHint: true`ويتطلب موافقة المضيف
+- إضافة المجلد ومدى الملف صراحة بدلاً من الاعتماد على الجذور القديمة.
+- تعامل الموارد والمواد المنتجة كأشياء غير موثوق بها.
+- حافظ على المعلومات المخصصة لـ JSON-RPC تحت stdio؛ كتابة التشخيصات إلى stderr.
 
 ## استخدمها
 
-كومة 2026 MCP:
+إشغلي الدروس من دليلها:
 
-| Situation | Pick |
-|-----------|------|
-| Local dev, single-user tools | Python `FastMCP`, stdio transport |
-| Remote team tools / SaaS integration | Streamable HTTP, OAuth 2.1 auth |
-| TypeScript host (VS Code extension, web app) | `@modelcontextprotocol/sdk` |
-| High-throughput server, typed access | Official Rust SDK (`modelcontextprotocol/rust-sdk`) |
-| Exploring ecosystem servers | `modelcontextprotocol/servers` monorepo (Filesystem, GitHub, Postgres, Slack, Puppeteer) |
+```bash
+python3 code/main.py
+cd code
+python3 -m unittest discover tests -v
+```
 
-قاعدة عامة: إذا كانت الأداة قابلة للقراءة فقط، قابلة للتخزين، وتتصل من مضيفين أو أكثر، ارسلها كخادم MCP. إذا كان منطقًا داخليًا لمرة واحدة، احتفظ بها كعمل محلي (المرحلة 11 · 09).
+السطر الأول يجب أن يبلغ عن اكتشاف`demo-server`في البروتوكول`2026-07-28`ثم تحقق`MCPClient.request`: إنه يعيد بناءه`_meta`إزالة البيانات المعدنية من طلب واحد ولاحظ الخادم رفضه.
 
 ## أرسله
 
-إنقاذ`outputs/skill-mcp-server-designer.md`:
+`outputs/skill-mcp-server-designer.md`يحول النطاق إلى تصميم MCP غير مصدر للدولة. بوابة قبوله تتطلب نتيجة اكتشاف ، وسياسة البيانات المعدنية لكل طلب ، وقوائم تحديدية واعية بالخزنة ، ومعالجة الحالة الصريحة ، و عناوين النقل ، والإذن ، وقواعد الموافقة.
 
-```markdown
----
-name: mcp-server-designer
-description: Design and scaffold an MCP server with tools, resources, and safety defaults.
-version: 1.0.0
-phase: 11
-lesson: 14
-tags: [llm-engineering, mcp, tool-use]
----
+## استمر في الغوص العميق في MCP
 
-Given a domain (internal API, database, file source) and the hosts that will mount the server, output:
+هذه الدروس تعطيك نموذج البروتوكول، المرحلة 13 تحول أربع حدود إنتاج إلى دروس منفصلة لبناء والتحقق:
 
-1. Primitive map. Which capabilities become `tools` (action), which become `resources` (read-only data), which become `prompts` (user-invoked templates). One line per primitive.
-2. Auth plan. Stdio (trusted local), streamable HTTP with API key, or OAuth 2.1 with PKCE. Pick and justify.
-3. Schema draft. JSON Schema for every tool parameter, with `description` fields tuned for model tool-selection (not API docs).
-4. Destructive-action list. Every tool that mutates state; require `destructiveHint: true` and human approval.
-5. Test plan. Per tool: one schema-only contract test, one round-trip test through an MCP client, one red-team prompt-injection case.
+1. [MCP Tool Contracts and Content](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)تغطي مخططات المدخلات المغلقة والمحتوى المهيكلي ومعلومات التوجيه والصفحات غير الشفافة وافقية الإكمال والفرق بين الأخطاء بين بروتوكول وسلطات الأدوات.
+2. [MCP Reliability, Cancellation, and Flow Control](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)تغطي إلغاء الطلبات، إلغاء المهام الدائمة، والمدود، والفشل، والضغط المتردد، والبرفير بالوكالة، وسلوك الإعادة الاتصال.
+3. [MCP Registry Supply Chain, Admission, Drift, and Rollback](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)تغطي دليل مساحة الأسماء، ومصدر الأثاث، ورقبات لا تتغير، والانحراف الحي، وحالة السجل، ودليل القبول، والعودة.
+4. [MCP Conformance Engineering](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)تغطي النصوص الذهبية والسلبية، وعصور الإصدار الصارم، ومفروق SDK، والأدلة النظامية، والتحرير، وبوابات الصحة، والإصدار الراجع.
 
-Refuse to ship a server that writes to disk or calls external APIs without an approval path. Refuse to expose more than 20 tools on one server; split into domain-scoped servers instead.
-```
+اتبعهم في التسلسل عندما يتخطى الخادم حدود الفريق أو الثقة. معاً ينتقلون من الوسيلة تعمل إلى العقد يبقى آمنًا ويمكن تشخيصه من خلال النشر.
 
 ## التمارين
 
-1. **Easy.**تمديد `demo-server`مع`subtract`أداة. قم بتوصيلها من لوحة المكتب كلود. تأكد من استلام المضيف الأداة الجديدة دون إعادة تشغيل بإصدار إشعار `tools/list_changed`الإخطار
-2. **Medium.**إضافة`resource`الذي يعرض آخر 100 سطر من `/var/log/app.log`. تطبيق قائمة السماح الجذور حتى`../etc/passwd`يتم حجبها حتى لو طلبها النموذج
-3. **Hard.**قم ببناء وكيل MCP يعدل ثلاثة خوادم فوقية (File System ، GitHub ، Postgres) إلى سطح واحد مجتمع. التعامل مع اصطدامات الأسماء والإتجاه المباشر `notifications/tools/list_changed`نظيفاً
+1. إضافة`subtract`أداة و تأكيد `tools/list`يبقى مرتبة أحرفية
+2. إزالة مفتاح نسخة البروتوكول والتحقق من المعلمات غير صالحة (`-32602`ثم أرسل النسخة المشكولة جيدا ولكن غير المدعومة`2025-11-25`، التحقق`-32022`، تأكيد`requested`يردد هذا الإصلاح، واختيار من بين `supported`. . .
+3. إضافة خادم-منت `draftId`لإنشاء عملية، ثم تطلبها كحجة لتحديث. شرح لماذا هذا هو حالة التطبيق بدلا من جلسة بروتوكول.
+4. العودة`input_required`من أداة تحتاج إلى تأكيد المستخدم. حاول مرة أخرى الاتصال الأصلي مع هوية جديدة،`inputResponses`الدخول، والتحديد `requestState`بدلاً من اختراع طلب JSON-RPC من خادم إلى عميل.
+5. رسم عميل استديو من عصر مزدوج. تعامل نتيجة أو خطأ معترف به الحديثة على أنه حديث، والسماح بالعودة إلى `initialize`فقط عن خطأ غير معروف أو توقيت
 
 ## الشروط الرئيسية
 
 | Term | What people say | What it actually means |
-|------|-----------------|-----------------------|
-| MCP | "Tool protocol for LLMs" | JSON-RPC 2.0 spec for exposing tools, resources, and prompts to any LLM host. |
-| Host | "Claude Desktop" | The LLM application — owns the model and user UI, mounts one or more clients. |
-| Client | "Connection" | A per-server connection inside the host that speaks JSON-RPC to exactly one server. |
-| Server | "The thing with the tools" | Your code; advertises tools/resources/prompts and handles their invocation. |
-| Tool | "Function call" | Model-invokable action with a JSON Schema input and a text/JSON result. |
-| Resource | "Read-only data" | URI-addressed content (file, row, API response) the host can request. |
-| Prompt | "Saved prompt" | User-invokable template (often with arguments) surfaced as a slash-command. |
-| Stdio transport | "Local dev mode" | Parent host spawns the server as a child process; JSON-RPC over stdin/stdout. |
-| Streamable HTTP | "The 2025-06 remote transport" | POST for requests, optional SSE for server-initiated messages; replaces the older SSE-only transport. |
+|------|-----------------|------------------------|
+| MCP | "Tool protocol for LLMs" | JSON-RPC protocol for server discovery, tools, resources, prompts, and extensions |
+| Host | "The AI app" | Owns the model and UI and mounts one or more MCP clients |
+| Client | "The connector" | Speaks MCP to one server on behalf of a host |
+| Stateless MCP | "No session" | Every request carries version and capabilities; no protocol state is keyed by a connection |
+| `server/discover` | "Capability probe" | Required server method advertising versions, capabilities, and identity |
+| `resultType` | "Result state" | Marks a result as `complete` or `input_required` |
+| State handle | "Workflow id" | Server-minted application identifier passed as an ordinary argument |
+| Streamable HTTP | "Remote transport" | One POST endpoint with JSON or request-scoped SSE responses |
+| MRTR | "Ask and retry" | Input request embedded in a result, followed by a retry of the original operation |
 
 ## المزيد من القراءة
 
-- [Model Context Protocol specification](https://modelcontextprotocol.io/specification) إشارة طائفية، نسخة حسب التاريخ.
-- [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) نظام الملفات، GitHub، Postgres، Slack، Puppeteer خادم مرجعية.
-- [Anthropic — Introducing MCP (Nov 2024)](https://www.anthropic.com/news/model-context-protocol) نقطة الإطلاق مع منطق التصميم.
-- [Python SDK](https://github.com/modelcontextprotocol/python-sdk) SDK الرسمي المستخدم في هذا الدروس.
-- [Security considerations for MCP](https://modelcontextprotocol.io/docs/concepts/security)الجذور، الإشارات المدمرة، التسمم بالأدوات
-- [Google A2A specification](https://a2a-protocol.org/latest/) بروتوكول Agent2Agent؛ معيار الأخوة للاتصال بين العملاء والوكلاء الذي يكمّل نطاق MCP من العميل إلى الأداة.
-- [Anthropic — Building effective agents (Dec 2024)](https://www.anthropic.com/research/building-effective-agents) حيث يقع MCP في مكتبة النماذج الأوسع لتصميم الوكلاء (التربية القانونية المرتفعة، وتدفقات العمل، والوكلاء المستقلين).
+- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [MCP server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+- [MCP Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP deprecated features](https://modelcontextprotocol.io/specification/2026-07-28/deprecated)
