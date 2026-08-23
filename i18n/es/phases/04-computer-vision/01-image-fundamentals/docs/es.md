@@ -12,7 +12,7 @@
 - Explicar cómo una escena continua se discrete en píxeles y por qué las decisiones de muestreo/cuantización establecen el límite en cada modelo en aguas posteriores
 - Leer, recortar e inspeccionar imágenes como matrices NumPy y cambiar fluidamente entre las configuraciones HWC y CHW
 - Convertir entre RGB, escala de gris, HSV y YCbCr y justificar por qué existe cada espacio de color
-- Aplicar el preprocesamiento a nivel de píxeles (normaliza, estandariza, redimensionar, canaliza primero) exactamente como lo espera la torchvision
+- Aplicar el preprocesamiento a nivel de píxeles (normaliza, estandariza, redimensionar, canaliza primero) exactamente como lo esperan los modelos de visión PyTorch preentrenados
 
 ## El problema
 
@@ -202,13 +202,12 @@ conv-output-size
 
 ## Construye el mismo
 
-### Paso 1: Cargue una imagen e inspeccione su forma
+### Paso 1: Construye un tensor de imagen e inspeccione su forma
 
-Usar Pillow para cargar cualquier JPEG o PNG, convertir en NumPy, e imprimir lo que tienes. Para un ejemplo determinista que se ejecuta fuera de línea, sintetizar uno.
+Comience con una imagen sintética determinista para que el primer laboratorio se ejecute fuera de línea con sólo NumPy. El decodificación de archivos es un límite separado: una vez que un decodificador JPEG o PNG devuelve bytes RGB, cada operación tensor a continuación es la misma.
 
 ```python
 import numpy as np
-from PIL import Image
 
 def synthetic_rgb(h=128, w=192, seed=0):
     rng = np.random.default_rng(seed)
@@ -220,8 +219,6 @@ def synthetic_rgb(h=128, w=192, seed=0):
     return np.clip(rgb, 0, 255).astype(np.uint8)
 
 arr = synthetic_rgb()
-# Or load from disk:
-# arr = np.asarray(Image.open("your_image.jpg").convert("RGB"))
 
 print(f"type:   {type(arr).__name__}")
 print(f"dtype:  {arr.dtype}")
@@ -231,7 +228,7 @@ print(f"max:    {arr.max()}")
 print(f"pixel at (0, 0): {arr[0, 0]}")
 ```
 
-Producción esperada: `shape: (H, W, 3)`¿ Qué ?`dtype: uint8`, rango `[0, 255]`Esa es la representación canónica en disco, ya sea que los bytes provengan de una cámara, un decodificador JPEG o un generador sintético.
+Producción esperada: `shape: (H, W, 3)`¿ Qué ?`dtype: uint8`, rango `[0, 255]`Esa es la representación canónica decodificada si los bytes provenían de una cámara, un decodificador de imágenes o de este generador sintético.
 
 ### Paso 2: División de canales y reordenamiento de diseño
 
@@ -270,15 +267,16 @@ def rgb_to_hsv(rgb):
 
     h = np.zeros_like(cmax)
     mask = delta > 0
-    rmax = mask & (cmax == r)
-    gmax = mask & (cmax == g)
-    bmax = mask & (cmax == b)
+    argmax = np.argmax(rgb_f, axis=-1)
+    rmax = mask & (argmax == 0)
+    gmax = mask & (argmax == 1)
+    bmax = mask & (argmax == 2)
     h[rmax] = ((g[rmax] - b[rmax]) / delta[rmax]) % 6
     h[gmax] = ((b[gmax] - r[gmax]) / delta[gmax]) + 2
     h[bmax] = ((r[bmax] - g[bmax]) / delta[bmax]) + 4
     h = h * 60.0
 
-    s = np.where(cmax > 0, delta / cmax, 0)
+    s = np.divide(delta, cmax, out=np.zeros_like(delta), where=cmax > 0)
     v = cmax
     return np.stack([h, s, v], axis=-1)
 
@@ -326,58 +324,93 @@ print(f"roundtrip max pixel diff: {max_diff}    # should be 0 or 1")
 
 El par de preprocesamiento/desprocesamiento es exactamente lo que cada visión de antorcha `transforms.Normalize`La llamada está bajo el capó.
 
-### Paso 5: Redimensionar con tres métodos de interpolación
+### Paso 5: Redimensionar desde cero
 
-Comparar el más cercano, bilinear y bicubico en una escala superior para que la diferencia sea visible.
+Las coordenadas de salida de las rodadas vecinas más cercanas a un píxel fuente. La interpolación bilinear encuentra los cuatro píxeles circundantes y los mezcla por distancia. Ambas implementaciones de abajo utilizan coordenadas alineadas con los puntos finales para que los primeros y últimos píxeles fuentes permanezcan fijos.
 
 ```python
-target = (arr.shape[0] * 3, arr.shape[1] * 3)
+def resize_coordinates(source_length, target_length):
+    if target_length == 1:
+        return np.zeros(1, dtype=np.float32)
+    return np.linspace(0, source_length - 1, target_length, dtype=np.float32)
 
-nearest = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.NEAREST))
-bilinear = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BILINEAR))
-bicubic = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BICUBIC))
+def nearest_resize(image, target_height, target_width):
+    y = np.rint(resize_coordinates(image.shape[0], target_height)).astype(int)
+    x = np.rint(resize_coordinates(image.shape[1], target_width)).astype(int)
+    return image[y[:, None], x[None, :]]
+
+def bilinear_resize(image, target_height, target_width):
+    y = resize_coordinates(image.shape[0], target_height)
+    x = resize_coordinates(image.shape[1], target_width)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    y1 = np.minimum(y0 + 1, image.shape[0] - 1)
+    x1 = np.minimum(x0 + 1, image.shape[1] - 1)
+    wy = (y - y0)[:, None, None]
+    wx = (x - x0)[None, :, None]
+
+    source = image.astype(np.float32)
+    top = source[y0[:, None], x0[None, :]] * (1 - wx)
+    top += source[y0[:, None], x1[None, :]] * wx
+    bottom = source[y1[:, None], x0[None, :]] * (1 - wx)
+    bottom += source[y1[:, None], x1[None, :]] * wx
+    result = top * (1 - wy) + bottom * wy
+    return np.clip(np.rint(result), 0, 255).astype(image.dtype)
+
+target_height = arr.shape[0] * 3
+target_width = arr.shape[1] * 3
+nearest = nearest_resize(arr, target_height, target_width)
+bilinear = bilinear_resize(arr, target_height, target_width)
 
 def local_roughness(x):
     gy = np.diff(x.astype(float), axis=0)
     gx = np.diff(x.astype(float), axis=1)
     return float(np.abs(gy).mean() + np.abs(gx).mean())
 
-for name, out in [("nearest", nearest), ("bilinear", bilinear), ("bicubic", bicubic)]:
+for name, out in [("nearest", nearest), ("bilinear", bilinear)]:
     print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
 ```
 
-El más cercano obtiene las puntuaciones más altas en rugosidad porque mantiene los bordes duros. Bilinear es el más liso.
+El más cercano obtiene más puntuaciones en rugosidad porque mantiene bordes duros. Bilinear es más suave porque cada nuevo píxel mezcla dos posiciones en cada eje. El compañero ejecutable extiende la misma idea separable a cuatro vecinos por eje con un núcleo cúbico Catmull-Rom, luego imprime los tres resultados sin una biblioteca de imágenes.
 
 ## Usalo
 
-`torchvision.transforms`El código de abajo reproduce exactamente lo que`preprocess_imagenet`Sí, más el tamaño y el recorte.
+PyTorch realiza las mismas operaciones en tensores batchados y conscientes del dispositivo. El código de abajo redimensionará el lado más corto, tomará un recorte central, estandarizará cada canal y producirá el tensor NCHW que un modelo preentrenado espera.
 
 ```python
 import torch
-from torchvision import transforms
-from PIL import Image
+import torch.nn.functional as F
 
-img = Image.fromarray(synthetic_rgb(256, 256))
+image_hwc = torch.from_numpy(synthetic_rgb(256, 320))
+batch = image_hwc.permute(2, 0, 1).unsqueeze(0).float() / 255.0
 
-pipeline = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+height, width = batch.shape[-2:]
+scale = 256 / min(height, width)
+resized_height = round(height * scale)
+resized_width = round(width * scale)
+batch = F.interpolate(
+    batch,
+    size=(resized_height, resized_width),
+    mode="bilinear",
+    align_corners=False,
+    antialias=True,
+)
 
-x = pipeline(img)
-print(f"tensor type:  {type(x).__name__}")
-print(f"tensor dtype: {x.dtype}")
-print(f"tensor shape: {tuple(x.shape)}      # (C, H, W)")
-print(f"per-channel mean: {x.mean(dim=(1, 2)).tolist()}")
-print(f"per-channel std:  {x.std(dim=(1, 2)).tolist()}")
+top = (resized_height - 224) // 2
+left = (resized_width - 224) // 2
+batch = batch[:, :, top:top + 224, left:left + 224]
 
-batch = x.unsqueeze(0)
-print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a model")
+mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+batch = (batch - mean) / std
+
+print(f"tensor dtype: {batch.dtype}")
+print(f"batched shape: {tuple(batch.shape)}")
+print(f"per-channel mean: {batch.mean(dim=(0, 2, 3)).tolist()}")
+print(f"per-channel std:  {batch.std(dim=(0, 2, 3)).tolist()}")
 ```
 
-Cuatro pasos, en este orden exacto:`Resize(256)`escala el lado más corto a 256; `CenterCrop(224)`toma un parche 224x224 desde el centro; `ToTensor()`se divide por 255 y se sustituye HWC por CHW; `Normalize`Subtrae la media de ImageNet y divide por std. Invertir ese orden cambia silenciosamente lo que llega al modelo.
+Cuatro pasos, en este orden exacto: convertir bytes a float y cambiar HWC a NCHW, cambiar el tamaño del lado más corto a 256, tomar un recorte central de 224x224, luego restar la media de ImageNet y dividir por su desviación estándar.
 
 ## Envío
 
@@ -388,7 +421,7 @@ Esta lección produce:
 
 ## Los ejercicios
 
-1. **(Easy)**Cargar un JPEG con OpenCV (`cv2.imread`Imprimir ambas formas y el píxel en `(0, 0)`Explica la diferencia de orden de canal, y luego escriba una conversión de una línea que haga que la matriz OpenCV sea idéntica a la de la almohada.
+1. **(Easy)**Crear un RGB 2x2 `uint8`Convierta HWC a CHW y hacia atrás, imprima ambas formas y prueba que el viaje de ida y vuelta conserva todos los valores.
 2. **(Medium)**Escriba .`standardize(img, mean, std)`y su inverso que juntos pasan un `roundtrip_max_diff <= 1`Las funciones deben funcionar en una sola imagen en HWC y en un lote en NCHW con la misma llamada.
 3. **(Hard)**Tome un tensor estándar de 3 canales ImageNet y ejecutarlo a través de un conv 1x1 que aprende una mezcla ponderada de RGB en un solo canal a escala de gris. Inicializa los pesos a`[0.299, 0.587, 0.114]`, congelarlos, y verificar que la salida coincide con su manual `rgb_to_grayscale`¿Qué otras transformaciones clásicas del espacio color se pueden escribir como 1x1 convolsiones?
 
