@@ -41,17 +41,8 @@
 
 ### 五个调用阶段
 
-```mermaid
-stateDiagram-v2
-  [*] --> Discovered
-  Discovered --> Eligible: actor and policy allow
-  Eligible --> Selected: explicit name or routing match
-  Selected --> Activated: body enters context
-  Activated --> Executing: permitted tool or model step begins
-  Executing --> Completed: output verified
-  Discovered --> Denied: actor or policy blocks
-  Eligible --> NotSelected: routing threshold not met
-  Activated --> Blocked: capability or approval unavailable
+```figure
+skill-invocation-stages
 ```
 
 准确使用这些词:
@@ -138,14 +129,8 @@ score(s, x) = capability_match + trigger_match + context_match - exclusion_match
 
 精确的分数可能是LLM决策而不是算术.工程原则仍然是如此:选择应该超过一个门和竞争技能.当证据很弱时,避免.
 
-```mermaid
-flowchart TD
-  Q[User request] --> E[Filter by actor eligibility]
-  E --> R[Compare request with descriptions]
-  R --> M{One clear match?}
-  M -->|yes| A[Activate selected skill]
-  M -->|no, ambiguous| C[Ask or use ordinary reasoning]
-  M -->|no match| N[Do not activate]
+```figure
+skill-routing-abstention
 ```
 
 对于高影响能力,隐含路由可能不合适,即使有强烈的描述.当假阳性的成本超过自动选择的便利时,只使用人为政策.
@@ -191,12 +176,8 @@ flowchart TD
 
 调用参数跨越了几个界限:
 
-```mermaid
-flowchart LR
-  U[User text] --> P[Host parser]
-  P --> B[Bound arguments]
-  B --> C[Skill context]
-  C --> T[Typed tool call]
+```figure
+skill-argument-boundaries
 ```
 
 在每一个边界,保持意图,而不是把文本作为代码.
@@ -214,16 +195,8 @@ flowchart LR
 
 这消除了路由不确定性,但会对运行时间API产生依赖.
 
-```mermaid
-flowchart LR
-  P[Portable bundle] --> S[SKILL.md]
-  P --> R[references]
-  P --> C[scripts]
-  H[Host adapter] --> D[discovery path]
-  H --> A[explicit activation API]
-  H --> I[invocation policy]
-  H --> B[argument binding]
-  H --> P
+```figure
+skill-host-adapter
 ```
 
 其他符合要求的客户开放时,该技能应该保持可理解性.

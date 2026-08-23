@@ -63,14 +63,8 @@
 
 ### 独立判断与确定性工作
 
-```mermaid
-flowchart LR
-  T[Task request] --> J1[Model: classify task and choose branch]
-  J1 --> R[Reference: load branch-specific rules]
-  R --> S[Script or tool: collect deterministic evidence]
-  S --> J2[Model: interpret evidence]
-  J2 --> A[Artifact contract]
-  A --> V[Deterministic and human verification]
+```figure
+skill-workflow-extraction
 ```
 
 使用模型判断来进行分类,优先级,合成和模糊性.使用脚本或工具来分析,计算,验证,转换,查询类型的API和执行变量.
@@ -96,14 +90,8 @@ flowchart LR
 
 ### 六层评估
 
-```mermaid
-flowchart TB
-  L1[1. Package structure] --> L2[2. Trigger routing]
-  L2 --> L3[3. Instruction and artifact behavior]
-  L3 --> L4[4. Script correctness]
-  L4 --> L5[5. Safety and authority]
-  L5 --> L6[6. Packaging and portability]
-  L6 --> G{Release gate}
+```figure
+skill-eval-layers
 ```
 
 每层都回答不同的问题.
@@ -268,13 +256,8 @@ treatment: same model + same tools + same task, skill available
 
 释放测试应安装在清洁的目的地,然后与安装的副本进行验证.
 
-```mermaid
-flowchart LR
-  S[Source bundle] --> M[Build manifest]
-  M --> I[Install complete tree]
-  I --> H[Verify hashes and paths]
-  H --> D[Discover installed skill]
-  D --> E[Run eval smoke test]
+```figure
+skill-package-install
 ```
 
 仅仅测试源树会错过安装 bug,丢失可执行的位, 已平坦的引用, 重写的名称,
@@ -458,23 +441,8 @@ python3 -m unittest discover -s code/tests -v
 
 使用此编写循环,每次修改技能:
 
-```mermaid
-flowchart LR
-  O[Observe real workflow] --> C[Define contract]
-  C --> P[Package procedure and helpers]
-  P --> E[Run layered evals]
-  E --> F{Failure class}
-  F -->|routing| D[Edit description or policy]
-  F -->|behavior| B[Edit body, references, or tools]
-  F -->|script| S[Fix deterministic code]
-  F -->|safety| A[Reduce authority or strengthen isolation]
-  F -->|portability| H[Add adapter, fallback, or incompatibility]
-  D --> E
-  B --> E
-  S --> E
-  A --> E
-  H --> E
-  E -->|passes gate| R[Release complete bundle]
+```figure
+skill-authoring-loop
 ```
 
 改变导致失败的层,不要加上更多的单词.`SKILL.md`如果真正的问题是一个将引用放下的安装器或一个暴露了主页目录的沙盒.

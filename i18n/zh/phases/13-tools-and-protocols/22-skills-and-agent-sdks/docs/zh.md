@@ -192,16 +192,8 @@ npx skills remove skill-contract-reviewer
 
 代理技能是一个目录,其入口点是`SKILL.md`输入文件包含YAML前列,然后是Markdown指令.目录也可以包含参考,脚本和资产.
 
-```mermaid
-flowchart TD
-  B[release-readiness bundle] --> S[SKILL.md]
-  B --> R[references]
-  R --> RP[release-policy.md]
-  R --> CF[changelog-format.md]
-  B --> C[scripts]
-  C --> IR[inspect_release.py]
-  B --> A[assets]
-  A --> RC[release-checklist.md]
+```figure
+skill-package-anatomy
 ```
 
 文件是可部署的单元.`SKILL.md`没有引用的包装是破碎的,即使它的前面材料被解析.
@@ -304,19 +296,8 @@ Use this workflow for a release candidate, not for ordinary development builds.
 
 ### 技能生命周期
 
-```mermaid
-flowchart LR
-  D[Discover package] --> V[Validate metadata and layout]
-  V --> C[Publish catalog entry]
-  C --> S{Select?}
-  S -->|explicit user request| A[Activate]
-  S -->|implicit model match| A
-  S -->|no match| N[Leave unloaded]
-  A --> B[Load SKILL.md body]
-  B --> R[Read required resources]
-  R --> T[Request tools or run scripts]
-  T --> E[Return evidence and artifact]
-  E --> Q[Verify result]
+```figure
+skill-runtime-lifecycle
 ```
 
 每个箭头都是一个有自己的失败模式的边界.
@@ -336,15 +317,8 @@ flowchart LR
 
 技术人员回答:"该应用程序可以要求哪些功能,以及它们的方案是什么?"一个技能回答",代理应该如何处理这个类型的任务?"
 
-```mermaid
-flowchart TB
-  U[User goal] --> K[Activated skill]
-  K --> P[Procedure and decision rules]
-  P --> M[MCP or local tool]
-  M --> O[Observation]
-  O --> P
-  P --> A[Artifact]
-  A --> V[Verification]
+```figure
+skill-tool-orthogonality
 ```
 
 技能可能会命名工具,但主机拥有实际能力登记册.如果工具不存在,技能应该明确表示倒退或失败.它永远不应该意味着命名能力创造它.
@@ -400,13 +374,8 @@ python3 -m unittest discover -s code/tests -v
 
 在更深入的内容规则之前验证廉价结构性事实:
 
-```mermaid
-flowchart LR
-  F[Frontmatter delimiters] --> Y[Scalar metadata]
-  Y --> N[Name and directory match]
-  N --> R[Required fields]
-  R --> X[Known extensions]
-  X --> B[Body and resource rules]
+```figure
+skill-validation-order
 ```
 
 由于此次测试的结果,

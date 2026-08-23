@@ -33,15 +33,8 @@
 
 处理文件系统作为源输入.不要直接发布原始路径到模型中.
 
-```mermaid
-flowchart LR
-  R[Configured roots] --> W[Enumerate immediate skill dirs]
-  W --> P[Find SKILL.md]
-  P --> V[Validate package]
-  V --> S[Attach scope and provenance]
-  S --> C[Resolve collisions]
-  C --> B[Apply catalog budget]
-  B --> O[Publish name, description, path]
+```figure
+skill-discovery-pipeline
 ```
 
 每个阶段都应该产生结构化数据和结构性故障.
@@ -101,10 +94,8 @@ flowchart LR
 
 机关的关键是每个层次都有不同的目的.
 
-```mermaid
-flowchart TB
-  L1[Level 1: catalog metadata<br/>name, description, source] -->|skill selected| L2[Level 2: SKILL.md body<br/>workflow and decision map]
-  L2 -->|branch requires detail| L3[Level 3: references, scripts, assets<br/>task-specific material]
+```figure
+skill-disclosure-levels
 ```
 
 #### 级别1:目录元数据
@@ -164,12 +155,8 @@ description: Validate a release candidate and produce a readiness report. Use wh
 
 官方指南建议直接链接到`SKILL.md`一次跳跃使得可访问性可测试,
 
-```mermaid
-flowchart LR
-  S[SKILL.md] --> P[python-release.md]
-  S --> C[container-release.md]
-  S --> D[docs-release.md]
-  S --> T[report-template.md]
+```figure
+skill-reference-map
 ```
 
 ### 产品表预算和活动背景是不同的预算
@@ -201,16 +188,8 @@ references/external-link -> /private/company-secrets
 
 通过文件系统语义来解决包根和候选,拒绝绝绝对输入,并验证已解决的候选仍然存在于已解决的根下. 确定是否允许在发现之前符号链接. 如果允许,每次都检查已解决的目标.
 
-```mermaid
-flowchart LR
-  I[Requested relative path] --> A{Absolute or parent escape?}
-  A -->|yes| X[Reject]
-  A -->|no| R[Resolve against package root]
-  R --> U{Resolved path under root?}
-  U -->|no| X
-  U -->|yes| F{Expected file type?}
-  F -->|no| X
-  F -->|yes| L[Load with size limit]
+```figure
+skill-resource-containment
 ```
 
 路径封锁不会建立内容信任.一个有效的包装引用仍然可能包含恶意指令. 第26课处理这种威胁.

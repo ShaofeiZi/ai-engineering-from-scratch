@@ -49,17 +49,8 @@
 - 批准后续行动;
 - 证明结果是正确的.
 
-```mermaid
-flowchart LR
-  S[Activated skill] --> M[Model proposes action]
-  M --> C[Capability registry]
-  C --> P[Permission policy]
-  P --> A{Approval needed?}
-  A -->|yes, granted| X[Isolated executor]
-  A -->|no| X
-  A -->|denied| D[Stop and report]
-  X --> O[Observation]
-  O --> V[Verification gate]
+```figure
+skill-authority-chain
 ```
 
 每个盒子都是独立的配置.
@@ -96,18 +87,8 @@ flowchart LR
 
 路径计算逃离工作空间,一个球太匹配,重复尝试重复写,或清理步骤删除错误生成的目录.
 
-```mermaid
-flowchart TB
-  P[Skill package] --> I[Model instructions]
-  R[References and assets] --> I
-  U[Untrusted task content] --> I
-  I --> Q[Requested actions]
-  SC[Scripts and dependencies] --> Q
-  Q --> H[Host tools and executor]
-  H --> F[Files]
-  H --> N[Network]
-  H --> E[Environment and credentials]
-  H --> X[External side effects]
+```figure
+skill-trust-surface
 ```
 
 给每一个高影响力技能绘制这个图表, 标记谁控制每个边缘,
@@ -246,17 +227,8 @@ WORKSPACE=/workspace/project
 
 使用批准,以便在事先安全地授权的行动.
 
-```mermaid
-flowchart TD
-  A[Proposed action] --> R{Reversible and local?}
-  R -->|yes| S{Inside pre-approved scope?}
-  S -->|yes| E[Execute in sandbox]
-  S -->|no| P[Ask for scoped approval]
-  R -->|no| H{External, destructive, costly, or sensitive?}
-  H -->|yes| P
-  H -->|no| E
-  P -->|granted| E
-  P -->|denied| D[Stop]
+```figure
+skill-approval-decision
 ```
 
 批准必须显示实际目标和后果. "允许?"是弱的. "允许被审查的人.`publish_release`版本 2.4.0 发布到阶段登记册的工具?"可操作.
