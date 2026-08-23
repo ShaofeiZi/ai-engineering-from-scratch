@@ -12,7 +12,7 @@
 - यह समझाएं कि एक निरंतर दृश्य कैसे पिक्सेल में विवश हो जाता है और नमूना/क्वांटिकेशन निर्णय प्रत्येक डाउनस्ट्रीम मॉडल पर सीमा क्यों निर्धारित करते हैं
 - NumPy सरणी के रूप में छवियों को पढ़ें, स्लाइस करें और निरीक्षण करें और HWC और CHW लेआउट के बीच धाराप्रवाह स्विच करें
 - आरजीबी, ग्रेस्केल, एचएसवी और वाईसीबीसीआर के बीच परिवर्तित करें और प्रत्येक रंग स्थान का अस्तित्व क्यों है, इसका कारण बताएं
-- पिक्सेल स्तर पर पूर्व प्रसंस्करण (मानक, मानकीकृत, आकार बदलने, चैनल-पहले) लागू करें ठीक उसी तरह जैसे टॉर्चविजन इसकी उम्मीद करता है
+- पिक्सेल स्तर पर पूर्व प्रसंस्करण (मानक, मानकीकृत, आकार बदलें, चैनल-पहले) लागू करें ठीक उसी तरह से जैसा कि पूर्व प्रशिक्षित PyTorch दृष्टि मॉडल इसकी उम्मीद करते हैं
 
 ## समस्या
 
@@ -202,13 +202,12 @@ conv-output-size
 
 ## इसे बनाओ
 
-### चरण 1: छवि लोड करें और उसकी आकृति की जांच करें
+### चरण 1: एक छवि टेन्सर बनाएं और इसकी आकार की जांच करें
 
-किसी भी JPEG या PNG लोड करने के लिए Pillow का उपयोग करें, NumPy में परिवर्तित करें, और आपके पास जो है उसे प्रिंट करें। एक निर्धारात्मक उदाहरण के लिए जो ऑफ़लाइन चलता है, एक संश्लेषण करें।
+एक निर्धारात्मक सिंथेटिक छवि के साथ शुरू करें ताकि पहली प्रयोगशाला केवल NumPy के साथ ऑफ़लाइन चल सके। फ़ाइल डिकोडिंग एक अलग सीमा हैः एक बार जब एक JPEG या PNG डिकोडर RGB बाइट्स लौटाता है, तो नीचे प्रत्येक Tensor ऑपरेशन समान होता है।
 
 ```python
 import numpy as np
-from PIL import Image
 
 def synthetic_rgb(h=128, w=192, seed=0):
     rng = np.random.default_rng(seed)
@@ -220,8 +219,6 @@ def synthetic_rgb(h=128, w=192, seed=0):
     return np.clip(rgb, 0, 255).astype(np.uint8)
 
 arr = synthetic_rgb()
-# Or load from disk:
-# arr = np.asarray(Image.open("your_image.jpg").convert("RGB"))
 
 print(f"type:   {type(arr).__name__}")
 print(f"dtype:  {arr.dtype}")
@@ -231,7 +228,7 @@ print(f"max:    {arr.max()}")
 print(f"pixel at (0, 0): {arr[0, 0]}")
 ```
 
-अपेक्षित उत्पादन: `shape: (H, W, 3)`,`dtype: uint8`, सीमा `[0, 255]`. यह डिस्क पर कैनोनिक प्रतिनिधित्व है चाहे बाइट्स कैमरा, जेपीईजी डिकोडर या सिंथेटिक जनरेटर से आए हों.
+अपेक्षित उत्पादन: `shape: (H, W, 3)`,`dtype: uint8`, सीमा `[0, 255]`. यह कैनोनिक डिकोड प्रतिनिधित्व है चाहे बाइट्स कैमरा से आए, एक छवि डिकोडर, या इस सिंथेटिक जनरेटर से.
 
 ### चरण 2: विभाजन चैनल और पुनर्गठन लेआउट
 
@@ -270,15 +267,16 @@ def rgb_to_hsv(rgb):
 
     h = np.zeros_like(cmax)
     mask = delta > 0
-    rmax = mask & (cmax == r)
-    gmax = mask & (cmax == g)
-    bmax = mask & (cmax == b)
+    argmax = np.argmax(rgb_f, axis=-1)
+    rmax = mask & (argmax == 0)
+    gmax = mask & (argmax == 1)
+    bmax = mask & (argmax == 2)
     h[rmax] = ((g[rmax] - b[rmax]) / delta[rmax]) % 6
     h[gmax] = ((b[gmax] - r[gmax]) / delta[gmax]) + 2
     h[bmax] = ((r[bmax] - g[bmax]) / delta[bmax]) + 4
     h = h * 60.0
 
-    s = np.where(cmax > 0, delta / cmax, 0)
+    s = np.divide(delta, cmax, out=np.zeros_like(delta), where=cmax > 0)
     v = cmax
     return np.stack([h, s, v], axis=-1)
 
@@ -326,58 +324,93 @@ print(f"roundtrip max pixel diff: {max_diff}    # should be 0 or 1")
 
 प्रति चैनल औसत शून्य के करीब होना चाहिए, std एक के करीब। पूर्व-प्रक्रिया/अप्रक्रिया जोड़ी बिल्कुल वही है जो प्रत्येक टर्चvision `transforms.Normalize`कॉल हुड के नीचे कर रहा है।
 
-### चरण 5: तीन इंटरपोलेशन विधियों से आकार बदलें
+### चरण 5: खरोंच से आकार बदलें
 
-एक उच्चतम पैमाने पर निकटतम, द्विआधारी, और द्विघट तुलना करें ताकि अंतर दिखाई दे।
+निकटतम पड़ोसी गोल प्रत्येक आउटपुट निर्देशांक एक स्रोत पिक्सेल के लिए। द्विआधारी अंतराल चार आसपास के पिक्सेल को ढूंढता है और उन्हें दूरी से मिलाता है। नीचे दोनों कार्यान्वयन अंत बिंदु-समझाने वाले निर्देशांक का उपयोग करते हैं ताकि पहला और अंतिम स्रोत पिक्सेल तय रहें।
 
 ```python
-target = (arr.shape[0] * 3, arr.shape[1] * 3)
+def resize_coordinates(source_length, target_length):
+    if target_length == 1:
+        return np.zeros(1, dtype=np.float32)
+    return np.linspace(0, source_length - 1, target_length, dtype=np.float32)
 
-nearest = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.NEAREST))
-bilinear = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BILINEAR))
-bicubic = np.asarray(Image.fromarray(arr).resize(target[::-1], Image.BICUBIC))
+def nearest_resize(image, target_height, target_width):
+    y = np.rint(resize_coordinates(image.shape[0], target_height)).astype(int)
+    x = np.rint(resize_coordinates(image.shape[1], target_width)).astype(int)
+    return image[y[:, None], x[None, :]]
+
+def bilinear_resize(image, target_height, target_width):
+    y = resize_coordinates(image.shape[0], target_height)
+    x = resize_coordinates(image.shape[1], target_width)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    y1 = np.minimum(y0 + 1, image.shape[0] - 1)
+    x1 = np.minimum(x0 + 1, image.shape[1] - 1)
+    wy = (y - y0)[:, None, None]
+    wx = (x - x0)[None, :, None]
+
+    source = image.astype(np.float32)
+    top = source[y0[:, None], x0[None, :]] * (1 - wx)
+    top += source[y0[:, None], x1[None, :]] * wx
+    bottom = source[y1[:, None], x0[None, :]] * (1 - wx)
+    bottom += source[y1[:, None], x1[None, :]] * wx
+    result = top * (1 - wy) + bottom * wy
+    return np.clip(np.rint(result), 0, 255).astype(image.dtype)
+
+target_height = arr.shape[0] * 3
+target_width = arr.shape[1] * 3
+nearest = nearest_resize(arr, target_height, target_width)
+bilinear = bilinear_resize(arr, target_height, target_width)
 
 def local_roughness(x):
     gy = np.diff(x.astype(float), axis=0)
     gx = np.diff(x.astype(float), axis=1)
     return float(np.abs(gy).mean() + np.abs(gx).mean())
 
-for name, out in [("nearest", nearest), ("bilinear", bilinear), ("bicubic", bicubic)]:
+for name, out in [("nearest", nearest), ("bilinear", bilinear)]:
     print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
 ```
 
-सबसे करीब के अंक कठोरता पर सबसे अधिक हैं क्योंकि यह कठोर किनारों को बनाए रखता है। द्विआधारी सबसे चिकनी है। बिकुबिक बीच में बैठता है, सीढ़ियों के चरणों के कलाकृतियों के बिना कथित तीक्ष्णता को संरक्षित करता है।
+निकटतम कठोरता पर उच्चतम स्कोर करता है क्योंकि यह कठिन किनारों को बनाए रखता है। द्विआधारी अधिक चिकनी है क्योंकि प्रत्येक नए पिक्सेल प्रत्येक अक्ष पर दो स्थितियों को मिलाता है। चलाने योग्य साथी एक कैटमुल-रोम घन नाभिक के साथ प्रत्येक अक्ष में चार पड़ोसी पर एक ही अलग करने योग्य विचार को बढ़ाता है, फिर एक छवि पुस्तकालय के बिना तीन परिणाम प्रिंट करता है।
 
 ## इसका प्रयोग करें
 
-`torchvision.transforms`नीचे दिए गए कोड में ठीक वही है जो`preprocess_imagenet`करता है, प्लस आकार और फसल.
+PyTorch बैच किए गए, डिवाइस-जागरूक टेंसर पर समान संचालन करता है। नीचे दिए गए कोड में कम पक्ष का आकार बदला जाता है, एक केंद्र फसल लेता है, प्रत्येक चैनल को मानकीकृत करता है, और पूर्व-प्रशिक्षित मॉडल की उम्मीद के एनसीएचडब्ल्यू टेंसर का उत्पादन करता है।
 
 ```python
 import torch
-from torchvision import transforms
-from PIL import Image
+import torch.nn.functional as F
 
-img = Image.fromarray(synthetic_rgb(256, 256))
+image_hwc = torch.from_numpy(synthetic_rgb(256, 320))
+batch = image_hwc.permute(2, 0, 1).unsqueeze(0).float() / 255.0
 
-pipeline = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+height, width = batch.shape[-2:]
+scale = 256 / min(height, width)
+resized_height = round(height * scale)
+resized_width = round(width * scale)
+batch = F.interpolate(
+    batch,
+    size=(resized_height, resized_width),
+    mode="bilinear",
+    align_corners=False,
+    antialias=True,
+)
 
-x = pipeline(img)
-print(f"tensor type:  {type(x).__name__}")
-print(f"tensor dtype: {x.dtype}")
-print(f"tensor shape: {tuple(x.shape)}      # (C, H, W)")
-print(f"per-channel mean: {x.mean(dim=(1, 2)).tolist()}")
-print(f"per-channel std:  {x.std(dim=(1, 2)).tolist()}")
+top = (resized_height - 224) // 2
+left = (resized_width - 224) // 2
+batch = batch[:, :, top:top + 224, left:left + 224]
 
-batch = x.unsqueeze(0)
-print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a model")
+mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+batch = (batch - mean) / std
+
+print(f"tensor dtype: {batch.dtype}")
+print(f"batched shape: {tuple(batch.shape)}")
+print(f"per-channel mean: {batch.mean(dim=(0, 2, 3)).tolist()}")
+print(f"per-channel std:  {batch.std(dim=(0, 2, 3)).tolist()}")
 ```
 
-चार कदम, इस क्रम मेंः`Resize(256)`कम पक्ष को 256 तक बढ़ाता है; `CenterCrop(224)`मध्य से एक 224x224 पैच लेता है; `ToTensor()`255 से विभाजित करता है और HWC को CHW में स्वैप करता है; `Normalize`ImageNet औसत घटाता है और std द्वारा विभाजित करता है उस क्रम को मौन रूप से बदलता है जो मॉडल तक पहुँचता है।
+चार चरण, इस सटीक क्रम मेंः बाइट्स को फ्लोट में परिवर्तित करें और एचसीडब्ल्यू को एनसीडब्ल्यू में स्विच करें, कम पक्ष को 256 पर आकार दें, एक 224x224 केंद्र फसल लें, फिर इमेजनेट औसत को घटाएं और इसके मानक विचलन से विभाजित करें। उस क्रम को उलटते हुए मौन रूप से मॉडल तक पहुंचता है।
 
 ## इसे भेजें
 
@@ -388,7 +421,7 @@ print(f"\nbatched shape: {tuple(batch.shape)}   # (N, C, H, W) — ready for a m
 
 ## व्यायाम
 
-1. **(Easy)**OpenCV के साथ एक JPEG लोड करें (`cv2.imread`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             `(0, 0)`. चैनल-क्रम अंतर की व्याख्या करें, फिर एक पंक्ति रूपांतरण लिखें जो ओपनसीवी सरणी को तकिया के समान बनाता है।
+1. **(Easy)**एक 2x2 RGB बनाएँ `uint8`चार अलग अलग रंगों के साथ array. HWC को CHW और वापस परिवर्तित, दोनों आकारों को प्रिंट, और साबित करने के लिए यात्रा वापस हर मूल्य को संरक्षित करता है।
 2. **(Medium)**लिखें `standardize(img, mean, std)`और इसके विपरीत जो एक साथ गुजरते हैं `roundtrip_max_diff <= 1`आपके कार्यों को HWC में एक ही छवि पर और NCHW में एक ही कॉल के साथ बैच पर काम करना चाहिए।
 3. **(Hard)**एक 3-चैनल इमेजनेट मानक Tensor ले लो और इसे एक 1x1 conv के माध्यम से चलाएं जो एक एकल ग्रेस्केल चैनल में RGB के एक भारित मिश्रण को सीखता है।`[0.299, 0.587, 0.114]`, उन्हें जमे, और जाँच आउटपुट अपने मैनुअल से मेल खाता है `rgb_to_grayscale`क्या अन्य क्लासिक रंग-स्थान परिवर्तन 1x1 घुमाव के रूप में लिखा जा सकता है?
 
