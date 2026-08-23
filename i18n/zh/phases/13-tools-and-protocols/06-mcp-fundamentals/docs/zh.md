@@ -1,115 +1,158 @@
-# 基本知识 原始知识,生命周期,JSON-RPC基础
+# 无国籍申请和JSON-RPC
 
-> 在MCP之前的每一次集成都是一次性的. 模型语境协议,首次由安特罗皮在2024年11月发行,现在由Linux基金会的Agentic AI基金会管理,标准化发现和调用,以便任何客户端可以与任何服务器交谈. 2025-11-25规范命名了六个原始 (三个服务器,三个客户端),一个三阶段的生命周期和一个JSON-RPC 2.0线程格式. 了解这些,这阶段的MCP章节的其他部分将成为阅读.
+> 现代MCP没有握手和协议会议.每个请求必须包含足够的元数据,才能被理解,授权,路由和重新尝试.
 
 **Type:** Learn
-**Languages:** Python (stdlib, JSON-RPC parser)
-**Prerequisites:** Phase 13 · 01 through 05 (the tool interface and function calling)
-**Time:** ~45 minutes
+**Languages:** Python
+**Prerequisites:** Phase 13, Lessons 01 through 05
+**Time:** ~55 minutes
 
 ## 学习目标
 
-- 列出所有六种MCP原始 (服务器上的工具,资源,提示;根,采样,客户端上的引发) 并给出每个使用案例.
-- 通过三个阶段的生命周期 (启动,运行,关闭) 进行查询,并表示每个阶段谁会发送哪个信息.
-- 解析和发射JSON-RPC 2.0请求,响应和通知封.
-- 解释哪些能力谈判`initialize`没有它,什么会破裂.
+- 区分MCP的服务器原始功能与客户端功能.
+- 建立有效的JSON-RPC 2.0请求和响应`2026-07-28`现在,我们要去.
+- 添加协议版本,客户端功能和客户端身份到每个请求.
+- 使用`server/discover`手`UnsupportedProtocolVersionError`没有握手.
+- 追踪一个独立的请求从验证到完整的结果.
 
 ## 问题
 
-在MCP之前,每个工具使用代理都有自己的协议.Cursor有一个MCP形状但不兼容的工具系统.Claude Desktop运输了不同的工具系统.VS Code的Copilot扩展有一个第三个.构建了"Postgres查询"工具的团队三次写出相同的工具,每个工具都输入到不同的主机的API.重复使用需要复制代码.
+如果服务器记住前一个请求声明了什么,它可以应用错误的权限或返回错误的电线形状.
 
-结果是布里亚的一次一体化爆炸,
+股`2026-07-28`服务器必须从当前请求中决定如何处理当前请求,而不是从连接历史中决定.
 
-通过标准化电线格式来解决这一问题. 每个MCP客户端都有一个MCP服务器:Cloade Desktop,ChatGPT,Cursor,VS Code,Gemini,Goose,Zed,Windsurf,到2026年4月300多个客户端.每月的SDK下载量为110万次. 10,000多个公共服务器.Linux基金会于2025年12月在新的Agentic AI基金会下担任管理员.
+这改变了心理模型.旧的序列是连接第一,握手第二,操作第三.现代的序列更简单:
 
-在此阶段使用的规格修改是**2025-11-25**增加了异步任务 (SEP-1686),URL模式调用 (SEP-1036),工具采样 (SEP-1577),增量范围同意 (SEP-835),以及OAuth 2.1资源指标语义.
+1. 客户向客户发出自定义请求.
+2. 服务器验证了请求的版本和功能.
+3. 服务器处理该方法.
+4. 服务器返回输入结果或JSON-RPC错误.
+
+接下来的请求从零开始重复相同的过程.
 
 ## 概念
 
-### 服务器原始的3个
+### 服务器原始
 
-1. **Tools.**调用式行动.从13期起相同的四步循环.
-2. **Resources.**仅可读的内容,可以由URI来处理: `file:///path`现在`db://query/...`通过"自定义"
-3. **Prompts.**复用模板. 服务器提供模板,客户端填写参数.
+ MCP 服务器暴露了三个主要的原始性:
 
-### 三个客户端原始
+1. **Tools**它们是模型控制的行动,`tools/list`,,,,,,,,,,,,,,,,,,,,,,,,,,,,,.`tools/call`现在,我们要去.
+2. **Resources**发现的数据是 URI-  адресат的数据`resources/list`子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子`resources/read`现在,我们要去.
+3. **Prompts**它们是可重复使用的模板,`prompts/list`字母为`prompts/get`现在,我们要去.
 
-4. **Roots.**服务器可以接触到URI的集合. 客户端声明它们;服务器尊重它们.
-5. **Sampling.**服务器要求客户端的模型完成. 启用服务器托管的代理循环,而没有服务器侧 API 密钥.
-6. **Elicitation.**服务器在飞行中要求客户端的用户进行结构化输入. 形式或URL (SEP-1036).
+根源,样本采集和伐木仍然存在`2026-07-28`它们是过时的. 新的实施应使用明确的工具或资源输入,用于根源,直接的模型提供商API用于采样,以及用于记录的 stderr或 OpenTelemetry. 通过多次回路请求,服务器返回输入请求,客户端重复初始操作. 现代服务器从来没有启动独立的JSON-RPC请求.
 
- MCP 的每一个能力都属于其中一个.
+### 其他类型的文件
 
-### 电缆格式:JSON-RPC 2.0
+采用JSON-RPC 2.0的MCP:
 
-每个消息都是包含这些字段的JSON对象:
+- 要求:`{jsonrpc, id, method, params}`
+- 答案:`{jsonrpc, id, result}`或`{jsonrpc, id, error}`
+- 通知:`{jsonrpc, method, params}`没有`id`
 
-- 要求:`{jsonrpc: "2.0", id, method, params}`现在,我们要去.
-- 答案:`{jsonrpc: "2.0", id, result | error}`现在,我们要去.
-- 通知:`{jsonrpc: "2.0", method, params}`没有`id`没有预期的反应.
+要求`id`没有创建协议会议.
 
-基本规格有15种方法,由原始组组组组.
+### 要求的请求元数据
 
-- `initialize`现在,`initialized`现在,我们要去做什么?
-- `tools/list`现在`tools/call`
-- `resources/list`现在`resources/read`现在`resources/subscribe`
-- `prompts/list`现在`prompts/get`
-- `sampling/createMessage`服务器到客户端
-- `notifications/tools/list_changed`现在`notifications/resources/updated`现在`notifications/progress`
-
-### 三阶段生命周期
-
-**Phase 1: initialize.**
-
-客户发送`initialize`它们的`capabilities`其他`clientInfo`服务器用自己的方式响应`capabilities`现在`serverInfo`客户端发送了`notifications/initialized`双方可以根据谈判能力发送请求.
-
-**Phase 2: operation.**
-
-客户的电话`tools/list`为了发现,`tools/call`服务器可能会发送`sampling/createMessage`如果它声明了该功能.`notifications/tools/list_changed`客户端可以发送`notifications/roots/list_changed`当用户改变根范围时.
-
-**Phase 3: shutdown.**
-
-任何一方都关闭了运输.MCP中没有结构性关闭方法;运输 (studio或 Streamable HTTP,阶段13 · 09) 携带了终端连接信号.
-
-### 能力谈判
-
-`capabilities`在`initialize`交手是合同.
+每个现代要求都包含一个`_meta`内部的物体`params`其他:
 
 ```json
 {
-  "tools": {"listChanged": true},
-  "resources": {"subscribe": true, "listChanged": true},
-  "prompts": {"listChanged": true}
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "course-client",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
-服务器表示可以发射`tools/list_changed`通知和支持`resources/subscribe`客户同意,并声明:
+需要协议版本和客户端功能. 客户端身份是建议的. 它是自主报告的显示和调试数据,而不是安全凭证.
+
+服务器不得从之前的请求,工作室进程,HTTP连接或单独的运输标题中推断这些值.
+
+### 完整的结果和服务器身份
+
+每一个成功的现代结果都包括`resultType`正常的最终结果使用`"complete"`服务器还应在结果的元数据中识别自己:
 
 ```json
 {
-  "roots": {"listChanged": true},
-  "sampling": {},
-  "elicitation": {}
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "resultType": "complete",
+    "tools": [],
+    "ttlMs": 30000,
+    "cacheScope": "public",
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "notes-server",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
-如果客户不申报`sampling`服务器不得打电话`sampling/createMessage`交对称:如果服务器不声明`resources.subscribe`客户不得尝试签订.
+`tools/list`现在`resources/list`现在`prompts/list`现在`resources/templates/list`现在`resources/read`其他`server/discover`它们包括:`ttlMs`其他`cacheScope`安全的默认是`ttlMs: 0`其他`cacheScope: "private"`列表项应有确定性排序,因此相当的响应产生稳定的缓存键和稳定的模型背景.
 
-没有支持采样的客户端仍然是有效的MCP客户端;一个不调用服务器`sampling`它们只是不使用这个功能在一起.
+### 没有握手的发现
 
-### 结构化内容和错误形状
+每个现代服务器都必须实现`server/discover`客户可以在其他方法之前调用:
 
-`tools/call`返回一个`content`类型类块的数组: `text`现在`image`现在`resource`阶段13 · 14增加了MCP应用程序 (`ui://`互动UI) 加入该列表.
+- `supportedVersions`
+- 服务器`capabilities`
+- 选择性使用`instructions`
+- 结果是服务器身份`_meta`
+- 缓存提示
 
-错误使用JSON-RPC错误代码. 规格定义的添加: `-32002`没有找到资源`-32603`内部错误,加上MCP特定错误数据`error.data`现在,我们要去.
+发现是有用的,但它不是一个门户.`tools/list`首先,因为该请求已经包含了协议版本和功能.
 
-### 客户端功能与工具呼叫详情
+如果未支持请求版本,服务器将返回JSON-RPC代码 `-32022`含有:
 
-常见的混:`capabilities.tools`客户端是否支持工具列表变更通知.客户端是否会调用特定工具是运行时间选择,由其模型驱动,而不是能力旗.能力旗是规范级别合同.模型的选择是直角.
+```json
+{
+  "requested": "2027-01-01",
+  "supported": ["2026-07-28"]
+}
+```
 
-### 为什么要使用JSON-RPC而不是REST?
+客户端选择一个互助的现代版本,并再次尝试使用新的JSON-RPC请求ID.
 
-JSON-RPC 2.0 (2010) 是一个轻量级的双向协议.REST是客户端启动的.MCP需要服务器启动的消息 (样本,通知),因此JSON-RPC与其对称请求/响应形状是自然合适的.JSON-RPC也清洁地构建了studio和WebSocket/Streamable HTTP,而不重新发明HTTP的请求形状.
+### 一个请求生命周期
+
+追踪一个现代要求的顺序:
+
+1. 分析一个JSON-RPC封面.
+2. 确认`jsonrpc`是`"2.0"`其他`id`存在的`method`是一个字符串,`params`是一个物体.
+3. 要求版本字符串和功能对象在 `params._meta`错误的或缺失的元数据`-32602`现在,我们要去.
+4. 在HTTP边界,将版本,方法和适用的名称标题与体格进行比较.`-32020`即使两个版本值中的一个不支持.
+5. 通过" 支持不支持的版本"来拒绝相匹配的版本.`-32022`现在,我们要去.
+6. 检查所需的能力,然后通过路线`method`验证特定方法的参数.
+7. 在操作器运行之前,验证和授权混凝土操作.
+8. 返回一个完整的结果,提供服务器身份.
+9. 忘记请求范围的协议元数据.
+
+通过该命令,两个组件无法解释不同的通话.`Mcp-Name: notes.read`在原始执行时`params.name: notes.delete`它还将错误输入,标题混,版本谈判,能力故障,授权和处理器故障作为明显的证据.
+
+关闭STDIN或HTTP响应结束了运输活动.它不会终止协议会议,因为现代MCP没有协议会议.
+
+### 显而易见的遗产兼容性
+
+通过版本`2025-11-25`使用`initialize`现在`notifications/initialized`由于这种行为仍然是相关的,当一个双代客户端与旧服务器交谈时.
+
+保持时代分开.现代请求由每请求所需的元数据识别.只通过记录后退路径选择旧连接.`initialize`作为一个 `2026-07-28`服务器.
+
+无国籍因此具有特定时代的意义.`2026-07-28`任何普通请求都可以独立解释,没有MCP会议.`2025-11-25`双代实现不是一个允许状态的机器.它是一个独立的传统适配器旁边的无状态现代核心,在任何解析器运行之前,它明确选择决定.
+
+任何一个意思都禁止持久的应用状态.一个工作流程,任务或草案可以在共享存储器中的不透明的手柄背后生活.客户端将该手柄作为普通输入,每个复制都验证并授权其使用.协议文本不得作为删除的会议的替代品泄露到该存储器中.
 
 ```figure
 mcp-tool-call
@@ -117,50 +160,47 @@ mcp-tool-call
 
 ## 用它
 
-`code/main.py`通过JSON-RPC 2.0解析器和发射器,然后使用`initialize`其他`tools/list`其他`tools/call`其他`shutdown`通过手动测序,打印每一个信息. 没有真正的运输,只是信息的形状.
+`code/main.py`建立,验证,追踪和发送现代MCP消息,而无需框架.
 
-什么要看:
+```bash
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
 
-- `initialize`声明能力两方面;`serverInfo`其他`protocolVersion: "2025-11-25"`现在,我们要去.
-- `tools/list`返回一个`tools`列;每个条目都有`name`现在`description`现在`inputSchema`现在,我们要去.
-- `tools/call`使用`params.name`其他`params.arguments`现在,我们要去.
-- 答案`content`是一个数组`{type, text}`子,子,子.
+检查输出中的三个不变:
+
+- 每个请求都重复了自己的要求.`_meta`其他地方
+- 每个成功的结果都是`resultType: "complete"`包含服务器身份.
+- 列表结果是确定性排序的,并且有明确的缓存提示.
 
 ## 运送它
 
-这一课产生了`outputs/skill-mcp-handshake-tracer.md`鉴于MCP客户端服务器互动的pcap式转录,技能注释每个消息,使用哪个原始,哪个生命周期阶段,以及它取决于哪个功能.
+这一课是很好的.`outputs/skill-mcp-handshake-tracer.md`历史文件名仍然稳定,但该文物现在已成为一个无状态请求追踪器. 它独立审计每个消息,并且只有当它真正存在时才标记旧的握手流量.
 
 ## 运动
 
-1. 跑步`code/main.py`确定能力谈判发生的线程,并描述如果服务器不声明会发生什么变化`tools.listChanged`现在,我们要去.
-
-2. 扩展解析器处理`notifications/progress`信息的形状:`{method: "notifications/progress", params: {progressToken, progress, total}}`放出它,而长时间`tools/call`确认客户端处理器会显示一个进展.
-
-3. 阅读MCP 2025-11-25规格从上到下面. 整个文档大约80页. 确定大多数服务器都不需要的功能标志. 提示:它与资源订阅有关.
-
-4. 草图在纸上原始的假设"cron工作"功能将属于. (提示:服务器希望客户端在预定的时间调用它.今天六个原始的任何一个都不适合.) MCP的2026路线图有一个SEP草案.
-
-5. 从 GitHub 开放的 MCP 服务器解析一个会议日志. 计算请求与响应与通知消息. 计算流量的多少分量是生命周期与操作.
+1. 改变一个请求的协议版本为 `2027-01-01`确认错误代码是`-32022`数据宣传支持版本.
+2. 删除`io.modelcontextprotocol/clientCapabilities`确认服务器不使用第一请求的功能.
+3. 转换内存工具登记器. 确认`tools/list`仍然返回相同的确定性顺序.
+4. 改变`cacheScope`其他`public`为了`private`解释哪些授权环境可以在每个情况下重复使用响应.
+5. 添加一个可选的`clientInfo`由于客户身份是建议的,而不是要求的,请求应保持有效.
 
 ## 关键词
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP | "Model Context Protocol" | Open protocol for model-to-tool discovery and invocation |
-| Server primitive | "What a server exposes" | tools (actions), resources (data), prompts (templates) |
-| Client primitive | "What a client lets servers use" | roots (scope), sampling (LLM callbacks), elicitation (user input) |
-| JSON-RPC 2.0 | "The wire format" | Symmetric request/response/notification envelopes |
-| `initialize` handshake | "Capability negotiation" | First message pair; servers and clients declare features they support |
-| `tools/list` | "Discovery" | Client asks server for its current tool set |
-| `tools/call` | "Invocation" | Client asks server to execute a tool with arguments |
-| `notifications/*_changed` | "Mutation events" | Server tells client that its primitive list has changed |
-| Content block | "Typed result" | `{type: "text" \| "image" \| "resource" \| "ui_resource"}` in tool result |
-| SEP | "Spec Evolution Proposal" | Named draft proposal (e.g. SEP-1686 for async Tasks) |
+| Term | Meaning |
+|------|---------|
+| Stateless protocol | Every request supplies the metadata needed to interpret it |
+| Request metadata | Version, client capabilities, and recommended client identity in `params._meta` |
+| `server/discover` | Mandatory server method for versions, capabilities, instructions, and identity |
+| `resultType` | Discriminator on every successful modern result |
+| Cacheable result | Result that includes required `ttlMs` and `cacheScope` hints |
+| Protocol era | Modern per-request metadata or legacy connection-scoped initialization |
+| Transport lifetime | Process, connection, or response-stream lifetime, not protocol session state |
+| `-32022` | Unsupported protocol version error with requested and supported versions |
 
 ## 进一步阅读
 
-- [Model Context Protocol — Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)法典规范文件
-- [Model Context Protocol — Architecture concepts](https://modelcontextprotocol.io/docs/concepts/architecture)六原始的心理模型
-- [Anthropic — Introducing the Model Context Protocol](https://www.anthropic.com/news/model-context-protocol)2024年11月发射时间
-- [MCP blog — First MCP anniversary](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/)一年后期和2025年至25年间规格变化
-- [WorkOS — MCP 2025-11-25 spec update](https://workos.com/blog/mcp-2025-11-25-spec-update)SEP-1686,1036,1577,835和1724的总结
+- [MCP Architecture](https://modelcontextprotocol.io/specification/2026-07-28/architecture)
+- [MCP Base Protocol](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+- [MCP Server Discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP 2026-07-28 Changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)

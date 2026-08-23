@@ -1,216 +1,318 @@
-# 通过MCP应用程序 互动UI资源 `ui://`
+# 无国籍议定书的MCP应用程序
 
-> 仅仅使用文字的工具输出限制了代理能显示的内容.MCP Apps (SEP-1724,官方于2026年1月26日) 允许工具返回在Cloed Desktop,ChatGPT,Cursor,Goose和VS代码中呈现的沙盒互动HTML.仪表板,表格,地图,3D场景,所有通过一个扩展.`ui://`资源计划,`text/html;profile=mcp-app`通过MIME,iframe-sandbox后消息协议,以及允许服务器染HTML的安全表面.
+> 互动结果仍然是MCP工具和资源交换. 2026-07-28的核心使交换自主,而应用程序扩展增加了沙盒浏览器表面.
 
 **Type:** Build
-**Languages:** Python (stdlib, UI resource emitter), HTML (sample app)
+**Languages:** Python
 **Prerequisites:** Phase 13 · 07 (MCP server), Phase 13 · 10 (resources)
 **Time:** ~75 minutes
 
 ## 学习目标
 
-- 返回一个`ui://`工具调用资源,并设置正确的MIME和元数据.
-- 声明工具的相关UI`_meta.ui.resourceUri`现在`_meta.ui.csp`其他`_meta.ui.permissions`现在,我们要去.
-- 实现iframe沙箱邮件JSON-RPC用于UI-to-host通信.
-- 应用基于UI的攻击的CSP和权限政策默认设置.
+- 通过MCP应用程序进行广告`server/discover`根据要求扩展功能.
+- 声明一个`ui://`在调用工具之前,在工具上使用资源.
+- 返回完整的工具和资源结果,在2026-07-28无状态电线上.
+- 分开应用程序`ui/initialize`移除MCP核心握手的桥梁消息.
+- 申请原产权验证,沙盒,CSP和最小特权权权.
 
 ## 问题
 
-未来的2025年`visualize_timeline`工具可以返回"这里有14个按时间序列排列的笔记: ...". 这是一个段落.用户实际上想要互动时间表. 在MCP Apps之前,选项是:客户端特定的小工具API (Claude文物,OpenAI Custom GPT HTML),或者根本没有UI.
+文本结果可以描述一个时间线. 它不能给用户一个时间线,他们可以过,检查或采取行动.
 
-根据MCP应用程序 (SEP-1724,发货于2026年1月26日),该协议标准化.`resource`哪个 URI 是`ui://...`谁的MIME是`text/html;profile=mcp-app`服务器将其转载到一个带沙盒的iframe中,只有经过限制的CSP,并且没有网络访问,除非明确授权.
+工具定义指出一个 工具的定义是`ui://`工具运行之前,主机可以获取和审查该资源,将其呈现成一个沙盒的iframe,并通过JSON-RPC桥接所有应用程序操作.
 
-每个兼容的客户端 (Claude Desktop, ChatGPT, Goose, VS Code) 都会呈现相同的效果.`ui://`一个服务器,一个HTML包,一个通用UI.
+2026-07-28 年,核心协议发生了变化.
+
+- 没有核心`initialize`要求或`notifications/initialized`通知
+- 没有.`Mcp-Session-Id`标题
+- 每个请求都包含协议版本和客户端功能.`params._meta`现在,我们要去.
+- 服务器实现`server/discover`客户可以检查版本,核心功能和扩展.
+- 每个成功的结果都有一个`resultType`歧视者.
+- 流式HTTP每请求使用一个POST.现代GET和 DELETE输入点返回405.
+
+应用程序桥仍然有一个叫做`ui/initialize`它属于iframe后消息方言. 它不会重建核心MCP会议.
 
 ## 概念
 
-### 其他`ui://`资源计划
+### 两个协议,一个功能
 
-一个工具返回:
+保持层次的明确性:
+
+1.  MCP核心携带`server/discover`现在`tools/list`现在`tools/call`现在`resources/list`其他`resources/read`现在,我们要去.
+2. 扩展MCP Apps声明UI并定义iframe到主机桥梁.
+3. 浏览器的沙箱规则限制了用户界面可以达到的内容.
+
+扩展标识符是`io.modelcontextprotocol/ui`客户端在每个请求中发送功能对象内部的扩展支持:
 
 ```json
 {
-  "content": [
-    {"type": "text", "text": "Here is your notes timeline:"},
-    {"type": "ui_resource", "uri": "ui://notes/timeline"}
-  ],
-  "_meta": {
-    "ui": {
-      "resourceUri": "ui://notes/timeline",
-      "csp": {
-        "defaultSrc": "'self'",
-        "scriptSrc": "'self' 'unsafe-inline'",
-        "connectSrc": "'self'"
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {
+        "extensions": {
+          "io.modelcontextprotocol/ui": {}
+        }
       },
-      "permissions": []
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "timeline-host",
+        "version": "1.0.0"
+      }
     }
   }
 }
 ```
 
-然后主机打电话`resources/read`在`ui://notes/timeline`染后,
+`clientInfo`报告的数据是自主报告的数据,而不是授权身份.
+
+### 在转换之前发现
+
+服务器的发现结果宣传了扩展:
 
 ```json
 {
-  "contents": [{
-    "uri": "ui://notes/timeline",
-    "mimeType": "text/html;profile=mcp-app",
-    "text": "<!doctype html>..."
-  }]
+  "resultType": "complete",
+  "supportedVersions": ["2026-07-28"],
+  "capabilities": {
+    "tools": {},
+    "resources": {},
+    "extensions": {
+      "io.modelcontextprotocol/ui": {}
+    }
+  },
+  "ttlMs": 300000,
+  "cacheScope": "public",
+  "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+      "name": "timeline-app-server",
+      "version": "2.0.0"
+    }
+  }
 }
 ```
 
-### 形砂箱
+服务器必须支持发现. 客户端不被迫在每一项行动之前调用发现,因为每个行动都具有自己的能力.
 
-宿主将HTML转化为一个沙盒`<iframe>`含有:
+### 声明工具定义中的UI
 
-- `sandbox="allow-scripts allow-same-origin"`(或每服务器声明更严格)
-- 通过响应标题应用服务器声明的CSP.
-- 没有饼干,没有来自主机的本地存储.
-- 网络访问限于`connectSrc`在CSP.
-
-### 邮件后协议
-
-通过 iframe 与主机通信`window.postMessage`简单的JSON-RPC2.0方言:
-
-总是着`targetOrigin`根据同龄人确切的来源,并通过收件证实`event.origin`任何有效载荷处理前,请不要使用`"*"`机体携带工具调用和资源阅读.
-
-```js
-// iframe to host  (pin to host origin)
-window.parent.postMessage({
-  jsonrpc: "2.0",
-  id: 1,
-  method: "host.callTool",
-  params: { name: "notes_update", arguments: { id: "note-14", title: "..." } }
-}, "https://host.example.com");
-
-// host to iframe  (pin to iframe origin)
-iframe.contentWindow.postMessage({
-  jsonrpc: "2.0",
-  id: 1,
-  result: { content: [...] }
-}, "https://iframe.example.com");
-
-// receiver on both sides
-window.addEventListener("message", (event) => {
-  if (event.origin !== "https://expected-peer.example.com") return;
-  // safe to process event.data
-});
-```
-
-接口用户界面可以调用可用的主机侧方法:
-
-- `host.callTool(name, arguments)`调用服务器工具.
-- `host.readResource(uri)`读取MCP资源.
-- `host.getPrompt(name, arguments)` 获取一个提示模板.
-- `host.close()` 驳回了UI.
-
-每次通话都通过MCP协议,并继承服务器的权限.
-
-### 许可证
-
-其他`_meta.ui.permissions`列表要求额外的功能:
-
-- `camera`访问用户的相机 (用于扫描文件的UI).
-- `microphone`语音输入.
-- `geolocation`位置
-- `network:*`比 更多的网络访问`connectSrc`只有一个人能做到.
-
-每个许可都是用户在UI呈现之前看到的提示.
-
-### 安全风险
-
-在iframe中的HTML仍然是HTML. 新的攻击表面:
-
-- **Prompt-injection via UI.**恶意服务器UI可以显示像系统消息的文本,并欺骗用户.主机染应该显著区分服务器UI与主机UI.
-- **Exfiltration via `connectSrc`.**如果CSP允许`connect-src: *`默认应该是严格的.
-- **Clickjacking.**接口面对面覆盖主机的色.主机必须防止z指数操纵并执行模糊性规则.
-- **Steal focus.**接待者必须拦截.
-
-阶段13·15将这些内容作为MCP安全的一部分详细介绍,本课程将介绍它们.
-
-### `ui/initialize`握手
-
-电脑系统的运输后,它发送了`ui/initialize`通过邮件:
+现代应用程序合同将UI与工具绑定在`tools/list`其他:
 
 ```json
-{"jsonrpc": "2.0", "id": 0, "method": "ui/initialize",
- "params": {"theme": "dark", "locale": "en-US", "sessionId": "..."}}
+{
+  "name": "notes_timeline",
+  "description": "Render a timeline of notes.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "_meta": {
+    "ui": {
+      "resourceUri": "ui://notes/timeline.html"
+    }
+  }
+}
 ```
 
-接待者使用功能和会议代币来响应.
+预定的数据是预先调用的元数据. 服务器可以预先加载,缓存和检查HTML,然后结果要求显示. 旧的平板元数据键可能会被兼容代码接受,但新服务器应该发射嵌套的元数据.`_meta.ui.resourceUri`形式.
 
-### 应用程序 / AppFrame SDK原始
+`tools/list`包含确定性排序,`ttlMs`其他`cacheScope`使用`private`可见的工具因用户或代币而异.
 
-扩展应用程序SDK揭示了两个便利性原始:
+### 返回数据,然后让主机绑定视图
 
-- `AppRenderer`包裹一个 React / Vue / Solid 组件,并发出一个`ui://`资源具有正确的MIME和元数据.
-- `AppFrame`接收资源,安装iframe,并调解邮件.
+工具调用返回普通内容加上结构化数据:
 
-您可以使用这些或手动滚动HTML和JSON-RPC.
+```json
+{
+  "resultType": "complete",
+  "content": [
+    {"type": "text", "text": "Timeline ready."}
+  ],
+  "structuredContent": {
+    "notes": [
+      {"id": "note-1", "title": "Discover", "created": "2026-07-28"}
+    ]
+  },
+  "isError": false
+}
+```
 
-### 生态系统状况
+机器主机已经知道该工具属于哪个视图. 避免发明新的内容块,只是为了重复URI.
 
-2026年4月至2020年4月,MCP应用程序发行于2026年1月26日.
+### 作为资源使用应用程序
 
-- **Claude Desktop.**自2026年1月起全面支持.
-- **ChatGPT.**通过应用程序SDK (相同的MCP应用程序协议) 提供完整支持.
-- **Cursor.**通过设置启用.
-- **VS Code.**内部人员只能建造.
-- **Goose.**完全支持.
-- **Zed, Windsurf.**路线图.
+服务器的广告`resources`为了实现这一目标,`resources/list`运行.其确定性列表入口包括可行URI,稳定名称,描述和MIME类型.列表结果包括`resultType`服务器身份元数据,`ttlMs`其他`cacheScope`像确定性工具列表一样.
 
-服务器在生产中:仪表板,地图可视化,数据表,图表构建器,沙盒IDE预览.
+主人派了`resources/read`在流式HTTP上,请求有:
+
+```text
+POST /mcp
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: resources/read
+Mcp-Name: ui://notes/timeline.html
+```
+
+标题值和JSON-RPC体必须匹配.不匹配是协议错误`-32020`现在,我们要去.
+
+结果包含HTML资源和缓存提示:
+
+```json
+{
+  "resultType": "complete",
+  "contents": [
+    {
+      "uri": "ui://notes/timeline.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "text": "<!doctype html>...",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "connectDomains": [],
+            "resourceDomains": [],
+            "frameDomains": [],
+            "baseUriDomains": []
+          },
+          "permissions": {}
+        }
+      }
+    }
+  ],
+  "ttlMs": 60000,
+  "cacheScope": "public"
+}
+```
+
+### 缓存用户界面资源作为可执行内容
+
+应用程序资源不能与普通散文交换.其缓存输入可以执行桥码,染工具数据,并请求主机调整的操作.按法式键键键键.`ui://`服务器身份和版本,资源内容消化,以及授权文本`cacheScope`永远不要在主题中重复使用私有应用资源,因为HTML或其政策元数据可能会不同,即使URI是相同的.
+
+无效的输入`ttlMs`工具的使用期限过去了.`_meta.ui.resourceUri`修改链接,服务器版本或被允许的描述符针变化,或一个被确认的资源更改订阅命名为URI.在重新安装之前重新检查和重新应用CSP和权限审查.一个过时的iframe不能仅仅因为新资源版本尚未加载而保留更广泛的权限.
+
+### 在功能政策之前拒绝线索模糊性
+
+验证有故意的顺序.首先验证JSON-RPC形状,并需要字符串协议元数据以及对象客户端能力地图.然后将路由头条与机体进行比较.只有那么才能决定是否支持匹配的协议版本.这个顺序阻止代理和服务器解释不同的请求.
+
+| Condition | HTTP | JSON-RPC error |
+|-----------|------|----------------|
+| Header and body version, method, or name disagree | 400 | `-32020` |
+| Header and body agree on an unsupported version | 400 | `-32022`, with `data` exactly `{"supported":["2026-07-28"],"requested":"<actual>"}` |
+| `resources/read` lacks the Apps extension capability | 400 | `-32021`, with `data.requiredCapabilities.extensions.io.modelcontextprotocol/ui` |
+| Method is unknown | 404 | `-32601` |
+
+没有JSON-RPC通知`id`服务器从来没有发出一个JSON-RPC响应.一个被接受的HTTP通知返回202的空格.一个错误可以改变HTTP状态,但它仍然不能为通知创建一个JSON-RPC错误体.
+
+### 沙盒是边界,不是信任判决
+
+应用程序不能直接读取主机的cookies,本地存储器或页面DOM.所有权限的工作必须跨越桥梁.
+
+使用以下默认:
+
+- 让所有CSP域名列表空,然后只添加应用程序需要的原始. 使用 `connectDomains`对于搜索,XHR和WebSocket;使用`resourceDomains`对于脚本,风格,图像和字体.
+- 实际情况下,将代码和数据捆绑起来.
+- 要求任何相机,麦克风或位置许可,除非可见的功能需要它.
+- 子`postMessage`对于其他任何起源,
+- 处理工具参数,工具结果,资源文本和桥梁消息作为不可信的输入.
+- 保持用户同意在主机中. iframe不能批准其自己的后果行动.
+
+别复制一个固定的`sandbox`根据应用程序的原始模型和其自己的隔离设计,主机必须选择旗.
+
+允许的域仍然是透路径.`connectDomains: ["https://api.example.com"]`意思是,任何执行应用程序中的脚本都可以将允许的数据发送到那里. 确切的原产地匹配可以防止目的地混,但它并不能决定有效载荷是否适合. 默认保持连接访问空,避免将载体代币放置在iframe中,在实际情况下通过主机进行代理狭窄操作,限制响应和请求大小,并审计用户的行为导致了每个输出请求. 治疗`resourceDomains`单独与`connectDomains`;允许加载字体或脚本不应允许任意加载数据.
+
+### 应用程序桥梁有自己的生命周期
+
+应用程序桥是一个JSON-RPC方言`postMessage`它可以交换`ui/initialize`其他`ui/*`通过该系统,可通过 技术技术来实现`tools/call`现在,我们要去.
+
+视图发送`ui/initialize`随着`appInfo`其他`appCapabilities`接待器返回其功能和接待器语境.`ui/notifications/initialized`服务主必须等到此应用程序通知,然后向视图发送消息.
+
+通过本地握手,一个iframe和一个主机框架之间建立了一个桥梁.它不会谈判MCP协议版本,创建服务器状态,或创建运输会话. 注意确切的预写:核心`notifications/initialized`应用程序被删除`ui/notifications/initialized`通过桥接工具调用生成的核心请求是一个新的自主请求,具有新的JSON-RPCID和完整的请求元数据.
+
+### 主机背景,行动和撤销
+
+服务主持人仍然是启动桥接后的权威.一个视频只能通过主机广告的功能请求工具操作,导航,剪辑板使用或其他特权效应.主机验证了输入的请求,当前用户,目标和参数,应用了批准政策,并可能拒绝它.按点击和有效的桥接消息表达了意图;没有一个权威.
+
+处理主题,大小和可访问性作为一个变化的主机环境而不是一次性染输入:
+
+- 应用主机提供的颜色和类型符号,然后当主题或对比偏好发生变化时,
+- 让查看报告所需的尺寸,但让主机盖并应用iframe尺寸,以便内容不能逃离布局或创建欺骗性叠加.
+- 保存键盘顺序,可见的焦点,可访问的名称,屏幕阅读器状态,足够的对比,放大,以及iframe内部的运动减少行为.
+- 重新测试主机控制器和查看控制器之间的重点转移,在改变尺寸和重新呈现后.
+
+应用程序开放期间,功能可被撤销,因为用户改变帐户,政策改变,服务器被隔离,或主机缩小同意.`ui/initialize`在撤销时,拒绝待定的特权调用,停止不再符合政策的网络活动,清除敏感的转载状态,并在用户界面资源本身不再被允许时重新安装或返回文本.
+
+### 倒退是合同的一部分
+
+应用程序知情的服务器仍然可以为不广告UI扩展的主机服务:
+
+- 返回相同的工具`_meta.ui`在`tools/list`现在,我们要去.
+- 保存一个有用的文本结果`tools/call`现在,我们要去.
+- 拒绝`resources/read`对于缺失能力错误的UI.
+- 决策工具是否完成时,永远不要假设一个iframe存在.
 
 ```figure
 t3-ui-sandbox
 ```
 
+## 建立它
+
+`code/main.py`通过Skype,它可以通过Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Skype,Syyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy`server/discover`列出工具和资源,执行工具,并提供一个独立的HTML资源.
+
+该模型已经接受了分析的体体和路由标题. 它不是完整的HTTP适配器,也不解析`Content-Type`或`Accept`. 使用第09课程来完成需要的完整的流通 HTTP 适配器`Content-Type: application/json`其他`Accept`含有两者中的值`application/json`其他`text/event-stream`现在,我们要去.
+
+运行它:
+
+```bash
+cd phases/13-tools-and-protocols/14-mcp-apps
+python3 code/main.py
+python3 -m unittest discover code/tests -v
+```
+
+检查输出中的四个东西:
+
+1. 每次电话都是独立的.
+2. 每个要求都有`_meta`能否实现.
+3. `resources/list`在任何资源阅读之前返回稳定描述符.
+4. 每个结果都有`resultType`服务器身份元数据.
+5. 没有出现核心会议标识符.
+
 ## 用它
 
-`code/main.py`扩展了笔记服务器`visualize_timeline`返回一个工具`ui://notes/timeline`资源,加上一个处理器`resources/read`在那个URI中返回一个小但完整的HTML捆绑,并带有SVG时间线.HTML是stdlib模板的.
+开始`server/discover`确认`io.modelcontextprotocol/ui`在服务器扩展地图中显示.`tools/list`首先,一个是用App功能,一次是没有App功能.
 
-什么要看:
-
-- `_meta.ui`工具响应载有资源Uri,CSP,权限.
-- 无需网络访问,所有数据都被插入.
-- 杰斯打电话`host.callTool`通过`window.parent.postMessage`(但在本DDLB演示中没有记录).
+阅读`ui://notes/timeline.html`查找HTML`hostOrigin`其他`event.origin`两条线是桥梁没有使用野生卡片目标的最小可见证据.
 
 ## 运送它
 
-这一课产生了`outputs/skill-mcp-apps-spec.md`由于使用互动UI可以获得益处的工具,这项技能产生了MCP Apps的全部合同: `ui://`通过"URI",CSP,权限,邮件输入点,以及安全检查清单.
+这一课是很好的.`outputs/skill-mcp-apps-spec.md`通过它,在编写框架代码之前,可审查应用程序合同.它迫使作者指定当前的核心包裹,扩展谈判,倒退,UI资源,缓存政策,CSP,权限,桥梁方法和同意界限.
 
 ## 运动
 
-1. 跑步`code/main.py`直接在浏览器中打开HTML,验证SVG染.然后绘制用户界面将使用的邮件后合同`host.callTool("notes_update", ...)`现在,我们要去.
-
-2. 紧紧部: 移除`'unsafe-inline'`基于非基于脚本的政策.HTML生成代码的变化是什么?
-
-3. 添加第二个UI资源`ui://notes/editor`通过 iframe 进行编辑,`host.callTool("notes_update", ...)`现在,我们要去.
-
-4. 检查用户界面的攻击表面. 恶意服务器可以在哪里注入内容?
-
-5. 阅读SEP-1724规格并确定MCP Apps SDK中没有使用的功能. (提示:组件级状态同步)
+1. 改为空扩展地图. 确认`tools/list`保持工具,但删除 UI 绑定.
+2. 发送`Mcp-Name: ui://notes/other.html`通过一个读取时间线的器官.`-32020`现在,我们要去.
+3. 改变资源为`cacheScope: private`描述使用者特定的条件,证明其合理.
+4. 转换脚本到`https://static.example.com/app.js`添加这个来源到`resourceDomains`并且解释了新的供应链风险.
+5. 添加一个`notes_open`按键通过主机. 保持用户批准在主机.
 
 ## 关键词
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| MCP Apps | "Interactive UI resources" | SEP-1724 extension shipped 2026-01-26 |
-| `ui://` | "App URI scheme" | Resource scheme for UI bundles |
-| `text/html;profile=mcp-app` | "The MIME" | Content-type for MCP App HTML |
-| Iframe sandbox | "Render container" | Browser sandboxing of the UI with CSP and permissions |
-| postMessage JSON-RPC | "UI-to-host wire" | Tiny JSON-RPC-over-postMessage dialect for host calls |
-| `_meta.ui` | "Tool-UI binding" | Metadata linking a tool result to a UI resource |
-| CSP | "Content-Security-Policy" | Declares allowed sources for scripts, network, styles |
-| AppRenderer | "Server SDK primitive" | Converts a framework component into a `ui://` resource |
-| AppFrame | "Client SDK primitive" | Iframe mount helper that mediates postMessage |
-| `ui/initialize` | "Handshake" | First postMessage from UI to host |
+| Term | Meaning |
+|------|---------|
+| MCP Apps | Optional extension for interactive HTML rendered by an MCP host |
+| `io.modelcontextprotocol/ui` | Extension identifier advertised by both peers |
+| `ui://` | Resource scheme for an App's UI template |
+| `text/html;profile=mcp-app` | MIME type for MCP App HTML |
+| `server/discover` | Current RPC for protocol and capability discovery |
+| `resources/list` | Mandatory resource listing method when the server advertises resources |
+| `resultType` | Required discriminator for modern successful results |
+| `ui/initialize` | First Apps bridge request, separate from removed core initialization |
+| `ui/notifications/initialized` | Apps View readiness notification sent after the host responds |
+| CSP | Browser policy that restricts scripts, styles, images, and network origins |
+| Text fallback | Tool behavior retained for a host without Apps support |
 
 ## 进一步阅读
 
-- [MCP ext-apps — GitHub](https://github.com/modelcontextprotocol/ext-apps)参考实施和SDK
-- [MCP Apps specification 2026-01-26](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx)正式的规范文件
-- [MCP — Apps extension overview](https://modelcontextprotocol.io/extensions/apps/overview)高层文件
-- [MCP blog — MCP Apps launch](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/)2026年1月发射时间
-- [MCP Apps API reference](https://apps.extensions.modelcontextprotocol.io/api/) JSDoc 类型的 SDK 参考
+- [MCP 2026-07-28 base protocol](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+- [MCP Apps overview](https://modelcontextprotocol.io/extensions/apps/overview)
+- [MCP Apps build guide](https://modelcontextprotocol.io/extensions/apps/build)
+- [Official extension support matrix](https://modelcontextprotocol.io/extensions/client-matrix)
