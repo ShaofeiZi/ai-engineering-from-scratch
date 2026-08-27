@@ -1,28 +1,28 @@
-# 查询重写:HyDE,多查询和分解
+# 查询重写：HyDE、多查询与分解
 
-> 查询用户输入的查询不是查询器想要的查询. 重写将在查询之前的差距弥合,因此索引会看到更接近答案的东西.
+> 用户输入的查询，并不是 retriever 真正想看到的查询。查询重写的作用，就是在检索发生前先把这道缝补上，让索引看到的内容更接近“答案会长成什么样”。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 11 lessons 04 (embeddings), 06 (RAG); Phase 19 Track B foundations (lessons 20-29); Phase 19 lessons 64 and 65
-**Time:** ~90 minutes
+**Prerequisites:** 第 11 阶段第 04 课（embeddings）、第 06 课（RAG）；第 19 阶段 Track B 基础课（第 20–29 课）；第 19 阶段第 64 与 65 课
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 实现假设文件嵌入 (HyDE):生成一个假答案,嵌入它,取回该向量而不是查询向量.
-- 实现多查询扩展:重写一个查询成N句子,与每个引用,通过相互排列融合将联盟合并.
-- 实现查询分解:将复杂问题分为子问题,每一个子问题检索,并合并.
-- 让我们比较三个重写器的位置,
-- 导航一个假的LLM,产生定性,固定输出,
+- 实现 Hypothetical Document Embeddings（HyDE）：先生成一段假的答案文本，对它做 embedding，再用这个向量而不是原查询向量去检索。
+- 实现多查询扩展：把一个查询重写成 N 个释义版本，对每个版本分别检索，再用 reciprocal rank fusion 合并结果。
+- 实现查询分解：把复杂问题拆成多个子问题，分别检索后再合并。
+- 在同一组 fixture 上正面对比这三种重写策略，并说明各自何时更有效。
+- 接入一个输出可复现、在 fixture 上行为确定的 mock LLM，让整个重写循环可以离线运行。
 
 ## 问题
 
-一个用户输入"当上传失败,预算消失时,我们的团队会做什么?" 文件中包含一个文件,上面写道:"AbortMultipartOnFail 停止了飞行中的S3多部分上传, 查询和文档没有任何名词.  BM25失败了. 双编码器将文档排名第三或第四,因为查询向量落入嵌入空间的一个区域,该区域更喜欢关于取消的任务的文档,而不是关于取消的上传的文档. 如果它坐在N上方,则课66中的二阶级重新排名可以拯救答案,
+用户输入一句话：“what does our team do when uploads fail and the budget is gone?” 但语料库里的文档写的是：“AbortMultipartOnFail aborts an in-flight S3 multipart upload and decrements the per-bucket retry budget when the upload fails”。查询和文档没有共享同一个名词短语。BM25 会漏掉它。双塔编码器也只会把这篇文档排在第三或第四，因为查询向量落在 embedding space 的另一个区域，更偏向那篇讲 cancelled jobs 的文档，而不是这篇讲 aborted uploads 的文档。第 66 课里的两阶段 rerank 只能在目标文档已经进入 top-N 时补救；如果它连 top-N 都进不去，reranker 根本见不到它。
 
-解决方案是在它触及回收器之前重新写查询. 2023年"精确零射击密集检索没有相关标签" (Gao等) 论文引入了HyDE:要求LLM写出将回答查询的文件,嵌入该假设文件,并使用其嵌入作为检索向量. 假设文件位于嵌入空间的右侧,因为它是用体体的声音写的. 查询向量没有.
+修复方法是在查询碰到 retriever 之前先重写。2023 年论文 “Precise Zero-Shot Dense Retrieval without Relevance Labels”（Gao et al.）提出了 HyDE：让 LLM 先写出“一篇会回答这个问题的文档”，对这篇假设文档做 embedding，然后把这个 embedding 当成检索向量。因为这段假设文档使用的是语料库的写作语气和术语，所以它会落在 embedding space 里更正确的区域；原始查询向量不会。
 
-两种表妹技术与HyDE结合. 多查询扩展 (微软使用的GraphRAG术语) 生成查询的N句子并与每个引用,然后合并. 解散 (在2024年斯坦福DSPy研究中被称为"下列查询解散") 将"当上传失败时我们的团队做什么,预算失败时"分为两个问题: 两个检索,一个合并结果,两个部分的答案可达成.
+与 HyDE 配套的还有两种近亲技术。多查询扩展，也就是 Microsoft GraphRAG 使用过的说法，会生成 N 个改写版本，并分别检索后再合并。分解则是 2024 年 Stanford DSPy 工作里常见的 “subquery decomposition”：把 “what does our team do when uploads fail and the budget is gone” 拆成两个问题，“what happens when an upload fails” 和 “what happens when the retry budget is gone”。这样就能做两次检索，再合并一次结果，并把答案的两部分都找出来。
 
-这一课将所有三个都实现,并将它们与同一架构相对.
+这一课会把这三种方法全部实现出来，并在同一份 fixture corpus 上对比它们。
 
 ## 概念
 
@@ -41,9 +41,9 @@ flowchart LR
   Merge --> Out[Top-K]
 ```
 
-### 详细的海德
+### 细讲 HyDE
 
-代取代用户查询向量为LLM编写的假设文档向量.提示是简短的:
+HyDE 会用一段由 LLM 写出的假设文档向量，替换掉用户原始查询的向量。它的 prompt 很短：
 
 ```
 You are a domain expert. Write a one-paragraph passage that answers the question
@@ -55,26 +55,26 @@ Question: {user_query}
 Passage:
 ```
 
-法律法师的答案是错误的,因为法律法师不了解你的体积. 这很好. 回者不关心事实正确性,只关心标志性分配. 假设的段落包含"堕胎","多部分","桶","预算"的词, 嵌入这个通道. 矢量落地在真实通道附近.
+LLM 写出来的内容，作为事实答案通常并不可靠，因为它并不知道你的 corpus 里到底有什么。这没关系。retriever 不关心事实真伪，它关心的是 token distribution。这段假设文本里会出现 “abort”“multipart”“bucket”“budget” 这样的词，因为相关文档就会这么写。只要把这段文本做 embedding，得到的向量就会落在真实段落附近。
 
-在制作中,你将假设文档限制在两个或三个句子上.较长的假设文本收集更多的噪音.较短的文本输掉了HyDE所需的词汇信号.
+在生产环境里，通常会把假设文档限制在两三句话之内。太长会引入噪声，太短又会丢掉 HyDE 需要的词汇信号。
 
-### 多项查询的详细扩展
+### 细讲多查询扩展
 
-生成用户查询的N句子.
+先生成用户查询的 N 个改写版本。最简单的 prompt 如下：
 
 ```
 Rewrite the following question in {N} different ways. Each rewrite must preserve
 the original intent. Number them 1 to {N}. Do not add explanations.
 ```
 
-取回每句话的顶部k.将N排列列列表与RRF (65课程相同的算法) 合并.
+然后对每个改写分别取 top-k，再用 RRF，也就是第 65 课里的同一套算法，把这 N 份排序列表合并起来。成本低、可并行、行为也稳定。
 
-复式查询是用户的句子提出问题的许多有效方式之一,任何重写都会更好地提出问题. 所有重写都一样糟糕,因为原始的情况同样糟糕.
+多查询最适合用户表达方式本来就有很多种等价说法的场景，只要其中任意一个改写问得更“像文档”，效果就会提升。它的失败场景则是：原始查询错得很根本，而所有改写也只是换种方式重复同样的错误。
 
-### 详细分解
+### 细讲分解
 
-解散要求LLM将问题分为子问题,系统则每一个子问题取回.提示:
+单次检索很难完整覆盖一个多面向问题。分解策略会让 LLM 先把问题拆成多个子问题，然后系统对每个子问题分别检索。prompt 如下：
 
 ```
 The following question may require information from multiple distinct topics.
@@ -84,92 +84,92 @@ independently. If the question is already atomic, return it unchanged.
 Question: {user_query}
 ```
 
-解散是包含连结,多条款比较或两个不相关的主题的问题,错误的原子问题工具;解散者的工作是返回单个问题,而不是发明假的子问题.
+对每个子问题分别检索，再合并结果。分解特别适合那些包含连接词、跨多个从句、需要比较多个主题，或者本身就同时涉及两个不相关话题的问题。它不适合原子问题；在这种情况下，分解器最重要的职责，是老老实实返回原问题，而不是凭空捏造子问题。
 
-### 为什么三者都存在
+### 为什么三者都需要
 
-综合测试系统 (HyDE) 解决了查询-库的代币差距.多查询覆盖了语法变异.分解覆盖了多主题查询.一个生产系统运行了三个,并选择了每个查询的策略 (第69课的端到端系统显示了选择器).
+这三种方法是互补关系。HyDE 用来弥合查询与语料库之间的词项差距。多查询覆盖释义差异。分解覆盖多主题问题。真正的生产系统通常会三者都实现，然后按查询类型选择策略；第 69 课的端到端系统里会展示这个选择器。
 
-## 假的法定法学士
+## 模拟 LLM
 
-课程开启在线.假 LLM 是一个小的查找表,按用户查询键,加上没有看到的查询的反弹.查找表包含:
+这节课是离线运行的。这个模拟 LLM 本质上是一个按用户查询做索引的小型查找表，并带有一个处理未知查询的兜底规则。查找表里包含：
 
-- 对于每一个固定查询:一个写的假设段落,三个句子,
-- 对于未知查询:确定性转换:取查询内容单词,通过同义词地图扩展它们,然后返回结果.
+- 对每个固定查询：一段预写好的假设性段落、三条改写版本，以及一份分解结果。
+- 对未知查询：执行一个确定性转换，把查询中的内容词通过同义词映射展开后返回。
 
-假冒的形状是重要的,而不是数据. 在生产中,你把假冒换成真实模型调用.
+关键在于 mock 的接口形状，而不是它里面的数据。在生产环境里，你只需要把 mock 替换成真实模型调用；retriever 本身不需要改动。
 
 ```figure
 cd-hyde-vector
 ```
 
-## 建立它
+## 动手实现
 
-`code/main.py`执行:
+`code/main.py` 会实现：
 
-- `MockLLM`- 上述的决定性替代.
-- `HyDERewriter`- 要求法师写下假设文件,返回重写器输出为`RewriteResult`检索器应该使用的假设文本和查询.
-- `MultiQueryRewriter`- 要求法师提供N句子,返回查询列表.
-- `DecomposeRewriter`- 要求法师解体,返回部分问题.
-- `retrieve_with_rewriter`通过重新写作器和回收器,
-- 显示了三个重写器的演示,然后打印了哪个策略先返回黄金答案文件.
+- `MockLLM`：上面描述的那个确定性替身。
+- `HyDERewriter`：调用 LLM 写出假设文档，并把结果以 `RewriteResult` 返回，其中包含假设文本以及 retriever 实际应该使用的查询。
+- `MultiQueryRewriter`：调用 LLM 生成 N 个改写版本，返回查询列表。
+- `DecomposeRewriter`：调用 LLM 做分解，返回子问题列表。
+- `retrieve_with_rewriter`：接收一个 rewriter 和一个 retriever，执行重写并融合结果。
+- 一个 demo：在固定数据上运行三种 rewriter，并打印哪种策略最先把金标准答案文档找出来。
 
-复制器的形状从第65课中重新使用 (混合BM25 +密集). 融合是相同的RRF.唯一的新形状是重写器接口,它很小.
+retriever 的整体形状沿用第 65 课，也就是 hybrid BM25 + dense。融合仍然使用同样的 RRF。唯一新增的结构就是 rewriter interface，而这个接口非常小。
 
-运行它:
+运行方式：
 
 ```bash
 python3 code/main.py
 ```
 
-输出是每个策略排名和最终总结.HyDE在短语不匹配的查询中获胜.多次查询在语法变异查询中获胜.分解在多主题查询中获胜.倒退 (没有重写器) 在三个中至少输掉一个.
+输出会展示每种策略的排序结果，以及最终总结。HyDE 会在“措辞与文档明显不一致”的查询上获胜。多查询会在“同义表达差异大”的查询上获胜。分解会在“一个问题里混了多个主题”的查询上获胜。fallback，也就是完全不做重写的版本，至少会在这三种情况中的一种上落后。
 
-## 失败模式的演示将隐藏
+## Demo 没法完全暴露的失败模式
 
-**HyDE hallucinates corpus-specific identifiers wrong.**模型发明了一个函数名称.假设的BM25分数在右边文件崩,因为发明的名称现在是一个高权重的代币,它不出现在索引中.
+**HyDE 会幻觉出错误的语料库专有标识符。** 模型可能凭空发明一个函数名。这样一来，假设文档在正确文档上的 BM25 分数反而会崩，因为这个虚构标识符成了高权重 token，但索引里根本没有它。解决方式是限制假设文本的长度，并在融合时降低 BM25 权重。
 
-**Multi-query rewrites all converge.**软模型产生了三个几乎相同的表达语.N检索返回相同的顶-k.RRF合并不比单次检索好.添加明确的多样性说明给重写提示,检测Jaccard的重复.
+**多查询改写会全部收敛。** 如果模型太弱，三条改写可能几乎一模一样。于是 N 次检索返回同一批 top-k，RRF 合并的效果与单次检索没有区别。可以在 prompt 里显式要求多样性，并用 Jaccard 去重。
 
-**Decomposition over-splits.**解散器将原子问题转化为列表.所有检索都返回相同的文档,但有降级. 合并比原始更糟. 在粉丝退出之前,通过"这些子问题足够明显吗?"检测到这一点.
+**分解会过度拆分。** 分解器可能把一个原子问题错误地拆成列表。这样每次检索虽然都命中同一文档，但排名被摊薄，合并结果反而更差。应在 fan-out 前增加一道 “这些子问题是否足够不同” 的检查。
 
-**Latency multiplies.**代成本一个LLM调用.多查询成本一个LLM调用生成N重写,然后N检索.分解成本一个LLM调用分解,然后M检索.检索运行并行;LLM调用是地板.
+**延迟会成倍增长。** HyDE 需要一次 LLM 调用。多查询需要一次 LLM 调用生成 N 个重写，再做 N 次检索。分解需要一次 LLM 调用完成拆分，再做 M 次检索。检索可以并行，但 LLM 调用始终是最小延迟底线。
 
 ## 用它
 
-生产模式:
+生产环境中常见的模式包括：
 
-- 按查询长度选择策略:原子短查询得到多查询,复杂多条款查询得到分解,语重查询得到HyDE.
-- 通过查询哈希缓存重写器输出.许多查询重复.
-- 运行三项并行,并将三项结果集组合到一个中,使用RRF. 成本是三项LLM调用和一项合并;质量是所有三项战略的合并.
+- 按查询长度选策略：短小的原子查询走多查询，复杂的多从句查询走分解，术语密集型查询走 HyDE。
+- 用查询哈希缓存 rewriter 输出，因为很多查询会反复出现。
+- 三种策略并行执行，再把三组结果用 RRF 合并成一组。代价是三次 LLM 调用和一次融合；收益是三种策略覆盖范围的并集。
 
-## 运送它
+## 交付它
 
-第69课将重写器的阶段,在第65课的回收器和第66课的重排器之前,在第68课中评估了重写器在回收回忆中增加的升级.
+第 69 课会把这一层 rewriter 接到第 65 课的 retriever 前面，以及第 66 课的 reranker 前面。第 68 课则会专门评估 rewriter 对 retrieval recall 的提升幅度。
 
-## 运动
+## 练习
 
-1. 实施RAG-Fusion (多项查询的2024变体),如果重写者的表达是故意多样化的,然后重排步骤 (课66) 选择最终列表.
-2. 加入第四个策略:退步提示 (问法师更一般的问题,回复,然后缩小).
-3. 训练分解器识别原子查询,通过添加一个"是原子问题"标题.
-4. 取代假的法师与一个真正的模型调用.
-5. 增加每次重写的信任分数,将重写低于门,测量召回的影响.
+1. 实现 RAG-Fusion，也就是 2024 年版的多查询变体，让 rewriter 故意生成更有差异的改写版本，然后交给第 66 课的 rerank 步骤挑最终列表。
+2. 再加第四种策略：step-back prompting，也就是先让 LLM 问一个更一般化的问题，用它检索后再收窄。然后在 fixture 上比较效果。
+3. 通过增加一个 “is the question atomic” 的 head，让 decomposer 学会识别原子查询。比较改造前后的 over-split rate。
+4. 用真实模型调用替换 mock LLM。测量你这套系统上每种策略的延迟。
+5. 给每次重写增加一个 confidence score。低于阈值的改写直接丢弃。测量这对 recall 的影响。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| HyDE | "Fake-document retrieval" | LLM writes the answer; embed and retrieve on that instead of the query |
-| Multi-query | "Paraphrase expansion" | N rewrites of the query; retrieve N times, merge by RRF |
-| Decomposition | "Subquery split" | Multi-topic queries split into sub-questions, retrieved separately |
-| Atomic query | "Single-topic" | Cannot be decomposed without inventing fake sub-questions |
-| Step-back | "Abstract the query" | Ask the more general question, retrieve, then narrow |
+| HyDE | "Fake-document retrieval" | 让 LLM 先写出答案文本，再对它做 embedding 并据此检索，而不是直接检索原查询 |
+| Multi-query | "Paraphrase expansion" | 把查询改写成 N 个版本，做 N 次检索，再用 RRF 合并 |
+| Decomposition | "Subquery split" | 把多主题查询拆成多个子问题，分别检索 |
+| Atomic query | "Single-topic" | 不能在不捏造假子问题的前提下继续拆分的问题 |
+| Step-back | "Abstract the query" | 先问一个更一般的问题来检索，再收窄到原问题 |
 
 ## 进一步阅读
 
-- 盖奥,马,林,卡兰,"精确零射击密集检索没有相关标签" (HyDE), 2023
-- 微软研究, "多个查询扩展用于检索"
-- 斯坦福的DSPy, "多哈QA的下调"
+- Gao, Ma, Lin, Callan, "Precise Zero-Shot Dense Retrieval without Relevance Labels" (HyDE), 2023
+- Microsoft Research, "Multi-Query Expansion for Retrieval"
+- Stanford DSPy, "Subquery Decomposition for Multi-Hop QA"
 - [LlamaIndex query transformations documentation](https://docs.llamaindex.ai/en/stable/optimizing/advanced_retrieval/query_transformations/)
-- 阶段11课07 - 高级RAG模式
-- 第19阶段课65 - 这台重写器的回收器
-- 第19阶段课程68 - 测量重写器升级的评估
+- 第 11 阶段第 07 课 - advanced RAG patterns
+- 第 19 阶段第 65 课 - the retriever this rewriter feeds
+- 第 19 阶段第 68 课 - the eval that measures the rewriter lift
