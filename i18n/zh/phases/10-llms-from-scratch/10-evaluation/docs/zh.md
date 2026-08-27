@@ -1,40 +1,40 @@
-# 评估:标准,Evals,LM Harness
+# 评估：基准、评测与 LM Harness
 
-> 格德哈特定律:当一个测量成为目标时,它不再是一个好的测量.每一个边界实验室游戏都会达到标准.MMLU的分数都会上升,而模型仍然无法可靠地计算"草"中的R数量.唯一重要的评估是您的评估 - - 在您的任务上,用您的数据.
+> 古德哈特定律：当一项指标成为目标时，它就不再是好指标。每家前沿实验室都会针对基准优化。MMLU 分数不断提高，模型却仍然无法可靠数出“strawberry”中有几个字母 R。真正重要的评测只有你的评测——针对你的任务，使用你的数据。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 10, Lessons 01-05 (LLMs from Scratch)
-**Time:** ~90 minutes
+**Prerequisites:** 阶段 10 第 01～05 课（从零构建大语言模型）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 建立一个针对语言模型的自定义评估链,以运行多种选择和开放的基准
-- 解释为什么标准基准标准 (MMLU,HumanEval) 充满了和无法区分边界模型
-- 执行任务特定的评估,使用适当的指标:精确匹配,F1,BLEU和法官认证等级
-- 设计一个针对您的特定使用情况而非仅仅依赖公共排名表的定制评估套件
+- 构建自定义评测框架，对语言模型运行多项选择与开放式基准
+- 解释标准基准（MMLU、HumanEval）为何会饱和，并失去区分前沿模型的能力
+- 使用恰当指标实现任务专用评测：精确匹配、F1、BLEU 与大语言模型裁判评分
+- 针对自己的具体使用场景设计评测套件，而不是只依赖公开排行榜
 
 ## 问题
 
-根据"全球数据分析"的数据,在2020年MMLU在57个学科中发表了15,908个问题.在三年内,边界模型和了它.GPT-4得分为86.4%.Claude 3 Opus得分为86.8%.Llama 3 405B得分为88.6%.排名板被压缩成3个点范围,其中差异是统计噪音,而不是实际能力差距.
+MMLU 于 2020 年发布，包含 57 个学科的 15,908 道题。三年内，前沿模型就让它趋于饱和。GPT-4 得分 86.4%，Claude 3 Opus 得分 86.8%，Llama 3 405B 得分 88.6%。排行榜被压缩到 3 分区间，差异只是统计噪声，而非真实能力差距。
 
-十岁的孩子在没有思考的情况下完成任务. 克劳德3.5索尼特在MMLU上获得88.7%的分数,最初无法计算"草"中的字母. 这项任务需要零的世界知识和零的推理, 人类Eval测试了164个问题. 模型在此获得90%以上的成绩,同时还会产生任何小开发人员都会抓住的边缘案例上的代码.
+与此同时，这些模型仍会在十岁孩子不假思索就能完成的任务上失败。MMLU 得分 88.7% 的 Claude 3.5 Sonnet，最初无法数出“strawberry”中的字母数量——这项任务不需要世界知识，也不需要推理，只需逐字符遍历。HumanEval 使用 164 道题测试代码生成。模型得分超过 90%，却仍会生成连初级开发者都能发现边界情况崩溃的代码。
 
-实践性与基准绩效之间的差距是 LLM评价的核心问题. 基准指标告诉你模型在基准指标上表现如何. 它们几乎没有告诉你该模型将如何执行你的具体任务, 如果您正在构建客户支持机器人,MMLU是无关紧要的. 如果您正在构建代码助理,HumanEval只涵盖功能级生成-- 它没有说任何关于调试,重新构成或解释文件中的代码.
+基准表现与现实可靠性之间的鸿沟，是大语言模型评估的核心问题。基准告诉你的，只是模型在该基准上的表现；它几乎无法说明模型面对你的特定任务、特定数据和特定失效模式时会怎样。如果你在构建客服机器人，MMLU 就无关紧要；如果你在构建代码助手，HumanEval 只覆盖函数级生成，完全没有衡量跨文件调试、重构或代码讲解。
 
-你需要定制的评估.不是因为基准是无用的,它们是用于粗略的模型选择,
+你需要自定义评测。不是因为基准毫无用处——它们适合粗略筛选模型——而是因为最终评估必须与部署条件精确一致。
 
 ## 概念
 
-### 伊瓦尔景观
+### 评测版图
 
-评估有三个类别,每个类别都有不同的成本和信号质量.
+评估分为三类，每一类的成本和信号质量都不同。
 
-**Benchmarks**测试组是标准化的测试套件.MMLU,HumanEval,SWE-bench, MATH,ARC,HellaSwag.你运行模型与基准值并获得分数.优势:每个人都使用相同的测试,所以你可以比较模型.缺点:模型和培训数据越来越污染这些基准.实验室训练数据包括基准问题.分数上升.能力可能不.
+**基准**是标准化测试套件，例如 MMLU、HumanEval、SWE-bench、MATH、ARC、HellaSwag。让模型运行基准，就能得到一个分数。优点是人人使用同一项测试，因此模型之间可以比较；缺点是这些基准正日益受到模型与训练数据污染。实验室训练所用的数据包含基准题目，于是分数上升，能力却未必提高。
 
-**Custom evals**您定义输入,预期输出和分数功能. 法律文件总结器被评估在法律文件上. SQL 生成器被评估在数据库方案上. 这些成本很高,但它们是唯一的评估,预测生产性能.
+**自定义评测**是针对具体使用场景自行构建的测试套件。你定义输入、预期输出与评分函数。法律文档摘要器应在法律文档上评估，SQL 生成器应在你的数据库 Schema 上评估。构建成本虽高，却只有这类评测能够预测生产表现。
 
-**Human evals**通过付费的注释器来判断模型的输出,以使用有用性,正确性,流利性和安全等标准.$0.10-$根据法庭的判决,每次裁定的时间为2.00分,速度为1小时至1天.
+**人类评测**由付费标注者根据帮助性、正确性、流畅性和安全性等标准评价模型输出。对于自动评分无法胜任的开放式任务，它是金标准。Chatbot Arena 已经收集 100 多个模型之间超过 200 万次人类偏好投票。缺点是成本高（每次判断 0.10～2.00 美元），速度慢（数小时到数天）。
 
 ```mermaid
 graph TD
@@ -53,41 +53,41 @@ graph TD
     style H fill:#1a1a2e,stroke:#e94560,color:#fff
 ```
 
-### 为什么标准标准会破裂
+### 基准为什么失效
 
-三种机制导致基准分数不再反映实际能力.
+三种机制会让基准分数不再反映真实能力。
 
-**Data contamination.**训练机构在互联网上扫描. 测量问题在互联网上播放. 模型在训练中看到答案. 这不是传统意义上的欺骗 - - 实验室不故意包括测量数据. 但在网络规模的测量使得几乎不可能排除.
+**数据污染。** 训练语料从互联网抓取，而基准题目也存在于互联网中。模型在训练期间见过答案。这不是传统意义上的作弊——实验室并非故意纳入基准数据——但在网络规模抓取中，几乎不可能将其完全排除。
 
-**Teaching to the test.**实验室优化训练混合物来实现基准性能.如果训练混合物中的5%是MMLU式多选项,模型就会学习格式和答案分布.MMLU是四方多选项.模型学习答案分布在A/B/C/D中大约均,即使模型不知道答案,这也可以帮助.
+**应试训练。** 实验室会优化训练数据配比，以改善基准表现。如果训练数据中有 5% 是 MMLU 风格的多项选择题，模型就会学会题型与答案分布。MMLU 是四选一，模型会学到 A/B/C/D 的答案分布大致均匀，即使不知道答案，这一点也能带来帮助。
 
-**Saturation.**当每个边界模型在基准上获得85-90%的分数时,基准不再歧视.剩余的10-15%的问题可能是模糊的,错误标签的,或需要模糊的域知识.在MMLU上从87%提高到89%可能意味着模型记忆了两个模糊的问题,而不是它变得更聪明.
+**饱和。** 当前沿模型在某项基准上都达到 85%～90%，该基准就失去了区分能力。剩余 10%～15% 的题目可能含糊、标错，或要求冷僻的领域知识。MMLU 从 87% 提高到 89%，可能只说明模型多记住了两道冷门题，而不是变得更聪明。
 
-### 困惑: 快速检查健康
+### 困惑度：快速健康检查
 
-度是测量模型对代币的顺序有多惊.
+困惑度衡量模型面对一串词元时有多“意外”。形式化定义是平均负对数似然的指数：
 
 ```
 PPL = exp(-1/N * sum(log P(token_i | context)))
 ```
 
-曲率为10意味着模型平均不确定,就像在每个代币位置中均地选择10个选项.较低更好.GPT-2在WikiText-103上得到了30个曲率.GPT-3得到了20个.Llama 3 8B得到了7个.
+困惑度为 10，表示模型在每个词元位置上的平均不确定性，相当于从 10 个选项中均匀选择。数值越低越好。GPT-2 在 WikiText-103 上的困惑度约为 30，GPT-3 约为 20，Llama 3 8B 约为 7。
 
-模特可以在预测常见模式方面擅长,但在罕见但重要的模式上却很糟糕.它也没有说任何关于遵循指令,推理或事实准确性的东西.使用它作为一个智力检查,而不是最终判决.
+困惑度适合在同一个测试集上比较模型，但也存在盲点。模型可以凭借擅长预测常见模式获得较低困惑度，同时在罕见但重要的模式上表现糟糕。它也完全不能说明指令遵循、推理或事实准确性。应把它用作健全性检查，而非最终裁决。
 
-### 法律法官
+### 大语言模型裁判
 
-根据GPT-4o的标准,GPT-4o的性能可以达到1-5的标准,以确定其正确性,有用性和安全性.这与GPT-4o-mini的判断成本约为0.01美元,与人类的判断相对相对而言,大约80%的认同在大多数任务上.
+使用强模型评估较弱模型的输出。做法很简单：要求 GPT-4o 或 Claude Sonnet 按 1～5 分评价回答的正确性、帮助性与安全性。使用 GPT-4o-mini 时，每次判断约花费 0.01 美元，而且与人类判断的相关性出人意料地高——在多数任务上约有 80% 的一致率。
 
-评分提示比模型更重要.一个模糊的提示 ("评分这个答案") 生产了噪音的分数.一个结构化的提示有条目 ("评分5如果答案是事实上正确的并引用一个来源,4如果是正确的但未来源的,3如果是部分正确的...") 生产了一致的,可复制的分数.
+评分提示词比模型本身更重要。模糊提示词（“评价这个回答”）会产生噪声分数；带有评分标准的结构化提示词（“事实正确且引用来源得 5 分；正确但无来源得 4 分；部分正确得 3 分……”）则能产生一致、可复现的分数。
 
-失败模式:评审模型显示位置偏差 (在对比中偏好第一反应),语法偏差 (偏好更长的反应),自偏 (GPT-4率高于相当的克劳德输出).减轻:随机排序,规范长度,使用不同于正在评估的模型的评审者.
+失效模式包括：裁判模型有位置偏差（成对比较时偏爱第一个回答）、冗长偏差（偏爱较长回答）和自我偏好（GPT-4 会给 GPT-4 输出比同等质量 Claude 输出更高的分数）。缓解方法包括随机排列顺序、按长度归一化，以及使用不同于被评模型的裁判。
 
-### 双对比的ELO评级
+### 根据成对比较计算 ELO 等级分
 
-通过聊天机场的方法. 显示两个不同的模型对相同提示的反应. 一个人 (或法师) 评判者选择了更好的. 从数千个比较中,计算每个模型的ELO评分 - - 象棋中使用的同一个系统.
+这是 Chatbot Arena 采用的方法。针对同一提示词，展示来自不同模型的两个回答，由人类（或大语言模型裁判）选出更好的一个。根据数千次此类比较，为每个模型计算 ELO 等级分——与国际象棋使用的系统相同。
 
-博平台优势:相对排名比绝对分数更可靠,处理关系优雅,并与独立分分分的比较较少相近.截至2026年初,Chatbot Arena排名显示GPT-4o,Claude 3.5 Sonnet和Gemini 1.5 Pro在彼此之间排名最高的20个博平台.
+ELO 的优点是：相对排名比绝对评分更可靠，可以妥善处理平局，而且比逐个输出独立评分需要更少比较就能收敛。截至 2026 年初，Chatbot Arena 排名显示 GPT-4o、Claude 3.5 Sonnet 与 Gemini 1.5 Pro 位于榜首，彼此相差不到 20 个 ELO 分。
 
 ```mermaid
 graph LR
@@ -106,44 +106,44 @@ graph LR
     style E fill:#1a1a2e,stroke:#51cf66,color:#fff
 ```
 
-### 平等框架
+### 评测框架
 
-**lm-evaluation-harness**(EleutherAI):标准的开源评估框架.支持200多个基准.用一个命令运行任何Hugging Face模型与MMLU,HellaSwag,ARC等.
+**lm-evaluation-harness**（EleutherAI）：标准的开源评测框架，支持 200 多项基准。只需一条命令，即可让任意 Hugging Face 模型运行 MMLU、HellaSwag、ARC 等基准。Open LLM Leaderboard 也使用它。
 
-**RAGAS**评估框架,具体用于RAG管道. 衡量信任性 (答案是否符合检索的背景?),相关性 (检索的背景是否与问题相关?),以及答案正确性.
+**RAGAS**：专门面向 RAG 流水线的评估框架。它衡量忠实性（回答是否符合检索到的上下文？）、相关性（检索上下文是否与问题有关？）和回答正确性。
 
-**promptfoo**设置一个测试案例,对几个模型进行测试,获得一个通过/失败报告. 对于回归测试提示有用 - 确保一个快速改变不会打破现有测试案例.
+**promptfoo**：配置驱动的提示工程评测工具。在 YAML 中定义测试用例，针对多个模型运行，再获得通过/失败报告。它适合做提示词回归测试——确保一次提示词改动没有破坏现有用例。
 
-### 建立定制的
+### 构建自定义评测
 
-唯一对生产有意义的评估.
+这是生产环境中唯一真正重要的评测。流程如下：
 
-1. **Define the task.**具体说明. "回答问题"太模糊了. "给出客户的投诉电子邮件,提取产品名称,问题类别和情绪"是一个可以评估的任务.
+1. **定义任务。** 模型究竟应该做什么？必须准确。“回答问题”过于模糊；“给定一封客户投诉邮件，提取产品名、问题类别和情感”才是可以评估的任务。
 
-2. **Create test cases.**对于原型 eval,至少50个,生产的200个以上.每个测试案例都是 (输入,预期_输出) 双.包括边缘案例:空输入,对立输入,模糊输入,其他语言的输入.
+2. **创建测试用例。** 原型评测至少 50 个，生产评测至少 200 个。每个测试用例都是一个（输入、预期输出）对。必须包含边界情况：空输入、对抗输入、含糊输入和其他语言的输入。
 
-3. **Define scoring.**对于结构化输出,完全匹配. BLEU/ROUGE对于文本相似性. LLM作为评审者对于开放式质量. F1用于提取任务. 结合多个指标和权重.
+3. **定义评分。** 结构化输出使用精确匹配；文本相似度使用 BLEU/ROUGE；开放式质量使用大语言模型裁判；提取任务使用 F1。可以用权重组合多项指标。
 
-4. **Automate.**每个 eval 都用一个命令运行,没有手动步骤. 保存结果以允许时间进行比较的格式.
+4. **自动化。** 每项评测都应通过一条命令运行，不得依赖手工步骤。用便于跨时间比较的格式保存结果。
 
-5. **Track over time.**评分分分单独是无意义的.你需要趋势线. 评分在最后一次提示变化后是否改善? 换模型后是否退缩? 版本你的评分与你的提示.
+5. **跟踪变化。** 孤立的评测分数毫无意义，你需要趋势线。上次提示词修改后分数提高了吗？切换模型后是否发生回归？评测应与提示词一起进行版本管理。
 
-| Eval Type | Cost per judgment | Agreement with humans | Best for |
+| 评测类型 | 每次判断成本 | 与人类的一致率 | 最适用场景 |
 |-----------|------------------|----------------------|----------|
-| Exact match | ~$0 | 100% (when applicable) | Structured output, classification |
-| BLEU/ROUGE | ~$0 | ~60% | Translation, summarization |
-| LLM-as-judge | ~$0.01 | ~80% | Open-ended generation |
-| Human eval | $0.10-$2.00 | N/A (is the ground truth) | Ambiguous, high-stakes tasks |
+| 精确匹配 | 约 0 美元 | 100%（适用时） | 结构化输出、分类 |
+| BLEU/ROUGE | 约 0 美元 | 约 60% | 翻译、摘要 |
+| 大语言模型裁判 | 约 0.01 美元 | 约 80% | 开放式生成 |
+| 人类评测 | 0.10～2.00 美元 | 不适用（它就是真值） | 含糊、高风险任务 |
 
 ```figure
 perplexity-loss
 ```
 
-## 建立它
+## 动手构建
 
-### 第一个步骤:最低等价框架
+### 第 1 步：最小评测框架
 
-定义核心抽象.一个 eval 案例有输入,预期输出和可选的元数据定位.一个得分者采用预测和参考,返回0到1之间的分数.
+先定义核心抽象。一个评测用例包含输入、预期输出和可选的元数据字典。评分器接收预测与参考答案，返回 0 到 1 之间的分数。
 
 ```python
 import json
@@ -177,9 +177,9 @@ class EvalSuite:
         return results
 ```
 
-### 步骤2: 评分功能
+### 第 2 步：评分函数
 
-建立一个完整的匹配,F1的代币,以及一个模拟的法官的L.L.M.
+构建精确匹配、词元 F1，以及模拟的大语言模型裁判评分器。
 
 ```python
 def exact_match(prediction, expected):
@@ -207,9 +207,9 @@ def llm_judge_simulated(prediction, expected):
     return round(overlap * 0.7 + length_penalty * 0.3, 3)
 ```
 
-### 步骤3:ELO评级系统
+### 第 3 步：ELO 等级分系统
 
-实现与ELO更新进行对比. 这正是Chatbot Arena用来排名模型的系统.
+实现带 ELO 更新的成对比较。这正是 Chatbot Arena 用来为模型排名的系统。
 
 ```python
 class ELOTracker:
@@ -254,9 +254,9 @@ class ELOTracker:
         return sorted(self.ratings.items(), key=lambda x: -x[1])
 ```
 
-### 步骤4: 难以计算
+### 第 4 步：计算困惑度
 
-实际上,你会从模型的逻辑中得到这些.我们用概率分布模拟.
+使用词元概率计算困惑度。实践中，这些概率来自模型 Logit；这里用概率分布进行模拟。
 
 ```python
 import numpy as np
@@ -282,9 +282,9 @@ def token_log_probs_simulated(text, model_quality=0.8):
     return log_probs
 ```
 
-### 步骤5:总结结果
+### 第 5 步：汇总结果
 
-计算在评估运行中总结统计数据:平均,中位数,门的通过率,每度分类.
+计算一次评测运行的汇总统计量：均值、中位数、指定阈值下的通过率，以及逐指标明细。
 
 ```python
 def summarize_results(results, threshold=0.8):
@@ -321,9 +321,9 @@ def print_summary(summary, suite_name="Eval"):
         print(f"    N:         {stats['n']}")
 ```
 
-### 步骤 6: 运行全管道
+### 第 6 步：运行完整流水线
 
-设置一个任务,创建测试案例,模拟两个模型,运行评估,从对比计算ELO,打印排名表.
+把所有部分连接起来。定义任务、创建测试用例、模拟两个模型、运行评测、根据成对比较计算 ELO，再打印排行榜。
 
 ```python
 def demo_model_good(prompt):
@@ -371,11 +371,11 @@ print_summary(summarize_results(results_good), "Model A (concise)")
 print_summary(summarize_results(results_bad), "Model B (verbose)")
 ```
 
-对于"好"模型,就有了准确的答案. "坏"模型,就有了词汇表达. 精确的匹配对词汇模型的惩罚很严厉. 符号F1和法官的 LLM更宽恕. 这说明了为什么测量选择很重要:根据你如何得分,相同的模型看起来很好或很糟糕.
+“好”模型给出精确答案，“坏”模型给出冗长改写。精确匹配会严厉惩罚冗长模型，词元 F1 与大语言模型裁判则更加宽容。这说明评分指标的选择非常重要：同一个模型会因评分方式不同而显得极好或极差。
 
-### 七步:Elo赛
+### 第 7 步：ELO 锦标赛
 
-运行多轮模型之间的对比.
+让多个模型进行多轮成对比较。
 
 ```python
 elo = ELOTracker(k=32)
@@ -401,9 +401,9 @@ for name, rating in elo.leaderboard():
     print(f"  {name}: {rating:.0f}")
 ```
 
-### 步骤8: 困惑的比较
+### 第 8 步：比较困惑度
 
-进行不同质量水平的"模型"之间的困难比较.
+比较不同质量水平“模型”的困惑度。
 
 ```python
 test_text = "The quick brown fox jumps over the lazy dog in the garden"
@@ -414,11 +414,11 @@ for quality, label in [(0.9, "Strong model"), (0.7, "Medium model"), (0.4, "Weak
     print(f"  {label} (quality={quality}): perplexity = {ppl:.2f}")
 ```
 
-## 用它
+## 学以致用
 
-### 评价器 (EleutherAI)
+### lm-evaluation-harness（EleutherAI）
 
-标准工具用于运行任何模型的基准.
+这是在任意模型上运行基准的标准工具。
 
 ```python
 # pip install lm-eval
@@ -436,9 +436,9 @@ for quality, label in [(0.9, "Strong model"), (0.7, "Medium model"), (0.4, "Weak
 # print(results["results"])
 ```
 
-### 快速foo
+### promptfoo
 
-定义YAML中的测试,并对抗多个提供商.
+这是配置驱动的提示工程评测工具。在 YAML 中定义测试，再针对多个提供商运行。
 
 ```yaml
 # promptfoo.yaml
@@ -462,7 +462,7 @@ tests:
         value: "4"
 ```
 
-### 针对RAG评估的RAGAS
+### 用 RAGAS 评估 RAG
 
 ```python
 # pip install ragas
@@ -476,44 +476,44 @@ tests:
 # print(result)
 ```
 
-RAGAS测量一般评估所缺少的内容:模型的答案是否基于检索的文本,而不是仅仅是答案在抽象中是否"正确".
+RAGAS 衡量通用评测遗漏的内容：模型回答是否以检索上下文为依据，而不只是抽象意义上是否“正确”。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/prompt-eval-designer.md`-- 可重复使用的提示,它为任何任务设计了定制的评估套件.给它一个任务描述,它生成了测试案例,分数函数和通过/失败门建议.
+本课会生成 `outputs/prompt-eval-designer.md`——一个为任意任务设计自定义评测套件的可复用提示词。给出任务说明后，它会生成测试用例、评分函数与通过/失败阈值建议。
 
-它还产生了`outputs/skill-llm-evaluation.md`根据任务类型,预算和延迟要求,
+它还会生成 `outputs/skill-llm-evaluation.md`——一个根据任务类型、预算和延迟要求选择正确评估策略的决策框架。
 
-## 运动
+## 练习
 
-1. 添加一个"一致性"分数器,它通过模型运行相同的输入5次,并测量输出的频率.确定性输入的不一致答案显示了脆弱的提示或高温度设置.
+1. 添加“一致性”评分器：让模型对同一个输入运行 5 次，测量输出相同的比例。在确定性输入上出现不一致回答，说明提示词脆弱或温度设置过高。
 
-2. 扩展ELO跟踪器以支持多个法官功能 (精确匹配,F1,LLM-as-judge) 并重量它们.当你重量精确匹配与F1重量时,比较排名表的变化.
+2. 扩展 ELO 跟踪器，使其支持多个裁判函数（精确匹配、F1、大语言模型裁判）并为其分配权重。比较提高精确匹配权重与提高 F1 权重时，排行榜会怎样变化。
 
-3. 建立一个特定任务的评估套件:将电子邮件分为5类.创建100个测试案例,包括多种例子 (可能属于多个类别的电子邮件,空虚的电子邮件,其他语言的电子邮件).测量不同"模型" (基于规则,关键字匹配,模拟的LLM) 的表现.
+3. 为一项具体任务构建评测套件：把电子邮件分为 5 类。创建 100 个多样化测试用例，包括边界情况（可能同时属于多个类别的邮件、空邮件、其他语言的邮件）。测量不同“模型”（基于规则、关键词匹配、模拟大语言模型）的表现。
 
-4. 实施污染检测:鉴于一组评估问题和培训组,检查培训数据中出现的评估问题 (或近句) 的百分比. 这就是研究人员对基准有效性进行审计的方式.
+4. 实现污染检测：给定一组评测问题与训练语料，检查评测问题（或近似改写）有多大比例出现在训练数据中。这就是研究人员审计基准有效性的方法。
 
-5. 建立一个"模型差异"工具. 鉴于两个模型版本的评估结果,突出哪些具体的测试案例改善,哪些回归,哪些保持不变.这是一个代码差异的评估相当 - - 对于了解改变是否有帮助或伤害至关重要.
+5. 构建“模型差异”工具。给定两个模型版本的评测结果，突出显示哪些具体用例有所改善、哪些发生回归、哪些保持不变。这相当于评测领域的代码差异——要理解一次改动究竟带来帮助还是伤害，它必不可少。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| MMLU | "The benchmark" | Massive Multitask Language Understanding -- 15,908 multiple choice questions across 57 subjects, saturated above 88% by 2025 |
-| HumanEval | "Code eval" | 164 Python function-completion problems from OpenAI, tests only isolated function generation |
-| SWE-bench | "Real coding eval" | 2,294 GitHub issues from 12 Python repos, measures end-to-end bug fixing including test generation |
-| Perplexity | "How confused the model is" | exp(-avg(log P(token_i given context))) -- lower means the model assigns higher probability to the actual tokens |
-| ELO rating | "Chess ranking for models" | A relative skill rating computed from pairwise win/loss records, used by Chatbot Arena to rank 100+ models |
-| LLM-as-judge | "Using AI to grade AI" | A strong model scores a weaker model's outputs against a rubric, ~80% agreement with human judges at ~$0.01/judgment |
-| Data contamination | "The model saw the test" | Training data includes benchmark questions, inflating scores without improving real capability |
-| Eval suite | "A bunch of tests" | A versioned collection of (input, expected_output, scorer) triples that measure a specific capability |
-| Pass rate | "What percentage it gets right" | Fraction of eval cases scoring above a threshold -- more actionable than mean score because it measures reliability |
-| Chatbot Arena | "Model ranking website" | LMSYS platform with 2M+ human preference votes, producing the most trusted LLM leaderboard via ELO ratings |
+| MMLU | “那个基准” | 大规模多任务语言理解——横跨 57 个学科的 15,908 道多项选择题，到 2025 年已在 88% 以上趋于饱和 |
+| HumanEval | “代码评测” | OpenAI 的 164 道 Python 函数补全题，只测试独立函数生成 |
+| SWE-bench | “真实编码评测” | 来自 12 个 Python 仓库的 2,294 个 GitHub Issue，衡量包括测试生成在内的端到端缺陷修复 |
+| 困惑度 | “模型有多困惑” | exp(-avg(log P(token_i given context)))——越低表示模型为实际词元分配的概率越高 |
+| ELO 等级分 | “模型的国际象棋排名” | 根据成对胜负记录计算的相对能力评分；Chatbot Arena 用它为 100 多个模型排名 |
+| 大语言模型裁判 | “用 AI 评价 AI” | 强模型依据评分标准评价较弱模型的输出；每次判断约 0.01 美元，与人类裁判的一致率约为 80% |
+| 数据污染 | “模型见过考题” | 训练数据包含基准问题，导致分数虚高，却不代表实际能力改善 |
+| 评测套件 | “一堆测试” | 由（输入、预期输出、评分器）三元组组成并进行版本管理的集合，用于衡量特定能力 |
+| 通过率 | “答对了多少百分比” | 评测用例中得分高于阈值的比例——它衡量可靠性，比平均分更可执行 |
+| Chatbot Arena | “模型排名网站” | 拥有超过 200 万次人类偏好投票的 LMSYS 平台，通过 ELO 等级分生成最受信任的大语言模型排行榜 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Hendrycks et al., 2021 -- "Measuring Massive Multitask Language Understanding"](https://arxiv.org/abs/2009.03300)尽管其度很高,但仍是最受引用的LLM基准.
-- [Chen et al., 2021 -- "Evaluating Large Language Models Trained on Code"](https://arxiv.org/abs/2107.03374)-- 开通AI的HumanEval论文,建立了代码生成评估方法
-- [Zheng et al., 2023 -- "Judging LLM-as-a-Judge"](https://arxiv.org/abs/2306.05685)--系统分析使用LLM来评估LLM,包括位置偏差和语句偏差的发现
-- [LMSYS Chatbot Arena](https://chat.lmsys.org/)-- 群众共享的模型比较平台,有2M+的投票,
+- [Hendrycks 等，2021——“衡量大规模多任务语言理解”](https://arxiv.org/abs/2009.03300)——MMLU 论文；尽管已趋于饱和，它仍是引用最多的大语言模型基准
+- [Chen 等，2021——“评估在代码上训练的大型语言模型”](https://arxiv.org/abs/2107.03374)——OpenAI 的 HumanEval 论文，奠定代码生成评估方法
+- [Zheng 等，2023——“评判 LLM-as-a-Judge”](https://arxiv.org/abs/2306.05685)——系统分析使用大语言模型评估大语言模型，包括位置偏差与冗长偏差
+- [LMSYS Chatbot Arena](https://chat.lmsys.org/)——由众包模型比较驱动的平台，拥有超过 200 万次投票，是最受信任的真实世界大语言模型排名
