@@ -1,26 +1,26 @@
-# 试验运行者
+# 实验运行器
 
-> 循环只像它的测量一样诚实. 构建运行器,它采用规格,在一个沙盒子子中执行它,
+> 一个循环是否诚实，取决于它的测量是否可信。把这个 runner 搭出来：它接收一个 spec，在沙箱化的子进程里执行，并输出一份 evaluator 可以信任的 json metrics blob。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 Track A lessons 20-29
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段 Track A 的第 20 到 29 课
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 运行者可以将实验编码为类型的规格,
-- 启动一个硬墙钟时间和软内存盖子的子进程,
-- 捕捉了 stdout, stderr,和结构化指标的块,成为一个结果记录.
-- 构建一个除表,一次扫一扫一个配置按,
-- 给出一个种子,使评估者看到相同的数量.
+- 把一个实验编码成带类型的 spec，并能由 runner 序列化后传给子进程。
+- 启动一个带硬 wall clock timeout 和软 memory cap 的子进程，并把这两者都作为明确的 terminal condition 上报。
+- 把 stdout、stderr 与结构化 metrics blob 统一捕获进一条结果记录。
+- 构建一个 ablation table，在固定 base spec 上一次只扫描一个配置旋钮。
+- 保证给定 seed 时结果完全可复现，这样 evaluator 在多次运行里看到的是同一组数字。
 
-## 为什么一个子过程
+## 为什么要用子进程
 
-研究循环运行不可信赖的代码.假设来自样本器,实验脚本来自同一个路径;将任何一个作为安全的过程要求发生崩,将乐队调整器下降.子进程是语言船的最简单的孤立:一个单独的过程,一个独立的地址空间,母侧的信号手柄.
+研究循环跑的是不可信代码。假设来自采样器，实验脚本也来自同一条链路；如果把其中任何一个当作“进程内安全”的代码来跑，本质上是在邀请一次崩溃直接把 orchestrator 一起带走。子进程是语言自带的最简单隔离层：独立进程、独立地址空间、父进程侧还能掌握 signal handle。
 
-跑步者在这里没有实现完整的沙盒.没有cgroup,没有seccomp过器,没有命名空间重新绘制.它确实有一个墙钟时间,一个选区循环用于记忆增长,和一个杀死路径,结束了过程在任何一个极限.这是运行时间合同每一个复杂的沙盒延长.课程使合同足够小,可以在一个座位上读取.
+这里的 runner 并没有实现完整沙箱。没有 cgroup、没有 seccomp filter、没有 namespace remapping。它提供的是 wall clock timeout、一个轮询内存增长的 poller，以及在任一限制触发时 kill 进程的路径。这就是更复杂沙箱都会在其上扩展的运行时合同。课程把合同缩到一个人一坐就能读完的大小。
 
-## 实验Spec的形状
+## 实验规格结构
 
 ```text
 ExperimentSpec
@@ -34,13 +34,13 @@ ExperimentSpec
   metric_keys    : list[str]      (which fields the evaluator will read)
 ```
 
-脚本生活在磁盘上;运行者将配置写入脚本读取的临时文件路径.脚本预计将在 stdout 上打印一个单个 json 线,其键是 超级集`metric_keys`其他任何东西都会被捕获,但被测量分析器忽略.
+脚本存放在磁盘上；runner 会把 config 写入一个临时文件路径，供脚本读取。脚本预期在 stdout 上打印一行单独的 json，其键必须覆盖 `metric_keys`。stdout 中的其他内容也会被捕获，但会被 metrics parser 忽略。
 
 ```figure
 cg-runner-limits
 ```
 
-## 建筑
+## 架构
 
 ```mermaid
 flowchart TD
@@ -57,42 +57,42 @@ flowchart TD
     R --> O[ExperimentResult]
 ```
 
-选手是一个类型,有一个主要方法. 选民是一个小线程,每次选民间隔一次醒来,读取子过程.`psutil`根据该平台的规定,在平台未暴露时,该平台将不再使用.
+runner 是一个类，只有一个主方法。poller 是一个小线程，每隔一个 poll interval 唤醒一次，在平台支持时通过 proc filesystem 读取子进程的 `psutil` 等价信息；如果平台不暴露该能力，就退化为 no-op。
 
-## 为什么软的记忆帽
+## 为什么是软内存上限
 
-硬件内存盖子需要`resource.setrlimit`课程提供了一个便携式方法:从平台上测试居民设置大小,如果超过限量,则杀死子进程.由于测试器有一个非零间隔,因此该限量是软的;一个过程可以在测试之间升到限量,然后退回.运行者记录了最大观察的RSS,以便评估员可以看到运行到底是多近.
+硬内存上限通常需要 `resource.setrlimit`，而且只在 POSIX 上工作。这门课提供的是一个可移植做法：从平台轮询 resident set size，如果超过上限就 kill 子进程。之所以叫“软上限”，是因为 poller 有非零间隔；一个进程可能在两次轮询间冲到上限以上又掉回来。runner 会记录最大观测 RSS，让 evaluator 看见这次运行到底离限制有多近。
 
-在没有过程检查支持的系统上,测试员会记录一次性警告并自行禁用.墙钟时间限期仍然适用.课程测试涵盖了两条路径.
+在不支持进程检查的系统上，poller 会打一条一次性 warning，然后关闭自己。wall clock timeout 仍然生效。课程测试覆盖了这两种路径。
 
-## 捕捉到和
+## 捕获 stdout 与 stderr
 
-跑步者读出完成后排水的两管. 排水被线后扫描;最后一行被解析为json,并所有所需的.`metric_keys`之前的JSON线在结果中保存为`intermediate_metrics`评估者可以使用这些信息来学习曲线.
+runner 会在进程结束后把两条 pipe 全部读空。stdout 会逐行扫描；最后一行如果能被解析为 json，且包含全部所需的 `metric_keys`，就被视为 metrics blob。更早出现的 json 行会作为 `intermediate_metrics` 存在结果里，evaluator 可以拿来画 learning curve。
 
-跑步者从来没有在非零出口代码上提升;相反,它记录了结果中的代码.任何非零出口都标记着`"crash"`评估员将部分运行作为默认失败.
+runner 遇到非零 exit code 时不会抛异常；它只会把 code 记录进结果。任何非零退出都会被标记为 `"crash"`，即便脚本打印出了 metrics，evaluator 默认也会把这种部分运行视为失败。
 
-## 排放表
+## Ablation 表
 
 ```python
 def ablate(base: ExperimentSpec, knob: str, values: list[Any]) -> list[ExperimentSpec]:
     ...
 ```
 
-根据基准规格和按名称,辅助器返回每值一个规格`config[knob]`每个规格都得到一个衍生.`spec_id`(`f"{base.spec_id}_{knob}_{value}"`跑步者将飞行`AblationRunner`它们是顺序的,然后返回一个`AblationTable`按值按键.
+给定一个 base spec 和一个 knob 名称，这个 helper 会为每个值返回一个 spec，并覆写 `config[knob]`。每个 spec 都会得到一个派生的 `spec_id`（`f"{base.spec_id}_{knob}_{value}"`）。runner 还会提供一个 `AblationRunner`，按顺序执行这些 spec，并返回一个按 knob value 建索引的 `AblationTable`。
 
-为什么一次一次. 完全的因子扫描速度高,结果值评员无法解释. 一个一次的按产生了评估员可以绘制的清洁轴.课程只支持多按扫描,只作为一次性的单个按排放,由调用者组成.
+为什么是一次只扫一个 knob。因为 full factorial sweep 会指数爆炸，还会生成 evaluator 很难解释的结果。一次一个 knob 会形成 evaluator 能直接画图的单轴。课程只支持多 knob sweep 通过重复的单 knob ablation 由调用方自己组合。
 
 ## 确定性
 
-每个标本都携带一个种子. 运行者通过配置命令将种子转发到脚本中 (`config["__seed"] = spec.seed`实验编写的模拟脚本`code/experiments/`对于""的定义,我们可以说是""的定义,但如果没有确定性,则"退回"可能是不同的随机初始化.
+每个 spec 都自带一个 seed。runner 会通过 config dict 把 seed 传给脚本（`config["__seed"] = spec.seed`）。`code/experiments/` 里的 mock experiment scripts 都会遵守这个 seed，因此多次运行能得到相同 metrics。第五十三课里的 evaluator 依赖这个性质；如果没有确定性，“regression” 也许只是一次不同的随机初始化。
 
-## 假实验剧本
+## Mock 实验脚本
 
-课程中,有一个实验脚本:`code/experiments/sparsity_experiment.py`它是真正的脚本,它读取配置文件,模拟一个小训练运行,用一个无数的随机通过,`sleep_s`测试时间和一个`allocate_mb`测试记忆测试器的.
+这门课附带一个实验脚本：`code/experiments/sparsity_experiment.py`。它是一个真实脚本，会读取 config file，模拟一次小型训练运行，然后打印一个 json metrics blob。脚本支持 `sleep_s` knob 用来测试 timeout，也支持 `allocate_mb` knob 用来测试 memory poller。
 
-模拟不是训练任何真实.它是一个数值计算模仿训练循环的形状:一个损失曲线,最后的困惑,一个墙时间.课程的重点是跑步,而不是模拟.一个真正的实验脚本将导入模型.
+这个模拟并没有训练任何真实模型。它只是一个数值计算，用来模仿训练循环的形状：loss curve、final perplexity、wall time。课程重点是 runner，而不是模拟本身。真正的实验脚本在这里会去 import 模型。
 
-## 结果形状
+## 结果结构
 
 ```text
 ExperimentResult
@@ -108,16 +108,16 @@ ExperimentResult
   stderr_tail          : str
 ```
 
-评价者读到`metrics`其他`terminal`如果终端是其他任何东西`"ok"`实验被认为是失败的,评估者的判决是自动的.
+evaluator 首先读的是 `metrics` 与 `terminal`。如果 terminal 不是 `"ok"`，实验就会被视为失败运行，evaluator 的 verdict 会直接走失败分支。否则，metrics 才会继续送入 significance test。
 
-## 如何读取代码
+## 如何阅读代码
 
-`code/main.py`定义`ExperimentSpec`现在`ExperimentResult`现在`ExperimentRunner`现在`AblationRunner`微型处理器是一个类型,内存调试器是一个小线程,除离辅助器是一个单个函数.
+`code/main.py` 定义了 `ExperimentSpec`、`ExperimentResult`、`ExperimentRunner`、`AblationRunner` 以及一个 deterministic demo。subprocess management 集中在一个类里。memory poller 是一个小线程。ablation helper 是一个独立函数。
 
-`code/experiments/sparsity_experiment.py`它从 argv 读取配置文件路径,并在完成时写出单个json测量线.
+`code/experiments/sparsity_experiment.py` 是测试里使用的 mock experiment。它从 argv 读取 config file path，并在完成时输出一行 json metrics。
 
-`code/tests/test_runner.py`覆盖成功路径,时间期路径,崩路径,排放表,以及两个运行中的确定性检查.
+`code/tests/test_runner.py` 覆盖 success path、timeout path、crash path、ablation table，以及两次运行间的 determinism check。
 
-## 在哪里这个插槽
+## 它在整条链路里的位置
 
-第五十课产生了假设. 第五十一课过了已经解决的文献. 第五十二课运行了剩下的实验. 第五十三课阅读了结果,运行了意义测试,并写出了主管对假设 id 的判决.
+第五十课生成 hypothesis。第五十一课过滤掉文献已经解决的问题。第五十二课为剩下的假设运行实验。第五十三课读取结果、执行 significance test，并写出 orchestrator 会挂到 hypothesis id 上的 verdict。
