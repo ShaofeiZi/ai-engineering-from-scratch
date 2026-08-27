@@ -1,28 +1,28 @@
-# 代码迁移代理 (重级语言/运行时间升级)
+# 综合项目 09——代码迁移智能体（仓库级语言 / 运行时升级）
 
-> 亚马逊的迁移 (Java 8至17),谷歌的应用引擎Py2至Py3迁移器设定了2026年. 现代的OpenRewrite在尺度上进行了确定性AST重写. 格里特对代码模式式DSL的解决方案也是如此. 生产模式结合了两种:安全重写的确定性基板,以及模糊的案例的代理层,每分支构建的沙盒,以及在公交开幕前变绿的测试带. 终点是迁移50个真实存储器,并发布一个失败类别的通过率.
+> 到 2026 年，Amazon 的 MigrationBench（Java 8 升级到 Java 17）和 Google 的 App Engine Py2-to-Py3 migrator 已经为代码迁移智能体树立了标杆。Moderne 的 OpenRewrite 能够大规模执行确定性的 AST 重写，Grit 则以 codemod 风格的 DSL 解决同类问题。生产系统会将确定性底座与智能体层结合起来：前者负责安全的代码改写，后者处理有歧义的情况；按分支隔离的沙箱负责构建，测试工具则确保创建 PR 前所有检查已经通过。本综合项目要求你迁移 50 个真实仓库，并发布迁移通过率和失败分类体系。
 
-**Type:** Capstone
-**Languages:** Python (agent), Java / Python (targets), TypeScript (dashboard)
-**Prerequisites:** Phase 5 (NLP), Phase 7 (transformers), Phase 11 (LLM engineering), Phase 13 (tools), Phase 14 (agents), Phase 15 (autonomous), Phase 17 (infrastructure)
-**Phases exercised:**子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子
-**Time:** 30 hours
+**Type:** 综合项目
+**Languages:** Python（智能体）、Java / Python（目标仓库）、TypeScript（仪表盘）
+**Prerequisites:** 第 5 阶段（NLP）、第 7 阶段（Transformer）、第 11 阶段（LLM 工程）、第 13 阶段（工具）、第 14 阶段（智能体）、第 15 阶段（自主系统）、第 17 阶段（基础设施）
+**Phases exercised:** P5 · P7 · P11 · P13 · P14 · P15 · P17
+**Time:** 30 小时
 
 ## 问题
 
-扩大代码迁移是2026年编码剂生产的最清洁应用之一. 实地真相是显而易见的 (测试套件在迁移之后是否通过?),奖励是真实的 (Java-8舰队迁移是人数规模项目),基准是公开的 (MigrationBench 50-repo子集). 现代的OpenRewrite处理了确定性方面. 代理层处理了OpenRewrite的食谱不能处理的一切:模糊的重写,构建系统漂移,长尾语法,过渡的依赖性破裂.
+大规模代码迁移是 2026 年编码智能体最适合落地、也最容易验证价值的生产场景之一。判断标准十分明确：迁移后测试套件是否通过；收益也很实际，因为升级一批 Java 8 项目往往需要投入大量人力；此外还有公开基准可用，例如 MigrationBench 的 50 个仓库子集。OpenRewrite 负责确定性任务，智能体层则处理 OpenRewrite 配方无法覆盖的问题，例如有歧义的改写、构建系统漂移、长尾语法和传递依赖冲突。
 
-您将构建一个使用Java 8 repo (或Python 2 repo) 的代理,并产生一个绿色CI迁移分支.您将测量通过率,测试覆盖保护,每次 repo 的成本,并构建一个失败类别.对决于只确定性基线的对方告诉您代理的价值实际居住在哪里.
+你要构建一个智能体：输入 Java 8 或 Python 2 仓库，输出一个 CI 全部通过的迁移分支。你需要衡量迁移通过率、测试覆盖率保持情况和单仓库成本，并建立失败分类体系。将完整方案与“仅使用确定性工具”的基线并列比较，才能看清智能体究竟在哪些问题上产生了价值。
 
 ## 概念
 
-管道有两个层.**deterministic substrate**通过使用"Java" (OpenRewrite for Java,Python) 运行了大部分机械重写的安全性:进口,方法签名,零安全性修改,尝试资源,过时的API替代. 它是快速的,产生可审核的差异.**agent layer**(OpenAI Agents SDK或LangGraph over Claude Opus 4.7和GPT-5.4-Codex) 处理配方不能的情况:构建文件升级 (Maven/Gradle/pyproject),过渡性依赖冲突,测试片,定制注释.
+整个流水线分为两层。**确定性底座**（Java 使用 OpenRewrite，Python 使用 libcst）安全地完成大部分机械改写，包括 import 语句、方法签名、空值安全改动、try-with-resources 和弃用 API 替换。它运行速度快，产生的代码差异也便于审计。**智能体层**（OpenAI Agents SDK，或由 Claude Opus 4.7 与 GPT-5.4-Codex 驱动的 LangGraph）负责处理配方无法覆盖的情况，包括构建文件升级（Maven、Gradle、pyproject）、传递依赖冲突、偶发测试失败和自定义注解。
 
-每个 repo 都得到一个 Daytona 沙盒,预装目标运行时间. 代理反复执行:运行构建,分类故障,应用修复,重启. 硬限制:每次 repo 30 分钟,每次 repo 8 美元,每次 repo 20 个代理转换. 如果所有测试都通过,覆盖率三角形并不是负面,分支将打开 PR. 如果没有,则 repo 被提交在失败类中,有证据.
+每个仓库都在预装了目标运行时的 Daytona 沙箱中执行。智能体不断循环：运行构建、对失败分类、应用修复、重新运行。每个仓库都有明确上限：30 分钟、8 美元和 20 轮智能体交互。只有全部测试通过且测试覆盖率不低于迁移前时，才为该分支创建 PR；否则必须将仓库归入相应的失败类别，并附上证据。
 
-失败类别是可交付的. 在50个复制中,什么是破产的? 过渡式代码? 定制注释? 构建工具版本? 测试片段与迁移无关? 每个类别都得到了数量和示例差异. 未来的食谱作者可以针对前三.
+失败分类体系本身就是交付物。50 个仓库中，究竟哪些问题最常见？传递依赖、自定义注解、构建工具版本漂移，还是与迁移无关的偶发测试失败？每个类别都要统计数量并提供一份具有代表性的代码差异，以便后续配方作者优先解决排名前三的问题。
 
-## 建筑
+## 架构
 
 ```
 target repo
@@ -52,40 +52,40 @@ open PR
 file under failure class + attach repro
 ```
 
-## 堆
+## 技术栈
 
-- 确定性基板:OpenRewrite (Java) 或libcst (Python)
-- 代理:OpenAI代理SDK或LangGraph 通过Claude Opus 4.7 +GPT-5.4代码
-- 沙箱:每分支的Daytona开发容器,预装目标运行时间 (Java 17 / Python 3.12)
-- 构建系统:马文,格拉德,UV (字thon)
-- 标准:亚马逊迁移Bench50回复子集 (Java 8至17),谷歌应用程序引擎Py2-to-Py3回复
-- 测试:平行运行器,通过Jacoco (Java) 或coverage.py (Python) 覆盖
-- 可观察性:每次复制的长+跟踪捆绑
-- 仪表板:每个类数和示例差异的故障类别仪表板
+- 确定性底座：OpenRewrite（Java）或 libcst（Python）
+- 智能体：OpenAI Agents SDK，或由 Claude Opus 4.7 + GPT-5.4-Codex 驱动的 LangGraph
+- 沙箱：按分支隔离的 Daytona devcontainer，预装目标运行时（Java 17 / Python 3.12）
+- 构建系统：Maven、Gradle、uv（Python）
+- 基准：Amazon MigrationBench 50 仓库子集（Java 8 到 17），以及 Google App Engine Py2-to-Py3 仓库
+- 测试框架：并行运行器，覆盖率使用 Jacoco（Java）或 coverage.py（Python）
+- 可观测性：Langfuse + 每个仓库一份追踪包，记录每段代码差异
+- 仪表盘：失败分类仪表盘，展示各类别数量与代表性代码差异
 
 ```figure
 ce-migration-funnel
 ```
 
-## 建立它
+## 动手构建
 
-1. **Recipe pass.**首先运行OpenRewrite (Java) 或libcst (Python) 配方.捕捉到机械迁移的70-80%. 作为"配方"承诺.
+1. **执行配方。** 先运行 OpenRewrite（Java）或 libcst（Python）配方，完成其中 70%～80% 的机械式迁移，并将这一步单独保存为 “recipe” commit。
 
-2. **Build trial.**戴顿沙箱:安装目标运行时间,运行构建.如果绿色,跳转测试.如果红色,交给代理.
+2. **尝试构建。** 在 Daytona 沙箱中安装目标运行时并运行构建。如果构建通过，就直接进入测试阶段；如果失败，则交给智能体处理。
 
-3. **Agent loop.**工具的LangGraph: `run_build`现在`read_file`现在`edit_file`现在`run_test`现在`git_diff`代理将故障分类 (深度,语法,测试,构建工具) 并应用针对性的修复. 复制.
+3. **智能体循环。** LangGraph 提供以下工具：`run_build`、`read_file`、`edit_file`、`run_test`、`git_diff`。智能体先判断失败属于依赖、语法、测试还是构建工具问题，再进行针对性修复并重新运行。
 
-4. **Budget caps.**任何违规行为都会停止,并且在"预算_耗尽"下,
+4. **预算上限。** 每个仓库最多使用 30 分钟、8 美元和 20 轮智能体交互。任一上限耗尽后都要停止，并将仓库连同当前代码差异归入 “budget_exhausted” 类别。
 
-5. **Test + coverage gate.**构建绿色后,运行测试套件. 进行覆盖与基 repo 的比较. 如果覆盖下降超过 2%,请在"覆盖_回归"下文件.
+5. **测试与覆盖率门禁。** 构建通过后运行完整测试套件，并与原始仓库的覆盖率比较。如果覆盖率下降超过 2%，则归入 “coverage_regression” 类别。
 
-6. **PR open.**通过不同和简要的做法, 执行该经纪人的承诺.
+6. **创建 PR。** 迁移成功后，推送分支并创建 PR，其中附上已应用的配方、智能体产生的提交，以及改动摘要。
 
-7. **Failure taxonomy.**对于每一个失败的回复, 标签一个类别:`dep_upgrade_required`现在`build_tool_drift`现在`custom_annotation`现在`test_flake`现在`syntax_edge_case`现在`budget_exhausted`建立一个仪表板.
+7. **失败分类。** 每个失败仓库都要归入以下某个类别：`dep_upgrade_required`、`build_tool_drift`、`custom_annotation`、`test_flake`、`syntax_edge_case`、`budget_exhausted`，再将结果汇总成仪表盘。
 
-8. **50-repo run.**执行在移动银行子集中. 报告每类通过率,每次报价,覆盖性-保存,以及仅对比与确定性的基线.
+8. **迁移 50 个仓库。** 在 MigrationBench 子集上运行完整流程，报告各类别的通过率、单仓库成本、覆盖率保持情况，以及相对于“仅使用确定性工具”基线的改进。
 
-## 用它
+## 实际运行
 
 ```
 $ migrate legacy-java-service --target java17
@@ -98,50 +98,50 @@ $ migrate legacy-java-service --target java17
 [pr]       opened #1841  cost=$3.20  turns=4
 ```
 
-## 运送它
+## 交付成果
 
-`outputs/skill-migration-agent.md`给出一个 repo,它执行确定性食谱,然后执行代理循环来产生绿色迁移分支,或者在一个类别下文件 repo.
+`outputs/skill-migration-agent.md` 是最终交付物。给定一个仓库，它先执行确定性配方，再进入智能体循环，最终要么产出 CI 全部通过的迁移分支，要么将仓库归入某个失败类别。
 
-| Weight | Criterion | How it is measured |
+| 权重 | 评分标准 | 衡量方式 |
 |:-:|---|---|
-| 25 | MigrationBench pass rate | 50-repo subset pass@1 |
-| 20 | Test-coverage preservation | Mean coverage delta vs base |
-| 20 | Cost per migrated repo | $/repo on passing runs |
-| 20 | Agent / deterministic-tool integration | Fraction of fixes that OpenRewrite handled vs agent authored |
-| 15 | Failure analysis write-up | Taxonomy completeness with exemplars |
+| 25 | MigrationBench 通过率 | 50 仓库子集的 pass@1 |
+| 20 | 测试覆盖率保持情况 | 相对原始仓库的平均覆盖率变化 |
+| 20 | 单仓库迁移成本 | 迁移成功的运行中，$/repo（每个仓库的成本） |
+| 20 | 智能体与确定性工具的集成 | OpenRewrite 完成和智能体完成的修复各自所占比例 |
+| 15 | 失败分析报告 | 分类体系的完整度和代表性案例质量 |
 | **100** | | |
 
-## 运动
+## 练习
 
-1. 运行迁移管道只使用OpenRewrite (没有代理).将通过率与整个管道进行比较. 确定只有代理才是区别的情况.
+1. 只使用 OpenRewrite 运行一遍迁移流水线，不启用智能体。将通过率与完整流水线对比，找出只有智能体才能解决的案例。
 
-2. 执行" lint-clean"检查:迁移后,运行一个风格linter (Java无点,Python无).如果出现新的 lint 错误,则失败 PR.测量覆盖性保存但风格重回率.
+2. 增加 “lint-clean” 检查：迁移后运行代码风格检查器，例如 Java 使用 spotless、Python 使用 ruff。如果出现新的 lint 错误，就令 PR 检查失败。测量“覆盖率保持不变、但代码风格发生回归”的比例。
 
-3. 添加"最小差异"优化器:经过经验后,经验者分支通过第二次通过,切除不必要的变化.报告差异大小的减少.
+3. 增加 “minimal-diff” 优化器：智能体分支通过测试后，再执行一轮精简，移除不必要的改动，并报告代码差异规模的缩减比例。
 
-4. 扩展到第三次迁移:节点18至节点22. 再利用沙盒包装;换取配方层进行定制代码模式.
+4. 扩展到第三种迁移：从 Node 18 升级到 Node 22。复用同一层沙箱封装，但将配方层替换为自定义 codemod。
 
-5. 测量时间到第一绿色构建 (TTFGB) 作为UX指标.目标:p50在10分钟以下.
+5. 将首次构建通过时间（Time to First Green Build，TTFGB）作为一项用户体验指标。目标是 p50 低于 10 分钟。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| Deterministic substrate | "Recipe engine" | OpenRewrite / libcst: declarative AST rewrites with safety guarantees |
-| Codemod | "Code-modifying program" | A rewrite rule that changes source code mechanically |
-| Build drift | "Tool version skew" | Subtle Maven / Gradle / uv behavior changes between major versions |
-| Failure class | "Taxonomy bucket" | A labeled reason a repo did not migrate: dep, syntax, test, build-tool, budget |
-| Coverage delta | "Coverage preservation" | Change in test coverage % from base to migrated branch |
-| Agent turn | "Tool-call round" | One plan -> act -> observe cycle in the agent loop |
-| Budget exhaustion | "Hit the ceiling" | The repo consumed its 30-min / $8 / 20-turn limit without passing |
+| 确定性底座（Deterministic substrate） | “配方引擎” | OpenRewrite / libcst 提供的声明式 AST 重写底座，并带有安全保证 |
+| 代码迁移规则（Codemod） | “代码修改程序” | 一条能机械性重写源码的规则 |
+| 构建漂移（Build drift） | “工具版本偏差” | Maven / Gradle / uv 跨大版本升级时出现的细微行为变化 |
+| 失败类别（Failure class） | “分类项” | 仓库迁移失败的标注原因，例如依赖、语法、测试、构建工具或预算问题 |
+| 覆盖率变化（Coverage delta） | “覆盖率保持情况” | 测试覆盖率从原始仓库到迁移分支的百分比变化 |
+| 智能体轮次（Agent turn） | “工具调用轮次” | 智能体循环中一次计划、行动和观察的完整过程 |
+| 预算耗尽（Budget exhaustion） | “达到上限” | 仓库耗尽 30 分钟、8 美元或 20 轮交互的限额后仍未迁移成功 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Amazon MigrationBench](https://aws.amazon.com/blogs/devops/amazon-introduces-two-benchmark-datasets-for-evaluating-ai-agents-ability-on-code-migration/)2026年法典基准
-- [Moderne.io OpenRewrite platform](https://www.moderne.io)确定性基板参考
-- [OpenRewrite documentation](https://docs.openrewrite.org) 制订食谱
-- [Grit.io](https://www.grit.io)替代代代码模式DSL
-- [OpenAI sandboxed migration cookbook](https://developers.openai.com/cookbook/examples/agents_sdk/sandboxed-code-migration/sandboxed_code_migration_agent) 代理人 SDK参考
-- [Google App Engine Py2 to Py3 migrator](https://cloud.google.com/appengine)替代迁移基准
-- [libcst](https://github.com/Instagram/LibCST) Python 确定性基板
-- [Daytona sandboxes](https://daytona.io)每分支的参考沙盒
+- [Amazon MigrationBench](https://aws.amazon.com/blogs/devops/amazon-introduces-two-benchmark-datasets-for-evaluating-ai-agents-ability-on-code-migration/) — 2026 年代码迁移的标准基准
+- [Moderne.io OpenRewrite platform](https://www.moderne.io) — 确定性底座参考
+- [OpenRewrite documentation](https://docs.openrewrite.org) — 配方编写文档
+- [Grit.io](https://www.grit.io) — 另一套 codemod DSL
+- [OpenAI sandboxed migration cookbook](https://developers.openai.com/cookbook/examples/agents_sdk/sandboxed-code-migration/sandboxed_code_migration_agent) — Agents SDK 沙箱迁移参考
+- [Google App Engine Py2 to Py3 migrator](https://cloud.google.com/appengine) — 另一套迁移基准来源
+- [libcst](https://github.com/Instagram/LibCST) — Python 的确定性改写底座
+- [Daytona sandboxes](https://daytona.io) — 按分支隔离的沙箱参考
