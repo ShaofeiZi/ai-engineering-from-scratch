@@ -1,24 +1,24 @@
-# 管道平行和泡分析
+# 管道并行与 Bubble 分析
 
-> 数平行式分开矩阵乘以各行.管道平行式分开模型跨行,每个行各分别分开一个阶段.微分组通过管道流动.开始和结束的空时间是泡;最小化它是整个工艺.
+> 张量并行把矩阵乘法拆到多个 rank 上。管道并行则是把模型按深度拆到多个 rank 上，每个 rank 持有一个 stage。微批次沿着管道流动。开头和结尾那段空闲时间就是 bubble；如何把它压低，就是这门工艺的核心。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 Track C lessons 42-49
-**Time:** ~90 min
+**Prerequisites:** 第 19 阶段 Track C 第 42–49 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 分开一个连续模型成N阶段,并模拟N行间的前进管道.
-- 使用GPipe时间表 (仅前面填充,然后倒退) 通过管道进行M微洗,并计算泡分数.
-- 根据Megatron-LM和PipeDream所使用的1F1B时间表进行泡比较.
-- 防御阶段分配:每阶段的等式计算比每阶段的等式参数数数更重要.
+- 把一个顺序模型切成 N 个 stage，并模拟它在 N 个 rank 之间的前向管道。
+- 使用 GPipe 调度，也就是先把前向填满，再统一 backward，让 M 个微批次穿过管道，并计算 bubble fraction。
+- 把 bubble 与 Megatron-LM 和 PipeDream 使用的交错式 1F1B 调度做比较。
+- 说明为什么 stage 划分时更应该追求每个 stage 计算量相等，而不是参数数量相等。
 
 ## 问题
 
-只有在fp16中的70B参数模型需要140GB的参数. 没有消费者GPU可以控制它. 泽罗-3在各层中分断参数,但仍然需要每个层来收集每一步的全部层次,每层支付 log ((N) 跳. 管道平行采用不同的路径:将模型切成N阶段,并将每个阶段设置为一个阶段. 阶段1的前进在0级完成,并将激活子交给1级;阶段1运行2级,手交给2级等等. 倒流向后,倒流向后. 记忆线性下降,因为每个级别只包含一个阶段;计算是序列的,这是泡问题.
+一个 70B 参数模型在 fp16 下，仅参数就要占用 140 GB。没有消费级 GPU 能完整装下它。ZeRO-3 会把参数分片到各个 rank 上，但每个 forward step 仍需要各 rank 为当前层执行 allgather，把完整层临时拼出来，因此每层都要支付 log(N) 跳的通信代价。管道并行走的是另一条路：把模型切成 N 个 stage，每个 stage 放到一个 rank 上。layer 1 的前向在 rank 0 上完成后，把激活张量交给 rank 1；rank 1 计算 layer 2，再交给 rank 2；依此类推。backward 则按相反方向流回。因为每个 rank 只持有一个 stage，所以内存近似线性下降；但计算变成了串行流动，于是 bubble 问题随之出现。
 
-泡是管道开始时的置时间 (等待第一批微洗到最后阶段),以及最后 (等待最后一批微洗回流). 对于M微洗和N阶段,每个阶段的泡分数为 (N-1)/(M+N-1). 在M=8,N=4是27%. 在M=64时,N=4是4.5%. 泡会缩小,当你每步都有很多微型洗器,这意味着每微型洗器的批量量很小,
+bubble 是指管道开始时的空闲时间，也就是等待第一批微批次抵达最后一个 stage；以及结束时的空闲时间，也就是等待最后一批微批次把 backward 彻底回流。对于 M 个微批次、N 个 stage，每个 stage 的 bubble fraction 是 (N-1)/(M+N-1)。当 M=8、N=4 时，它是 27%；当 M=64、N=4 时，它只有 4.5%。只要每一步有足够多的微批次，bubble 就会缩小；这也意味着单个微批次的 batch size 必须变小，而这正是微批次设计要面对的约束。
 
 ## 概念
 
@@ -32,87 +32,87 @@ flowchart LR
   R1 -.backward.-> R0
 ```
 
-### 轮时间表
+### GPipe 调度
 
-在向后开始之前,将M微洗手机填充到前方,然后向后排水. 任何微型的激活必须保持到它向后,所以记忆以线性方式增长与M. 前进需要M+N-1周期,后退需要另一个M+N-1周期. 每阶段有用的工作为2M周期;每阶段泡为2 ((N-1) 周期. 泡分数是 (N-1)/(M+N-1) 每个向前和向后都需要一个时间单位. 选择M比N大得多,就隐藏了泡.
+先把全部 M 个微批次依次送入前向传播，把管道填满；在所有前向都结束之后，再统一按相反方向排空 backward。因为每个微批次的激活值都要一直保留到它自己的 backward 开始，内存占用会随 M 线性增长。前向需要 M+N-1 个周期，后向再需要一个 M+N-1 周期。每个 stage 的有效工作量是 2M 个周期，而空闲 bubble 是 2(N-1) 个周期。如果前向和后向都各占一个时间单位，那么 bubble fraction 就是 (N-1)/(M+N-1)。只要让 M 远大于 N，就能把 bubble 隐藏掉。
 
-### 时间表1F1B
+### 1F1B 调度
 
-间歇:一旦微型的前行达到最后阶段,就开始向后流,然后让它回流. 每个阶段,时间表交换一次向前,一次向后. 泡仍然是N-1,但激活记忆由管道深度限制,而不是微量. 生产管道使用1F1B (Megatron, PipeDream). 课程首先将GPipe执行,因为它更简单,
+交错调度的思路是：一旦某个微批次的前向抵达最后一个 stage，就立刻开始它的 backward，并让它沿管道反向流回。这样每个 stage 会交替执行一次 forward、一次 backward。bubble 仍然是 N-1，但激活内存不再随微批次数增长，而是被管道深度所限制。生产级管道大多采用 1F1B，例如 Megatron 和 PipeDream。本课先实现更简单的 GPipe；1F1B 留作练习扩展。
 
-### 为什么每个阶段的等式计算是重要的
+### 为什么每个 stage 的计算量相等更重要
 
-如果阶段0需要50ms,阶段1需要100ms,每个周期都被关在阶段1.其他阶段每周期停滞50ms等待阶段1释放.等等参数数数量是错误的轴:变压器的计算由注意力加上每层MLP主导,嵌入层具有许多参数,但计算很少.阶段分配应该等同于每个阶段的FLOP,而不是每个阶段的重量.
+如果 stage 0 需要 50 ms，而 stage 1 需要 100 ms，那么每个周期都会被 stage 1 卡住。其他 stage 每轮都要空等 50 ms，直到 stage 1 释放结果。按参数量均分是错误的指标：Transformer 的计算主要由注意力和每层 MLP 决定，而 embedding 层参数很多，计算却不重。stage 划分应该尽量让每个 stage 的 FLOPs 接近，而不是让每个 stage 的权重数量接近。
 
-### 微分批量对批量
+### 微批次与总批次
 
-管道运行B尺寸M微.有效批量大小为M*B.管道步骤结束时的梯度是结合M*B示例的梯度.泡分数取决于M;优化器看到M*B.调整M意味着交易泡 (低于M高) 与每微存储器 (GPipe的高于M高的更高的激活存储).
+一条管道会处理 M 个微批次，每个微批次大小为 B。有效总 batch size 是 M*B。一个管道 step 结束时，得到的梯度就是这 M*B 个样本联合的梯度。bubble fraction 取决于 M，而优化器实际感知的是 M*B。调 M 的过程，本质上是在用更低的 bubble 去换取更高的单微批次内存占用；对于 GPipe 来说，M 越大，激活内存也越高。
 
 ```figure
 cd-pipeline-bubble
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `PipelineStage`子`nn.Module`具有一个阶段的参数和暴露`forward(activation)`现在,我们要去.
-- `Pipeline(stages, num_microbatches)`通过模拟每阶段的墙钟,调整GPipe的时间表.
-- `bubble_fraction(num_stages, num_microbatches)`:封闭式 (N-1) /(M+N-1).
-- 通过4个阶段的演示, 打印每微分量的痕迹和测量的泡分数.
+- `PipelineStage`：一个小型 `nn.Module`，持有某个 stage 的参数，并暴露 `forward(activation)`。
+- `Pipeline(stages, num_microbatches)`：使用模拟的逐 stage 墙钟时间来编排 GPipe 调度。
+- `bubble_fraction(num_stages, num_microbatches)`：闭式公式 (N-1)/(M+N-1)。
+- 一个 4-stage 的演示程序：打印逐微批次的执行轨迹，以及测得的 bubble fraction。
 
-运行它:
+运行它：
 
 ```bash
 python3 code/main.py
 ```
 
-输出:一个阶段按微批次的甘特图表和与封闭形式预测相比的泡百分比.
+输出是一张按 stage 和 microbatch 展开的甘特图，以及与闭式公式预测值对比后的 bubble 百分比。
 
-## 野生生产模式
+## 生产环境中的常见模式
 
-两种模式使管道硬化,
+有三种模式会把管道并行从“概念成立”推进到“工程可用”。
 
-**Activation checkpointing pairs with pipeline.**通过GPipe飞行中的M微分钟,激活内存为M乘以1微分钟.激活检查点重新计算前进时间,对内存进行交易.
+**Activation checkpointing 与 pipeline 天然配套。** 在 GPipe 中，如果有 M 个微批次同时在飞，那么激活内存就是单个微批次激活内存的 M 倍。Activation checkpointing 会在 backward 时重算 forward，用额外计算换内存；这与 pipeline 配合后，才让长序列训练真正可行。
 
-**Stage balance is measured, not assumed.**制作团队运行一个配置文件通过,测量目标硬件的实际每层计算 (FLOP和墙钟),然后按此测量进行分区.`--num-layers-per-stage`标志接受列表,以便在各阶段的成本不同时允许不均的层计数.
+**Stage balance 需要实测，而不是假设。** 生产团队会先跑 profiling pass，在目标硬件上测量每层的真实 FLOPs 和墙钟时间，然后按这个结果做 stage 划分。Megatron-LM 的 `--num-layers-per-stage` 接受一个列表，就是为了在各 stage 单层开销不一致时，允许层数不平均。
 
-**Send-recv schedule must avoid deadlock.**管道,每个阶段都在收到电线上的门之前发送.标准的修正是交互:平排阶段先发送,然后回复,奇排阶段先回复,然后发送.课程时间表明确排列,所以模式可见.
+**Send-recv 调度必须避免死锁。** 如果管道中每个 stage 都先 send 再 recv，链路就会互相卡死。标准修复方式是交错：偶数 rank 先 send 再 recv，奇数 rank 先 recv 再 send。本课把 rank 调度显式写出来，就是为了让这个模式清楚可见。
 
-## 用它
+## 实际应用
 
-生产模式:
+生产模式：
 
-- **Megatron-LM.**参考管道平行尺度. 使用1F1B,支持子+管道+数据平行组合.
-- **DeepSpeed Pipeline.**与 ZeRO 集成; ZeRO-1 + 管道是最大的开放模型的常见组合.
-- **PyTorch Pipe.**管道包装, 基于`torch.distributed.pipeline.sync.Pipe`现在,我们要去.
+- **Megatron-LM。** 大规模 pipeline parallel 的参考实现。使用 1F1B，并支持把 tensor、pipeline 和 data parallel 组合起来。
+- **DeepSpeed Pipeline。** 与 ZeRO 集成得很好；ZeRO-1 + pipeline 是许多超大开源模型的常见组合。
+- **PyTorch Pipe。** PyTorch 原生的管道包装器，建立在 `torch.distributed.pipeline.sync.Pipe` 之上。
 
-## 运送它
+## 交付成果
 
-第80课节将每个阶段参数的分片存储在分片检查点. 第81课节将DDP + ZeRO +管道组合到端到端演示中 (精神上;演示保持管道模拟运行时间).
+第 80 课会把每个 stage 的参数分片写入分片检查点。第 81 课则在概念上把 DDP、ZeRO 和 pipeline 一起组合进端到端演示中，不过为了运行时可控，演示仍然采用的是模拟版 pipeline。
 
-## 运动
+## 练习
 
-1. 执行1F1B,验证泡分数与GPipe相匹配,但激活内存是有限的.
-2. 在更深层次的模型上,按测量的墙钟进行分析,并重新平衡阶段的实时阶段.
-3. 通过管道微分组加上梯度积累,检查梯度等于相当的全批次向前梯度.
-4. 通过激活检查点对配管道进行测量,测量内存下降与计算成本.
-5. 结合管道与DDP (每个管道排名在数据平行组中复制) 并通过2D时间表进行推理.
+1. 实现 1F1B，并验证它的 bubble fraction 与 GPipe 一致，但激活内存是有上界的。
+2. 在更深的模型上测量真实的逐 stage 墙钟时间，并按测量结果重新平衡 stage。
+3. 在 pipeline 微批次之上叠加梯度累计，并检查得到的梯度是否等于等价总 batch 的前向结果。
+4. 把 pipeline 与 activation checkpointing 组合起来，测量内存下降幅度以及增加的计算代价。
+5. 把 pipeline 与 DDP 结合，也就是让每个 pipeline rank 再复制到一个数据并行组中，并推演对应的二维调度。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|------------------------|
-| Pipeline | "Model parallel along depth" | One stage per rank, activations flow stage to stage |
-| Bubble | "Pipeline idle time" | (N-1) steps at start + end where some stages have no work |
-| Microbatch | "Slice of the batch" | One forward/backward unit; bubble shrinks as M grows |
-| GPipe | "Fill then drain" | All M forwards before any backward; high activation memory |
-| 1F1B | "Interleaved schedule" | One forward one backward per stage; bounded activation memory |
+| Pipeline | “沿深度做模型并行” | 每个 rank 持有一个 stage，激活值从 stage 流向 stage |
+| Bubble | “管道空闲时间” | 开头和结尾各有 N-1 个步骤中，部分 stage 没有工作可做 |
+| Microbatch | “总 batch 的切片” | 一个 forward/backward 单元；M 增大时 bubble 会缩小 |
+| GPipe | “先填满再排空” | 所有 M 次前向都结束后才开始 backward；激活内存很高 |
+| 1F1B | “交错调度” | 每个 stage 交替执行一次 forward 和一次 backward；激活内存有界 |
 
-## 进一步阅读
+## 延伸阅读
 
 - [Huang et al, GPipe: Efficient Training of Giant Neural Networks](https://arxiv.org/abs/1811.06965)
 - [Narayanan et al, PipeDream: Generalized Pipeline Parallelism for DNN Training](https://arxiv.org/abs/1806.03377)
 - [Megatron-LM pipeline parallel docs](https://github.com/NVIDIA/Megatron-LM)
-- 第19阶段 第76课 - 时间表使用的发送/回收原始函数
-- 阶段19课程78 - ZeRO与管道直角,通常是结合的
+- 第 19 阶段第 76 课：调度会直接使用那里的 send/recv 原语
+- 第 19 阶段第 78 课：ZeRO 与 pipeline 正交，二者经常组合使用
