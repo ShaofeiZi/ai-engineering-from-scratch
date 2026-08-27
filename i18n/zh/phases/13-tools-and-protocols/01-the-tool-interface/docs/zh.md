@@ -1,156 +1,156 @@
-# 工具界面 代理人需要结构化I/O
+# 工具接口——智能体为何需要结构化输入输出
 
-> 语言模型产生代币.一个程序采取行动.这两者之间的差距是工具界面:一个合同,允许模型请求操作,主机执行它.每2026年,堆 函数都需要OpenAI,Anthropic和Gemini;MCP的 `tools/call`是同一四步循环的不同的编码.这个课程命名循环,显示运行最小的机器.
+> 语言模型生成词元，程序执行动作。二者之间的鸿沟由工具接口弥合：这是一份契约，让模型能够请求某项动作，再由宿主执行。2026 年的每种技术栈——OpenAI、Anthropic 与 Gemini 的函数调用；MCP 的 `tools/call`；A2A 的任务部件——都只是同一个四步循环的不同编码方式。本课会为这个循环命名，并展示运行它所需的最小机制。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python (stdlib, no LLM)
-**Prerequisites:** Phase 11 (LLM completion APIs)
-**Time:** ~45 minutes
+**Prerequisites:** 第 11 阶段（LLM 补全 API）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 解释为什么只能生成文本的法学士不能单独对现实世界采取行动.
-- 绘制四步工具调用循环 (描述 → 决定 → 执行 → 观察) 并命名每个步骤的所有者.
-- 写一个工具描述为三个部分:名称,JSON Schema输入和确定性执行函数.
-- 区分纯净的工具和副作用,并说明为什么分断对安全性有重要意义.
+- 解释为什么只能生成文本的大语言模型无法独自对现实世界采取行动。
+- 画出四步工具调用循环（描述 → 决策 → 执行 → 观察），并说出每一步由谁负责。
+- 把工具描述写成三个部分：名称、JSON Schema 输入与确定性执行器函数。
+- 区分纯工具与有后果的工具，并说明这一区分为何对安全很重要。
 
 ## 问题
 
-士师在下一个代币上发出概率分布.这是整个输出表面.如果你问聊天模型"现在孟加拉的天气是什么",它可以写出一个可信的句子,但它不能拨打一个天气API.句子可能是偶然的或三个天的陈旧.
+大语言模型输出的是下一个词元的概率分布，这就是其全部输出界面。如果你问聊天模型“班加罗尔现在天气怎么样”，它可以写出一句看似合理的话，却无法真正调用天气 API。答案也许碰巧正确，也可能已经过时三天。
 
-工具界面的目的是关闭这一差距. 的主机程序 你的代理运行时间,Clode Desktop,ChatGPT,Cursor,或一个定制脚本 广告一个可调用工具的列表. 模型在决定需要采取行动时,发出一个结构化有效载荷,命名工具及其论点. 接待者分析了这些工具, 运行了工具, 循环持续到模型决定不再需要电话.
+工具接口的目的正是弥合这道鸿沟。宿主程序——你的智能体运行时、Claude Desktop、ChatGPT、Cursor 或定制脚本——向模型公布一组可调用工具。当模型判断需要采取行动时，它会输出一个结构化负载，指明工具名称及参数。宿主解析该负载，真正运行工具，再把结果反馈给模型。循环持续进行，直到模型判断不再需要调用工具。
 
-作为OpenAI的"功能"参数,该合同的第一版本于2023年6月发行.`tool_use`双胞胎添加了`functionDeclarations`几个月后. 每个提供商现在都会暴露相同的形状:一个JSON-Schema-typed工具列表,一个JSON-payload工具调用.模型文本协议 (2024年11月) 将合同概括,因此每个模型都会有一个工具注册表.A2A (2026年4月,v1.0) 为代理到代理委托层构成相同的原始.
+这项契约的第一版于 2023 年 6 月作为 OpenAI 的“functions”参数发布。Anthropic 随后在 Claude 2.1 中加入 `tool_use` 块。几个月后，Gemini 又加入 `functionDeclarations`。如今，每家提供商都暴露相同形态：输入一组由 JSON Schema 定义类型的工具，输出一个 JSON 负载形式的工具调用。模型上下文协议（2024 年 11 月）把这份契约推广到一个工具注册表可服务所有模型。A2A（2026 年 4 月，v1.0）又把同一种原语用于智能体之间的委派。
 
-其他所有在13阶段的东西都是一个精简.
+四步循环是所有这些方案背后的不变量。阶段 13 后续全部内容，都是它的扩展。
 
 ## 概念
 
-### 步骤一:描述
+### 第一步：描述
 
-机器主将每个工具声明为三个字段.
+宿主用三个字段声明每个工具。
 
-- **Name.**机器可读的稳定识别器.`get_weather`没有"天气问题".
-- **Description.**简单一段自然语言简单. "当用户询问特定城市的当前状况时,请使用.不要用于历史数据".
-- **Input schema.**描述工具的参数的JSON Schema对象 (2020-12年草案).
+- **名称。** 稳定、机器可读的标识符。使用 `get_weather`，而不是“weather thing”。
+- **描述。** 一段自然语言使用说明。“当用户询问特定城市的当前天气状况时使用。不要用于历史数据。”
+- **输入 Schema。** 描述工具参数的 JSON Schema 对象（草案 2020-12）。
 
-现代提供商将这些声明串行到系统提示中,使用特定供应商的模板,因此您作为调用者只处理结构化表格.
+模型会收到工具列表。现代提供商会使用各自专用模板，把这些声明序列化到系统提示词中，因此调用者只需处理结构化形式。
 
-### 第二步:决定
+### 第二步：决策
 
-鉴于用户的信息和可用的工具,模型选择了三个行为之一.
+根据用户消息和可用工具，模型会选择三种行为之一。
 
-1. **Answer directly**没有工具调用.
-2. **Call one or more tools.**发射结构化调用对象.`parallel_tool_calls: true`(默认在OpenAI和双子座,选择在人类) 模型可以发出一次多次电话.
-3. **Refuse.**严格模式结构化输出可以产生一个打字的`refusal`封锁而不是打电话.
+1. **直接以文本回答。** 不调用工具。
+2. **调用一个或多个工具。** 输出结构化调用对象。设置 `parallel_tool_calls: true` 后（OpenAI 与 Gemini 默认开启，Anthropic 需选择启用），模型可以在一轮中输出多个调用。
+3. **拒绝。** 严格模式的结构化输出可以生成有类型的 `refusal` 块，而不是工具调用。
 
-工具调用用量有三个稳定的字段:一个调用`id`作为一个工具`name`并且一个JSON`arguments`作为一个对象,这个ID存在,所以主机可以将后来的结果与特定的呼叫相关联,这在并行呼叫出现时是重要的.
+工具调用负载有三个稳定字段：调用 `id`、工具 `name` 与 JSON `arguments` 对象。ID 的作用是让宿主把之后返回的结果与具体调用对应起来；并行调用乱序完成时，这一点尤其重要。
 
-### 第三步:执行
+### 第三步：执行
 
-接待者接收了调用,验证了对声明的方案的参数,并运行执行器. 无效的参数意味着模型幻觉了一个字段或使用错误的类型 很常见的失败模式在弱型模型上. 制作主机在不有效的参数上做三个事情之一:快速失败并将错误传递到模型中,使用限制式解析器修复JSON,或在提示中包含的验证错误中重新尝试模型.
+宿主收到调用后，依据声明的 Schema 验证参数，并运行执行器。参数无效意味着模型编造了字段，或使用了错误类型——这在较弱模型上非常常见。生产宿主会采用三种方法之一处理无效参数：快速失败并把错误反馈给模型；使用受约束解析器修复 JSON；或把验证错误加入提示词后重试模型。
 
-执行器本身是普通代码. Python,TypeScript,一个 shell命令,数据库查询.它产生一个结果,通常是字符串,但可以是任何JSON值或结构化内容块 (文本,图像或资源引用在MCP).结果必须是串化.
+执行器本身只是普通代码：Python、TypeScript、Shell 命令或数据库查询。它会产生结果，通常是字符串，也可以是任意 JSON 值或结构化内容块（MCP 中的文本、图像或资源引用）。结果必须可序列化。
 
-### 第四步:观察
+### 第四步：观察
 
-主机将工具结果添加到对话中 (如一个 `tool`配合的角色信息`id`) 并且重新调用模型.模型现在将工具输出放在文本中,可以产生最终答案或请求更多呼叫. 这持续到模型停止发出呼叫或主机达到反复数量的安全限制.
+宿主把工具结果追加到对话中（使用 `tool` 角色消息，并带上匹配的 `id`），再调用一次模型。模型现在可以在上下文中看到工具输出，并生成最终答案或请求更多调用。这个过程会持续，直到模型不再输出调用，或者宿主达到迭代次数的安全上限。
 
-### 信任分开了
+### 信任边界
 
-工具有两种味道,
+从安全角度看，工具分成两类：
 
-- **Pure.**只有阅读,确定性,没有副作用.`get_weather`现在`search_docs`现在`get_current_time`值得推测.
-- **Consequential.**变化状态,花钱,触摸用户数据.`send_email`现在`delete_file`现在`execute_trade`必须有门.
+- **纯工具。** 只读、确定性、没有副作用，例如 `get_weather`、`search_docs`、`get_current_time`。可以安全地进行推测性调用。
+- **有后果的工具。** 会改变状态、花费资金或接触用户数据，例如 `send_email`、`delete_file`、`execute_trade`。必须经过门禁。
 
-根据Meta的2026年代理安全"二项规则",一个转换可以结合最多两项:不值得信赖的输入,敏感数据,后续行动.工具界面是通过拒绝呼叫,要求用户确认或升级范围来执行该规则的.查看第13 · 15阶段,全安全章和第14 · 09阶段,查看代理级许可政策.
+Meta 在 2026 年针对智能体安全提出的“二选规则”（Rule of Two）规定：单轮中最多只能同时组合以下三项中的两项——不可信输入、敏感数据、有后果的动作。工具接口正是执行这条规则的地方：拒绝调用、要求用户确认或升级权限范围。完整安全章节见阶段 13 · 15，智能体级权限策略见阶段 14 · 09。
 
-### 循环的存在
+### 循环位于何处
 
-| Context | Who describes | Who decides | Who executes |
+| 场景 | 谁负责描述 | 谁负责决策 | 谁负责执行 |
 |---------|---------------|-------------|--------------|
-| Single-turn function calling (OpenAI/Anthropic/Gemini) | App developer | LLM | App developer |
-| MCP | MCP server | LLM via MCP client | MCP server |
-| A2A | Agent Card publisher | Calling agent | Called agent |
-| Web browser (function-calling agent) | Browser extension / WebMCP | LLM | Browser runtime |
+| 单轮函数调用（OpenAI/Anthropic/Gemini） | 应用开发者 | 大语言模型 | 应用开发者 |
+| MCP | MCP 服务器 | 大语言模型（通过 MCP 客户端） | MCP 服务器 |
+| A2A | Agent Card 发布者 | 调用方智能体 | 被调用智能体 |
+| Web 浏览器（函数调用智能体） | 浏览器扩展 / WebMCP | 大语言模型 | 浏览器运行时 |
 
-列名字改变,结构不会.
+无论在哪里，都是同样的四个步骤。列名会变，结构不变。
 
-### 现在,我们需要一个模型来发射JSON.
+### 为什么不直接提示模型输出 JSON？
 
-"请模型在JSON中回答"是前函数调用模式.在边界模型上,它失败了5到15%的时间,在较小模型上则失败了更多.失败模式包括缺失的支架,后行逗号,幻觉字段和错误类型.然后你需要一个JSON修复通行,重新尝试或限制的解码器.
+“要求模型使用 JSON 回答”是函数调用出现前的模式。即使在前沿模型上，它也有约 5%～15% 的失败率，在小模型上更高。失效模式包括缺少大括号、尾随逗号、编造字段与类型错误。随后你还需要 JSON 修复步骤、重试或受约束解码器。
 
-由于三个原因,本地函数调用更好. 首先,提供商将模型端到端训练在准确的呼叫形状上, 第二,调用用电话的有效载荷位于其自己的协议插槽,而不是在自由文本中,因此工具调用永远不会泄露到用户可见的回复中. 第三,提供商强制执行方案的遵守限制式解码 (OpenAI的严格模式,Anthropic的严格模式).`tool_use`双子座的`responseSchema`) 产量保证验证.
+原生函数调用有三个优势。第一，提供商会针对精确的调用形态对模型进行端到端训练，因此严格模式下的有效 JSON 比率会提升到 98%～99%。第二，调用负载位于独立协议槽中，而不是自由文本内——所以工具调用不会泄露进用户可见回复。第三，提供商使用受约束解码强制遵守 Schema（OpenAI 严格模式、Anthropic `tool_use`、Gemini `responseSchema`），从而保证输出通过验证。
 
-阶段13·02将三个供应商API与其相结合.
+阶段 13 · 02 会并排讲解三家提供商的 API，阶段 13 · 04 则深入介绍结构化输出。
 
-### 电路断电器
+### 熔断器
 
-循环在模型停止发出电话或主机达到最大的转折数时结束.生产主机设置在5到20转之间.此外,你几乎肯定处于模型无法退出的循环中.克劳德代码默认设置为20;OpenAI助理为10;Cursor的代理模式为25.
+当模型停止输出调用，或宿主达到最大轮次时，循环终止。生产宿主通常把上限设为 5～20 轮。超过这个范围，模型几乎必然陷入无法自行退出的循环。Claude Code 默认为 20，OpenAI Assistants 为 10，Cursor 智能体模式为 25。
 
-替代方案是"每六个月就出现一个无限循环"作为"代理人在一夜之间花费400美元的API通话"的后期测试.
+另一种选择——无限循环——每隔六个月就会出现在“智能体一夜间花掉 400 美元 API 费用”的事后分析中。不要发布没有上限的系统。
 
-阶段14·12涵盖了错误恢复和自我修复的深度;阶段17涵盖了生产率限制.
+阶段 14 · 12 会深入介绍错误恢复与自我修复，阶段 17 会介绍生产速率限制。
 
-### 从这里开始,第13阶段
+### 阶段 13 的后续内容
 
-- 课程02至05将提供商级工具调用表面进行抛光.
-- 课程06至14将循环整合成MCP.
-- 课程15-18保护循环对抗敌对服务器,对抗用户和未认证的远程作者表面.
-- 课程19-22将模式扩展到代理人间合作,可观察性,路由和包装.
-- 课23将使用每一个原始的整个生态系统.
+- 第 02～05 课会完善提供商级工具调用界面。
+- 第 06～14 课会把循环推广到 MCP。
+- 第 15～18 课会防御恶意服务器、对抗用户与未经身份验证的远程授权界面。
+- 第 19～22 课会把模式扩展到智能体间协作、可观测性、路由与打包。
+- 第 23 课会使用每项原语交付完整生态系统。
 
-现在,我们需要在这个过程中做出一些改变.
+后续每一课都是这个四步循环的扩展。请始终把它当作不变量。
 
 ```figure
 tp-tool-loop
 ```
 
-## 用它
+## 投入使用
 
-`code/main.py`运行四步循环,没有LLM.一个假的"决策者"函数通过在用户消息上匹配模式来模拟模型;执行器,方案验证器和观察步骤的带是真实的.运行它以查看可打印的中间状态的完整请求/响应编程,然后在后一堂课中替换假决策者以任何真实提供商.
+`code/main.py` 在不使用大语言模型的情况下运行四步循环。一个假的“决策器”函数通过匹配用户消息中的模式来模拟模型；执行器、Schema 验证器与观察步骤的运行框架都是真实的。运行它可以查看完整的请求/响应协作过程和可打印的中间状态；后续课程中，再把假决策器替换为任意真实提供商。
 
-什么要看:
+需要关注：
 
-- 工具登记库每工具包含三个字段:名称,描述,方案和执行器引用.
-- 验证器是简单的JSON方案子集 (类型,要求,enum,min/max) 仅用 stdlib 写的.
-- 生产代理需要这种电路切断器.
+- 工具注册表为每个工具保存三个字段：名称、描述、Schema，以及执行器引用。
+- 验证器仅使用标准库实现 JSON Schema 的最小子集（类型、必填字段、枚举、最小/最大值）。阶段 13 · 04 会提供更完整的版本。
+- 循环把迭代次数限制为五次。生产智能体正需要这种熔断器。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-tool-interface-reviewer.md`鉴于工具定义草案 (名称 + 描述 + 方案 + 执行程序概述),技能审计它是否适合循环:是名称机器稳定,是描述是完整的使用简介,是方案使用JSON Schema 2020-12正确,是纯对后果分类明确.
+本课会产出 `outputs/skill-tool-interface-reviewer.md`。给定一份工具定义草案（名称 + 描述 + Schema + 执行器概要），它会审查其是否适合循环：名称是否对机器稳定，描述是否构成完整的使用说明，Schema 是否正确使用 JSON Schema 2020-12，以及是否明确划分纯工具与有后果的工具。
 
-## 运动
+## 练习
 
-1. 添加第四个工具`code/main.py`呼叫`get_stock_price(ticker)`写下"用户通过ticker请求当前股价时使用.不要用于历史价格或市场总结."运行带并确认新工具的假决策者路线查询.
+1. 在 `code/main.py` 中添加第四个工具 `get_stock_price(ticker)`。将其描述写为：“Use when the user asks for a current stock price by ticker. Do not use for historical prices or market summaries.”运行框架，并确认假决策器会把包含股票代码的查询路由给新工具。
 
-2. 打破方案验证器,打电话给谁`arguments`执行前确认主机拒绝了该字段.然后通过一个额外的未知的字段进行调用. 决定:主机应该拒绝或忽视? 用安全参数证明您的选择.
+2. 破坏 Schema 验证器：传入一个 `arguments` 对象缺少必填字段的调用，确认宿主会在执行前拒绝它。然后传入包含未知额外字段的调用。决定宿主应该拒绝还是忽略，并从安全角度论证选择。
 
-3. 加入一个 子,`consequential: true`随着选择后果工具,将标志到需要的注册表输入,并改变循环,打印一个"会与用户确认"行.这是每个生产主机所需的确认门的形状.
+3. 把框架中的每个工具分类为纯工具或有后果的工具。为需要门禁的注册表项添加 `consequential: true` 标记，并修改循环，使它每当选择有后果的工具时都打印“would confirm with user”。这就是每个生产宿主所需的确认门禁形态。
 
-4. 在纸上绘制四步循环,上面填写供应商列表,为您最喜欢的客户端 (Claude Desktop,Cursor,ChatGPT或自定义堆).
+4. 在纸上画出四步循环，并针对你最常用的客户端（Claude Desktop、Cursor、ChatGPT 或定制技术栈）填写上面的提供商列。与阶段 13 · 06 的 MCP 专用变体进行交叉核对。
 
-5. 阅读OpenAI的函数调用指南从上到下. 确定在请求中包含的一个字段,但不是如图所示的四步循环. 解释它添加什么,以及为什么它比必要更方便.
+5. 从头到尾阅读 OpenAI 函数调用指南。找出请求中存在、但此处四步循环没有呈现的那个字段。解释它添加了什么，以及为什么它只是方便，而非必需。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|------------------------|
-| Tool | "A thing the model can call" | A triple of name + JSON-Schema-typed input + executor function |
-| Function calling | "Native tool use" | Provider-level API support for emitting structured tool calls instead of prose |
-| Tool call | "The model's request to act" | A JSON payload with `id`, `name`, `arguments` emitted by the model |
-| Tool result | "What the tool returned" | The executor's output, wrapped in a `tool` role message with matching id |
-| Parallel tool calls | "Many calls at once" | Multiple call objects in one model turn, independent and orderable by id |
-| Strict mode | "Guaranteed JSON" | Constrained decoding that forces the model's output to validate against the declared schema |
-| Pure tool | "Read-only tool" | No side effects; safe to re-run |
-| Consequential tool | "Action tool" | Mutates external state; requires gate, audit, or user confirmation |
-| Four-step loop | "The tool-call cycle" | describe → decide → execute → observe |
-| Host | "Agent runtime" | The program that holds the tool registry, calls the model, and runs the executor |
+| 工具 | “模型可以调用的东西” | 名称 + 由 JSON Schema 定义类型的输入 + 执行器函数三元组 |
+| 函数调用 | “原生工具使用” | 提供商级 API 支持，使模型输出结构化工具调用而不是自然语言文本 |
+| 工具调用 | “模型的行动请求” | 模型输出的 JSON 负载，包含 `id`、`name`、`arguments` |
+| 工具结果 | “工具返回的内容” | 执行器输出，包装在带匹配 ID 的 `tool` 角色消息中 |
+| 并行工具调用 | “一次调用多个工具” | 模型一轮输出多个调用对象；它们彼此独立，并可按 ID 对应顺序 |
+| 严格模式 | “保证 JSON” | 强制模型输出通过声明 Schema 验证的受约束解码 |
+| 纯工具 | “只读工具” | 没有副作用，可以安全地重新运行 |
+| 有后果的工具 | “动作工具” | 修改外部状态；需要门禁、审计或用户确认 |
+| 四步循环 | “工具调用周期” | 描述 → 决策 → 执行 → 观察 |
+| 宿主 | “智能体运行时” | 保存工具注册表、调用模型并运行执行器的程序 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [OpenAI — Function calling guide](https://platform.openai.com/docs/guides/function-calling) OpenAI 式工具声明和呼叫形状的常规参考
-- [Anthropic — Tool use overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)克劳德的`tool_use`现在,`tool_result`区块格式
-- [Google — Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling) `functionDeclarations`在双子座中,并行调用语义
-- [Model Context Protocol — Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28)工具界面的当前无状态,提供商-无知的通用化
-- [JSON Schema — 2020-12 release notes](https://json-schema.org/draft/2020-12/release-notes)每个现代工具API都会使用的方案方言
+- [OpenAI——函数调用指南](https://platform.openai.com/docs/guides/function-calling)——OpenAI 风格工具声明与调用形态的权威参考
+- [Anthropic——工具使用概览](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)——Claude 的 `tool_use` / `tool_result` 块格式
+- [Google——Gemini 函数调用](https://ai.google.dev/gemini-api/docs/function-calling)——Gemini 中的 `functionDeclarations` 与并行调用语义
+- [模型上下文协议——2026-07-28 规范](https://modelcontextprotocol.io/specification/2026-07-28)——当前无状态、与提供商无关的工具接口推广形式
+- [JSON Schema——2020-12 发布说明](https://json-schema.org/draft/2020-12/release-notes)——每种现代工具 API 都使用的 Schema 方言
