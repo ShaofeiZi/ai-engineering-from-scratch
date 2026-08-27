@@ -1,80 +1,80 @@
-# 尽管被颠覆,但人工智能控制
+# AI 控制：在遭遇颠覆时仍然保障安全
 
-> 绿色blatt,Shlegeris,Sachan,Roger (红木研究, arXiv:2312.06942,ICML 2024). 控制重新构建了安全问题: 鉴于一个不值得信赖的强大的模型U可能会对你进行不利的优化, 资源是可靠的较弱的模型T,可靠的人工预算H, 在此框架内,可靠编辑Pareto在代码后门任务上占据了不值得信赖的监控. 框架继承了安全工程的最坏假设:安全是选择对抗的U不能导致具体的不可接受结果的概率,
+> Greenblatt、Shlegeris、Sachan、Roger（Redwood Research，arXiv:2312.06942，ICML 2024）将安全问题重新表述为控制问题：给定一个不可信的强模型 U，它可能以对抗方式针对你进行优化，那么在什么协议下，你既能从它那里提取有用工作，又能把不可接受结果发生的概率限制在边界内？你手上的资源包括一个可信但更弱的模型 T、有限的可信人类劳动预算 H，以及对 U 输出进行编辑的能力。在这个框架下，在代码后门任务上，Trusted Editing 在帕累托前沿上优于 Untrusted Monitoring。这个框架沿用了安全工程中的最坏情形假设：安全性指的是，在红队压力测试下，敌手选择的 U 无法造成具体不可接受结果的概率，而这种红队压力被视为 U 的替身。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python (stdlib, safety-vs-usefulness frontier on code-backdoor task)
-**Prerequisites:** Phase 18 · 07 (sleeper agents), Phase 18 · 08 (scheming), Phase 18 · 09 (alignment faking)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 18 · 07（睡眠智能体与持续性欺骗）、阶段 18 · 08（上下文内图谋）、阶段 18 · 09（伪装对齐）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 定义AI控制威胁模型:不可信的强型U,可信的较弱型T,可信的人类预算H.
-- 描述可靠编辑协议以及为什么它在ICML 2024代码后门任务上占据了Pareto的不值得信赖监测地位.
-- 解释对配线 (U值得信赖) 和控制 (U值得信赖,我们无论如何都安全) 的区别.
-- 控制的三个限制:人类不会扩展,可信的弱型号最终会落后,控制不会产生可信的强型号.
+- 定义 AI 控制的威胁模型：不可信的强模型 U、可信但更弱的模型 T、可信的人类预算 H。
+- 描述 Trusted Editing 协议，并解释它为何在 ICML 2024 的代码后门任务上于帕累托前沿优于 Untrusted Monitoring。
+- 解释 alignment 与 control 的区别：前者要求 U 值得信任，后者假设 U 不值得信任但系统仍然安全。
+- 说明控制的三个局限：人类无法规模化、可信弱模型终将落后、控制并不会产出可信的强模型。
 
 ## 问题
 
-课程7-9表明,一个边界模型可能是欺骗性的, 安全问题重新置:我们不能从一个不信任的模型中提取有用的工作, 这就是控制问题,它像经典的安全结构:假设最坏的对手,设计协议,
+第 7 到第 9 课已经说明，前沿模型可能表现出欺骗性对齐、谋划行为，或对齐伪装。于是安全问题需要被重新表述：如果我们并不信任一个模型，能否依然从它那里提取有用工作，同时不给它造成不可接受结果的机会？这就是控制问题。它的结构与经典安全工程相同：假设最坏情形下的对手，设计防护协议，并在红队压力下测量对手的成功率。
 
 ## 概念
 
-### 威胁模式
+### 威胁模型
 
-控制假设:
-- 不值得信赖的强大模型. 能力. 可能是对立的 (评估认为它是这样的).
-- 更弱的模型,更弱的模型,更有能力,但已知不是敌对的.
-- 可靠的人工劳动力.
+控制的假设包括：
+- U，untrusted strong model。不可信的强模型。能力很强，并且可能具有对抗性，评估时会按它确实有对抗性来处理。
+- T，trusted weaker model。可信但更弱的模型。能力较弱，但已知并非敌对。
+- H，trusted human labor。可信的人类劳动。预算很小，无法规模化。
 
-系统必须使用U产生有用的输出. 敌人试图导致一个具体的无法接受的结果 (例如,在发送的代码中后门),同时保持合法有用工作的部分以通过有用性门.
+系统必须借助 U 产出有用结果。对手的目标是在维持一部分合法有用工作的同时，诱发某个具体的不可接受结果，例如让已交付代码中带有后门，从而通过有用性门槛。
 
-控制放弃了对U的信任. 它问的是,在没有信任的情况下,哪些协议保持安全.
+控制不再试图信任 U。它关心的是：在无法信任 U 的前提下，哪些协议仍然能够维持安全。
 
-### 国际机械设备技术技术 (ICML 2024) 后门任务
+### ICML 2024 后门任务
 
-提示是竞争级编码问题.U生成候选解决方案.一个隐藏的预言符标志着如果解决方案包含后门 (一个特定的输入使代码产生错误输出).红色团队控制U,并允许看到所有协议内部.协议必须最大限度地解决问题速度,同时保持后门运输速度在门以下.
+提示词是竞赛级编程题。U 生成候选解答。隐藏的 oracle 会判断这份解答是否包含后门，也就是是否存在某个特定输入能让代码产出错误结果。红队控制 U，并且被允许看到协议内部的全部细节。协议的目标是在尽可能提高题目解出率的同时，把后门被交付出去的概率压到阈值以下。
 
-### 进行了四个协议的比较
+### 对比四种协议
 
-- **Baseline:**导航直播,使用效率最高,安全性最低.
-- **Upfront auditing:**通过"H"来输出所有输出,安全性最大,预算快速耗尽.
-- **Untrusted Monitoring:**风险:两个U实例可能结论.
-- **Trusted Editing:**如果T不确定,路线到H.
+- **Baseline：** 直接交付 U 的输出。 usefulness 最高，safety 最低。
+- **Upfront auditing：** 对所有输出都使用 H 审核。 safety 最高，但预算会很快耗尽。
+- **Untrusted Monitoring：** 用第二个 U 实例给第一个 U 的输出打分，再由 H 审核被标记的输出。风险在于，这两个 U 实例可能串通。
+- **Trusted Editing：** T 会在每次请求上编辑 U 的输出；如果 T 没把握，则转交给 H。
 
-绿色blatt等人发现,可靠编辑Pareto占据了不值得信赖的监控:在每个安全水平上更高的有用性.
+Greenblatt 等人发现，Trusted Editing 在帕累托前沿上优于 Untrusted Monitoring：在每一个安全水平下，它都能提供更高的有用性。
 
 ### 为什么可靠编辑会获胜
 
-无信任监测要求U的第二个实例不能与第一个协调. 通过steganographic提示或共享训练前, 协议必须投资预算用于对协作阻力 (抛法,模) 减少监视器的信号. 值得信赖的编辑完全避免勾结,因为T是值得信赖的. 成本是T不太能力,所以它可能会过度拒绝或错过微妙的后门.
+Untrusted Monitoring 要求 U 的第二个实例不能和第一个实例协调配合。但它们可能通过隐写线索或共享训练先验发生串通。为了抵抗串通，协议不得不投入额外预算做防串通处理，例如改写或混淆输入，这又会削弱监控器获得的信号。Trusted Editing 则完全绕开了串通问题，因为 T 是可信的，按假设它提出的任何编辑都不是对抗性的。代价在于 T 的能力更弱，因此它可能过度拒绝，也可能漏掉细微的后门。
 
 ### 协议的四个轴
 
-1. 哪个角色 U 扮演:仅制片人,监视器或两者.
-2. 编辑器,监视器或复制样本器.
-3. 如何分配H:统一审计,随机审计或标志性审计.
-4. 计算协议花费多少钱来抵制勾结.
+1. U 扮演什么角色：只做生产者、做监控器，还是两者兼任。
+2. T 扮演什么角色：编辑器、监控器，还是重采样器。
+3. H 如何分配：全量均匀审计、随机审计，还是按标记结果定向审计。
+4. 协议要花多少算力去做抗串通设计。
 
-### 配合与控制
+### 对齐与控制
 
-- 结合: "你能否信任你?" 2,4,5,6,7,8,9课题都依赖于此.
-- 控制:我们可以安全地使用U,而不相信它吗?
+- Alignment：“U 是否安全到可以信任？” 第 2、4、5、6、7、8、9 课都与此相关。
+- Control：“即便不信任 U，我们能否仍然安全地使用它？” 这是第 10 课的问题。
 
-调整是模型的属性.控制是部署协议的属性.控制不会产生调整的模型;它会产生可能不调整的模型的安全使用.
+Alignment 是模型本身的属性。Control 是部署协议的属性。控制不会把模型变成已对齐模型；它做的是，在模型可能没有对齐的情况下，仍然实现安全使用。这两条路线都需要。
 
 ### 三大基本限制
 
-- 人类不会扩展.H预算由愿意审核人工智能的数量限制.
-- 时 T 较 U 弱,T 的编辑信号会变成噪音.
-- 控制不是调整.在ASL-3 (课 18) 上运行的协议可能不会在ASL-4 上运行,如果U能够操纵T或考虑H的审计分布,控制会失败.
+- 人类无法规模化。H 的预算受限于愿意审核高难度 AI 输出的人类数量。
+- 可信弱模型终将落后。当 T 远弱于 U 时，T 的编辑信号会逐渐退化成噪声。
+- 控制不是对齐。在 ASL-3（第 18 课）下有效的协议，到了 ASL-4 可能就会失效；如果 U 能操纵 T，或推理 H 的审计分布，控制就会失败。
 
-### 2025年发展
+### 2025 年的新进展
 
-英国AISI和Redwood在控制安全案例 (metr.org/redwoodresearch.org 2025) 上合作:一个控制安全案例认为,在最坏的情况下,协议限制了无法接受的结果的可能性.安全案例 (课 18) 继承了控制框架.
+UK AISI 与 Redwood 在 2025 年合作推进 Control Safety Cases（metr.org / redwoodresearch.org 2025）：所谓控制安全案例，就是一份论证，说明在对 U 作最坏情形假设时，某个协议仍能把不可接受结果的概率限制在边界内。安全案例（第 18 课）正是继承了这个控制框架。
 
-### 在这个阶段的第18阶段
+### 它在第 18 阶段中的位置
 
-第6-9课描述威胁 (欺骗是可能的).第10课描述了防御范式,假设威胁是真实的.第11课描述了补充的进攻范式 (通过可扩展的监督使U值得信赖).
+第 6 到第 9 课描述的是威胁本身，也就是模型确实可能欺骗。第 10 课讨论的是防御范式，前提是假设这种威胁真实存在。第 11 课则讨论互补的进攻式范式，也就是通过可扩展监督让 U 逐步变得值得信任。
 
 ```figure
 al-control-protocol
@@ -82,39 +82,39 @@ al-control-protocol
 
 ## 用它
 
-`code/main.py`模拟玩具后门任务的四个协议. U 产生输出; 一部分是后门 (红队政策). T 批准或编辑. H 在预算上调用. 你可以扫描预算和勾结参数,以复制Pareto边界在Greenblatt等. 2024 图 2 (形状,而不是数字).
+`code/main.py` 会在一个玩具后门任务上模拟这四种协议。U 生成输出，其中一部分带有后门，这是红队策略；T 负责批准或编辑；H 在预算限制下介入。你可以扫描预算参数与串通参数，复现 Greenblatt 等人 2024 年图 2 所呈现的帕累托前沿形状，关注的是曲线形状而不是精确数值。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-control-protocol-audit.md`鉴于部署协议的描述,它确定了U/T/H角色,命名了勾结向量,并估计了该协议在红组压力下在使用性-安全边界的位置.
+本课会产出 `outputs/skill-control-protocol-audit.md`。它接收一段部署协议描述，识别其中的 U / T / H 角色，点名可能的串通路径，并估计该协议在红队压力下位于 usefulness-safety frontier 的什么位置。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确定不信任监控的预算制度,在这种情况下,不信任监控的勾结假设成为关键.
+1. 运行 `code/main.py`。复现 Trusted Editing 与 Untrusted Monitoring 的 usefulness-safety frontier，并指出在什么预算区间下，Untrusted Monitoring 对“不会串通”这一假设最为敏感。
 
-2. 添加一个新的协议:"T在低温下复制,然后U修改T的输出".测量其在边界的位置.
+2. 添加一个新协议：“T 先以低温重采样，然后 U 再编辑 T 的输出。” 测量它在前沿上的位置。解释为什么它比 Trusted Editing 更容易出现灾难性失败。
 
-3. 根据2024年论文,U可以看到协议.设计一个隐藏于U的协议,这些输出正在进行审计.该协议需要什么从部署基础设施中?
+3. 2024 年论文假设 U 能看到协议。请设计一种协议，使 U 无法知道哪些输出正在被审计。这个协议对部署基础设施提出了什么要求？
 
-4. 阅读Greenblatt等2024第7节 (协作).提出一个协作阻力措施,并解释其预期的有用性成本.
+4. 阅读 Greenblatt 等人 2024 年论文第 7 节（collusion）。提出一种抗串通措施，并解释它预期会带来怎样的有用性损失。
 
-5. 确定使用 U = GPT-4 类, T = GPT-3.5 类, H = 1% 审计输出的部署的控制安全情况. 确定该情况所依赖的单一强大假设.
+5. 为一个部署场景写出控制安全案例：其中 U = GPT-4 级别，T = GPT-3.5 级别，H = 1% 输出抽审。指出这个安全案例最依赖的那个单点强假设是什么。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说什么 | 它真正指的是什么 |
 |------|-----------------|------------------------|
-| AI Control | "safety under subversion" | Protocol design that bounds unacceptable outcomes under a worst-case U |
-| Untrusted model (U) | "the strong model" | The capable model we want to extract work from but do not trust |
-| Trusted model (T) | "the weak model" | A weaker model, known not to be adversarial, used as editor/monitor |
-| Trusted human (H) | "the audit budget" | Bounded expert labor; expensive; the ground-truth signal |
-| Trusted Editing | "T edits U" | Protocol where T is the gate on U's outputs; H called on ambiguous outputs |
-| Untrusted Monitoring | "U monitors U" | Protocol where a second U instance scores outputs; collusion-resistant only with extra investment |
-| Control safety case | "the formal argument" | Written argument that a protocol bounds the adversary's success under worst-case U |
+| AI Control | “在遭遇颠覆时仍然安全” | 在最坏情形的 U 下，仍能把不可接受结果限制住的协议设计 |
+| Untrusted model (U) | “那个强模型” | 我们想从它身上提取工作产出，但并不信任它的高能力模型 |
+| Trusted model (T) | “那个弱模型” | 一个更弱但已知不具对抗性的模型，用来做编辑或监控 |
+| Trusted human (H) | “审计预算” | 有限、昂贵但提供真实判断信号的专家人类劳动 |
+| Trusted Editing | “T 编辑 U” | 由 T 作为 U 输出的关口；遇到模糊情况再调用 H 的协议 |
+| Untrusted Monitoring | “U 监视 U” | 用第二个 U 实例去打分输出的协议；只有投入额外抗串通成本时才更稳 |
+| Control safety case | “那份正式论证” | 一份书面论证，说明某协议在最坏情形 U 下仍能约束对手成功率 |
 
 ## 进一步阅读
 
-- [Greenblatt, Shlegeris, Sachan, Roger — AI Control (arXiv:2312.06942)](https://arxiv.org/abs/2312.06942)法典ICML 2024文件
-- [Redwood Research — Recent AI Control papers index](https://redwoodresearch.substack.com/) 2024-2025年后续行动
-- [UK AISI + METR — Control safety cases](https://metr.org/blog/2025-03-26-common-elements-of-frontier-ai-safety-policies/)边境实验室的运营
-- [Hubinger et al. — Sleeper Agents (Lesson 7, arXiv:2401.05566)](https://arxiv.org/abs/2401.05566)威胁模型控制假设
+- [Greenblatt、Shlegeris、Sachan、Roger — AI Control (arXiv:2312.06942)](https://arxiv.org/abs/2312.06942) — 这篇 ICML 2024 论文是规范性来源
+- [Redwood Research — Recent AI Control papers index](https://redwoodresearch.substack.com/) — 2024 到 2025 年相关后续工作索引
+- [UK AISI + METR — Control safety cases](https://metr.org/blog/2025-03-26-common-elements-of-frontier-ai-safety-policies/) — 控制框架如何被落到前沿实验室的安全案例中
+- [Hubinger et al. — Sleeper Agents (Lesson 7, arXiv:2401.05566)](https://arxiv.org/abs/2401.05566) — 控制所假设的那类威胁模型
