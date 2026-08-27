@@ -1,28 +1,28 @@
-# 对于人工智能的Linux
+# 面向 AI 的 Linux
 
-> 大多数人工智能运行在Linux上.你需要足够的知识,
+> 大多数 AI 工作负载都运行在 Linux 上。你至少要掌握足够的知识，确保自己不会被卡住。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** --
-**Prerequisites:** Phase 0, Lesson 01
-**Time:** ~30 minutes
+**Prerequisites:** 第 0 阶段，第 01 课
+**Time:** 约 30 分钟
 
 ## 学习目标
 
-- 从命令行执行基本文件操作
-- 使用 管理文件权限`chmod`其他`chown`解决"拒绝许可"错误
-- 安装系统包装`apt`设置一个新的GPU盒子来进行人工智能工作
-- 识别macOS与Linux之间的差异,通常会让远程机器上的开发人员陷入困境
+- 在命令行中浏览 Linux 文件系统并完成必要的文件操作
+- 使用 `chmod` 和 `chown` 管理文件权限，解决“Permission denied”错误
+- 使用 `apt` 安装系统软件包，并为 AI 工作配置一台全新的 GPU 机器
+- 识别从 macOS 转到 Linux 时，经常困扰远程开发者的差异
 
 ## 问题
 
-你在macOS或Windows上开发. 但当你把它放入云GPU盒子,租用一个Lambda实例,或者发动一个EC2机器时,你就会进入Ubuntu. 终端是你的唯一接口. 没有Finder,没有 Explorer,没有GUI. 如果你无法导航文件系统,安装包,并从命令行管理进程, 你会在谷歌搜索"如何在Linux中解锁文件"时, 付费无用的GPU时间.
+你可能在 macOS 或 Windows 上开发，但只要通过 SSH 登录云端 GPU 机器、租用 Lambda 实例或启动 EC2 主机，迎面而来的通常就是 Ubuntu。终端是唯一界面，没有 Finder、资源管理器或 GUI。如果无法在命令行中浏览文件系统、安装软件包和管理进程，你就只能一边为空闲的 GPU 小时付费，一边搜索“Linux 怎么解压文件”。
 
-这是一本生存指南. 它涵盖了操作远程Linux机器的需要.
+这是一份生存指南，只介绍在远程 Linux 机器上开展 AI 工作所需的内容，不多也不少。
 
 ## 文件系统布局
 
-Linux将所有东西都组织在一个根底下`/`没有.`C:\`或`/Volumes`你实际上会触摸的目录:
+Linux 把所有内容都组织在一个根目录 `/` 下，没有 `C:\` 或 `/Volumes`。你真正会接触的目录如下：
 
 ```mermaid
 graph TD
@@ -35,13 +35,13 @@ graph TD
     root --> proc["proc/ and /sys/<br/>Virtual files — kernel and hardware info"]
 ```
 
-你的家目录是`~`或`/home/your-username`你几乎所有的事情都在这里发生.
+你的主目录是 `~` 或 `/home/your-username`。几乎所有日常操作都在这里完成。
 
-## 基本的命令
+## 必备命令
 
-这些15个命令涵盖了你在远程GPU盒子上所做的95%.
+下面 15 个命令足以覆盖你在远程 GPU 机器上 95% 的操作。
 
-### 移动
+### 浏览目录
 
 ```bash
 pwd                         # Where am I?
@@ -52,7 +52,7 @@ cd ~                        # Go home
 cd ..                       # Go up one level
 ```
 
-### 文件和目录
+### 文件与目录
 
 ```bash
 mkdir my-project            # Create a directory
@@ -68,9 +68,9 @@ rm file.txt                 # Delete a file (no trash, it's gone)
 rm -rf my-dir/              # Delete a directory and everything inside
 ```
 
-`rm -rf`进入前,检查路径.
+`rm -rf` 会永久删除内容，无法撤销。按下回车前务必再次检查路径。
 
-### 阅读文件
+### 读取文件
 
 ```bash
 cat file.txt                # Print entire file
@@ -80,7 +80,7 @@ tail -f log.txt             # Follow a log file in real time (Ctrl+C to stop)
 less file.txt               # Scroll through a file (q to quit)
 ```
 
-### 寻找
+### 搜索
 
 ```bash
 grep "error" training.log           # Find lines containing "error"
@@ -91,9 +91,9 @@ find . -name "*.py"                 # Find all Python files under current dir
 find . -name "*.ckpt" -size +1G     # Find checkpoint files larger than 1GB
 ```
 
-## 许可证
+## 权限
 
-每个Linux文件都有一个所有者和许可位. 当脚本不执行或不能写到目录时,你会遇到这个.
+Linux 中的每个文件都有所有者和权限位。当脚本无法执行，或者你不能向某个目录写入时，就会遇到权限问题。
 
 ```bash
 ls -l train.py
@@ -103,7 +103,7 @@ ls -l train.py
 #        ^^        everyone else: read only
 ```
 
-常见的修复:
+常用修复命令：
 
 ```bash
 chmod +x train.sh           # Make a script executable
@@ -113,11 +113,11 @@ chmod 644 config.yaml       # Owner: read+write, others: read only
 chown user:group file.txt   # Change who owns a file (needs sudo)
 ```
 
-当某事说"被拒绝许可",几乎总是一个权限问题.`chmod +x`或`sudo`解决了大多数案件.
+遇到 “Permission denied” 时，通常是权限设置有问题。多数情况下，`chmod +x` 或 `sudo` 可以解决，但使用前应先确认真正需要的权限范围。
 
-## 包装管理 (适用)
+## 软件包管理（apt）
 
- ubuntu 使用`apt`这就是你安装系统级软件的方式.
+Ubuntu 使用 `apt` 安装和管理系统级软件。
 
 ```bash
 sudo apt update             # Refresh the package list (always do this first)
@@ -129,7 +129,7 @@ apt list --installed        # What's installed?
 sudo apt remove htop        # Uninstall
 ```
 
-您将安装在新鲜的GPU盒子上:
+在全新的 GPU 机器上，通常需要安装以下软件包：
 
 ```bash
 sudo apt update && sudo apt install -y \
@@ -143,9 +143,9 @@ sudo apt update && sudo apt install -y \
     python3-venv
 ```
 
-## 用户和 sudo
+## 用户与 sudo
 
-您通常是普通用户登录.有些操作需要根源 (管理员) 访问.
+通常情况下，你会以普通用户身份登录；部分操作需要 root（管理员）权限。
 
 ```bash
 whoami                      # What user am I?
@@ -153,11 +153,11 @@ sudo command                # Run a single command as root
 sudo su                     # Become root (exit to go back, use sparingly)
 ```
 
-在云GPU实例中,你通常是唯一的用户,并且已经有Sudo访问权限.不要把一切运行为Root.只使用Sudo当需要时.
+在云端 GPU 实例上，你通常是唯一用户，并且已经拥有 sudo 权限。不要让所有命令都以 root 身份运行，只在确有需要时使用 sudo。
 
-## 过程和系统d
+## 进程与 systemd
 
-当你的训练停留,或者你需要检查什么正在运行:
+当训练任务卡住，或者需要查看当前运行内容时：
 
 ```bash
 htop                        # Interactive process viewer (q to quit)
@@ -167,7 +167,7 @@ kill -9 12345               # Force kill (use when graceful doesn't work)
 nvidia-smi                  # GPU processes and memory usage
 ```
 
-系统d管理服务 (后台恶魔). 如果运行推理服务器,您将使用它:
+systemd 用于管理服务（后台守护进程）。运行推理服务器时，你会使用它：
 
 ```bash
 sudo systemctl start nginx          # Start a service
@@ -179,7 +179,7 @@ sudo systemctl enable nginx         # Start automatically on boot
 
 ## 磁盘空间
 
- GPU 盒子通常具有有限的磁盘空间.
+GPU 机器的磁盘空间通常有限，模型和数据集会很快将其占满。
 
 ```bash
 df -h                       # Disk usage for all mounted drives
@@ -193,7 +193,7 @@ du -sh /data/checkpoints/   # Check how big your checkpoints are
 du -h --max-depth=1 / 2>/dev/null | sort -hr | head -20
 ```
 
-常见的空间节省器:
+常见的空间清理方法：
 
 ```bash
 # Clear pip cache
@@ -206,9 +206,9 @@ sudo apt clean
 rm -rf checkpoints/epoch_01/ checkpoints/epoch_02/
 ```
 
-## 网络
+## 网络操作
 
-您将从命令行下载模型,传输文件,
+你会在命令行中下载模型、传输文件和调用 API。
 
 ```bash
 # Download files
@@ -226,11 +226,11 @@ rsync -avz --progress ./data/ user@remote:/data/
 rsync -avz --progress user@remote:/results/ ./results/
 ```
 
-使用`rsync`现在`scp`只有转移已更改的字节,
+传输大文件时应优先使用 `rsync`，而不是 `scp`。它只传输发生变化的字节，并且能在连接中断后继续。
 
-## 让会议活跃
+## tmux：让会话持续运行
 
-当你把手机放进远程盒子时,关闭笔记本电脑会杀死你的训练.
+通过 SSH 登录远程机器时，如果直接合上笔记本电脑，训练任务也会终止。tmux 可以避免这个问题。
 
 ```bash
 tmux new -s train           # Start a new session named "train"
@@ -246,11 +246,11 @@ tmux attach -t train        # Reattach to session
 # Ctrl+B, then arrow keys   # Switch between panes
 ```
 
-总是在克斯里做长时间的训练工作.
+长时间训练任务一定要放在 tmux 中运行，每次都应如此。
 
-## 对于Windows用户的WSL2
+## Windows 用户使用 WSL2
 
-如果您使用Windows,WSL2可以提供一个真正的Linux环境,
+如果你使用 Windows，WSL2 无需双系统就能提供真正的 Linux 环境。
 
 ```bash
 # In PowerShell (admin)
@@ -260,24 +260,24 @@ wsl --install -d Ubuntu-24.04
 sudo apt update && sudo apt upgrade -y
 ```
 
-现在,我们在WSL2上运行一个真正的Linux内核.`/mnt/c/Users/YourName/`来自WSL内部.
+WSL2 运行真正的 Linux 内核，因此本课中的所有内容都适用。在 WSL 内部，可以通过 `/mnt/c/Users/YourName/` 访问 Windows 文件。
 
-通过GPU通过安装在Windows侧的NVIDIA驱动程序工作.安装WindowsNVIDIA驱动程序 (而不是Linux),CUDA将在WSL2内提供.
+安装 Windows 端的 NVIDIA 驱动后，即可使用 GPU 透传。请安装 Windows NVIDIA 驱动，而不是 Linux 版驱动；之后 CUDA 会在 WSL2 内可用。
 
-## 接下来,我们将将其转换为 Linux.
+## 从 macOS 切换到 Linux 时的常见陷阱
 
-如果您来自macOS,可能会让您陷入困境:
+以下差异经常让 macOS 用户踩坑：
 
-| macOS | Linux | Notes |
+| macOS | Linux | 说明 |
 |-------|-------|-------|
-| `brew install` | `sudo apt install` | Different package names sometimes. `brew install htop` vs `sudo apt install htop` works the same, but `brew install readline` vs `sudo apt install libreadline-dev` does not. |
-| `open file.txt` | `xdg-open file.txt` | But you won't have a GUI on a remote box. Use `cat` or `less`. |
-| `pbcopy` / `pbpaste` | Not available | Pipe to/from clipboard doesn't exist over SSH. |
-| `~/.zshrc` | `~/.bashrc` | macOS defaults to zsh. Most Linux servers use bash. |
-| `/opt/homebrew/` | `/usr/bin/`, `/usr/local/bin/` | Binaries live in different places. |
-| `sed -i '' 's/a/b/' file` | `sed -i 's/a/b/' file` | macOS sed needs an empty string after `-i`. Linux does not. |
-| Case-insensitive filesystem | Case-sensitive filesystem | `Model.py` and `model.py` are two different files on Linux. |
-| Line endings `\n` | Line endings `\n` | Same. But Windows uses `\r\n`, which breaks bash scripts. Run `dos2unix` to fix. |
+| `brew install` | `sudo apt install` | 软件包名称有时不同。`brew install htop` 与 `sudo apt install htop` 效果相同，但 `brew install readline` 与 `sudo apt install libreadline-dev` 并不相同。 |
+| `open file.txt` | `xdg-open file.txt` | 远程机器通常没有 GUI，应使用 `cat` 或 `less`。 |
+| `pbcopy` / `pbpaste` | 不可用 | 通过 SSH 时不存在与本地剪贴板之间的管道。 |
+| `~/.zshrc` | `~/.bashrc` | macOS 默认使用 zsh，大多数 Linux 服务器使用 bash。 |
+| `/opt/homebrew/` | `/usr/bin/`、`/usr/local/bin/` | 二进制文件所在位置不同。 |
+| `sed -i '' 's/a/b/' file` | `sed -i 's/a/b/' file` | macOS 的 sed 要求在 `-i` 后提供空字符串，Linux 则不需要。 |
+| 不区分大小写的文件系统 | 区分大小写的文件系统 | 在 Linux 中，`Model.py` 与 `model.py` 是两个不同的文件。 |
+| 换行符 `\n` | 换行符 `\n` | 二者相同，但 Windows 使用 `\r\n`，会破坏 Bash 脚本；可运行 `dos2unix` 修复。 |
 
 ## 快速参考卡
 
@@ -298,10 +298,10 @@ Sessions:       tmux new/attach/detach
 s0-process-fork
 ```
 
-## 运动
+## 练习
 
-1. 创建一个项目文件,在其中创建三个空格文件.`touch`然后列出它们.`ls -la`现在,我们要去.
-2. 安装`htop`运行它,并确定哪个进程使用最多的内存.
-3. 开始一个tmux会议,运行`sleep 300`在它里,脱离,列出会议,再连接.
-4. 使用`df -h`查看可用的磁盘空间,然后使用`du -sh ~/.cache/*`找出你存储器里有什么空间.
-5. 通过使用 移动一个文件从本地机器到远程机器`scp`然后与 `rsync`让我们比较经验.
+1. 通过 SSH 登录任意 Linux 机器（或打开 WSL2），进入主目录。创建一个项目目录，在其中用 `touch` 创建三个空文件，然后使用 `ls -la` 列出它们。
+2. 使用 apt 安装 `htop`，运行它，并找出占用内存最多的进程。
+3. 启动一个 tmux 会话，在其中运行 `sleep 300`，然后断开、列出会话并重新接入。
+4. 使用 `df -h` 查看可用磁盘空间，再使用 `du -sh ~/.cache/*` 找出缓存中最占空间的内容。
+5. 使用 `scp` 将一个文件从本地机器传到远程机器，再使用 `rsync` 完成同样的传输，并比较两者的体验。
