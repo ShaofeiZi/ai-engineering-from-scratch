@@ -1,70 +1,70 @@
-# 求婚的人:提出,然后承诺
+# 人类在环：Propose-Then-Commit
 
-> 关于HITL的2026年共识是具体的. 它不是"代理要求,用户点击批准". 它是提出-然后承诺:建议的行动是继续使用无权密钥的持久存储器;向审查者显示了意图,数据谱系,触摸的权限,爆炸半径和反弹计划;只有在积极的确认后进行;执行后验证以确认副作用实际发生. 长格拉夫的`interrupt()`另外,我们还可以使用微软代理框架的 PostgreSQL 检查点.`RequestInfoEvent`云的`waitForApproval()`标准的标准是: 通过"通过"的,没有审查的. 文件的减轻是挑战和反应,有明确的检查列表.
+> 到 2026 年，HITL 的共识已经非常具体。它不再是“代理发起请求，用户点击 Approve”这么简单，而是先提案后提交（propose-then-commit）：拟议动作先被持久化到持久存储（durable store），并绑定一个幂等键（idempotency key）；随后它会带着 intent、data lineage、permissions touched、blast radius 和 rollback plan 展示给 reviewer；只有得到明确正向确认之后才允许真正提交；执行完成后还要回读验证，确认副作用确实发生。LangGraph 的 `interrupt()` 加 PostgreSQL checkpointing、Microsoft Agent Framework 的 `RequestInfoEvent`，以及 Cloudflare 的 `waitForApproval()`，实现的都是同一个形状。这个模式最经典的失败方式，是橡皮图章式审批（rubber-stamp approval）：用户看到“Approve?” 就机械点击。被反复记录的缓解手段，则是带明确检查项的质询式确认（challenge-and-response）。
 
-**Type:** Learn
-**Languages:** Python (stdlib, propose-then-commit state machine with idempotency)
-**Prerequisites:** Phase 15 · 12 (Durable execution), Phase 15 · 14 (Tripwires)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（stdlib，带幂等性的 propose-then-commit 状态机）
+**Prerequisites:** 阶段 15 · 12（持久执行），阶段 15 · 14（跳线与诱饵）
+**Time:** 约 60 分钟
 
 ## 问题
 
-经纪人采取行动.用户必须决定:批准或不批准.如果决定是即时的,它可能不是审查.如果决定是结构化的,它是缓慢的,但可信的.工程问题是如何使结构化的审查成为最少抵抗的道路.
+代理准备执行一个动作，而用户必须决定：批准，还是拒绝。如果这个决定几乎是瞬时做出的，那它大概率根本不算审查；如果这个决定是结构化的，它会慢一些，但也更可信。真正的工程问题是：如何让“结构化审查”成为阻力最小的默认路径。
 
-2023年HITL模式是一个同步提示:"代理想发送电子邮件给X,体 Y 批准?"用户点击批准.每个人都觉得系统安全.实际上,这个表面很大程度上是纹:用户快速批准,批准预测很少,当代理错误时,审计轨迹显示了用户无法回忆的长期批准历史.
+2023 年前后的 HITL 模式，通常只是一个同步弹窗：“智能体想向 X 发送一封正文为 Y 的邮件，是否批准？”用户点一下“批准”，所有人都觉得系统很安全。但实际运行中，这种界面极易流于橡皮图章式审批：用户批得很快，审批本身几乎没有预测力；等代理真的出错时，审计轨迹里只会留下长长一串用户自己都回忆不起来的批准记录。
 
-2026 模式 建议然后承诺 将HITL移动到一个耐用基板上,附加结构化元数据,并需要积极承诺.每个管理代理SDK发送一个版本:LangGraph `interrupt()`微软代理框架`RequestInfoEvent`云`waitForApproval()` API名称不同,形状不同.
+2026 年的模式，即 propose-then-commit，把 HITL 放到了持久化底座上，绑定结构化元数据，并要求明确的正向提交。每个托管代理 SDK 都有自己的名字：LangGraph 用 `interrupt()`，Microsoft Agent Framework 用 `RequestInfoEvent`，Cloudflare 用 `waitForApproval()`。API 名字不同，形状完全一样。
 
 ## 概念
 
-### 提出,然后承诺的国家机器
+### Propose-then-commit 状态机
 
-1. **Propose.**代理生成一个拟议的操作. 持续到一个持久的存储器 (PostgreSQL, Redis,持久的对象). 包括:
-   - 意图 (为什么代理人这样做)
-   - 数据系 (该提案的来源)
-   - 触及的权限 (哪些范围 / 文件 / 终点)
-   - 爆炸半径 (最坏情况是什么)
-   - 倒退计划 (如果已实施,我们如何撤销它)
-   - 无效关键 (每项提案均为独一无二;重新提交的记录相同)
-2. **Surface.**审查者看到所有元数据的提案. 审查者是一个人 (而不是审查自己的代理人).
-3. **Commit.**确认了,行动执行了.
-4. **Verify.**执行后,副作用被检查并确认. 如果验证步骤失败,系统处于已知坏状态,并启动警报.
+1. **Propose。** 代理产生一个拟议动作，并把它持久化到 durable store，例如 PostgreSQL、Redis 或 Durable Object。记录中至少要包含：
+   - intent：代理为什么要这样做
+   - data lineage：是哪段源内容导致了这个提案
+   - permissions touched：会触及哪些 scope、文件或 endpoint
+   - blast radius：最坏情况下影响有多大
+   - rollback plan：如果已经提交，如何撤销
+   - idempotency key：每个提案唯一；重复提交返回同一条记录
+2. **Surface。** reviewer 会看到带完整元数据的提案。reviewer 必须是一个人，而不是代理自审。
+3. **Commit。** 得到明确正向确认后，动作才真正执行。
+4. **Verify。** 执行后回读目标，确认副作用确实发生。若 verify 失败，系统就进入一个“已知坏状态”，需要触发告警。
 
-### 无能之钥匙
+### Idempotency key
 
-没有无效率关键,过渡失败后重试可以双重执行批准的操作.具体例子:用户批准"从A转移100美元到B".网络闪.工作流重试.用户一次批准,但转移执行两次.无效率关键将批准与单个独特的副作用联系在一起;第二次执行是无效.
+没有 idempotency key 时，一次短暂失败后的 retry 就可能把已经批准的动作执行两遍。一个具体例子是：用户批准“从 A 向 B 转 100 美元”；此时网络闪断；workflow 重试；用户其实只批准了一次，但转账却执行了两次。Idempotency key 会把这次批准和“唯一的一次副作用”绑定在一起，因此第二次执行会被识别为 no-op。
 
-对于代理批准,它被明确使用在微软代理框架文件中.
+这和 Stripe、AWS API 采用的 idempotency 模式完全是同一种思路。Microsoft Agent Framework 文档也明确把它作为 agent approval 的基础机制。
 
-### 耐用性:为什么批准的过程过期
+### Durability：为什么审批要比进程更长寿
 
-通过等待室是一个代理人不拥有的状态.工作流程被暂停 (课12).`interrupt()`通过 PostgreSQL 检查点,而不是仅仅在内存状态, 两天后的批准仍然发现工作流程完整.
+等待审批的那个“waiting room”是一段代理并不拥有的状态。workflow 会在此处暂停（见第 12 课）。等审批真的到达时，workflow 会从那个点精确恢复。这就是为什么 LangGraph 会把 `interrupt()` 和 PostgreSQL checkpointing 绑定在一起，而不是只靠内存状态。即使审批两天后才到，workflow 也仍然能完好地接住它。
 
-### 印批准和挑战和响应减轻
+### Rubber-stamp approval 与 challenge-and-response 缓解
 
-默认的HITLUI ("批准" / "拒绝"按) 产生了快速的批准,没有真正的审查. 文档减轻:需要在批准按启用之前对特定问题作出积极答案的挑战和响应检查清单.
+HITL 的默认 UI，如果只是两个按钮“Approve / Reject”，通常只会制造快速批准，而不是真正审查。被反复记录的缓解方式，是一个 challenge-and-response checklist：只有在 reviewer 对若干具体问题给出明确肯定回答后，Approve 按钮才会解锁。典型问题可以是：
 
-- "你知道这是什么资源吗?"
-- "你是否确定爆炸半径是可接受的?"
-- "如果这失败,你有没有反弹计划吗?"
+- “你理解这次操作会触及什么资源吗？”
+- “你确认 blast radius 是可以接受的吗？”
+- “如果这次动作失败，你已经有 rollback plan 吗？”
 
-没有官僚主义本身是一个强制性功能.不能点击框的评论员要么要求澄清 (升级) 或拒绝 (安全默认).人类代理安全研究明确引用了检查清单驱动的HITL作为印批准模式的减轻.
+这不是为了形式主义增加官僚流程，而是一个强制触发机制（forcing function）。reviewer 如果连这些框都无法勾选，就应该要求澄清，或直接拒绝。Anthropic 的 agent-safety 研究也明确把 checklist-driven HITL 列为对抗 rubber-stamp approval 的缓解手段。
 
-### 什么是重要的
+### 什么算 consequential action
 
-没有任何行动都需要提出,然后承诺.
+并不是每一个动作都需要 propose-then-commit。2026 年比较稳定的指导原则是：
 
-- **Consequential actions**无可逆的文件,金融交易,出口通信,生产数据库的变化,破坏性文件系统操作.
-- **Reversible actions**(有时HITL):编辑本地文件,阶段化变化,可逆的写作,清晰的反转.
-- **Reads and inspections**读取文件,列出资源,调用只读取API.
+- **Consequential actions**：始终要走 HITL。例如不可逆写入、金融交易、对外通信、生产数据库变更、破坏性文件系统操作。
+- **Reversible actions**：有时需要 HITL。例如本地文件编辑、staging 环境改动、具备清晰回滚路径的可逆写入。
+- **Reads and inspections**：不需要 HITL。例如读取文件、列出资源、调用只读 API。
 
-### 行动后的验证
+### 提交后的验证
 
-"提交运行"与"副作用发生"不同.网络分区和比赛条件可以产生一个认为成功的工作流程,而后端没有持续.验证步骤在提交确认后重新阅读目标资源.这是与数据库交易相同的模式.`RETURNING`条款或 AWS `GetObject`之后`PutObject`现在,我们要去.
+“提交逻辑跑完了”并不等于“副作用真的发生了”。网络分区和竞争条件都可能让 workflow 误以为成功，而后端实际上没有持久化任何结果。Verify 这一步的意义，就是在 commit 之后重新读取目标资源进行确认。它和数据库里的 `RETURNING` 子句，或者 AWS 用 `GetObject` 在 `PutObject` 之后做回读验证，本质上是同一个模式。
 
-### 欧盟人工智能法第14条
+### EU AI Act Article 14
 
-根据第14条,在欧盟高风险人工智能系统的有效监督."有效"并非装饰性的.监管语言特别排除了印模式.提出,然后承诺,挑战和回应是微软代理管理工具包合规文件中保存的第14条审查的形状.
+EU AI Act Article 14 要求对欧盟高风险 AI 系统实施 **effective human oversight**。这里的“effective”不是装饰词。监管语境本身就明确排斥 rubber-stamp 这种装样子的审批模式。结合 challenge-and-response 的 propose-then-commit，才是 Microsoft Agent Governance Toolkit 合规文档里能够经得住 Article 14 审查的形状。
 
 ```figure
 mx-propose-then-commit
@@ -72,41 +72,41 @@ mx-propose-then-commit
 
 ## 用它
 
-`code/main.py`执行一个建议然后执行状态机在 stdlib Python. 持久存储是一个 JSON 文件. 无效密钥是 (thread_id, action_signature) 的哈希. 驱动程序模拟了三个情况:清洁的批准流,过渡失败后的重试 (不得执行双重),以及印默认对挑战和响应流.
+`code/main.py` 用 stdlib Python 实现了一个 propose-then-commit 状态机。durable store 是一个 JSON 文件。idempotency key 由 thread_id 和 action_signature 的哈希组成。驱动程序会模拟三种场景：一次正常的审批流程，一次短暂失败后的 retry（不得双重执行），以及 rubber-stamp 默认模式与 challenge-and-response 模式之间的对比。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-hitl-design.md`审查拟议的HITL工作流程,以提出后承诺的形式和缺少元数据,无权,验证或挑战和响应层的标志.
+`outputs/skill-hitl-design.md` 用来审查一个拟议 HITL workflow 是否具备 propose-then-commit 的完整形态，并标出缺失项，例如缺少元数据、缺少 idempotency、缺少 verify，或缺少 challenge-and-response 层。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认批准的提案的重试使用了持久记录,而不是重复执行. 现在更改无效键,包括时间印,并显示重试双重执行.
+1. 运行 `code/main.py`。确认一次已批准提案的 retry 会复用 durable record，而不是重复执行。然后把 idempotency key 改成包含 timestamp，展示 retry 如何导致双重执行。
 
-2. 延长提案记录`rollback`执行执行过程中验证步骤失败. 显示自动反弹.
+2. 给 proposal record 加上一个 `rollback` 字段。模拟一次执行成功但 verify 失败的场景，并展示 rollback 会被自动触发。
 
-3. 阅读微软代理框架的文章`RequestInfoEvent`文件. 识别一个元数据领域,API包括玩具机器缺失. 添加它并解释它保护什么.
+3. 阅读 Microsoft Agent Framework 的 `RequestInfoEvent` 文档。找出其中一个 toy engine 尚未包含的 metadata 字段，把它补进去，并解释它防御了什么风险。
 
-4. 设计一个特定行动的挑战和答案检查清单 (例如"发布到公共Twitter帐户").评论员必须回答哪些三个问题?为什么这三个问题?
+4. 为一个具体动作设计 challenge-and-response checklist，例如“向公开 Twitter 账号发帖”。reviewer 必须回答哪三个问题？为什么偏偏是这三个？
 
-5. 选择一个同步的"批准"提示 (不需要持久的存储) 足够的情况.解释原因,并列出你接受的风险类别.
+5. 选一个同步“Approve?” 提示已经足够的场景，也就是不需要 durable store。解释为什么成立，并说明你在接受什么风险类别。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |---|---|---|
-| Propose-then-commit | "Two-phase approval" | Persisted proposal + positive commit + verify |
-| Idempotency key | "Retry-safe token" | Unique per proposal; second execution no-ops |
-| Data lineage | "Where it came from" | The specific source content that led to the proposal |
-| Blast radius | "Worst case" | Scope of effect if the action goes wrong |
-| Rubber-stamp | "Fast approval" | "Approve" clicked without genuine review |
-| Challenge-and-response | "Forcing checklist" | Reviewer must positively acknowledge specific questions |
-| RequestInfoEvent | "MS Agent Framework primitive" | Durable HITL request with structured metadata |
-| `interrupt()` / `waitForApproval()` | "Framework primitives" | LangGraph / Cloudflare equivalents of the same shape |
+| Propose-then-commit | “两阶段审批” | 先持久化 proposal，再 commit，并在之后 verify |
+| Idempotency key | “可重试安全 token” | 每个 proposal 唯一；第二次执行会变成 no-op |
+| Data lineage | “它从哪里来的” | 触发 proposal 的具体源内容 |
+| Blast radius | “最坏情况有多糟” | 动作出错时影响的范围 |
+| Rubber-stamp | “快速批准” | 没有真正审查就点击了 “Approve” |
+| Challenge-and-response | “强制检查清单” | reviewer 必须对具体问题做明确确认 |
+| RequestInfoEvent | “Microsoft Agent Framework 原语” | 带结构化元数据的 durable HITL 请求 |
+| `interrupt()` / `waitForApproval()` | “框架原语” | LangGraph / Cloudflare 对同一形状的不同实现 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Microsoft Agent Framework — Human in the loop](https://learn.microsoft.com/en-us/agent-framework/workflows/human-in-the-loop) `RequestInfoEvent`经过长期的批准.
-- [Cloudflare Agents — Human in the loop](https://developers.cloudflare.com/agents/concepts/human-in-the-loop/) `waitForApproval()`它们是可靠的.
-- [Anthropic — Measuring agent autonomy in practice](https://www.anthropic.com/research/measuring-agent-autonomy)HITL作为缓解长远风险.
-- [EU AI Act — Article 14: Human oversight](https://artificialintelligenceact.eu/article/14/)高风险系统的监管基准.
-- [Anthropic — Claude's Constitution (January 2026)](https://www.anthropic.com/news/claudes-constitution) 关于监督的宪法框架.
+- [Microsoft Agent Framework — Human in the loop](https://learn.microsoft.com/en-us/agent-framework/workflows/human-in-the-loop) — `RequestInfoEvent` 与 durable approvals。
+- [Cloudflare Agents — Human in the loop](https://developers.cloudflare.com/agents/concepts/human-in-the-loop/) — `waitForApproval()` 与 Durable Objects。
+- [Anthropic — Measuring agent autonomy in practice](https://www.anthropic.com/research/measuring-agent-autonomy) — 把 HITL 视为长周期风险的缓解手段。
+- [EU AI Act — Article 14: Human oversight](https://artificialintelligenceact.eu/article/14/) — 高风险系统的人类监督监管基线。
+- [Anthropic — Claude's Constitution (January 2026)](https://www.anthropic.com/news/claudes-constitution) — 围绕监督问题的 constitutional framing。
