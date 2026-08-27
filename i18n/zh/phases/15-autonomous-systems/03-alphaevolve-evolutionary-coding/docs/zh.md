@@ -1,122 +1,122 @@
-# 进化编码代理
+# AlphaEvolve——进化式编码智能体
 
-> 结合一个边界编码模型,一个进化循环和一个可机器检查的评估器. 让循环足够长. 它发现了4x4复杂矩阵乘法程序,使用48个 skalar乘法,这是在56年来第一次改善Strassen. 它还发现了谷歌范围内的Borg计划测量, 建筑是故意无聊的. 获胜来自评审员的严谨性.
+> 将前沿编码模型与进化循环、机器可检查的评估器结合起来，再让循环运行足够长的时间。它发现了一种只需 48 次标量乘法的 4×4 复数矩阵乘法程序——这是 56 年来首次超越 Strassen 的结果。它还找到了一个已用于 Google 生产环境的 Borg 调度启发式算法，能够回收约 0.7% 的集群算力。这套架构刻意保持朴素，真正的突破来自评估器的严谨性。
 
-**Type:** Learn
-**Languages:** Python (stdlib, evolutionary-loop toy)
-**Prerequisites:** Phase 15 · 01 (long-horizon framing), Phase 15 · 02 (self-taught reasoning)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库，进化循环玩具示例）
+**Prerequisites:** 阶段 15 · 01（长时程框架），阶段 15 · 02（自学推理）
+**Time:** 约 60 分钟
 
 ## 问题
 
-语言模型可以写代码.进化算法可以搜索代码.这两种代码都已经被单独尝试了几十年;两种都达到顶层.LLM的顶层是论:模型写出可靠的代码,但它不做它声称的.进化天花板是搜索成本:语法上的随机突变很少产生编译的程序,更不用说更好的程序.
+大语言模型可以编写代码，进化算法可以搜索代码。几十年来，两者都被单独尝试过，也都遇到了瓶颈。LLM 的瓶颈是虚构：模型会写出看似可信、却没有实现其声称行为的代码。进化算法的瓶颈是搜索成本：对语法进行随机变异，几乎无法产生可编译程序，更不用说更优秀的程序。
 
-专业知识研究 (LLC) 提出了针对性的编辑程序数据库;一个自动评估器评分每个变体;高分变体成为未来代人的父母.专业知识研究处理了可信代码编写的昂贵步骤;评估员捕获了论.循环持续数小时到几周.
+AlphaEvolve（Novikov 等，DeepMind，arXiv:2506.13131，2025 年 6 月）把二者结合起来。LLM 针对程序数据库提出定向修改；自动评估器为每个变体评分；高分变体成为后续世代的父代。LLM 负责代价高昂的步骤——编写看起来合理的代码，评估器则负责捕捉虚构。整个循环可以运行数小时乃至数周。
 
-结果报告:48级乘法4x4复杂矩阵乘法 (斯特拉森1969年限为49),谷歌生产中的博格计划论,FlashAttention内核增速32.5%,双子座训练吞吐量改进.
+报告的成果包括：只需 48 次标量乘法的 4×4 复数矩阵乘法（Strassen 1969 年的上界是 49 次）、已进入 Google 生产环境的 Borg 调度启发式算法、FlashAttention 内核 32.5% 的性能提升，以及 Gemini 训练吞吐量的改进。
 
-建筑是因为评估器是机器检查的,它不在评估器没有的地方工作.
+这套架构之所以有效，是因为评估器能够由机器检查。在评估器做不到这一点的领域，它就无法奏效。这种不对称性正是本课的核心。
 
 ## 概念
 
 ### 循环
 
-1. 开始从种子计划开始`P_0`这正确,但不太理想.
-2. 保持变种程序的数据库,每个程序由评价者评分.
-3. 从数据库中取出一个或多个父母的样本 (MAP精英类型或岛屿类型).
-4. 要求士 (许多候选人是双子闪光,硬的双子Pro) 制造父母的修改版本.
-5. 编译,运行和评估在持久的评估器上的变体.
-6. 按其分数和特征向量键入数据库.
-7. 复制.
+1. 从一个正确但次优的种子程序 `P_0` 开始。
+2. 维护一个变体程序数据库，每个变体都有评估器给出的分数。
+3. 从数据库中采样一个或多个父代（采用 MAP-elites 风格或岛屿模型）。
+4. 提示 LLM（大量候选使用 Gemini Flash，困难候选使用 Gemini Pro）生成父代的修改变体。
+5. 编译、运行变体，并在留出评估器上进行评估。
+6. 按分数与特征向量把变体插入数据库。
+7. 重复。
 
-首先,LLM需要更多的数据库,加上评估者签名,加上简短的任务描述.模型的工作是提出一个有针对性的变化,可能会改善得分.第二,数据库结构化 (MAP精英网格,基于岛屿) 因此循环探索多样性,而不仅仅是当前领导者.
+有两个细节很重要。第一，提供给 LLM 的不只是父代程序，通常还包括数据库中多个顶尖变体、评估器签名和简短任务描述。模型的工作是提出有望提高分数的定向改动。第二，数据库采用结构化组织方式（MAP-elites 网格或岛屿模型），让循环探索多样性，而不是只围绕当前领先者搜索。
 
-### 评价者是什么不可以谈判的
+### 为什么评估器不可妥协
 
-们都在一个快速,决定性和难以玩的领域中获胜:
+AlphaEvolve 的成功全部来自评估器快速、确定且难以投机的领域：
 
-- **Matrix multiplication algorithm**测试单位测试,乘以矩阵并检查等式的比特相同.
-- **Borg scheduling heuristic**产品级模拟器,可重复历史集群负载,并测量浪费计算.
-- **FlashAttention kernel**实用硬件的墙钟基准.
-- **Gemini training throughput**测量每步的GPU秒.
+- **矩阵乘法算法**：单元测试执行矩阵乘法，并逐位检查结果是否完全相等。
+- **Borg 调度启发式算法**：生产级模拟器重放历史集群负载，并测量浪费的算力。
+- **FlashAttention 内核**：正确性测试加上真实硬件上的实际耗时基准。
+- **Gemini 训练吞吐量**：测量每一步所需的 GPU 秒数。
 
-在每个情况下,评估员发现了其他类型的LLM错误:假设的正确性要求,硬件上消失的性能要求和边缘故障.
+在每种情况下，评估器都会捕捉否则占主导地位的 LLM 错误：虚构的正确性声明、到了硬件上便消失的性能声明，以及边界用例故障。移除评估器后，循环优化的就只是代码外观。
 
-### 奖励黑客是这一说法的另一面
+### 奖励黑客是同一结论的另一面
 
-进化优化了评估者所测量的一切.如果评估者不完美,循环会发现不完美.在未经验证的域中,循环会优化了表面特征,而不是预期的行为.深思论文明确指出:AlphaEvolve的成功只转移到评估者的严格匹配搜索的野心的域.
+进化过程会优化评估器所测量的一切。如果评估器不完善，循环就会找到这个缺陷。在无法验证的领域，循环会优化表面特征，而不是预期行为。DeepMind 在论文中明确指出：AlphaEvolve 的成功只适用于评估器严谨程度与搜索目标相匹配的领域。
 
-具体的2025-2026年奖励黑客在代码搜索循环中:
+2025–2026 年代码搜索循环中，奖励黑客的具体示例包括：
 
-- 优化目标,以"完成时间"为回报,
-- 基准分数是奖励正确性在测试中奖励的记忆测试和过度匹配.
-- 代码质量代理将删除评论和重写变量名称,
+- 奖励“完成用时”的优化目标，导致系统提交空解答。
+- 奖励测试内正确性的基准分数，导致系统记忆测试并过拟合。
+- “代码质量”代理指标奖励删除注释和重命名变量，而语义毫无变化。
 
-对于"阿尔法发达"的解决方案:将一个经过审批的评估员发送到法师从未见过,在评估时产生的输入.
+AlphaEvolve 的修复方法是：使用 LLM 从未见过的留出评估器，并在评估时动态生成输入。即便如此，DeepMind 仍建议对所有拟议部署进行严格审查。
 
-### 为什么LLM+搜索单独击败
+### 为什么 LLM 加搜索优于其中任何一方
 
-专业知识学士可以产生可编译,语义上可行的修改.在2000行Python文件上的随机突变GA几乎总是产生语法错误.专业知识学士还集中在可行的邻居 (改变一个函数,而不是随机字节) 上搜索,这大大减少了浪费的评估者调用.
+LLM 能够产生可编译、语义上合理的修改。对一个 2,000 行 Python 文件使用随机变异的遗传算法，几乎总会产生语法错误。LLM 还会把搜索集中在合理邻域中——修改一个函数，而不是随机修改字节——从而大幅减少浪费的评估器调用。
 
-评价者反过来会发现LLM的论.LLM会自信地声称函数"在限度中是O(n log n") 当它实际上是O ((n ^ 2);一个墙钟基准使问题解决.
+反过来，评估器会捕捉 LLM 的虚构。LLM 可能自信地声称某个函数“在极限情况下是 O(n log n)”，而它实际是 O(n^2)；实际耗时基准会直接给出定论。
 
-### 在边境堆中,AlphaEvolve可以适合
+### AlphaEvolve 在前沿技术栈中的位置
 
-| System | Generator | Evaluator | Domain | Example win |
+| 系统 | 生成器 | 评估器 | 领域 | 成果示例 |
 |---|---|---|---|---|
-| AlphaEvolve | Gemini | correctness + benchmark | algorithms, kernels, schedulers | 48-mul 4x4 matmul |
-| FunSearch (DeepMind, 2023) | PaLM / Codey | correctness | combinatorial math | cap-set lower bounds |
-| AI Scientist v2 (Sakana, L5) | GPT/Claude | LLM critique + experiment | ML research | ICLR workshop paper |
-| Darwin Godel Machine (L4) | agent scaffolding | SWE-bench / Polyglot | agent code | 20% → 50% SWE-bench |
+| AlphaEvolve | Gemini | 正确性 + 基准 | 算法、内核、调度器 | 48 次乘法的 4×4 矩阵乘法 |
+| FunSearch（DeepMind，2023） | PaLM / Codey | 正确性 | 组合数学 | cap-set 下界 |
+| AI Scientist v2（Sakana，第 5 课） | GPT/Claude | LLM 评议 + 实验 | 机器学习研究 | ICLR 研讨会论文 |
+| Darwin Gödel Machine（第 4 课） | 智能体脚手架 | SWE-bench / Polyglot | 智能体代码 | SWE-bench 从 20% → 50% |
 
-它们都是相同的配方的变化:生成器加值器,循环.
+四个系统都是同一配方的变体：生成器加评估器，再加循环。区别在于评估器评判什么，以及它有多严谨。
 
 ```figure
 alphaevolve-loop
 ```
 
-## 用它
+## 使用它
 
-`code/main.py`对于玩具的符号回归问题,它实现了最小的AlphaEvolve类似循环. "LLM"是一个stdlib代理,它为计算目标函数的程序提出了小的语法突变. "评估器"的测量意味着在保留的测试点上出现的二次错误.
+`code/main.py` 在一个玩具符号回归问题上实现了最小化的 AlphaEvolve 风格循环。其中的“LLM”是一个仅使用标准库的代理，会对用于计算目标函数的程序提出小型语法变异；“评估器”则测量留出测试点上的均方误差。
 
-观察:
+请观察：
 
-- 如何在几代人中得到最佳成绩.
-- 如何让各种解决方案保持活力,使循环不到当地最低点.
-- 如何将延续的测试 (仅进行训练的评估者) 移除使循环非常适合.
+- 最佳分数如何随世代不断改善。
+- MAP-elites 网格如何保留多样化解，使循环不会收敛到局部最小值。
+- 移除留出测试（只使用训练评估器）后，循环如何出现严重过拟合。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-evaluator-rigor-audit.md`在一个新领域考虑一个AlphaEvolve样式的循环的前提是:你的评估员是否真的能发现你关心的失败?
+`outputs/skill-evaluator-rigor-audit.md` 是在新领域考虑采用 AlphaEvolve 风格循环之前的必要条件：你的评估器真的能够捕捉你关心的故障吗？
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`除置评器 (旗)`--no-holdout`量化过度适应.
+1. 运行 `code/main.py`，记录最佳分数轨迹。禁用留出评估器（标志 `--no-holdout`）并重新运行，量化过拟合程度。
 
-2. 阅读MAP精英格格的AlphaEvolve论文第3节.为一个新的问题 (例如编译器优化通过) 设计一个特征向量描述符,使搜索保持多样性.
+2. 阅读 AlphaEvolve 论文中有关 MAP-elites 网格的第 3 节。为一个新问题（例如编译器优化 pass）设计特征向量描述符，使搜索保持多样性。
 
-3. 读取论文的附录F,并用三句话解释为什么对这个问题的评估器特别容易得到正确,以及为什么大多数领域不像它.
+3. 4×4 矩阵乘法的 48 次乘法结果，在 56 年后超越了 Strassen 的 49 次上界。阅读论文附录 F，用三句话解释为什么这个问题的评估器特别容易正确实现，以及大多数领域为何并非如此。
 
-4. 提出一个领域, AlphaEvolve 失败,确定评估者在哪里断裂,以及为什么.
+4. 提出一个 AlphaEvolve 会失败的领域，准确指出评估器会在哪里失效以及原因。
 
-5. 对于您所熟悉的域名,请写出您将使用的评估器签名.包括 (a) 准确性条件, (b) 性能指标, (c) 持久的输入生成规则, (d) 至少一个反奖励黑客检查.
+5. 针对你熟悉的领域编写评估器签名。包括：（a）正确性条件；（b）性能指标；（c）留出输入生成规则；（d）至少一项防奖励黑客检查。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |---|---|---|
-| AlphaEvolve | "DeepMind's evolutionary coding agent" | Gemini + program database + machine-checkable evaluator |
-| MAP-elites | "Diversity-preserving archive" | Grid keyed by feature vectors; each cell holds the best variant with that descriptor |
-| Island model | "Parallel evolution subpopulations" | Independent populations that migrate periodically; prevents premature convergence |
-| Machine-checkable evaluator | "Deterministic oracle" | A unit test, simulator, or benchmark the LLM cannot fake — a prerequisite for this loop |
-| Reward hacking | "Optimizing the measure, not the goal" | Loop finds a way to maximize score without doing the intended task |
-| Seed program | "The starting point" | An initial correct-but-suboptimal program the loop evolves from |
-| Held-out evaluator | "Evaluation data the LLM never saw" | Inputs generated at evaluation time to prevent memorization |
+| AlphaEvolve | “DeepMind 的进化式编码智能体” | Gemini + 程序数据库 + 机器可检查的评估器 |
+| MAP-elites | “保持多样性的档案” | 按特征向量索引的网格；每个单元保存具有该描述符的最佳变体 |
+| 岛屿模型 | “并行进化子种群” | 定期迁移的独立种群；防止过早收敛 |
+| 机器可检查的评估器 | “确定性判定器” | LLM 无法伪造的单元测试、模拟器或基准；是这种循环的前提 |
+| 奖励黑客 | “优化指标，而非目标” | 循环找到一种无需完成预期任务也能最大化分数的方法 |
+| 种子程序 | “起点” | 循环从中开始进化的、初始正确但次优的程序 |
+| 留出评估器 | “LLM 从未见过的评估数据” | 在评估时生成输入，防止记忆 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Novikov et al. (2025). AlphaEvolve: A coding agent for scientific and algorithmic discovery](https://arxiv.org/abs/2506.13131)完整的报纸.
-- [DeepMind blog on AlphaEvolve](https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/) 供应商的报表,结果.
-- [AlphaEvolve results repository](https://github.com/google-deepmind/alphaevolve_results)发现算法,包括48-mul 4x4matmul.
-- [Romera-Paredes et al. (2023). Mathematical discoveries from program search with LLMs (FunSearch)](https://www.nature.com/articles/s41586-023-06924-6)前任系统.
-- [Anthropic — Responsible Scaling Policy v3.0 (Feb 2026)](https://anthropic.com/responsible-scaling-policy/rsp-v3-0)将评估者自主化作为一个关键的研究方向.
+- [Novikov 等（2025），AlphaEvolve：用于科学与算法发现的编码智能体](https://arxiv.org/abs/2506.13131)——完整论文。
+- [DeepMind 的 AlphaEvolve 博文](https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/)——包含研究结果的厂商说明。
+- [AlphaEvolve 结果仓库](https://github.com/google-deepmind/alphaevolve_results)——已发现的算法，包括 48 次乘法的 4×4 矩阵乘法。
+- [Romera-Paredes 等（2023），使用 LLM 程序搜索进行数学发现（FunSearch）](https://www.nature.com/articles/s41586-023-06924-6)——前身系统。
+- [Anthropic——负责任扩展策略 v3.0（2026 年 2 月）](https://anthropic.com/responsible-scaling-policy/rsp-v3-0)——把受评估器约束的自主性视为关键研究方向。
