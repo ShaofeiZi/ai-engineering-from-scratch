@@ -1,38 +1,38 @@
-# 在 Kubernetes 上自动扩展GPU 卡珀特,KAI定制器,帮派定制器
+# Kubernetes 上的 GPU 自动扩缩容：Karpenter、KAI Scheduler 与 Gang Scheduling
 
-> 没有一个层. 卡珀特供应节点动态 (低于1分钟,比集群自动测量器快40%). 卡伊计划器处理团队安排,拓意识和等级队列,它防止7/8的部分分配陷,其中七个节点在一个缺失的GPU上等待和燃烧. 应用级自动量化器 (NVIDIA Dynamo Planner, llm-d Workload Variant Autoscaler) 根据推理特定信号进行量化,排队深度,KV缓存使用,而不是CPU/DCGM工作周期. 经典的HPA陷是这样的`DCGM_FI_DEV_GPU_UTIL`作为一个任务周期测量:100%可以是10个请求或100个. vLLM预先分配KV缓存,所以内存永远不会触发缩放.`WhenEmptyOrUnderutilized`在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户在线用户网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站网站
+> 这不是一层自动扩缩，而是三层协同。Karpenter 负责动态供给节点，通常不到一分钟就能拉起新节点，比 Cluster Autoscaler 快约 40%。KAI Scheduler 负责 gang scheduling、拓扑感知和分层队列，避免“8 张卡只凑齐 7 张”的部分分配陷阱，也就是 7 个节点空等最后 1 张 GPU、持续烧钱的局面。应用层自动扩缩器，例如 NVIDIA Dynamo Planner 和 llm-d Workload Variant Autoscaler，则根据推理专用信号扩缩副本，比如队列深度和 KV cache 利用率，而不是 CPU 或 DCGM duty cycle。经典 HPA 的误区在于，`DCGM_FI_DEV_GPU_UTIL` 本质上是占空比指标：100% 利用率既可能对应 10 个请求，也可能对应 100 个请求。vLLM 还会预分配 KV cache 内存，所以显存指标几乎不会触发缩容。本课会教你把这三层组合起来，并避开 Karpenter 默认的 `WhenEmptyOrUnderutilized` 策略，因为它会在推理进行到一半时直接终止还在运行的 GPU 作业。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy queue-depth autoscaler simulator)
-**Prerequisites:** Phase 17 · 02 (Inference Platform Economics), Phase 17 · 04 (Serving Engine Internals)
-**Time:** ~75 minutes
+**Type:** 学习
+**Languages:** Python（标准库，玩具级队列深度自动扩缩模拟器）
+**Prerequisites:** 第 17 阶段 · 02（推理平台经济学），第 17 阶段 · 04（服务引擎内部原理）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 绘制三个自动扩展层 (节点配置,团队安排,应用级别) 并命名每个层使用的工具.
-- 解释原因`DCGM_FI_DEV_GPU_UTIL`是vLLM的错误HPA信号,并命名两个替代 (排队深度,KV缓存使用).
-- 描述团队规划和部分分配故障模式 KAI Scheduler 防止 (7 个8 个GPU 置).
-- 提及卡珀特集团政策 (`WhenEmptyOrUnderutilized`) 终止GPU工作,并指出2026年安全的替代方案.
+- 画出三层自动扩缩架构图，说明节点供给、gang scheduling、应用层扩缩分别对应什么工具。
+- 解释为什么 `DCGM_FI_DEV_GPU_UTIL` 不适合拿来给 vLLM 做 HPA 信号，并说出两个替代指标，例如队列深度和 KV cache 利用率。
+- 描述 gang scheduling 的含义，以及 KAI Scheduler 避免的部分分配故障模式，也就是“8 张卡只到位 7 张”时整批任务空等。
+- 说出 Karpenter 会误杀运行中 GPU 作业的 consolidation policy `WhenEmptyOrUnderutilized`，并指出 2026 年更安全的替代配置。
 
 ## 问题
 
-你的团队在Kubernetes上提供了法学服务.`DCGM_FI_DEV_GPU_UTIL`现在,我们在电脑上看到一个电脑,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它,它可以使用它可以使用它,它可以使用它,它可以使用它,它可以使用它可以使用它,它可以使用它,它可以使用它,它可以使用它可以使用它,它可以使用它,它可以使用它可以使用它.
+你的团队在 Kubernetes 上部署了一个 LLM serving 服务。你把 `DCGM_FI_DEV_GPU_UTIL` 作为 HPA 的扩缩信号。业务高峰期间，服务的 GPU utilization 一直卡在 100%。HPA 没有扩容，因为它认为系统已经“满载”。你手动多加了一个副本，TTFT 立刻下降。可 HPA 还是没有动。问题不在容量，而在信号本身误导了你。
 
-单独使用 Cluster Autoscaler 为节点. 一个 1M-代币提示到达凌晨2点; 集群花费3分钟的节点配置, 请求时间.
+另一边，你用 Cluster Autoscaler 来扩节点。凌晨 2 点来了一个 1M-token 的长提示词，集群花了 3 分钟才供给出新节点，结果请求直接超时。
 
-单独的,你部署一个70B模型需要8个GPU在2个节点上.集群有7个GPU免费和1个分布在3个节点上.集群自动测量器为1个缺失的GPU提供一个节点.七个节点等待4分钟燃烧钱,而Kubernetes得到最后一个GPU.
+再另一边，你上线了一个需要跨 2 个节点、总计 8 张 GPU 的 70B 模型。集群当前空闲了 7 张 GPU，剩下那第 8 张零散分布在 3 个节点上。Cluster Autoscaler 为最后那 1 张 GPU 新拉了一个节点。结果其余 7 个节点上的资源干等了 4 分钟，一边烧钱，一边等 Kubernetes 把最后那张卡补齐。
 
-两个层,三个不同的故障模式. 2026年 GPU 意识到自动扩展不是"启动HPA". 它是构成节点配置,团队规划,和应用信号自动扩展.
+三层架构，三种完全不同的失败模式。到了 2026 年，GPU-aware autoscaling 早就不是“把 HPA 打开”这么简单，而是要把节点供给、gang scheduling 和应用信号扩缩容组合起来。
 
 ## 概念
 
-### 层1 节点供应 (卡普门特)
+### 第 1 层：节点供给（Karpenter）
 
-卡宾特在45-60秒内观察待定的 pods和储备节点 (集群自动测量器通常需要90-120秒用于GPU节点).它根据数据的动态选择实例类型.`NodePool`限制如果你的小组需要8个H100,并且集群没有匹配的节点,
+Karpenter 监控 pending pods，并在大约 45 到 60 秒内供给新节点。相比之下，Cluster Autoscaler 给 GPU 节点扩容通常要 90 到 120 秒。它会按照 `NodePool` 约束动态选择实例类型。如果你的 pod 需要 8 张 H100，而集群里没有匹配节点，Karpenter 会直接创建合适的新节点，而不是去扩一个现有节点组。
 
-**The consolidation trap**卡宾特的默认`consolidationPolicy: WhenEmptyOrUnderutilized`对于 GPU 池来说,它会终止运行 GPU 节点,将 pods 迁移到更便宜的正确尺寸实例.对于推断工作负载,这意味着驱逐运行请求和重新加载70B 模型在新节点上.损失是数分钟的容量加上请求失败.
+**consolidation trap**：Karpenter 默认的 `consolidationPolicy: WhenEmptyOrUnderutilized` 对 GPU 池非常危险。它会为了把 pod 迁移到更便宜、规格更“合适”的实例上，直接终止一台还在运行的 GPU 节点。对推理工作负载来说，这意味着正在处理的请求会被驱逐，70B 模型还得在新节点上重新加载。代价通常是数分钟容量损失，再加上一批请求失败。
 
-对于GPU池的安全设置:
+适用于 GPU 池的安全配置如下：
 
 ```yaml
 disruption:
@@ -40,100 +40,100 @@ disruption:
   consolidateAfter: 1h
 ```
 
-让卡宾特在一个小时后整合真正空的节点,但从来没有驱逐出一个正在运行的工作.
+这表示 Karpenter 只会在节点真正空闲并持续一小时后再做整合，而不会驱逐仍在运行的 GPU 作业。
 
-### 层2 帮派安排 (KAI安排器)
+### 第 2 层：gang scheduling（KAI Scheduler）
 
-卡伊定制器 (随后改名为"卡普"项目) 处理默认的 kube-scheduler 不:
+KAI Scheduler 负责默认 kube-scheduler 做不好的那一部分。这个项目早期代号叫 “Karp”，后来改名。
 
-**Gang scheduling**计划所有或什么都.一个需要8个GPU的分布式推理器,或者8个GPU都开始在一起,或者没有.没有这个,你得到了部分分配陷:8个子中的7个开始,等待无限时间,烧钱.
+**Gang scheduling**：要么全部一起调度成功，要么一个都不启动。一个分布式推理工作负载如果需要 8 张 GPU，那就必须 8 张一次到位；否则就全部等待。没有这一层，就会落入部分分配陷阱：8 个 pod 里先起来 7 个，然后无限等待最后 1 个，白白占资源、持续烧钱。
 
-**Topology awareness**知道哪些GPU共享NVLink,这些GPU都坐在同一架子上,它们之间有InfiniBand. 根据此,放置 pods.一个DeepSeek-V3 67B的子平行工作负载必须保持在一个NVLink域;KAI Scheduler尊重这一点.
+**拓扑感知**：它知道哪些 GPU 共享 NVLink，哪些 GPU 位于同一机架，哪些节点之间有 InfiniBand，可以据此做合理放置。例如 DeepSeek-V3 67B 的 tensor-parallel 工作负载必须放在同一个 NVLink 域内，KAI Scheduler 会尊重这一点。
 
-**Hierarchical queues**多个团队以优先级和配额竞争同一个GPU池.A团队的生产只会在优先规则允许的情况下被B团队的训练工作先进.
+**分层队列**：多个团队共享同一个 GPU 池时，KAI 能根据优先级和配额来调度。团队 A 的线上高优先级任务，是否能被团队 B 的训练作业抢占，取决于队列中的优先级规则。
 
-作为二级调度器,KAI与 kube-scheduler一起部署;您注释工作负载使用它.Ray和vLLM生产堆都集成.
+KAI 通常作为 kube-scheduler 旁边的辅助调度器部署，你通过给工作负载加注解来指定它。Ray 和 vLLM 的生产栈都已经可以和它集成。
 
-### 层3 应用级信号
+### 第 3 层：应用层信号
 
-**The HPA trap**其他`DCGM_FI_DEV_GPU_UTIL`测量GPU是否在每个样本中段工作.100%的利用可能意味着10个同时请求或100个;GPU无论如何都忙.在工作周期上进行扩展是盲目扩展.
+**HPA 的经典误区**：`DCGM_FI_DEV_GPU_UTIL` 是一个 duty-cycle 指标，它只衡量 GPU 在采样周期内是否一直有活干。100% utilization 既可能意味着只有 10 个并发请求，也可能意味着已经积压到 100 个请求。GPU 都是满忙状态，但系统拥塞程度完全不同。用 duty cycle 来扩缩容，本质上是在盲扩。
 
-更糟糕的是,vLLM和类似的引擎预先分配KV缓存 (高达 `--gpu-memory-utilization`记忆使用率即使是一次请求,也保持接近90%.
+更麻烦的是，vLLM 这类引擎会预先占用 KV cache 内存，最高可以顶到 `--gpu-memory-utilization` 所设的上限。即使系统里只有 1 个请求，显存使用率也可能接近 90%。所以基于内存的 HPA 根本不会触发缩容。
 
-**2026 replacement signals**其他:
+**2026 年更合适的替代信号**：
 
-- 排队深度 (等待预填的请求数量).
-- 存储器存储器使用量 (区块的多少分量被分配到活跃序列中).
-- 按复制 P99 TTFT (您的SLA信号).
-- 产量 (每秒满足所有SLO的要求).
+- 队列深度，也就是等待进入 prefill 的请求数量。
+- KV cache 利用率，也就是活跃序列实际占用的 block 比例。
+- 单副本的 P99 TTFT，也就是你的 SLA 信号。
+- Goodput，也就是每秒真正满足全部 SLO 的请求数。
 
-根据NVIDIA 动态规划器和 llm-d 工作负载变量自动测量器的使用,它们完全取代了HPA.
+NVIDIA Dynamo Planner 和 llm-d Workload Variant Autoscaler 会消费这些信号来调整副本数。在 LLM serving 场景里，它们往往是对传统 HPA 的直接替代。
 
-### 什么时候使用
+### 什么时候用什么
 
-| Scale decision | Tool |
+| 扩缩决策 | 工具 |
 |----------------|------|
-| Add/remove nodes | Karpenter |
-| Schedule multi-GPU jobs | KAI Scheduler |
-| Add/remove replicas | Dynamo Planner / llm-d WVA (or custom HPA on queue depth) |
-| Choose GPU type | Karpenter NodePool |
-| Preempt low-priority | KAI Scheduler queues |
+| 增减节点 | Karpenter |
+| 调度多 GPU 作业 | KAI Scheduler |
+| 增减副本 | Dynamo Planner / llm-d WVA（或基于队列深度自定义 HPA） |
+| 选择 GPU 类型 | Karpenter NodePool |
+| 抢占低优先级任务 | KAI Scheduler queues |
 
-### 解密的预填/解码复杂化了一切
+### 解耦 prefill / decode 会让问题更复杂
 
-如果运行分类的预填/解码 (阶段17·17),则有两个类,具有不同的扩展触发器:排列深度的预填尺度,KV缓存压力上的解码尺度. llm-d将这些分开.`Services`试着把一个HPA放在两者面前.
+如果你采用了解耦的 prefill / decode 架构（Phase 17 · 17），那就会同时存在两类 pod，而且它们的扩缩信号不同：prefill pod 应该按队列深度扩缩，decode pod 应该按 KV cache 压力扩缩。llm-d 会把它们暴露成不同的 `Services`，并分别配置各自的 HPA。不要试图在这两类流量前面共用一个 HPA。
 
-### 寒冷开始也在这个地方重要
+### 这里同样要考虑 cold start
 
-卡宾特的45-60秒加热加上20GB模型负载加上发动机 init意味着零请求需要2-5分钟.保持一个温暖的池 (`min_workers=1`) 对于SLO关键路径,或在应用层使用Modal样式的检查点.
+冷启动缓解（Phase 17 · 10）在这里也很关键，因为节点供给时间会直接暴露给用户。Karpenter 需要 45 到 60 秒来拉起新节点，再加上 20GB 模型加载和引擎初始化，从零启动的一次请求很容易就要等 2 到 5 分钟。对于 SLO 敏感路径，你应该保留一个 warm pool，也就是 `min_workers=1`；或者在应用层使用类似 Modal 的 checkpointing 方案。
 
-### 你应该记住的数字
+### 这些数字你应该记住
 
-- 卡珀特节点供应: ~ 45-60s vs 集群自动测量器 ~ 90-120s (GPU节点).
-- 卡伊计划器防止部分分配废物 7/8陷.
-- `DCGM_FI_DEV_GPU_UTIL`作为HPA信号:断裂;使用队列深度或KV利用.
-- 匠`WhenEmptyOrUnderutilized`停止运行GPU工作. 使用`WhenEmpty + consolidateAfter: 1h`为了推断.
+- Karpenter 供给节点大约需要 45 到 60 秒，而 Cluster Autoscaler 给 GPU 节点扩容通常要 90 到 120 秒。
+- KAI Scheduler 能避免部分分配浪费，也就是典型的 “7-of-8” 陷阱。
+- `DCGM_FI_DEV_GPU_UTIL` 作为 HPA 信号是错误的；应该改用队列深度或 KV 利用率。
+- Karpenter 的 `WhenEmptyOrUnderutilized` 会终止仍在运行的 GPU 作业。做推理时，更安全的配置是 `WhenEmpty + consolidateAfter: 1h`。
 
 ```figure
 autoscaling
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`模拟一个在一个破裂的GPU工作负载上进行三层自动扩展器. 进行了天真的HPA (职务周期),排队深度HPA和KAI团队计划的扩展. 报告未满的请求,空置GPU分钟和复合分数.
+`code/main.py` 会模拟一个面向突发 GPU 工作负载的三层自动扩缩系统。它比较三种方案：天真的 duty-cycle HPA、基于队列深度的 HPA，以及带有 KAI gang scheduling 的扩缩策略。输出结果包括未满足请求数、GPU 空转分钟数，以及一个综合评分。
 
-## 运送它
+## 交付物
 
-这一课产生了`outputs/skill-gpu-autoscaler-plan.md`鉴于集群拓,工作负载形状和SLO,它设计了一个三层的自动扩展计划.
+本课会产出 `outputs/skill-gpu-autoscaler-plan.md`。给定集群拓扑、工作负载形态和 SLO，它会设计一份三层自动扩缩方案。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`在一个繁忙的工作量下, 无辜的职务周期HPA会放下排队深度HPA捕获的请求? 区别来自于什么?
-2. 设计一个Karpenter NodePool,用于H100 SXM5上服务Llama 3.3 70B FP8的集群. 指定 `capacity-type`现在`disruption.consolidationPolicy`现在`consolidateAfter`并且可以将非GPU工作负载远离这些节点.
-3. 诊断 是卡宾特,Kube-Scheduler,或KAI Scheduler?哪些指标证实?
-4. 选择一个信号,以自动化分类的预填和一个不同的信号,以解码.
-5. 计算成本`WhenEmptyOrUnderutilized`在24×7生产服务中,平均每天有60次请求降低事件,P99 TTFT>10s.
+1. 运行 `code/main.py`。在突发工作负载下，天真的 duty-cycle HPA 会漏掉多少本应由队列深度 HPA 捕获的请求？差异来自哪里？
+2. 为一个在 H100 SXM5 上服务 Llama 3.3 70B FP8 的集群设计 Karpenter NodePool。明确写出 `capacity-type`、`disruption.consolidationPolicy`、`consolidateAfter`，以及一个能把非 GPU 工作负载挡在外面的 taint。
+3. 你的团队反馈部署一直卡在 Pending，报错是“集群里明明有 GPU，但 pod 就是调度不上去”。请诊断问题在 Karpenter、kube-scheduler 还是 KAI Scheduler，并说明要看哪些指标来确认。
+4. 为解耦的 prefill pod 选一个自动扩缩信号，再为 decode pod 选另一个不同的信号，并分别说明理由。
+5. 计算 `WhenEmptyOrUnderutilized` 这个 consolidation trap 在一个 24x7 线上服务中的成本。已知它平均每天触发 60 次导致请求掉落的事件，并且 P99 TTFT 都高于 10 秒。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| Karpenter | "the node provisioner" | Kubernetes node autoscaler; sub-minute provisioning |
-| Cluster Autoscaler | "the old scaler" | Kubernetes node autoscaler predecessor; slower, group-based |
-| KAI Scheduler | "the GPU scheduler" | Secondary scheduler for gang + topology + queues |
-| Gang scheduling | "all or nothing" | Schedule N pods atomically or defer all of them |
-| Topology awareness | "rack-aware" | Place pods based on NVLink/IB/rack placement |
-| `DCGM_FI_DEV_GPU_UTIL` | "GPU utilization" | Duty-cycle metric; NOT a scaling signal for LLMs |
-| Queue depth | "waiting requests" | Correct HPA signal for prefill-bound scaling |
-| KV cache utilization | "memory pressure" | Correct HPA signal for decode-bound scaling |
-| Consolidation | "Karpenter consolidation" | Node termination to cheaper instance type |
-| `WhenEmpty + 1h` | "safe consolidation" | Policy that doesn't evict running GPU jobs |
+| Karpenter | “节点供给器” | Kubernetes 的节点自动扩缩器，能做到亚分钟级供给 |
+| Cluster Autoscaler | “老一代扩缩器” | Karpenter 之前的 Kubernetes 节点自动扩缩方案，速度更慢，基于节点组 |
+| KAI Scheduler | “GPU 调度器” | 提供 gang scheduling、拓扑感知和队列管理的辅助调度器 |
+| Gang scheduling | “要么全上，要么全等” | N 个 pod 只有在能整体调度成功时才会一起启动，否则全部延后 |
+| Topology awareness | “感知机架与互联拓扑” | 基于 NVLink、InfiniBand、机架位置等信息来放置 pod |
+| `DCGM_FI_DEV_GPU_UTIL` | “GPU 利用率” | Duty-cycle 指标，不适合作为 LLM 的扩缩信号 |
+| Queue depth | “排队请求数” | 适合 prefill 扩缩的 HPA 信号 |
+| KV cache utilization | “KV cache 压力” | 适合 decode 扩缩的 HPA 信号 |
+| Consolidation | “Karpenter 整合” | 为了迁移到更便宜实例类型而终止节点 |
+| `WhenEmpty + 1h` | “安全整合策略” | 不会驱逐运行中 GPU 作业的整合配置 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [KAI Scheduler GitHub](https://github.com/kai-scheduler/KAI-Scheduler)设计文件和配置示例.
-- [Karpenter Disruption Controls](https://karpenter.sh/docs/concepts/disruption/)整合政策语义和GPU安全的默认.
-- [NVIDIA — Disaggregated LLM Inference on Kubernetes](https://developer.nvidia.com/blog/deploying-disaggregated-llm-inference-workloads-on-kubernetes/) 动力计划器扩展信号.
-- [Ray docs — KAI Scheduler for RayClusters](https://docs.ray.io/en/latest/cluster/kubernetes/k8s-ecosystem/kai-scheduler.html)射线集成模式.
-- [AWS EKS Compute and Autoscaling Best Practices](https://docs.aws.amazon.com/eks/latest/best-practices/aiml-compute.html)管理-库伯内特斯具体指导.
-- [llm-d GitHub](https://github.com/llm-d/llm-d) 工作负载变量自动尺设计.
+- [KAI Scheduler GitHub](https://github.com/kai-scheduler/KAI-Scheduler) — 设计文档与配置示例。
+- [Karpenter 中断控制](https://karpenter.sh/docs/concepts/disruption/) — 节点整合策略的语义，以及适合 GPU 的安全默认值。
+- [NVIDIA — Disaggregated LLM Inference on Kubernetes](https://developer.nvidia.com/blog/deploying-disaggregated-llm-inference-workloads-on-kubernetes/) — Dynamo Planner 所使用的扩缩信号。
+- [Ray docs — KAI Scheduler for RayClusters](https://docs.ray.io/en/latest/cluster/kubernetes/k8s-ecosystem/kai-scheduler.html) — Ray 的集成方式。
+- [AWS EKS 计算与自动扩缩最佳实践](https://docs.aws.amazon.com/eks/latest/best-practices/aiml-compute.html) — EKS 上计算与自动扩缩的最佳实践。
+- [llm-d GitHub](https://github.com/llm-d/llm-d) — Workload Variant Autoscaler 的设计。
