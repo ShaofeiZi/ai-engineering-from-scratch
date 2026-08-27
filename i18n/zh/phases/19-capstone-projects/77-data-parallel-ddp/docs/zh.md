@@ -124,6 +124,6 @@ python3 code/main.py
 
 - [PyTorch DistributedDataParallel docs](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html)
 - [PyTorch DDP internals tutorial](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
-- [Li et al, PyTorch Distributed: Experiences on Accelerating Data Parallel Training](https://arxiv.org/abs/2006.15704)
+- [Li 等，《PyTorch Distributed: Experiences on Accelerating Data Parallel Training》](https://arxiv.org/abs/2006.15704)
 - 第 19 阶段第 76 课：DDP 建立在这些集合通信之上
 - 第 19 阶段第 78 课：ZeRO 用 reduce_scatter 取代逐参数 allreduce

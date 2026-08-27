@@ -152,8 +152,8 @@ python3 code/main.py
 
 ## 进一步阅读
 
-- [Anthropic, Building search and retrieval](https://www.anthropic.com/news/contextual-retrieval)
+- [Anthropic, 构建搜索与检索](https://www.anthropic.com/news/contextual-retrieval)
 - [Pinterest, MCP internal search](https://medium.com/pinterest-engineering) - 参考生产架构
-- [Ragas: Automated Evaluation of RAG Pipelines](https://docs.ragas.io)
+- [Ragas: RAG 流水线自动化评测](https://docs.ragas.io)
 - 第 11 阶段第 06 课——RAG 基础
 - 第 19 阶段第 64-68 课——本课组合使用的组件

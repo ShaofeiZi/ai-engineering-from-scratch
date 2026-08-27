@@ -515,6 +515,6 @@ f3-bootstrap-resample
 | Type I error | 假阳性，在 H0 为真时错误地拒绝 H0 |
 | Type II error | 假阴性，在 H0 为假时未能拒绝 H0 |
 | Statistical power | 正确拒绝错误 H0 的概率，等于 1 减第二类错误率 |
-| Central limit theorem | 随样本量增加，样本均值会趋近正态分布 |
+| 中心极限定理 | 随样本量增加，样本均值会趋近正态分布 |
 | Parametric test | 假设数据服从特定分布，通常是正态分布 |
 | Non-parametric test | 不做分布假设，通常基于秩或符号进行检验 |

@@ -113,11 +113,11 @@ python3 code/main.py
 | Session replay | "Trace playback" | 为了调试，逐步回放过去的运行过程 |
 | RAG relevancy | "Retrieval quality" | 检索出来的上下文是否真的匹配查询 |
 | Trace clustering | "Behavioral grouping" | 对相似运行聚类，用于检测漂移 |
-| Guardrail enforcement | "Policy at log time" | 对日志内容做 PII / toxicity / scope 检查 |
+| Guardrail enforcement | "记录时执行策略" | 对日志内容做 PII / toxicity / scope 检查 |
 
 ## 延伸阅读
 
 - [Langfuse docs](https://langfuse.com/) — tracing、evals、prompt management
 - [Arize Phoenix docs](https://docs.arize.com/phoenix) — auto-instrumentation、drift
-- [Comet Opik](https://www.comet.com/site/products/opik/) — optimization + guardrails
+- [Comet Opik](https://www.comet.com/site/products/opik/) — 优化与护栏
 - [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) — 三个平台共同消费的 schema

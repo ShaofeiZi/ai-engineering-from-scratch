@@ -1,6 +1,6 @@
 # Constitutional AI 与规则覆盖
 
-> Anthropic 于 2026 年 1 月 22 日公开的 Claude Constitution 长达 79 页，并以 CC0 发布。它把对齐方法从基于规则（rule-based）推向基于推理（reason-based），并明确给出四层优先级：（1）安全与支持人类监督；（2）伦理；（3）Anthropic 指南；（4）有帮助性。行为约束被分成两类：一类是硬编码禁令（hardcoded prohibitions），比如提升生物武器能力和 CSAM，运营方和用户都无法覆盖；另一类是软编码默认值（soft-coded defaults），运营方可以在规定边界内调节。其 2022 年原始路线（Bai 等）是通过自我批评和基于宪章的 RLAIF 来训练无害性。需要坦白的是：基于推理的对齐能否成立，取决于模型能否把原则泛化到未曾预料的情境中。Anthropic 自己 2023 年的参与式实验显示，公众原则与公司原则之间大约有 50% 的分歧，而 2026 版 Constitution 并没有吸收这部分结果。
+> Anthropic 于 2026 年 1 月 22 日公开的 Claude Constitution 长达 79 页，并以 CC0 发布。它把对齐方法从基于规则（rule-based）推向基于推理（reason-based），并明确给出四层优先级：（1）安全与支持人类监督；（2）伦理；（3）Anthropic 指南；（4）有帮助性。行为约束被分成两类：一类是硬编码禁令（hardcoded prohibitions），比如提升生物武器能力和 CSAM，运营方和用户都无法覆盖；另一类是软编码默认值（soft-coded defaults），运营方可以在规定边界内调节。其 2022 年原始路线（Bai 等）是通过自我批评和基于宪章的 RLAIF 来训练无害性。需要坦白的是：基于推理的对齐能否成立，取决于模型能否把原则泛化到未曾预料的情境中。Anthropic 自己 2023 年的参与式实验显示，公众原则与公司原则之间大约有 50% 的分歧，而 2026 版宪章（Constitution）并没有吸收这部分结果。
 
 **Type:** 学习
 **Languages:** Python（stdlib，四层优先级解析器）
@@ -26,7 +26,7 @@
 
 当不同层发生冲突时，高层覆盖低层。它的结构和 Unix priority 或网络 QoS 很像，目标不是让每个单一维度都做到最好，而是让冲突时的分辨规则足够稳定、可预测。
 
-### Hardcoded prohibitions 与 soft-coded defaults
+### 硬编码禁令与软编码默认值
 
 **Hardcoded：**
 - 生物武器 / CBRN 能力提升
@@ -34,15 +34,15 @@
 - 针对关键基础设施的攻击
 - 在用户直接询问时，欺骗用户关于模型自身身份
 
-这些都不能被 operator 覆盖，也不能被 user 覆盖。能在模型权重层执行的，会通过 RLHF / Constitutional AI 训练固化进去；不能只靠权重完成的，则要在 inference 层继续拦住。
+这些都不能被运营方（operator）覆盖，也不能被用户（user）覆盖。能在模型权重层执行的，会通过 RLHF / Constitutional AI 训练固化进去；不能只靠权重完成的，则要在推理层（inference layer）继续拦住。
 
-**Soft-coded defaults（operator 可调）：**
+**软编码默认值（operator 可调）：**
 - 响应长度默认值
 - 主题范围，也就是模型是否要拒绝超出部署范围的话题
 - 风格，例如 formal 还是 casual
 - 工具使用模式
 
-这些 operator 调整都必须发生在明确声明过的边界内部。operator 不能靠“换个名字”来实质性移除 hardcoded prohibitions。
+这些运营方调整都必须发生在明确声明过的边界内部。运营方不能靠“换个名字”来实质性移除 hardcoded prohibitions。
 
 ### 2022 年的 CAI 训练路线
 
@@ -55,7 +55,7 @@
 
 得到的结果，是模型会用“基于原则的解释”来拒绝有害请求，而不是简单粗暴的一刀切拒绝。2026 版 Constitution 则是在这条训练脉络的后继基础上，再加上针对显式四层优先级的额外后训练。
 
-### Reason-based alignment 能抓住什么，又会漏掉什么
+### 基于推理的对齐能抓住什么，又会漏掉什么
 
 **能抓住的：**
 - 一些由允许的基本元素组合出来、但原则明显仍然适用的新情况。
@@ -71,7 +71,7 @@
 
 Anthropic 在 2023 年做过一次实验，把公司自己撰写的 constitution 和通过公众输入整理出的 constitution 做比较，后者大约来自 1,000 名美国受访者。两份版本的原则只在约 50% 的内容上达成一致。它们分歧的地方，有些问题上公众版更严格，例如政治内容处理；另一些问题上则更宽松，例如是否应主动披露 AI 身份。2026 版 Constitution 没有吸收这部分公众来源的发现，这也是该路线一个被明文记录的张力点。
 
-### 为什么 hardcoded prohibitions 仍然必需
+### 为什么硬编码禁令仍然必需
 
 单靠 reason-based alignment，没有办法真正封住长尾。一个攻击者如果能让模型接受某个前提，比如“我们是一家持牌的生物武器研究实验室”，往往就能绕过那些依赖具体情境推理的原则。hardcoded prohibitions 不会因为前提包装而弯曲。它们对应的是第 14 课里所说的“hard constitutional limit”，只是这次它位于对齐层（alignment layer）。
 
@@ -85,11 +85,11 @@ mx-priority-tiers
 
 ## 用起来
 
-`code/main.py` 实现了一个最小化的四层优先级 resolver。它接收一个拟议动作，以及该动作在 safety、ethics、guidelines、helpfulness 四个维度上的评估结果，然后返回允许执行、拒绝执行，或返回一个修改后的动作。驱动程序包含几个小案例：明确允许、明确拒绝、hardcoded prohibition，以及跨层冲突的模糊案例。
+`code/main.py` 实现了一个最小化的四层优先级解析器（resolver）。它接收一个拟议动作，以及该动作在 safety、ethics、guidelines、helpfulness 四个维度上的评估结果，然后返回允许执行、拒绝执行，或返回一个修改后的动作。驱动程序包含几个小案例：明确允许、明确拒绝、硬编码禁令（hardcoded prohibition），以及跨层冲突的模糊案例。
 
 ## 交付物
 
-`outputs/skill-constitution-review.md` 用来审计某个部署的宪法层（constitutional layer）：哪些部分是 hardcoded，哪些是 soft-coded，operator 可以调哪些默认值，以及真实的冲突解决顺序是否真的遵守这四层层级。
+`outputs/skill-constitution-review.md` 用来审计某个部署的宪法层（constitutional layer）：哪些部分是硬编码的（hardcoded），哪些是软编码的（soft-coded），运营方（operator）可以调哪些默认值，以及真实的冲突解决顺序是否真的遵守这四层层级。
 
 ## 练习
 
@@ -97,24 +97,24 @@ mx-priority-tiers
 
 2. 阅读公开发布的 Claude Constitution（79 页，CC0）。找出一条你认为表述不够具体的原则，写两段话说明它究竟模糊在哪，以及你会怎样把它改得更精确。
 
-3. 为一个 customer-support agent 设计一组 soft-coded defaults。哪些是 operator 可以调的？哪些绝不能碰？分别说明边界理由。
+3. 为一个 customer-support agent 设计一组软编码默认值（soft-coded defaults）。哪些是运营方（operator）可以调的？哪些绝不能碰？分别说明边界理由。
 
 4. 阅读 Bai et al. 2022 的 CAI 论文。描述一种场景：在这种场景里，Constitutional AI 的 critique-and-revise 循环会比一条简单明确的硬规则产生更糟的结果。指出它属于哪一类问题。
 
-5. Anthropic 2023 年的参与式实验显示，公众原则与公司原则之间大约有 50% 分歧。选择一个对生产部署真正重要的类别，例如政治中立，设计一种机制，让 operator 可以表达自己的价值取向，同时 hardcoded prohibitions 仍然完全不可动。
+5. Anthropic 2023 年的参与式实验显示，公众原则与公司原则之间大约有 50% 分歧。选择一个对生产部署真正重要的类别，例如政治中立，设计一种机制，让运营方（operator）可以表达自己的价值取向，同时硬编码禁令（hardcoded prohibitions）仍然完全不可动。
 
 ## 关键术语
 
 | 术语 | 人们通常怎么说 | 实际含义 |
 |---|---|---|
-| Constitutional AI | “Anthropic 的对齐方法” | 依据成文宪章进行自我批评，再基于此开展 RLAIF |
-| Reason-based alignment | “原则，而不是规则” | 让模型围绕原则推理，从而处理未见场景 |
+| Constitutional AI | “Anthropic 的宪章式对齐方法” | 依据成文宪章进行自我批评，再基于此开展 RLAIF |
+| Reason-based alignment | “按原则推理” | 让模型围绕原则推理，从而处理未见场景 |
 | Hardcoded prohibition | “绝不做 X” | 一条任何运营方或用户都无法覆盖的规则型禁令 |
-| Soft-coded default | “运营方可调” | 落在声明边界内、由运营方调整的行为默认值 |
-| 四层优先级 | "优先级顺序" | safety > ethics > guidelines > helpfulness |
+| Soft-coded default | “可调默认值” | 落在声明边界内、由运营方调整的行为默认值 |
+| 四层优先级 | “优先级顺序” | 安全与监督 > 伦理 > 指南 > 有帮助性 |
 | RLAIF | “AI 反馈强化学习” | 奖励信号来自模型生成的批评意见 |
-| Participatory constitution | “公众参与制定的原则” | Anthropic 2023 年实验中的公众来源原则；与公司版约有 50% 分歧 |
-| Principle drift | “理解偏移” | 模型对固定原则文本的理解随训练周期缓慢漂移 |
+| Participatory constitution | “公众参与制定的宪章” | Anthropic 2023 年实验中的公众来源原则；与公司版约有 50% 分歧 |
+| Principle drift | “原则理解漂移” | 模型对固定原则文本的理解随训练周期缓慢漂移 |
 
 ## 延伸阅读
 

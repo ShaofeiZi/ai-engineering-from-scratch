@@ -110,7 +110,7 @@ sae-features
 
 ## 进一步阅读
 
-- [MATS (ML Alignment & Theory Scholars)](https://www.matsprogram.org/) - 导师计划主页
+- [MATS（机器学习对齐与理论学者计划）](https://www.matsprogram.org/) - 导师计划主页
 - [Redwood Research](https://www.redwoodresearch.org/) - AI Control 相关工作
 - [Apollo Research](https://www.apolloresearch.ai/) - 图谋行为评估
 - [METR — Common Elements of Frontier AI Safety Policies](https://metr.org/blog/2025-03-26-common-elements-of-frontier-ai-safety-policies/) - 框架比较

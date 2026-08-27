@@ -1,6 +1,6 @@
 # 间接提示注入：生产环境中的攻击面
 
-> Indirect prompt injection (IPI) 会把指令藏进外部内容里，例如网页、电子邮件、共享文档或工单；而 agentic system 会在没有用户明确触发的情况下消费这些内容。IPI 是 2026 年生产环境中的主导威胁：它绕过用户输入过滤，因为攻击者根本不需要接触用户；随着代理处理越来越多外部内容，它还能悄无声息地扩张；它攻击的还是那些根本没人逐条审读 prompt 的自动化工作流。MDPI Information 17(1):54（2026 年 1 月）汇总了 2023 到 2025 年的研究。NDSS 2026 的 IPI defense 论文则指出了核心难点：注入指令在语义上可能完全无害，例如 “please print Yes”，因此检测绝不只是关键词过滤的问题。“The Attacker Moves Second”（Nasr et al.，OpenAI / Anthropic / DeepMind 联合，2025 年 10 月）进一步表明：适应性攻击（梯度搜索、RL、随机搜索、人类红队）击穿了 12 个已发表防御中的绝大多数，这些防御原本都声称攻击成功率接近 0。
+> 间接提示注入（IPI）会把指令藏进外部内容里，例如网页、电子邮件、共享文档或工单；而 agentic system 会在没有用户明确触发的情况下消费这些内容。IPI 是 2026 年生产环境中的主导威胁：它绕过用户输入过滤，因为攻击者根本不需要接触用户；随着代理处理越来越多外部内容，它还能悄无声息地扩张；它攻击的还是那些根本没人逐条审读 prompt 的自动化工作流。MDPI Information 17(1):54（2026 年 1 月）汇总了 2023 到 2025 年的研究。NDSS 2026 的 IPI defense 论文则指出了核心难点：注入指令在语义上可能完全无害，例如 “please print Yes”，因此检测绝不只是关键词过滤的问题。《攻击者后手出招》（Nasr et al.，OpenAI / Anthropic / DeepMind 联合，2025 年 10 月）进一步表明：适应性攻击（梯度搜索、RL、随机搜索、人类红队）击穿了 12 个已发表防御中的绝大多数，这些防御原本都声称攻击成功率接近 0。
 
 **Type:** 构建
 **Languages:** Python (stdlib, IPI attack + defense harness)
@@ -9,9 +9,9 @@
 
 ## 学习目标
 
-- 定义 indirect prompt injection，并描述三种常见投递路径。
+- 定义间接提示注入，并描述三种常见投递路径。
 - 解释为什么仅针对用户输入的过滤器会完全漏掉 IPI。
-- 说明为什么 “information flow control” 会成为 2026 年的主流防御框架。
+- 说明为什么 “信息流控制” 会成为 2026 年的主流防御框架。
 - 陈述 Nasr et al.（2025 年 10 月）关于适应性攻击击穿已发表 IPI 防御的结论。
 
 ## 问题
@@ -84,10 +84,10 @@ al-injection-vector
 
 | 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| IPI | "indirect prompt injection" | 通过并非用户亲自撰写的内容完成注入，代理在正常运行中读到并执行 |
+| IPI | "间接提示注入" | 通过并非用户亲自撰写的内容完成注入，代理在正常运行中读到并执行 |
 | RAG injection | "poisoned retrieval" | 攻击者发布内容，检索步骤把它取回，prompt 中随之带入 payload |
 | Zero-click | "no user action" | 攻击会在代理正常运行时自动触发，用户什么都不用做 |
-| IFC | "information flow control" | 基于标签的防御方法：来自不可信内容的动作必须得到可信输入批准 |
+| IFC | "信息流控制" | 基于标签的防御方法：来自不可信内容的动作必须得到可信输入批准 |
 | Adaptive attack | "gradient / RL red-team" | 知道防御细节并据此优化的攻击；这是诚实评估所必需的攻击方式 |
 | Benign instruction | "please print Yes" | 语义上看起来无害的 IPI 指令，因此关键词过滤抓不住 |
 | Scope violation | "cross-trust exfiltration" | 代理从一个信任域读取数据，再把它输出到另一个信任域 |

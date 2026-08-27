@@ -18,7 +18,7 @@
 
 只靠对摘要做关键词搜索，确实能找出与 query 共用词汇的论文，覆盖了大部分表层结果。但它会漏掉两类情况。第一类是 foundational paper 本身使用了不同词汇，例如你搜 “sparse attention”，却漏掉了一篇标题叫 “block selection in transformer routing” 的工作。第二类是相关论文本身是某篇已知 anchor 的 follow-up；这种情况下，与其暴力扫完整个 abstract pool，不如先找到 anchor，再顺着 citation graph 前后走。
 
-这一课会同时实现这两轮。BM25 over abstracts 负责抓 lexical hit。Citation graph traversal 则以这批 lexical hit 为 seed，向前向后扩张一到两跳。最后两轮结果取并集、按 paper id 去重，并根据一个小型 combined score 做排序。
+这一课会同时实现这两轮。BM25 over abstracts 负责抓 lexical hit。引文图遍历则以这批 lexical hit 为 seed，向前向后扩张一到两跳。最后两轮结果取并集、按 paper id 去重，并根据一个小型 combined score 做排序。
 
 ## 论文结构
 

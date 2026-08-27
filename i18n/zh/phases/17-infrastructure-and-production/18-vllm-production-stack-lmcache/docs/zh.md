@@ -119,6 +119,6 @@ zero-sharding
 
 - [vLLM Blog — KV Offloading Connector（2026 年 1 月）](https://blog.vllm.ai/2026/01/08/kv-offloading-connector.html)
 - [vLLM Production Stack GitHub](https://github.com/vllm-project/production-stack) — Helm chart 与 operator
-- [LMCache for Enterprise-Scale LLM Inference (arXiv:2510.09665)](https://arxiv.org/html/2510.09665v2)
+- [面向企业规模的 LMCache LLM 推理（arXiv:2510.09665）](https://arxiv.org/html/2510.09665v2)
 - [LMCache GitHub](https://github.com/LMCache/LMCache) — Connector 实现
 - [vLLM 0.11.0 release notes](https://github.com/vllm-project/vllm/releases) — 异步路径细节

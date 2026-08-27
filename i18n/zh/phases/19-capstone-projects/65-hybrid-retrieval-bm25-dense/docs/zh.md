@@ -129,13 +129,13 @@ python3 code/main.py
 | RRF | "Rank fusion" | 在 ranked list 上求 1 / (k + rank) 之和；默认 k = 60 |
 | k1 | "TF saturation" | 控制重复 term 多快停止继续增加分数 |
 | b | "Length penalty" | 0 表示忽略文档长度，1 表示完全归一化 |
-| Field weighting | "Symbol boost" | 在索引时重复某 field 中的 token，以抬高该 field 的命中 |
-| Rank-based vs score-based fusion | "Why RRF beats linear" | rank 在不同 modality 间可比较，而 raw score 不可比较 |
+| Field weighting | "字段加权" | 在索引时重复某 field 中的 token，以抬高该 field 的命中 |
+| Rank-based vs score-based fusion | "为什么 RRF 胜过线性融合" | rank 在不同 modality 间可比较，而 raw score 不可比较 |
 
 ## 进一步阅读
 
-- Cormack, Clarke, Buettcher, "Reciprocal Rank Fusion outperforms Condorcet and individual rank learning methods", SIGIR 2009
-- Robertson, Walker, Beaulieu, Gatford, Payne, "Okapi at TREC-3"（最早的 BM25 论文）
+- Cormack、Clarke、Buettcher，《Reciprocal Rank Fusion outperforms Condorcet and individual rank learning methods》，SIGIR 2009
+- Robertson、Walker、Beaulieu、Gatford、Payne，《Okapi at TREC-3》（最早的 BM25 论文）
 - [Vespa: Hybrid Retrieval with BM25 and Embeddings](https://docs.vespa.ai/en/tutorials/hybrid-search.html)
 - [Weaviate: Hybrid Search](https://weaviate.io/developers/weaviate/search/hybrid)
 - 第 11 阶段第 06 课 - RAG 基础

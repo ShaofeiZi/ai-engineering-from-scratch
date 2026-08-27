@@ -120,9 +120,9 @@ python3 code/main.py
 
 ## 延伸阅读
 
-- [PyTorch Distributed: NCCL collectives](https://pytorch.org/docs/stable/distributed.html#collective-functions)
-- [Horovod ring allreduce paper](https://arxiv.org/abs/1802.05799)
-- [NCCL topology and algorithm selection](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html)
-- [Patarasuk and Yuan, Bandwidth optimal allreduce algorithms](https://www.cs.fsu.edu/~xyuan/paper/09jpdc.pdf)
+- [PyTorch Distributed: NCCL 集合通信](https://pytorch.org/docs/stable/distributed.html#collective-functions)
+- [Horovod 环形 allreduce 论文](https://arxiv.org/abs/1802.05799)
+- [NCCL 拓扑与算法选择](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html)
+- [Patarasuk 和 Yuan，《Bandwidth optimal allreduce algorithms》](https://www.cs.fsu.edu/~xyuan/paper/09jpdc.pdf)
 - 第 10 阶段第 05 课：分布式训练概览
 - 第 19 阶段第 77 课：在这些原语之上接线 DDP

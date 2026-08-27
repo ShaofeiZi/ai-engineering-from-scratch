@@ -131,7 +131,7 @@ issues.search
 
 ### 保护无状态 MRTR 确认
 
-会产生重大影响的工具可能需要用户确认。当前 MCP 使用 Multi Round-Trip Requests，而不是服务器到客户端的回调。
+会产生重大影响的工具可能需要用户确认。当前 MCP 使用多轮往返请求（Multi Round-Trip Requests），而不是服务器到客户端的回调。
 
 第一次响应：
 

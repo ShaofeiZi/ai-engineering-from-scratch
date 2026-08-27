@@ -128,7 +128,7 @@ i4-canary-ramp
 ## 延伸阅读
 
 - [TianPan — 在不破坏生产的前提下发布 AI 功能](https://tianpan.co/blog/2026-04-09-llm-gradual-rollout-shadow-canary-ab-testing)
-- [MarkTechPost — Safely Deploying ML Models](https://www.marktechpost.com/2026/03/21/safely-deploying-ml-models-to-production-four-controlled-strategies-a-b-canary-interleaved-shadow-testing/)
-- [APXML — Advanced LLM Deployment Patterns](https://apxml.com/courses/mlops-for-large-models-llmops/chapter-4-llm-deployment-serving-optimization/advanced-llm-deployment-patterns)
+- [MarkTechPost — 安全部署 ML 模型](https://www.marktechpost.com/2026/03/21/safely-deploying-ml-models-to-production-four-controlled-strategies-a-b-canary-interleaved-shadow-testing/)
+- [APXML — 高级 LLM 部署模式](https://apxml.com/courses/mlops-for-large-models-llmops/chapter-4-llm-deployment-serving-optimization/advanced-llm-deployment-patterns)
 - [Argo Rollouts 文档](https://argo-rollouts.readthedocs.io/)
 - [Flagger docs](https://docs.flagger.app/)

@@ -108,8 +108,8 @@ python3 code/main.py
 
 | 术语 | 常见说法 | 实际含义 |
 |------|----------|----------|
-| Indirect prompt injection | "Injection in retrieved content" | 指令被嵌入到代理检索到的数据中 |
-| Direct prompt injection | "Jailbreak" | 用户直接提供 prompt 来绕过 guardrail |
+| 间接提示注入 | "检索内容中的注入" | 指令被嵌入到代理检索到的数据中 |
+| 直接提示注入 | "越狱" | 用户直接提供 prompt 来绕过 guardrail |
 | PVE | "Prompt-Validator-Executor" | 在昂贵主推理前先跑廉价快速验证器 |
 | Source tag | "Content provenance" | 标记内容来源的元数据 |
 | Allowlist navigation | "URL whitelist" | 代理只能访问被批准的目的地 |

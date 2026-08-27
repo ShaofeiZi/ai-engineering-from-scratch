@@ -104,7 +104,7 @@ python3 code/main.py
 在生产环境中:
 
 - **LangGraph checkpointers.** 思路完全一样,只是底层存储换成了 SQLite、Postgres 或自定义后端。本课教的 schema,正是当 checkpointer 挂掉时你还能够手工读懂状态所依赖的东西。
-- **Letta memory blocks.** 这也是持久块加结构化 schema 的思路,只是作用域落在长生命周期 persona 上,见 Phase 14 · 08。
+- **Letta 记忆块（memory blocks）.** 这也是持久块加结构化 schema 的思路,只是作用域落在长生命周期 persona 上,见 Phase 14 · 08。
 - **OpenAI Agents SDK session store.** 它支持可插拔后端,也有 schema-aware 的状态观念。本课的 state file 可以看作它的本地文件版后端。
 
 ## 交付成果
@@ -133,13 +133,13 @@ python3 code/main.py
 
 - [JSON Schema specification](https://json-schema.org/specification.html)
 - [LangGraph checkpointers](https://langchain-ai.github.io/langgraph/concepts/persistence/)
-- [Letta memory blocks](https://docs.letta.com/concepts/memory)
+- [Letta 记忆块](https://docs.letta.com/concepts/memory)
 - [Fast.io, AI Agent State Checkpointing: A Practical Guide](https://fast.io/resources/ai-agent-state-checkpointing/) — schema-first checkpointing 与 idempotency 的实践
 - [Fast.io, AI Agent Workflow State Persistence: Best Practices 2026](https://fast.io/resources/ai-agent-workflow-state-persistence/) — 并发控制、TTL 和 event sourcing
 - [Hive Issue #6263 — non-atomic state.json writes silently ignored](https://github.com/aden-hive/hive/issues/6263) — 真实项目里的失败模式
 - [eunomia, Checkpoint/Restore Systems: Evolution, Techniques, Applications](https://eunomia.dev/blog/2025/05/11/checkpointrestore-systems-evolution-techniques-and-applications-in-ai-agents/) — 把操作系统历史上的 checkpoint/restore 原语迁移到代理系统
-- [Indium, 7 State Persistence Strategies for Long-Running AI Agents in 2026](https://www.indium.tech/blog/7-state-persistence-strategies-ai-agents-2026/)
-- [Microsoft Agent Framework, Compaction](https://learn.microsoft.com/en-us/agent-framework/agents/conversations/compaction) — 厂商侧的 checkpoint manager
+- [Indium，2026 年长时运行 AI 智能体的 7 种状态持久化策略](https://www.indium.tech/blog/7-state-persistence-strategies-ai-agents-2026/)
+- [Microsoft Agent Framework，压缩](https://learn.microsoft.com/en-us/agent-framework/agents/conversations/compaction) — 厂商侧的 checkpoint manager
 - Phase 14 · 08 — memory blocks 与 sleep-time compute
 - Phase 14 · 32 — 本课为之补上 schema 的三文件最小工作台
 - Phase 14 · 40 — 读取同一套 schema 的 handoff packet

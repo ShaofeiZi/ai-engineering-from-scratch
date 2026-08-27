@@ -34,7 +34,7 @@ LangGraph、AutoGen、CrewAI 都偏框架化。那些只想要“agent loop，�
 
 - TypeScript，建立在 Vercel AI SDK 之上。
 - 三个核心原语：**Agents**、**Tools**（带 Zod 类型）、**Workflows**。
-- Unified Model Router：跨 94 个 provider 提供 3,300+ 个模型（2026 年 3 月数据）。
+- 统一模型路由器：跨 94 个 provider 提供 3,300+ 个模型（2026 年 3 月数据）。
 - Composite storage：memory、workflows、observability 可以分别写入不同后端；在大规模观测场景下推荐使用 ClickHouse。
 - 采用 Apache 2.0，但源码中的 `ee/` 目录使用 source-available 的企业许可证。
 - 支持 Express、Hono、Fastify、Koa 等 server adapters，并且对 Next.js 与 Astro 提供一等集成。
@@ -102,7 +102,7 @@ python3 code/main.py
 |------|----------|----------|
 | Agno | “Fast Python agents” | 无状态、按 session 划分的 agent runtime |
 | Mastra | “TypeScript agents on Vercel AI SDK” | Agents + Tools + Workflows + Model Router |
-| Unified Model Router | “Multi-provider access” | 一个客户端统一访问 94 个 provider 的 3,300+ 模型 |
+| 统一模型路由器 | “多提供商访问” | 一个客户端统一访问 94 个 provider 的 3,300+ 模型 |
 | Composite storage | “Multiple backends” | memory / workflows / observability 分别落到不同存储 |
 | Mastra Studio | “Local debugger” | localhost:4111 上用于观察 agent 的 UI |
 | Source-available | “Not OSS” | 允许阅读源码，但对商业使用有额外限制 |

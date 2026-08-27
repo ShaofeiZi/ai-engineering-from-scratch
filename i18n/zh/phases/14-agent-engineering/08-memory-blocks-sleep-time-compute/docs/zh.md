@@ -121,7 +121,7 @@ transcript 展示了职责分离：主智能体的 turn 快速响应并产生原
 | Human block | “用户记忆” | 固定在 core 中的用户事实 |
 | Persona block | “智能体身份” | 固定在 core 中的自我概念、语气与约束 |
 | Sleep-time compute | “异步记忆工作” | 第二个智能体在关键路径之外执行整合 |
-| Core / Recall / Archival | “层级” | 始终可见 / 对话 / 外部三层记忆划分 |
+| 核心 / 召回 / 归档 | “层级” | 始终可见 / 对话 / 外部三层记忆划分 |
 | Block limit | “上限” | 每个 block 的字符上限；触发摘要 |
 | Native reasoning | “思考 channel” | 提供商层的 reasoning 输出，而非 prompt 层的 `Thought:` |
 | Learned context | “休眠输出” | 休眠时智能体写入共享 block 的事实 |

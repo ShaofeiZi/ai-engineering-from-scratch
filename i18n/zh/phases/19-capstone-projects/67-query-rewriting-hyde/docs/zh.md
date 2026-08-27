@@ -162,14 +162,14 @@ python3 code/main.py
 | Multi-query | "Paraphrase expansion" | 把查询改写成 N 个版本，做 N 次检索，再用 RRF 合并 |
 | Decomposition | "Subquery split" | 把多主题查询拆成多个子问题，分别检索 |
 | Atomic query | "Single-topic" | 不能在不捏造假子问题的前提下继续拆分的问题 |
-| Step-back | "Abstract the query" | 先问一个更一般的问题来检索，再收窄到原问题 |
+| Step-back | "先把查询抽象化" | 先问一个更一般的问题来检索，再收窄到原问题 |
 
 ## 进一步阅读
 
-- Gao, Ma, Lin, Callan, "Precise Zero-Shot Dense Retrieval without Relevance Labels" (HyDE), 2023
-- Microsoft Research, "Multi-Query Expansion for Retrieval"
-- Stanford DSPy, "Subquery Decomposition for Multi-Hop QA"
+- Gao、Ma、Lin、Callan，《Precise Zero-Shot Dense Retrieval without Relevance Labels》（HyDE），2023
+- Microsoft Research，《Multi-Query Expansion for Retrieval》
+- Stanford DSPy，《Subquery Decomposition for Multi-Hop QA》
 - [LlamaIndex query transformations documentation](https://docs.llamaindex.ai/en/stable/optimizing/advanced_retrieval/query_transformations/)
-- 第 11 阶段第 07 课 - advanced RAG patterns
-- 第 19 阶段第 65 课 - the retriever this rewriter feeds
+- 第 11 阶段第 07 课 - 高级 RAG 模式
+- 第 19 阶段第 65 课 - 这个改写器会把查询送进的检索器
 - 第 19 阶段第 68 课 - the eval that measures the rewriter lift

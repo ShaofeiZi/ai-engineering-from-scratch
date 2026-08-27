@@ -169,19 +169,19 @@ python3 code/main.py
 
 | 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| Precision@k | "Hit rate over retrieved" | top-k 结果中有多少比例属于 gold |
-| Recall@k | "Hit rate over gold" | gold 文档中有多少比例出现在 top-k |
-| MRR | "First-hit position" | 第一个相关文档的 1 / rank 在所有查询上的平均值 |
-| nDCG@k | "Graded ranking quality" | top-k 的 DCG 除以理想排序下的 DCG |
-| Faithfulness | "Groundedness" | 答案中的 claims 有多少能被检索上下文支持 |
-| Answer relevance | "Did it address the question?" | 答案是否真正对准了问题意图 |
+| Precision@k | "已检索结果里的命中率" | top-k 结果中有多少比例属于 gold |
+| Recall@k | "gold 集合里的命中率" | gold 文档中有多少比例出现在 top-k |
+| MRR | "首个命中的位置" | 第一个相关文档的 1 / rank 在所有查询上的平均值 |
+| nDCG@k | "分级排序质量" | top-k 的 DCG 除以理想排序下的 DCG |
+| Faithfulness | "有据可依性" | 答案中的 claims 有多少能被检索上下文支持 |
+| Answer relevance | "它真的回答了问题吗？" | 答案是否真正对准了问题意图 |
 | Qrels | "Gold labels" | 带标注的查询集合，以及对应的 gold 文档和答案 |
 
 ## 进一步阅读
 
 - Buckley, Voorhees, "Evaluating Evaluation Measure Stability", SIGIR 2000 - 排名指标领域的经典论文
 - Jarvelin, Kekalainen, "Cumulated Gain-based Evaluation of IR Techniques" - nDCG 论文
-- [Ragas: Automated Evaluation of RAG Pipelines](https://docs.ragas.io)
+- [Ragas: RAG 流水线自动化评测](https://docs.ragas.io)
 - [Anthropic, Evaluating RAG](https://www.anthropic.com/news/evaluating-rag)
 - 第 11 阶段第 10 课 - evaluation framework foundations
 - 第 19 阶段第 64-67 课 - components evaluated here

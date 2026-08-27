@@ -48,10 +48,10 @@ flowchart LR
 | `wpe.weight` | (1024, 768) | Position embedding |
 | `h.N.ln_1.weight` | (768,) | 第 N 个 block 的 LayerNorm 1 scale |
 | `h.N.ln_1.bias` | (768,) | 第 N 个 block 的 LayerNorm 1 shift |
-| `h.N.attn.c_attn.weight` | (768, 2304) | Fused QKV linear weight |
-| `h.N.attn.c_attn.bias` | (2304,) | Fused QKV linear bias |
-| `h.N.attn.c_proj.weight` | (768, 768) | Attention output projection |
-| `h.N.attn.c_proj.bias` | (768,) | Attention output projection bias |
+| `h.N.attn.c_attn.weight` | (768, 2304) | 融合 QKV 线性层权重 |
+| `h.N.attn.c_attn.bias` | (2304,) | 融合 QKV 线性层偏置 |
+| `h.N.attn.c_proj.weight` | (768, 768) | 注意力输出投影 |
+| `h.N.attn.c_proj.bias` | (768,) | 注意力输出投影偏置 |
 | `h.N.ln_2.weight` | (768,) | LayerNorm 2 scale |
 | `h.N.ln_2.bias` | (768,) | LayerNorm 2 shift |
 | `h.N.mlp.c_fc.weight` | (768, 3072) | MLP fc1 weight |
@@ -75,8 +75,8 @@ flowchart LR
 | `blocks.N.ln1.shift` | LayerNorm 1 shift |
 | `blocks.N.attn.qkv.weight` | Fused QKV |
 | `blocks.N.attn.qkv.bias` | Fused QKV bias |
-| `blocks.N.attn.out_proj.weight` | Attention output projection |
-| `blocks.N.attn.out_proj.bias` | Output projection bias |
+| `blocks.N.attn.out_proj.weight` | 注意力输出投影 |
+| `blocks.N.attn.out_proj.bias` | 输出投影偏置 |
 | `blocks.N.ln2.scale` | LayerNorm 2 scale |
 | `blocks.N.ln2.shift` | LayerNorm 2 shift |
 | `blocks.N.mlp.fc1.weight` | MLP fc1 |
@@ -151,7 +151,7 @@ python3 code/main.py
 | Name map | “Key remapping” | 从预训练 tensor 名到本地参数名的函数；通常是一个字典，再对每层索引展开 |
 | Shape mismatch | “形状不对” | 预训练 tensor 的目标名字能映射上，但 shape 与本地参数不一致；loader 会拒绝赋值并记录这一对 |
 | Transpose-on-load | “Conv1d 布局” | GPT-2 公开权重中的 attention / MLP projection 存储方向与 nn.Linear 期望方向相反；加载时要转置 |
-| Weight tying alias | “共享 LM head” | 通过设置模型的 LM head 权重与 token embedding 共享存储，实现 head 与 embedding 共用参数；因此 head 不单独出现在文件里 |
+| 权重绑定别名 | “共享 LM head” | 通过设置模型的 LM head 权重与 token embedding 共享存储，实现 head 与 embedding 共用参数；因此 head 不单独出现在文件里 |
 | Load report | “覆盖摘要” | 一个小 dataclass，跟踪 loaded、missing、unexpected、shape_mismatch；判断加载是否成功主要靠它 |
 
 ## 进一步阅读

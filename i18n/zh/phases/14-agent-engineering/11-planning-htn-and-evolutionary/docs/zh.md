@@ -135,7 +135,7 @@ trace 会展示 HTN planner 如何分解 compound task（方案中途会使用�
 | ChatHTN | “LLM + HTN” | 没有 method 匹配时，符号 planner 询问 LLM |
 | AlphaEvolve | “进化式代码搜索” | LLM ensemble 改变代码；确定性 evaluator 负责选择 |
 | Fitness function | “Evaluator” | 对输出执行确定、机器可检查的评分 |
-| Online method learning | “缓存的 LLM 分解” | 保存并泛化 LLM 方案，以降低查询成本 |
+| 在线方法学习 | “缓存的 LLM 分解” | 保存并泛化 LLM 方案，以降低查询成本 |
 
 ## 延伸阅读
 

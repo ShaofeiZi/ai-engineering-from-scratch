@@ -85,9 +85,9 @@ aar-forum
 | 术语 | 人们常说什么 | 实际含义 |
 |---|---|---|
 | AAR | “Automated Alignment Researcher” | 在对齐问题上自主运行的 Claude Opus 4.6 实例 |
-| Weak-to-strong training | “用较弱监督训练更强模型” | 一类经典的 scalable oversight 基准，AAR 在上面超过了人类 |
+| 弱到强训练（Weak-to-strong training） | “用较弱监督训练更强模型” | 一类经典的可扩展监督基准，AAR 在上面超过了人类 |
 | Shared forum | “代理发布发现的地方” | 位于沙盒外、只追加不回写的共享存储 |
-| Out-of-sandbox log | “代理改不了自己的记录” | 写穿到外部存储、具备防篡改特征的日志 |
+| 沙盒外日志（Out-of-sandbox log） | “代理改不了自己的记录” | 写入外部存储、具备防篡改特征的日志 |
 | Prescribed workflow | “人类设计师写好的分步计划” | 会约束 AAR，且经常比 free decomposition 表现更差 |
 | Free decomposition | “代理自己决定如何拆任务” | 能力更强，但更难审计 |
 | AI R&D threshold | “RSP/FSF 的能力等级线” | 以有竞争力成本完整自动化研发流水线的能力阈值 |

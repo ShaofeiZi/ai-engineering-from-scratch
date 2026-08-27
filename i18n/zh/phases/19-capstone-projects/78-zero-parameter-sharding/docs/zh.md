@@ -126,7 +126,7 @@ python3 code/main.py
 
 ## 延伸阅读
 
-- [Rajbhandari et al, ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054)
+- [Rajbhandari 等，《ZeRO: Memory Optimizations Toward Training Trillion Parameter Models》](https://arxiv.org/abs/1910.02054)
 - [DeepSpeed ZeRO documentation](https://www.deepspeed.ai/tutorials/zero/)
 - [PyTorch FSDP documentation](https://pytorch.org/docs/stable/fsdp.html)
 - 第 19 阶段第 76 课：本课建立在那里的 reduce_scatter 和 allgather 之上

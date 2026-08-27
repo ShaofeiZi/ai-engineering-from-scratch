@@ -136,7 +136,7 @@ i4-control-matrix
 
 - [OpenAI 安全与隐私](https://openai.com/security-and-privacy/)：OpenAI 的参考合规轮廓。
 - [GuardionAI — LLM Compliance 2026: ISO 42001, EU AI Act, SOC 2, GDPR](https://guardion.ai/blog/llm-compliance-guide-iso-42001-eu-ai-act-soc2-gdpr-2026)
-- [Dsalta — SOC 2 Type 2 Audit Guide 2026: 10 AI Controls](https://www.dsalta.com/resources/ai-compliance/soc-2-type-2-audit-guide-2026-10-ai-powered-controls-every-saas-team-needs)
+- [Dsalta — 2026 SOC 2 Type 2 审计指南：10 项 AI 控制](https://www.dsalta.com/resources/ai-compliance/soc-2-type-2-audit-guide-2026-10-ai-powered-controls-every-saas-team-needs)
 - [EU AI Act 官方文本](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)：主要来源。
 - [Colorado AI Act](https://leg.colorado.gov/bills/sb24-205)：主要来源。
 - [ISO/IEC 42001:2023](https://www.iso.org/standard/81230.html)：AI management system standard。

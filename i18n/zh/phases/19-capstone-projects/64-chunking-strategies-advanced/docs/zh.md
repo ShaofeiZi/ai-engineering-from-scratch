@@ -142,7 +142,7 @@ python3 code/main.py
 
 | 术语 | 人们常说的话 | 它真正表示什么 |
 |------|-----------------|------------------------|
-| Recall@k | "Did we get the right chunk?" | top-k chunk 中是否有任意一个覆盖了 gold answer span |
+| Recall@k | "我们拿到正确的 chunk 了吗？" | top-k chunk 中是否有任意一个覆盖了 gold answer span |
 | Chunk overlap | "Sliding window" | 在下一块中重新包含前一块最后 N 个字符 |
 | Structural splitter | "Header-aware chunks" | 按 H1/H2/H3 边界切分，heading 文本本身也属于 chunk |
 | Semantic chunker | "Topic-aware chunks" | 对句子做 embedding，按 centroid similarity 聚类，遇到 drift 就切开 |
@@ -152,7 +152,7 @@ python3 code/main.py
 
 - [LongRAG：用长上下文 LLM 增强 Retrieval-Augmented Generation（arXiv 2406.15319）](https://arxiv.org/abs/2406.15319)
 - [Anthropic, Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval)
-- [LlamaIndex, Chunking strategies for production RAG](https://docs.llamaindex.ai/en/stable/optimizing/production_rag/)
+- [LlamaIndex, 面向生产 RAG 的切块策略](https://docs.llamaindex.ai/en/stable/optimizing/production_rag/)
 - 第 11 阶段第 06 课 - RAG fundamentals
 - 第 11 阶段第 07 课 - advanced RAG
 - 第 19 阶段第 65 课 - hybrid retrieval that ranks the chunks produced here

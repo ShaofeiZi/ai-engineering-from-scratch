@@ -136,8 +136,8 @@ python3 code/main.py
 
 | 术语 | 常见说法 | 实际含义 |
 |------|----------|----------|
-| Micro batch | The batch you forward | 一次 forward pass 中能够装进内存的那一小片 batch |
-| Accum steps | Backward passes per step | 在一次 optimizer step 之前连续累加的 backward 次数 |
+| Micro batch | 你单次前向传播的那批数据 | 一次 forward pass 中能够装进内存的那一小片 batch |
+| Accum steps | 每步对应的反向传播次数 | 在一次 optimizer step 之前连续累加的 backward 次数 |
 | Effective batch | The batch | Micro batch 乘以 accum steps，再乘以数据并行 world size |
 | Loss scaling | Divide by N | 对每个 micro-batch 先做除法，使累积梯度与 full batch 一致 |
 | Sync on last | Skip the rest | 在一个 accumulation window 里，只在最后一次 backward 才做梯度同步 |

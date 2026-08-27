@@ -146,13 +146,13 @@ i4-spend-ladder
 | Rate limit | “429 护栏” | 在 gateway 上按租户强制上限 |
 | Daily spend cap | “每日天花板” | 以租户为范围的预算与告警 |
 | Kill switch | “自动暂停” | spend z-score > 4 时自动停用 |
-| Cost per resolved | “产品单位指标” | 成本必须绑定到产品结果，而不是 token 数 |
+| 每次解决成本 | “产品单位指标” | 成本必须绑定到产品结果，而不是 token 数 |
 | Telemetry joiner | “trace 对账单” | 精度最高的归因模式 |
 | Stacked optimization | “cache+batch+route+gateway” | 组合后可把成本压到 baseline 的约 5-10% |
 
 ## 延伸阅读
 
-- [FinOps Foundation — FinOps for AI Overview](https://www.finops.org/wg/finops-for-ai-overview/)
-- [FinOps School — Cost per Unit 2026 Guide](https://finopsschool.com/blog/cost-per-unit/)
-- [Digital Applied — LLM Agent Cost Attribution 2026](https://www.digitalapplied.com/blog/llm-agent-cost-attribution-guide-production-2026)
+- [FinOps Foundation — AI FinOps 概览](https://www.finops.org/wg/finops-for-ai-overview/)
+- [FinOps School — 2026 单位成本指南](https://finopsschool.com/blog/cost-per-unit/)
+- [Digital Applied — 2026 LLM 智能体成本归因](https://www.digitalapplied.com/blog/llm-agent-cost-attribution-guide-production-2026)
 - [PointFive — Managed LLMs in Azure OpenAI](https://www.pointfive.co/blog/finops-for-ai-economics-of-managed-llms-in-azure-open-ai)

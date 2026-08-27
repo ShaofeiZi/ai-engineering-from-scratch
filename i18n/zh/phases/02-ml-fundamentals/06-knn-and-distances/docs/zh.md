@@ -362,14 +362,14 @@ distances, indices = index.search(query_vectors, k=5)
 | K-nearest neighbors | 根据距离查询点最近的 K 个训练点作出预测的非参数算法 |
 | Lazy learning | 训练时不做计算，所有工作都在预测时完成；KNN 是典型例子 |
 | Eager learning | 训练时进行大量计算以构建紧凑模型；多数机器学习算法属于此类 |
-| Curse of dimensionality | 高维空间中距离趋同，邻域扩张到覆盖大部分空间，使 KNN 失效 |
+| 维度灾难 | 高维空间中距离趋同，邻域扩张到覆盖大部分空间，使 KNN 失效 |
 | KD-tree | 沿特征轴递归划分空间的二叉树，低维空间查询复杂度平均为 O(log n) |
 | Ball tree | 嵌套超球组成的树，在约 50 维以内的中等维度中比 KD-tree 更有效 |
 | Weighted KNN | 按距离倒数为邻居加权，越近的邻居对预测影响越大 |
 | Feature scaling | 把特征归一化到可比较范围，是 KNN 等基于距离方法的必要步骤 |
 | Majority vote | 统计 K 个邻居中最常见类别进行分类 |
-| Brute force search | 计算查询点到每个训练点的距离，每次查询 O(n*d)，精确但在大 n 下很慢 |
-| Approximate nearest neighbor | HNSW、LSH、IVF 等算法，以少量准确率损失换取远快于精确搜索的速度 |
+| 暴力搜索 | 计算查询点到每个训练点的距离，每次查询 O(n*d)，精确但在大 n 下很慢 |
+| 近似最近邻 | HNSW、LSH、IVF 等算法，以少量准确率损失换取远快于精确搜索的速度 |
 | Voronoi diagram | 对空间进行划分，每个区域包含比其他训练点更接近某个训练点的全部位置；K=1 的 KNN 会产生 Voronoi 边界 |
 
 ## 延伸阅读

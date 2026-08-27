@@ -42,7 +42,7 @@ flowchart TD
 | Repo paths | 硬编码路径会漂移; 最好一次解析、固定下来 |
 | Environment variables | 缺少 `OPENAI_API_KEY` 应该被视为明确失败面,不是运行时谜题 |
 | State + board freshness | 上次崩掉后留下的陈旧状态是个陷阱 |
-| Last-known-good commit | 会话结束做 handoff diff 时需要一个锚点 |
+| 上一个已知良好提交 | 会话结束做 handoff diff 时需要一个锚点 |
 
 ### 响亮失败、快速失败,并且只在一个地方失败
 
@@ -120,8 +120,8 @@ init script 之所以可移植,正是因为它不依赖特定框架。Bash、Mak
 
 ## 延伸阅读
 
-- [Anthropic, Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
-- [GitHub Actions, composite actions for setup](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action)
+- [Anthropic，长时运行智能体的有效 harness](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+- [GitHub Actions，用于初始化的组合动作](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action)
 - [microservices.io, GenAI dev platform: guardrails](https://microservices.io/post/architecture/2026/03/09/genai-development-platform-part-1-development-guardrails.html) — 把 pre-commit 与 CI 检查当成 init 的一部分
 - [Augment Code, How to Build Your AGENTS.md (2026)](https://www.augmentcode.com/guides/how-to-build-agents-md) — 对初始化阶段的要求
 - [Codex Blog, Codex CLI Context Compaction](https://codex.danielvaughan.com/2026/03/31/codex-cli-context-compaction-architecture/) — 将会话启动视为具备 compaction 意识的 init

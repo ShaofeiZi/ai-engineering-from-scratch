@@ -495,7 +495,7 @@ print(f"Similarities: {similarities[top_k]}")
 | Edit distance | “Levenshtein 距离” | 把一个字符串变成另一个字符串所需的最少插入、删除和替换次数 |
 | KL divergence | “分布之间的距离” | 不是真正的距离，因为它不对称；衡量使用 Q 编码 P 时增加的信息量 |
 | Wasserstein distance | “Earth mover's distance” | 把概率质量从一个分布搬运到另一个分布所需的最小功，是真正的距离度量 |
-| Approximate nearest neighbor | “ANN 搜索” | HNSW、LSH、IVF 等算法，以少量近似误差换取远快于精确搜索的速度 |
+| 近似最近邻 | “ANN 搜索” | HNSW、LSH、IVF 等算法，以少量近似误差换取远快于精确搜索的速度 |
 | HNSW | “向量数据库算法” | Hierarchical Navigable Small World 图，通过多层图快速进行近似最近邻搜索 |
 | L1 regularization | “Lasso” | 把权重的 L1 范数加入损失，使权重趋于零并产生稀疏性 |
 | L2 regularization | “Ridge”或“weight decay” | 把权重的 L2 范数平方加入损失，使权重趋近零，但不会产生稀疏性 |

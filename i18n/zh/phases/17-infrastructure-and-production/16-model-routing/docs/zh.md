@@ -102,12 +102,12 @@ model-cascade-router
 | RouteLLM | “LMSYS 路由器” | 开源 routing library |
 | Not Diamond | “商业路由器” | SaaS 形式的 model-routing 产品 |
 | Drift | “廉价模型侵蚀” | 分布已经变化，但 router 没察觉 |
-| Online quality gate | “线上检查” | 对线上流量做 automated LLM-judge 抽样 |
+| 在线质量闸门 | “线上检查” | 对线上流量做 automated LLM-judge 抽样 |
 
 ## 延伸阅读
 
-- [AbhyashSuchi — Model Routing LLM 2026 Best Practices](https://abhyashsuchi.in/model-routing-llm-2026-best-practices/)
-- [Lukas Brunner — Rise of Inference Optimization 2026](https://dev.to/lukas_brunner/the-rise-of-inference-optimization-the-real-llm-infra-trend-shaping-2026-4e4o)
+- [AbhyashSuchi — 2026 年 LLM 模型路由最佳实践](https://abhyashsuchi.in/model-routing-llm-2026-best-practices/)
+- [Lukas Brunner — 2026 推理优化的崛起](https://dev.to/lukas_brunner/the-rise-of-inference-optimization-the-real-llm-infra-trend-shaping-2026-4e4o)
 - [RouteLLM paper / code](https://github.com/lm-sys/RouteLLM)
-- [Not Diamond — model routing](https://www.notdiamond.ai/)
+- [Not Diamond — 模型路由](https://www.notdiamond.ai/)
 - [OpenRouter](https://openrouter.ai/) — 多模型网关，带 routing primitives

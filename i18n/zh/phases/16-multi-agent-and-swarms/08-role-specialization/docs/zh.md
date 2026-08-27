@@ -128,6 +128,6 @@ python3 code/main.py
 ## 延伸阅读
 
 - [Hong et al. — MetaGPT: Meta Programming for Multi-Agent Collaboration](https://arxiv.org/abs/2308.00352) — 以角色提示编码 SOP 的参考论文
-- [Qian et al. — Communicative Agents for Software Development (ChatDev)](https://arxiv.org/abs/2307.07924) — chat chain + communicative dehallucination
+- [Qian et al. — Communicative Agents for Software Development (ChatDev)](https://arxiv.org/abs/2307.07924) — 聊天链与通信式去幻觉
 - [Cemri et al. — Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/abs/2503.13657) — MAST 分类；verification gap 占 21.3%
 - [CrewAI docs — Agent roles](https://docs.crewai.com/en/introduction) — 生产环境里的角色定义接口

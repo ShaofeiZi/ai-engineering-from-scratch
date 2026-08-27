@@ -120,9 +120,9 @@ python3 code/main.py
 | Processor | "Pipeline stage" | 一个实现了 process(frame) 的处理节点 |
 | DOWNSTREAM | "Forward flow" | 从 source 到 sink 的正向路径：音频输入，语音输出 |
 | UPSTREAM | "Feedback flow" | 控制路径：cancel、metrics、barge-in |
-| VAD | "Voice activity detection" | 检测用户是否正在说话 |
-| Semantic turn detection | "Smart end-of-turn" | 通过模型判断用户这一轮是否已经说完 |
-| MultimodalAgent | "Direct audio agent" | 中间不经过文本，直接 audio in / audio out |
+| VAD | "语音活动检测" | 检测用户是否正在说话 |
+| 语义轮次检测 | "智能轮次结束判断" | 通过模型判断用户这一轮是否已经说完 |
+| MultimodalAgent | "直接音频智能体" | 中间不经过文本，直接 audio in / audio out |
 | VoicePipelineAgent | "Cascade agent" | 通过 STT + LLM + TTS 级联，保留文本层控制能力 |
 
 ## 延伸阅读

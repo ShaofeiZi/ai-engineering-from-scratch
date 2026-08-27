@@ -139,7 +139,7 @@ tp-router-failover
 | Fallback chain | “重试列表” | 失败时按顺序尝试的提供商列表 |
 | Semantic caching | “prompt embedding 缓存” | 以 prompt 的 embedding 为键；近似请求共享缓存命中 |
 | Guardrails | “输入/输出过滤器” | 脱敏 PII、拒绝策略违规内容 |
-| Per-key rate limit | “团队预算” | 作用域限定到一个 API key 的配额 |
+| 按密钥限流 | “团队预算” | 作用域限定到一个 API key 的配额 |
 | Cost tracking | “单次请求支出” | 汇总 token 用量 × 对应模型单价 |
 | LiteLLM | “开放代理” | 可自托管的开源路由网关 |
 | OpenRouter | “托管 SaaS” | 使用额度计费的托管网关 |

@@ -60,7 +60,7 @@
 - “在 OpenAI 429 时 fallback 到 Anthropic”是它的典型 recipe。
 - 相对更新，也更偏商业产品。
 
-### Cloudflare AI Gateway / Vercel AI Gateway
+### Cloudflare AI Gateway 与 Vercel AI Gateway
 
 - 托管式、零运维，内建基础 retry 与 observability。
 - 更适合运行在 Cloudflare / Vercel 边缘环境中的 JavaScript 应用。
@@ -133,9 +133,9 @@ mx-gateway-fallback
 
 ## 延伸阅读
 
-- [Kong AI Gateway Benchmark](https://konghq.com/blog/engineering/ai-gateway-benchmark-kong-ai-gateway-portkey-litellm)
-- [TrueFoundry — AI Gateways 2026 Comparison](https://www.truefoundry.com/blog/a-definitive-guide-to-ai-gateways-in-2026-competitive-landscape-comparison)
-- [Techsy — Top LLM Gateway Tools 2026](https://techsy.io/en/blog/best-llm-gateway-tools)
+- [Kong AI Gateway 基准测试](https://konghq.com/blog/engineering/ai-gateway-benchmark-kong-ai-gateway-portkey-litellm)
+- [TrueFoundry — 2026 AI Gateway 对比](https://www.truefoundry.com/blog/a-definitive-guide-to-ai-gateways-in-2026-competitive-landscape-comparison)
+- [Techsy — 2026 顶级 LLM Gateway 工具](https://techsy.io/en/blog/best-llm-gateway-tools)
 - [LiteLLM GitHub](https://github.com/BerriAI/litellm)
 - [Portkey GitHub](https://github.com/Portkey-AI/gateway)
-- [Kong AI Gateway docs](https://docs.konghq.com/gateway/latest/ai-gateway/)
+- [Kong AI Gateway 文档](https://docs.konghq.com/gateway/latest/ai-gateway/)

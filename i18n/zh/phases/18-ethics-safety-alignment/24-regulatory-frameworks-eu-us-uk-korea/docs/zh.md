@@ -59,7 +59,7 @@
 
 特朗普政府把 NIST 的 AI Safety Institute 重组为 Center for AI Standards and Innovation。根据 VP Vance 在 Paris AI Action Summit 的表述，整体方向转向 “pro-growth AI policies”。这意味着对 pre-deployment evaluation 的强调减少，而对 standards 与 innovation support 的强调增强。它在政策姿态上，基本构成了 EU AI Act 式监管立场的美国国内对照面。
 
-### Korean AI Framework Act
+### 韩国《人工智能框架法》
 
 该法案于 2024 年 12 月通过，2025 年 1 月颁布，2026 年 1 月正式生效，并整合了原本分散的 19 项 AI 相关法案。
 

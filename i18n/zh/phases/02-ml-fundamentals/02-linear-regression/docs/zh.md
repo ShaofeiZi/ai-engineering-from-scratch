@@ -529,7 +529,7 @@ print(f"Ridge coefficient: {ridge.coef_[0]:.4f}")
 |------|----------------|----------------------|
 | Linear regression | “在数据中画直线” | 寻找权重 w 和偏置 b，使 wx+b 与真实 y 之间的平方差之和最小 |
 | Cost function | “模型有多差” | 把模型参数映射到单一预测误差数值的函数，优化过程会将其最小化 |
-| Mean squared error | “平方误差的平均值” | (1/n) * sum((predicted - actual)^2)，会对大误差施加更强惩罚 |
+| 均方误差 | “平方误差的平均值” | (1/n) * sum((predicted - actual)^2)，会对大误差施加更强惩罚 |
 | Gradient descent | “沿下坡走” | 使用偏导数，反复沿降低代价函数的方向调整参数 |
 | Learning rate | “步长” | 控制每次梯度下降更新中参数变化幅度的标量 |
 | Normal equation | “直接求解” | 闭式解 w = (X^T X)^-1 X^T y，无需迭代即可得到最优权重 |

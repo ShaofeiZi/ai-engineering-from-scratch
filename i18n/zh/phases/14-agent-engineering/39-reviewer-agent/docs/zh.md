@@ -133,8 +133,8 @@ python3 code/main.py
 - [Adnan Masood, Rubric-Based Evaluations and LLM-as-a-Judge: Methodologies, Biases, Empirical Validation](https://medium.com/@adnanmasood/rubric-based-evals-llm-as-a-judge-methodologies-and-empirical-validation-in-domain-context-71936b989e80) —— 四类偏差及其缓解手段
 - [MLflow, LLM-as-a-Judge Evaluation](https://mlflow.org/llm-as-a-judge) —— 构建者/评估者分离的生产工具
 - [LangChain, How to Calibrate LLM-as-a-Judge with Human Corrections](https://www.langchain.com/articles/llm-as-a-judge) —— 校准集工作流
-- [Evidently AI, LLM-as-a-judge: a complete guide](https://www.evidentlyai.com/llm-guide/llm-as-a-judge)
-- [Arize, LLM as a Judge — Primer and Pre-Built Evaluators](https://arize.com/llm-as-a-judge/)
+- [Evidently AI，LLM-as-a-judge 完整指南](https://www.evidentlyai.com/llm-guide/llm-as-a-judge)
+- [Arize，LLM as a Judge —— 入门与预构建评估器](https://arize.com/llm-as-a-judge/)
 - Phase 14 · 05 —— Self-Refine 与 CRITIC，单代理自审的基线
 - Phase 14 · 30 —— Eval-driven agent development，校准集生成器
 - Phase 14 · 38 —— 审查者要读取的验证闸门

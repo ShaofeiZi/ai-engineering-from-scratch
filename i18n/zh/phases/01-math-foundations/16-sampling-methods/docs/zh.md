@@ -667,7 +667,7 @@ print(f"Sampled token index: {token}")
 | Gibbs sampling | “每次更新一个变量” | 固定其他变量，根据条件分布依次更新每个变量；接受率为 100% |
 | Temperature | “置信度旋钮” | softmax 前用 T 除 logits；T<1 让分布更尖锐、更自信，T>1 让分布更平坦、更多样 |
 | Top-k sampling | “保留最好的 k 个” | 把概率最高的 k 个 token 以外的概率置零，重新归一化后采样；候选集合大小固定 |
-| Nucleus sampling (top-p) | “保留高概率部分” | 保留累计概率超过 p 的最小 token 集合；候选集合大小自适应 |
+| 核采样（top-p） | “保留高概率部分” | 保留累计概率超过 p 的最小 token 集合；候选集合大小自适应 |
 | Reparameterization trick | “把随机性移到外部” | 写成 z = mu + sigma * epsilon，其中 epsilon ~ N(0,1)，使采样过程可微，是 VAE 训练的关键 |
 | Gumbel-Softmax | “软类别采样” | 使用 Gumbel 噪声和带温度的 softmax，对类别采样进行可微近似 |
 | Stratified sampling | “强制覆盖” | 把样本空间划分成多个层，并从每层采样；方差始终低于或等于朴素 Monte Carlo |

@@ -126,7 +126,7 @@ i4-incident-agents
 
 ## 延伸阅读
 
-- [incident.io — AI SRE Complete Guide 2026](https://incident.io/blog/what-is-ai-sre-complete-guide-2026)
+- [incident.io — 2026 AI SRE 完整指南](https://incident.io/blog/what-is-ai-sre-complete-guide-2026)
 - [InfoQ — Human-Centred AI for SRE](https://www.infoq.com/news/2026/01/opsworker-ai-sre/)
 - [DZone — AI in SRE 2026](https://dzone.com/articles/ai-in-sre-whats-actually-coming-in-2026)
 - [Datadog Bits AI](https://www.datadoghq.com/product/bits-ai/)

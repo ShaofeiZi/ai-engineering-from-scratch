@@ -40,7 +40,7 @@
 
 ### 把攻击面逐项命名
 
-1. **Indirect prompt injection。** 不受信任的页面内容里夹带指令；代理读到它们；代理照做。公开例子包括 2024 年 Kai Greshake 等人的工作、2025 年的 Tainted Memories 论文，以及 2026 年的 HashJack（Cato Networks）。
+1. **间接提示词注入（Indirect prompt injection）。** 不受信任的页面内容里夹带指令；代理读到它们；代理照做。公开例子包括 2024 年 Kai Greshake 等人的工作、2025 年的 Tainted Memories 论文，以及 2026 年的 HashJack（Cato Networks）。
 2. **URL fragment / query injection。** 被爬取 URL 的 `#fragment` 或 query string 中夹带命令。它可能根本不会出现在用户肉眼看到的页面里，但仍然进入代理上下文。
 3. **Memory-binding attacks。** 页面诱导代理写入持久记忆（第 12 课会讲持久状态）。到下一次会话时，这段记忆会在没有可见触发器的情况下释放恶意载荷（payload）。
 4. **CSRF-shaped attacks on authenticated sessions。** Tainted Memories 这一类攻击的典型形态是：代理在某处已登录，攻击者页面诱导代理发出带用户 cookies 的状态变更请求。
@@ -90,14 +90,14 @@ injection-boundary
 
 | 术语 | 常见说法 | 实际含义 |
 |---|---|---|
-| Indirect prompt injection | “坏页面文本” | 代理读取的页面里包含不受信任的指令，并最终执行它们 |
+| 间接提示词注入（Indirect prompt injection） | “坏页面文本” | 代理读取的页面里包含不受信任的指令，并最终执行它们 |
 | Tainted Memories | “记忆攻击” | 代理把攻击者提供的指令写入持久记忆，并在下次会话被触发 |
 | HashJack | “URL fragment 攻击” | 恶意载荷藏在 URL fragment 或 query string 中，进入代理上下文但不一定可见 |
 | One-click hijack | “坏按钮” | 表面无害的可见交互，实际携带后续恶意载荷供代理执行 |
 | BrowseComp | “Web 搜索基准” | 在开放 Web 上查找具体事实，时间跨度为分钟级 |
 | OSWorld | “桌面基准” | 完整 OS 控制下的多步 GUI 任务 |
 | WebArena-Verified | “修正后的 Web 任务基准” | ServiceNow 重新评分后的 WebArena，并附带 Hard 子集 |
-| Read/write boundary | “副作用闸门” | 读取永远不直接产生后果；来自信任边界外内容触发的写入需要重新批准 |
+| 读写边界（Read/write boundary） | “副作用闸门” | 读取永远不直接产生后果；来自信任边界外内容触发的写入需要重新批准 |
 
 ## 延伸阅读
 

@@ -130,7 +130,7 @@ python3 code/main.py
 | Swarm | “点对点” | 通过共享工具直接 handoff，没有中心路由器 |
 | Hierarchical | “supervisor 管 supervisor” | 用嵌套 subgraph 来管理大规模 agent 群体 |
 | Debate | “提出方案 + 批判” | 并行 proposer，再做交叉批评（Lesson 25） |
-| Tool-call-based supervision | “不用库也能做 supervisor” | 用直接 tool call 实现 supervisor，以获得更细的上下文控制 |
+| 基于工具调用的监督 | “不用库也能做 supervisor” | 用直接 tool call 实现 supervisor，以获得更细的上下文控制 |
 | Crew | “自治团队” | CrewAI 中基于角色的协作模式 |
 | Flow | “确定性工作流” | CrewAI 中事件驱动的生产模式 |
 

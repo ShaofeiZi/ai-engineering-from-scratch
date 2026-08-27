@@ -137,8 +137,8 @@ i4-otel-glue
 
 ## 延伸阅读
 
-- [SigNoz — Top LLM Observability Tools 2026](https://signoz.io/comparisons/llm-observability-tools/)
-- [Langfuse — Arize AX Alternative analysis](https://langfuse.com/faq/all/best-phoenix-arize-alternatives)
+- [SigNoz — 2026 顶级 LLM 可观测工具](https://signoz.io/comparisons/llm-observability-tools/)
+- [Langfuse — Arize AX 替代方案分析](https://langfuse.com/faq/all/best-phoenix-arize-alternatives)
 - [PremAI — 搭建 Langfuse、LangSmith、Helicone 与 Phoenix](https://blog.premai.io/llm-observability-setting-up-langfuse-langsmith-helicone-phoenix/)
 - [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 - [Arize Phoenix 文档](https://docs.arize.com/phoenix)

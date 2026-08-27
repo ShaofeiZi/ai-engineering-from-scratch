@@ -125,15 +125,15 @@ python3 code/main.py
 |------|-----------------|------------------------|
 | Bi-encoder | "Vector retriever" | 独立编码 query 和 doc；再按 cosine 排序 |
 | Cross-encoder | "Reranker" | 联合编码 (query, doc)；输出单个相关性标量 |
-| Two-stage pipeline | "Retrieve and rerank" | 廉价 retriever 返回 N，昂贵 reranker 保留 K |
-| N (candidate budget) | "Rerank pool" | cross-encoder 每个 query 要打分的候选数 |
-| Mean-pooling head | "Mean of last hidden" | 对 encoder 最后一层输出取平均，得到一个向量 |
+| Two-stage pipeline | "先检索再重排" | 廉价 retriever 返回 N，昂贵 reranker 保留 K |
+| N (candidate budget) | "重排候选池" | cross-encoder 每个 query 要打分的候选数 |
+| Mean-pooling head | "最后一层隐藏状态取均值" | 对 encoder 最后一层输出取平均，得到一个向量 |
 
 ## 进一步阅读
 
 - Nogueira, Cho, "Passage Re-ranking with BERT", 2019 - 经典 cross-encoder reranker 论文
 - Reimers, Gurevych, "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks", 2019 - bi-encoder 与 cross-encoder 的经典对照
 - [SentenceTransformers Cross-Encoders documentation](https://www.sbert.net/examples/applications/cross-encoder/README.html)
-- [BGE Reranker v2 model card](https://huggingface.co/BAAI/bge-reranker-v2-m3)
+- [BGE Reranker v2 模型卡](https://huggingface.co/BAAI/bge-reranker-v2-m3)
 - 第 19 阶段第 65 课 - 为这一 rerank 阶段提供输入的 hybrid retriever
 - 第 19 阶段第 68 课 - 衡量这一 rerank 带来提升的评测

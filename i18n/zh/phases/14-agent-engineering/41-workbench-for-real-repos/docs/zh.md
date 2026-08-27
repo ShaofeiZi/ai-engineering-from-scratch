@@ -146,7 +146,7 @@ python3 code/main.py
 - [preprints.org, Harness Engineering for Language Agents](https://www.preprints.org/manuscript/202603.1756) — 88% enterprise failure rate, runtime root causes
 - [HN: Improving 15 LLMs at Coding in One Afternoon. Only the Harness Changed](https://news.ycombinator.com/item?id=46988596) — replicated across 15 models
 - [Cloudflare, Orchestrating AI Code Review at Scale](https://blog.cloudflare.com/ai-code-review/) — 131k review runs / 30 days in production
-- [Anthropic, Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
+- [Anthropic，构建高效智能体](https://www.anthropic.com/research/building-effective-agents)
 - 阶段 14 · 32 至 14 · 40——本课端到端练习的各个工作面
 - 阶段 14 · 19——本课所补充的宏观基准：SWE-bench、GAIA、AgentBench
 - 阶段 14 · 30——同一套工作台可接入的评估驱动代理开发

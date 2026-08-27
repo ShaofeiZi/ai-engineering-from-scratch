@@ -129,7 +129,7 @@ python3 code/main.py
 |------|-----------------|------------------------|
 | Weight tying | "Tied embeddings" | LM head 与 token embedding 共享同一个参数张量；可节省词表大小乘以模型维度这么多参数，并与 GPT-2 参考实现一致 |
 | Position embedding | "Learned positions" | 一个形状为 context length 乘模型维度的独立表，会加到 token 向量上，并通过端到端训练学习 |
-| Sliding window context | "Context cap" | 当提示词加生成结果超过 context length 时，丢弃最老的 token，让活动窗口重新落回上限以内 |
+| 滑动窗口上下文 | "Context cap" | 当提示词加生成结果超过 context length 时，丢弃最老的 token，让活动窗口重新落回上限以内 |
 | Top-k sampling | "K truncation" | 保留数值最大的 K 个 logits，其余全部屏蔽为负无穷，然后只在保留下来的候选上做 softmax |
 | Temperature | "Sampling temperature" | 在 softmax 前用温度系数去除 logits；小于 1 会锐化分布，等于 1 保持原分布，大于 1 会拉平分布 |
 

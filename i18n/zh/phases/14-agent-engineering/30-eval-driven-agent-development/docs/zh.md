@@ -24,7 +24,7 @@
 
 1. **Static benchmarks**：代码场景看 SWE-bench Verified（Lesson 19），浏览器 / 桌面场景看 WebArena / OSWorld（Lesson 20），通用能力看 GAIA（Lesson 19），工具调用看 BFCL V4（Lesson 06）。它们主要用于跨模型比较和回归 gate。污染问题是真实存在的：SWE-bench+ 发现 32.67% 的解答泄漏。报告结果时应优先使用 Verified / +-audited 分数。
 
-2. **Custom offline evals**：围绕你自己的产品形态来设计：
+2. **自定义离线评测**：围绕你自己的产品形态来设计：
    - LLM-as-judge（Langfuse、Phoenix、Opik，见 Lesson 24）
    - Execution-based（真的运行 patch，再检查测试）
    - Trajectory-based（把动作序列和 gold trajectory 对比；OSWorld-Human 显示顶级代理的步数往往是 gold 的 1.4-2.7x）
@@ -131,8 +131,8 @@ python3 code/main.py
 
 | 术语 | 常见说法 | 实际含义 |
 |------|----------|----------|
-| Static benchmark | "Off-the-shelf eval" | SWE-bench、GAIA、AgentBench、WebArena、OSWorld 这类现成基准 |
-| Custom offline eval | "Domain eval" | 围绕你产品形态设计的 LLM-as-judge / execution / trajectory 评估 |
+| Static benchmark | "现成评测" | SWE-bench、GAIA、AgentBench、WebArena、OSWorld 这类现成基准 |
+| 自定义离线评测 | "领域评测" | 围绕你产品形态设计的 LLM-as-judge / execution / trajectory 评估 |
 | Online eval | "Production eval" | Session replay、guardrail alert、成本/延迟跟踪 |
 | Evaluator-optimizer | "Propose-judge-refine" | 持续迭代，直到 judge 通过 |
 | CI gate | "Merge blocker" | eval 回归时阻止合并 |
@@ -141,7 +141,7 @@ python3 code/main.py
 
 ## 延伸阅读
 
-- [Anthropic, Building Effective Agents](https://www.anthropic.com/research/building-effective-agents) — “start simple, optimize with evals”
+- [Anthropic，构建高效智能体](https://www.anthropic.com/research/building-effective-agents) — “先从简单开始，再用评测做优化”
 - [OpenAI, SWE-bench Verified](https://openai.com/index/introducing-swe-bench-verified/) — 经过策展的代码 benchmark
 - [Berkeley Function Calling Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard.html) — 工具调用 benchmark
 - [Langfuse docs](https://langfuse.com/) — 生产里如何把 eval 和 session replay 结合起来

@@ -95,8 +95,8 @@ al-guard-stack
 |------|-----------------|------------------------|
 | Llama Guard | "the classifier" | 针对 14 个 hazard categories 微调得到的 Llama-3.1-8B / 4-12B 安全分类器 |
 | Garak | "the scanner" | NVIDIA 的开源漏洞扫描器，由 probes、detectors、harnesses 组成 |
-| PyRIT | "the campaign tool" | Microsoft 的多轮红队编排工具，核心是 converters、orchestrators、scoring |
-| Prompt-Guard | "the small classifier" | Meta 的 86M prompt-injection 分类器，常与 Llama Guard 搭配使用 |
+| PyRIT | "那个攻击活动工具" | Microsoft 的多轮红队编排工具，核心是 converters、orchestrators、scoring |
+| Prompt-Guard | "那个小型分类器" | Meta 的 86M prompt-injection 分类器，常与 Llama Guard 搭配使用 |
 | TBSA | "tier-based scoring" | Garak 的分层评分机制，用来替代简单的二元通过/失败 |
 | Converter chain | "paraphrase + encode + ..." | PyRIT 中把多步攻击串起来的基本组合原语 |
 | MLCommons hazard categories | "the 14 taxonomies" | Llama Guard 对齐的行业标准风险分类体系 |

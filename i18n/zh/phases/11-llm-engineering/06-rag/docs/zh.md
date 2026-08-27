@@ -84,7 +84,7 @@ graph LR
 | Cohere embed-v4 | 1024 (Matryoshka) | Cohere | 多语言能力强，128K 上下文 |
 | BGE-M3 | 1024 (dense + sparse + ColBERT) | BAAI (open-weight) | 一个模型提供三种表示 |
 | Qwen3-Embedding | 4096 (Matryoshka) | Alibaba (open-weight) | 开放权重模型中的顶尖检索分数 |
-| all-MiniLM-L6-v2 | 384 | Open-weight (Sentence Transformers) | 原型开发基线 |
+| all-MiniLM-L6-v2 | 384 | 开放权重（Sentence Transformers） | 原型开发基线 |
 
 本课会使用 TF-IDF 构建自己的简单嵌入。并不是因为生产系统使用 TF-IDF，而是因为它能让概念变得具体：输入文本，输出向量；相似文本产生相似向量。
 

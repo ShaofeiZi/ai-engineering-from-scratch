@@ -99,7 +99,7 @@ MCP 2026-07-28 移除了 `initialize` 与 `notifications/initialized`，同时�
 2026-07-28 的每个核心结果都有 `resultType`：
 
 - `complete` 表示操作已经完成。
-- `input_required` 表示服务器需要通过多轮往返请求（Multi Round-Trip Requests）模式再进行一次交互。核心服务器只能从 `tools/call`、`resources/read` 或 `prompts/get` 返回该状态。
+- `input_required` 表示服务器需要通过多轮往返请求模式（Multi Round-Trip Requests）再进行一次交互。核心服务器只能从 `tools/call`、`resources/read` 或 `prompts/get` 返回该状态。
 
 客户端必须把省略 `resultType` 的旧版结果视为已完成。
 

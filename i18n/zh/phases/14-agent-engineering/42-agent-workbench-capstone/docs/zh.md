@@ -152,7 +152,7 @@ python3 code/main.py
 - [HKUDS/OpenHarness](https://github.com/HKUDS/OpenHarness)——与该工具包等价的参考实现
 - [andrewgarst/agentic_harness](https://github.com/andrewgarst/agentic_harness)——由 Redis 支持、附带评估套件的参考实现
 - [Augment Code, A good AGENTS.md is a model upgrade](https://www.augmentcode.com/blog/how-to-write-good-agents-dot-md-files)——工具包文档的质量基准
-- [Anthropic, Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
-- [Anthropic, Harness design for long-running application development](https://www.anthropic.com/engineering/harness-design-long-running-apps)
+- [Anthropic，长时运行智能体的有效 harness](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+- [Anthropic，面向长时运行应用开发的 harness 设计](https://www.anthropic.com/engineering/harness-design-long-running-apps)
 - 阶段 14 · 30——使用该工具包验证闸门的评估驱动代理开发
 - 阶段 14 · 41——该工具包所改进的前后对比基准

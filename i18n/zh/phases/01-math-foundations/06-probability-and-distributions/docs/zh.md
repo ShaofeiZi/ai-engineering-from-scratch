@@ -442,7 +442,7 @@ print(f"Log-softmax: {log_probs}")
 | Expected value | “平均值” | 对所有结果按概率加权后求和；损失函数就是一种期望值 |
 | Variance | “分散程度” | 相对于均值的平方偏差的期望；方差高意味着估计噪声大、不稳定 |
 | Normal distribution | “钟形曲线” | f(x) = (1/sqrt(2*pi*sigma^2)) * exp(-(x-mu)^2/(2*sigma^2))，由于中心极限定理而无处不在 |
-| Central Limit Theorem | “平均值会变成正态分布” | 无论原始分布如何，大量独立样本的均值都会趋近正态分布 |
+| 中心极限定理 | “平均值会变成正态分布” | 无论原始分布如何，大量独立样本的均值都会趋近正态分布 |
 | Joint distribution | “两个变量一起看” | P(X, Y) 描述 X 与 Y 每种结果组合的概率 |
 | Marginal distribution | “把另一个变量求和消掉” | P(X) = sum_y P(X, Y)，从联合分布中恢复单个变量的分布 |
 | Log probability | “概率的对数” | log P(x)，把乘法变成加法，防止长序列计算出现数值下溢 |

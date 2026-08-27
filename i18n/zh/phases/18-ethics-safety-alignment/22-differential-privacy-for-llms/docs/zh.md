@@ -1,6 +1,6 @@
 # 面向 LLM 的差分隐私
 
-> DP-SGD 仍然是标准方案，核心机制是对梯度更新注入噪声，并给出形式化的 (epsilon, delta) 保证。但它在计算、显存和效用上的代价都很高，因此到了 2025 年，更常见的落地配置已经变成参数高效的 DP 微调，也就是 LoRA + DP-SGD（ACM 2025）。当前有两组彼此紧张的证据：一方面，基于 canary 的 membership inference（Duan et al., 2024）在语言模型上报告的成功率有限；另一方面，训练数据提取（Carlini et al., 2021；Nasr et al., 2025）却能恢复大量逐字记忆。2025 年 3 月的工作（arXiv:2503.06808）给出的解释是，两者测量的对象并不相同，前者测的是插入式 canary，后者测的是“最容易被提取的数据”。新的 canary 设计让基于 loss 的 MIA 在没有 shadow models 的情况下也可实施，并首次对一个在真实数据上训练、且具有现实 DP 保证的 LLM 做出非平凡审计。替代路线还包括 PMixED（arXiv:2403.15638），也就是在推理时通过 next-token distribution 上的 mixture of experts 提供私有预测，以及 DP synthetic data generation（Google Research 2024）。新出现的攻击方向则是 Differential Privacy Reversal via LLM Feedback，也就是通过 confidence score 泄漏反推个体信息。
+> DP-SGD 仍然是标准方案，核心机制是对梯度更新注入噪声，并给出形式化的 (epsilon, delta) 保证。但它在计算、显存和效用上的代价都很高，因此到了 2025 年，更常见的落地配置已经变成参数高效的 DP 微调，也就是 LoRA + DP-SGD（ACM 2025）。当前有两组彼此紧张的证据：一方面，基于 canary 的 membership inference（Duan et al., 2024）在语言模型上报告的成功率有限；另一方面，训练数据提取（Carlini et al., 2021；Nasr et al., 2025）却能恢复大量逐字记忆。2025 年 3 月的工作（arXiv:2503.06808）给出的解释是，两者测量的对象并不相同，前者测的是插入式 canary，后者测的是“最容易被提取的数据”。新的 canary 设计让基于 loss 的 MIA 在没有 shadow models 的情况下也可实施，并首次对一个在真实数据上训练、且具有现实 DP 保证的 LLM 做出非平凡审计。替代路线还包括 PMixED（arXiv:2403.15638），也就是在推理时通过 next-token distribution 上的 mixture of experts 提供私有预测，以及 DP synthetic data generation（Google Research 2024）。新出现的攻击方向则是“通过 LLM 反馈逆转差分隐私”，也就是通过 confidence score 泄漏反推个体信息。
 
 **Type:** 构建
 **Languages:** Python (stdlib, DP-SGD noise-injection and ε-δ accountant demonstration)

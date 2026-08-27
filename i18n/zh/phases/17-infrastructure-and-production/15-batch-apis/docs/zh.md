@@ -117,5 +117,5 @@ batch-lane-triage
 - [OpenAI Batch API](https://platform.openai.com/docs/guides/batch) — JSONL 格式与 `/v1/batches` 语义。
 - [Anthropic Message Batches](https://docs.anthropic.com/en/docs/build-with-claude/batch-processing) — batch 格式与 `cache_control` 的交互方式。
 - [Vertex AI Batch Prediction](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/batch-prediction-gemini) — Gemini 的 batch 语义。
-- [Finout — OpenAI vs Anthropic API Pricing 2026](https://www.finout.io/blog/openai-vs-anthropic-api-pricing-comparison)
-- [Zen Van Riel — LLM API Cost Comparison 2026](https://zenvanriel.com/ai-engineer-blog/llm-api-cost-comparison-2026/)
+- [Finout — 2026 OpenAI 与 Anthropic API 定价对比](https://www.finout.io/blog/openai-vs-anthropic-api-pricing-comparison)
+- [Zen Van Riel — 2026 LLM API 成本对比](https://zenvanriel.com/ai-engineer-blog/llm-api-cost-comparison-2026/)

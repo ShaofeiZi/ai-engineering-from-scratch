@@ -38,7 +38,7 @@ flowchart LR
 |----------|---------------------------|---------|
 | Startup | 工作开始前哪些条件必须成立? | “状态文件存在且仍然新鲜” |
 | Forbidden | 哪些事绝不能发生? | “不要编辑 `scripts/release.sh`” |
-| Definition of done | 任务完成要靠什么来证明? | “pytest 退出码为 0 且 acceptance line 通过” |
+| 完成定义 | 任务完成要靠什么来证明? | “pytest 退出码为 0 且 acceptance line 通过” |
 | Uncertainty | 代理不确定时该怎么做? | “创建 question note,而不是瞎猜” |
 | Approval | 哪些操作必须经过人工批准? | “任何新增依赖、任何 prod 写入” |
 
@@ -138,7 +138,7 @@ python3 code/main.py
 |------|----------|----------|
 | Operational rule | “真正的指令” | 工作台可以在运行时检查的规则 |
 | Aspirational rule | “小心一点” | 没有对应检查的规则; 要么删掉,要么升级成可执行规则 |
-| Definition of done | “验收标准” | 用文件或命令客观证明任务已完成 |
+| 完成定义 | “验收标准” | 用文件或命令客观证明任务已完成 |
 | Block severity | “硬规则” | 一旦违规就必须中止运行,不能悄悄忽略 |
 | Rule expiry | “陈旧规则清扫” | 一条规则在 N 天内无失败记录,就应该考虑退休 |
 
@@ -146,7 +146,7 @@ python3 code/main.py
 
 - [OpenAI Agents SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/)
 - [LangGraph interrupts](https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/breakpoints/)
-- [Anthropic, Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
+- [Anthropic，构建高效智能体](https://www.anthropic.com/research/building-effective-agents)
 - [Rick Hightower, Agent RuleZ: A Deterministic Policy Engine](https://medium.com/@richardhightower/agent-rulez-a-deterministic-policy-engine-for-ai-coding-agents-9489e0561edf) — 生产环境里的 block/warn/info 严重级别实践
 - [Cloudflare, Orchestrating AI Code Review at Scale](https://blog.cloudflare.com/ai-code-review/) — 13.1 万次审查背后的规则组合经验
 - [microservices.io, GenAI development platform — part 1: guardrails](https://microservices.io/post/architecture/2026/03/09/genai-development-platform-part-1-development-guardrails.html) — 规则与 CI 之间如何做纵深防御

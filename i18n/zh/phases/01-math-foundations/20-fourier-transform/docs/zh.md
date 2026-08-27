@@ -438,8 +438,8 @@ spectrogram = np.abs(Zxx) ** 2
 
 | 术语 | 含义 |
 |------|---------------|
-| DFT (Discrete Fourier Transform) | 把 N 个时域样本转换成 N 个频域系数；每个系数表示信号与对应频率复正弦波的相关性 |
-| FFT (Fast Fourier Transform) | 以 O(N log N) 复杂度计算 DFT 的算法；Cooley-Tukey 算法会递归拆分偶数与奇数索引 |
+| DFT（离散傅里叶变换） | 把 N 个时域样本转换成 N 个频域系数；每个系数表示信号与对应频率复正弦波的相关性 |
+| FFT（快速傅里叶变换） | 以 O(N log N) 复杂度计算 DFT 的算法；Cooley-Tukey 算法会递归拆分偶数与奇数索引 |
 | Inverse DFT | 根据频率系数重建时域信号；公式与 DFT 相同，但指数符号相反并乘以 1/N |
 | Frequency bin | DFT 输出中的每个索引 k 表示频率 k*fs/N Hz；bin 就是离散频率槽 |
 | DC component | X[0]，零频系数，与信号均值成正比 |

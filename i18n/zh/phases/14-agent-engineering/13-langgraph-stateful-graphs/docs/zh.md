@@ -108,12 +108,12 @@ trace 会展示第一次运行如何在 human gate 处失败、状态如何被�
 
 | 术语 | 常见说法 | 实际含义 |
 |------|----------|----------|
-| State graph | "Agent as state machine" | 带类型状态 + 节点 + 边 + reducer |
+| State graph | "智能体作为状态机" | 带类型状态 + 节点 + 边 + reducer |
 | Checkpointer | "Persistence backend" | 每个节点后序列化状态；支持 resume |
 | Reducer | "State merger" | 把当前状态与节点更新合并起来的函数 |
 | Conditional edge | "Branch" | 由状态函数决定选择哪条边 |
 | Subgraph | "Nested graph" | 作为另一个图中节点使用的图 |
-| Durable execution | "Resume from failure" | 从最后一个成功节点，以精确状态继续执行 |
+| Durable execution | "从故障处恢复" | 从最后一个成功节点，以精确状态继续执行 |
 | Supervisor | "Router LLM" | 专业子 agent 的中央调度者 |
 | Swarm | "P2P agents" | Agent 通过共享工具 handoff；没有中央路由器 |
 

@@ -153,7 +153,7 @@ PyTorch 的 FSDP 也是同样的形状，只是做得更完整：每层使用 fl
 | World size | "Total ranks" | 进程组中的总进程数；collective 以整个组为单位运行 |
 | Rank | "Worker id" | 进程组内部的进程编号，从 0 开始 |
 | All-reduce | "Sum the grads" | 把一个 tensor 在所有 ranks 上求和，并让每个 rank 都拿到相同结果 |
-| Unshard | "Gather the params" | 通过 all_gather 把各 rank 手里的参数切片重建成完整 tensor |
+| Unshard | “收集参数” | 通过 all_gather 把各 rank 手里的参数切片重建成完整 tensor |
 
 ## 延伸阅读
 

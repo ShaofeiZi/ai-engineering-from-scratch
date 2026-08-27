@@ -87,7 +87,7 @@ al-ascii-cloak
 | UTES | "uncommon structure" | Uncommon Text-Encoded Structure，例如树、图、嵌套 JSON，可用于夹带内容 |
 | ViTC | "visual-text capability" | 衡量模型读取非语义视觉编码能力的基准 |
 | Perplexity filter | "PPL defense" | 通过高困惑度拒绝 prompt 的防御；会误伤合法结构化输入 |
-| Retokenization | "tokenizer shift defense" | 先用另一种 tokenizer 重新处理 prompt；之所以失效，是因为攻击依赖视觉识别 |
+| Retokenization | "tokenizer 位移防御" | 先用另一种 tokenizer 重新处理 prompt；之所以失效，是因为攻击依赖视觉识别 |
 | Homoglyph | "lookalike characters" | 视觉上与拉丁字母相同的 Unicode 字符，可绕过子串检查 |
 
 ## 进一步阅读

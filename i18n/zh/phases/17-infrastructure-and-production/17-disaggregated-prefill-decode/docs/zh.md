@@ -144,7 +144,7 @@ prefill-decode-split
 ## 延伸阅读
 
 - [NVIDIA — Introducing Dynamo](https://developer.nvidia.com/blog/introducing-nvidia-dynamo-a-low-latency-distributed-inference-framework-for-scaling-reasoning-ai-models/)
-- [NVIDIA — Disaggregated LLM Inference on Kubernetes](https://developer.nvidia.com/blog/deploying-disaggregated-llm-inference-workloads-on-kubernetes/)
-- [TensorRT-LLM Disaggregated Serving blog](https://nvidia.github.io/TensorRT-LLM/blogs/tech_blog/blog5_Disaggregated_Serving_in_TensorRT-LLM.html)
+- [NVIDIA — Kubernetes 上的解耦式 LLM 推理](https://developer.nvidia.com/blog/deploying-disaggregated-llm-inference-workloads-on-kubernetes/)
+- [TensorRT-LLM 解耦式服务博客](https://nvidia.github.io/TensorRT-LLM/blogs/tech_blog/blog5_Disaggregated_Serving_in_TensorRT-LLM.html)
 - [llm-d GitHub](https://github.com/llm-d/llm-d)
-- [llm-d 0.5 release notes](https://github.com/llm-d/llm-d/releases)
+- [llm-d 0.5 发布说明](https://github.com/llm-d/llm-d/releases)

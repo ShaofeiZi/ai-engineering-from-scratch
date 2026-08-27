@@ -115,10 +115,10 @@ python3 code/main.py
 
 | 术语 | 常见说法 | 实际含义 |
 |------|----------|----------|
-| MASFT | "Multi-agent failure taxonomy" | Berkeley 提出的 14 模式分类 |
+| MASFT | "多智能体失败分类法" | Berkeley 提出的 14 模式分类 |
 | Cascading error | "Ripple failure" | 一个早期错误沿着 N 个步骤继续传播 |
-| Context loss | "Forgot the constraint" | 长时任务中丢失了前几轮的关键事实 |
-| Tool misuse | "Wrong tool / wrong args" | 调用形式合法，但实际调用错了 |
+| Context loss | "忘了约束条件" | 长时任务中丢失了前几轮的关键事实 |
+| Tool misuse | "工具错了 / 参数错了" | 调用形式合法，但实际调用错了 |
 | Success hallucination | "Faked completion" | agent 在 400 错误后仍声称成功，且状态未变 |
 | Scope creep | "Overreach" | agent 做了超出要求的事情 |
 | Instruction-following deviation | "Disobedience" | 忽略 system prompt 或用户约束 |

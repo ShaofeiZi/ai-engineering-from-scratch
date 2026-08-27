@@ -134,7 +134,7 @@ python3 -m unittest code/test_main.py
 | Temperature | 控制对比 softmax 尖锐程度的标量 |
 | Hard negative | 模型觉得很容易混淆的非对角样本，适合重点采样 |
 | LM loss | 标题生成一侧的标准 next-token 交叉熵 |
-| Joint embedding space | 图像与文本向量投影后共同落入的共享空间 |
+| 联合嵌入空间 | 图像与文本向量投影后共同落入的共享空间 |
 
 ## 进一步阅读
 

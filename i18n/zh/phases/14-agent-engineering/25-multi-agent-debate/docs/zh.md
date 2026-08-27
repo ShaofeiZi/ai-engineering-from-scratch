@@ -20,7 +20,7 @@ Self-Refine（Lesson 05）本质上是一个模型批评自己，容易陷入 gr
 
 ## 概念
 
-### Society of Minds (Du et al., ICML 2024)
+### Society of Minds（Du 等，ICML 2024）
 
 - N 个模型实例针对同一个问题独立提出答案。
 - 在 R 轮过程中，每个模型会读取其他模型的提案并加以批评。
@@ -109,11 +109,11 @@ python3 code/main.py
 | 术语 | 常见说法 | 实际含义 |
 |------|----------|----------|
 | Debate | "Multi-agent critique" | N 个 proposer，经过 R 轮交叉批评后收敛 |
-| Full mesh | "Everyone reads everyone" | 每个 debater 每轮都读取所有 peers |
-| Sparse topology | "Limited peer view" | debater 只读取部分 peers |
+| Full mesh | "人人读取所有人" | 每个 debater 每轮都读取所有 peers |
+| Sparse topology | "受限的同伴视野" | debater 只读取部分 peers |
 | Hub-and-spoke | "Star topology" | 一个中心 debater，N-1 个 spokes 只读取 hub |
 | Convergence | "Agreement" | debaters 最终收敛到同一个共享答案 |
-| Society of Minds | "Du et al. debate paper" | ICML 2024 的多代理辩论方法 |
+| Society of Minds | "Du 等人的辩论论文" | ICML 2024 的多代理辩论方法 |
 
 ## 延伸阅读
 

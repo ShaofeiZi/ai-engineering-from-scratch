@@ -142,9 +142,9 @@ i4-vault-rotation
 
 ## 延伸阅读
 
-- [Doppler — Advanced LLM Security](https://www.doppler.com/blog/advanced-llm-security)
-- [Portkey — Manage LLM API keys with secret references](https://portkey.ai/blog/secret-references-ai-api-key-management/)
-- [Datadog — LLM Guardrails Best Practices](https://www.datadoghq.com/blog/llm-guardrails-best-practices/)
-- [JumpServer — Secrets Management Best Practices 2026](https://www.jumpserver.com/blog/secret-management-best-practices-2026)
+- [Doppler — 高级 LLM 安全](https://www.doppler.com/blog/advanced-llm-security)
+- [Portkey — 使用 secret references 管理 LLM API 密钥](https://portkey.ai/blog/secret-references-ai-api-key-management/)
+- [Datadog — LLM Guardrails 最佳实践](https://www.datadoghq.com/blog/llm-guardrails-best-practices/)
+- [JumpServer — 2026 Secrets Management 最佳实践](https://www.jumpserver.com/blog/secret-management-best-practices-2026)
 - [Microsoft Presidio](https://github.com/microsoft/presidio)：PII 检测与匿名化工具。
 - [HashiCorp Vault docs](https://developer.hashicorp.com/vault/docs)

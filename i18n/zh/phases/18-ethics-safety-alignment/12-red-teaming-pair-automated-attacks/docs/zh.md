@@ -97,7 +97,7 @@ al-pair-loop
 |------|-----------------|------------------------|
 | PAIR | “自动 jailbreak” | Prompt Automatic Iterative Refinement；由 attacker-LLM + judge-LLM 组成的循环攻击 |
 | GCG | “梯度 jailbreak” | white-box 条件下，对对抗性后缀做 token-level gradient search |
-| Attack success rate (ASR) | “k 次查询下的成功率” | 核心指标；必须与 query budget 和 judge 身份一起报告 |
+| 攻击成功率（ASR） | “k 次查询下的成功率” | 核心指标；必须与 query budget 和 judge 身份一起报告 |
 | Judge LLM | “评分器” | 判断回复是否满足有害目标的 LLM |
 | JailbreakBench | “那个评测基准” | 带类别标签的标准化有害行为集合 |
 | HarmBench | “更大的基准” | 510 个行为，兼顾 functional 和 semantic harm 测试 |

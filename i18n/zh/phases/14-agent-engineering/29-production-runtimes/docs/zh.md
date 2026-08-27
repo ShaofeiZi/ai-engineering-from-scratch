@@ -129,7 +129,7 @@ python3 code/main.py
 |------|----------|----------|
 | Request-response | "Synchronous" | 用户等待完成，只适合短任务 |
 | Streaming | "SSE / WS" | 逐步输出，用户体验更好，并且可以逐块观测延迟 |
-| Durable execution | "Resume from failure" | 状态有 checkpoint，失败后从上一步恢复 |
+| Durable execution | "从故障处恢复" | 状态有 checkpoint，失败后从上一步恢复 |
 | Queue-based | "Background jobs" | Producer / worker pool / DLQ 结构 |
 | Event-driven | "Trigger-based" | 代理对外部事件作出响应 |
 | DLQ | "Dead-letter queue" | 存放失败任务的停车场 |

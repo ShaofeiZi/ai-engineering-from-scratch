@@ -587,7 +587,7 @@ check_tensor("ugly", [1.0, float('inf'), 3.0])
 | Catastrophic cancellation | “减法造成的精度损失” | 两个非常接近的浮点数相减时，有效数字消去，舍入噪声主导结果 |
 | Overflow | “数字太大” | 结果超过最大可表示值并变为 inf；exp(89) 在 float32 中会上溢 |
 | Underflow | “数字太小” | 结果比最小可表示正数更接近零并变为 0.0；exp(-104) 在 float32 中会下溢 |
-| Log-sum-exp trick | “先减去最大值” | 提取 exp(max(x)) 后计算 log(sum(exp(x)))，从而防止上溢与下溢；用于 softmax、交叉熵和对数概率计算 |
+| 对数求和指数技巧 | “先减去最大值” | 提取 exp(max(x)) 后计算 log(sum(exp(x)))，从而防止上溢与下溢；用于 softmax、交叉熵和对数概率计算 |
 | Stable softmax | “不会爆炸的 softmax” | 取指数前减去 max(logits)，数值结果相同，但不可能上溢 |
 | Gradient checking | “验证反向传播” | 把反向传播得到的解析梯度与有限差分得到的数值梯度比较，以捕获实现缺陷 |
 | Mixed precision | “float16 前向、float32 反向” | 对速度敏感的运算使用低精度浮点数，对数值敏感的运算使用高精度浮点数；通常可加速 2–3 倍 |

@@ -141,17 +141,17 @@ Codex CLI、Claude Code 和 OpenCode 都有各自不同的上下文压缩机制�
 
 ## 延伸阅读
 
-- [Anthropic, Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+- [Anthropic，长时运行智能体的有效 harness](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
 - [OpenAI Agents SDK handoffs](https://openai.github.io/openai-agents-python/handoffs/)
 - [Codex Blog, Codex CLI Context Compaction: Architecture, Configuration, Managing Long Sessions](https://codex.danielvaughan.com/2026/03/31/codex-cli-context-compaction-architecture/) — 介绍 POST /v1/responses/compact 与本地回退机制
 - [Justin3go, Shedding Heavy Memories: Context Compaction in Codex, Claude Code, OpenCode](https://justin3go.com/en/posts/2026/04/09-context-compaction-in-codex-claude-code-and-opencode) — 对比三种工具的上下文压缩机制
 - [JD Hodges, Claude Handoff Prompt: How to Keep Context Across Sessions (2026)](https://www.jdhodges.com/blog/ai-session-handoffs-keep-context-across-conversations/) — 讨论 CLAUDE.md 与 HANDOVER.md 的 50-75% 上下文预算做法
 - [Mervin Praison, Managing Handoffs in Multi-Agent Coding Sessions: Fresh Context Without Losing Continuity](https://mer.vin/2026/04/managing-handoffs-in-multi-agent-coding-sessions-fresh-context-without-losing-continuity/) — 用分布式系统视角解释交接
-- [Hermes Issue #20372 — automatic fresh-session handoff when compression becomes risky](https://github.com/NousResearch/hermes-agent/issues/20372)
+- [Hermes Issue #20372 —— 当压缩开始变得有风险时自动切换到新会话交接](https://github.com/NousResearch/hermes-agent/issues/20372)
 - [Hermes Issue #499 — Context Compaction Quality Overhaul](https://github.com/NousResearch/hermes-agent/issues/499) — Codex CLI 中面向交接的提示设计
-- [Microsoft Agent Framework, Compaction](https://learn.microsoft.com/en-us/agent-framework/agents/conversations/compaction)
-- [OpenCode, Context Management and Compaction](https://deepwiki.com/sst/opencode/2.4-context-management-and-compaction)
-- [LangChain, Context Engineering for Agents](https://www.langchain.com/blog/context-engineering-for-agents)
+- [Microsoft Agent Framework，压缩](https://learn.microsoft.com/en-us/agent-framework/agents/conversations/compaction)
+- [OpenCode，上下文管理与压缩](https://deepwiki.com/sst/opencode/2.4-context-management-and-compaction)
+- [LangChain，面向智能体的上下文工程](https://www.langchain.com/blog/context-engineering-for-agents)
 - 阶段 14 · 34——生成器读取的状态文件
 - 阶段 14 · 38——交接包所指向的验证结论
 - 阶段 14 · 39——打包进交接包的审查报告

@@ -95,15 +95,15 @@ agent loop 本身也是一个 worker：它消费事件（用户消息、工具�
 
 | 厂商或社区里的模式名 | 它本质上是什么 |
 |------------------------------|--------------------|
-| Ralph Loop (Claude Code, Codex, agentic_harness book) — re-inject original intent into a fresh context window when the agent tries to stop early | 一个 trigger 把任务重新入队到干净上下文；session persistence 负责把目标延续下去 |
-| Plan / Execute / Verify (PEV) | 三个 worker，各负责一个角色，通过 state 和 queue 串联阶段 |
-| Harness-compute separation (OpenAI Agents SDK, April 2026) — split control plane from execution plane | 只是把 control-plane / data-plane 的老概念重新表述了一遍；这个想法比 agent 标签早很多年 |
-| Open Agent Passport (OAP, March 2026) — sign and audit every tool call against a declarative policy before execution | 一个 pre-action worker 执行 authorization policy，并把签名审计写入队列 |
-| Guides and Sensors (Birgitta Böckeler / Thoughtworks) — feedforward rules + feedback observability | authorization policy + verification functions + observability traces |
-| Progressive compaction, 5-stage (Claude Code reverse engineering, April 2026) | 一个定期在 session persistence 上运行的状态管理 worker，用来把上下文压进预算 |
-| Hooks / middleware (LangChain, Claude Code) — intercept model and tool calls | 包在 runtime 调用路径外层的 triggers + functions |
-| Skills as Markdown with progressive disclosure (Anthropic, Flue) | 一个 function registry，只在需要时把 function metadata 加载进上下文 |
-| Sandbox agents (Codex, Sandcastle, Vercel Sandbox) | compute plane：具备隔离文件系统、网络和生命周期的 runtime |
+| Ralph Loop（Claude Code、Codex、agentic_harness 一书）——当智能体试图过早停止时，把原始意图重新注入新的上下文窗口 | 一个 trigger 把任务重新入队到干净上下文；session persistence 负责把目标延续下去 |
+| Plan / Execute / Verify（PEV） | 三个 worker，各负责一个角色，通过 state 和 queue 串联阶段 |
+| Harness-compute separation（OpenAI Agents SDK，2026 年 4 月）——把控制平面与执行平面拆开 | 只是把 control-plane / data-plane 的老概念重新表述了一遍；这个想法比 agent 标签早很多年 |
+| Open Agent Passport（OAP，2026 年 3 月）——在执行前按声明式策略对每次工具调用进行签名与审计 | 一个 pre-action worker 执行 authorization policy，并把签名审计写入队列 |
+| Guides and Sensors（Birgitta Böckeler / Thoughtworks）——前馈规则加反馈可观测性 | authorization policy + verification functions + observability traces |
+| 五阶段渐进式压缩（Claude Code 逆向观察，2026 年 4 月） | 一个定期在 session persistence 上运行的状态管理 worker，用来把上下文压进预算 |
+| Hooks / middleware（LangChain、Claude Code）——拦截模型调用与工具调用 | 包在 runtime 调用路径外层的 triggers + functions |
+| 以 Markdown 形式提供、并按渐进披露加载的 Skills（Anthropic、Flue） | 一个 function registry，只在需要时把 function metadata 加载进上下文 |
+| Sandbox agents（Codex、Sandcastle、Vercel Sandbox） | compute plane：具备隔离文件系统、网络和生命周期的 runtime |
 | MCP servers | 通过稳定 RPC 暴露 functions 的 worker，capability list 就是 authorization |
 
 表中每一项，本质上都是 agent 社区重新发现了一个本就存在于 distributed systems 里的 primitive，并给它起了一个新名字。做营销很有帮助，做工程时却不够精确。
@@ -183,7 +183,7 @@ python3 code/main.py
 | Workbench | “整体 setup” | 围绕模型搭建的工程表面，让工作变得可靠 |
 | Surface | “一份文档”或“一段脚本” | agent 每一轮都会读写的具名、机器可读输入 |
 | System of record | “那份记录” | 聊天历史消失后，agent 仍然当真的那份文件 |
-| Definition of done | “验收标准” | agent 无法伪造的、以文件为依托的客观检查清单 |
+| 完成定义 | “验收标准” | agent 无法伪造的、以文件为依托的客观检查清单 |
 | Workbench audit | “repo 就绪性检查” | 在工作开始前检查七个表面是否齐备的过程 |
 
 ## 延伸阅读
@@ -219,8 +219,8 @@ python3 code/main.py
 
 值得读的 Hacker News 讨论在于分歧，而不是共识：
 
-- [HN: Effective harnesses for long-running agents](https://news.ycombinator.com/item?id=46081704)
-- [HN: Improving 15 LLMs at Coding in One Afternoon. Only the Harness Changed](https://news.ycombinator.com/item?id=46988596)
+- [HN：长时运行智能体的有效 harness](https://news.ycombinator.com/item?id=46081704)
+- [HN：一个下午提升 15 个 LLM 的编程能力，唯一变化只有 harness](https://news.ycombinator.com/item?id=46988596)
 - [HN: The agent harness belongs outside the sandbox](https://news.ycombinator.com/item?id=47990675) — 主张 authorization 应该作为独立平面存在
 
 本课程内的交叉引用：

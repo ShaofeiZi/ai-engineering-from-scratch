@@ -111,8 +111,8 @@ python3 code/main.py
 
 ## 延伸阅读
 
-- [Huang et al, GPipe: Efficient Training of Giant Neural Networks](https://arxiv.org/abs/1811.06965)
-- [Narayanan et al, PipeDream: Generalized Pipeline Parallelism for DNN Training](https://arxiv.org/abs/1806.03377)
-- [Megatron-LM pipeline parallel docs](https://github.com/NVIDIA/Megatron-LM)
+- [Huang 等，《GPipe: Efficient Training of Giant Neural Networks》](https://arxiv.org/abs/1811.06965)
+- [Narayanan 等，《PipeDream: Generalized Pipeline Parallelism for DNN Training》](https://arxiv.org/abs/1806.03377)
+- [Megatron-LM 流水线并行文档](https://github.com/NVIDIA/Megatron-LM)
 - 第 19 阶段第 76 课：调度会直接使用那里的 send/recv 原语
 - 第 19 阶段第 78 课：ZeRO 与 pipeline 正交，二者经常组合使用

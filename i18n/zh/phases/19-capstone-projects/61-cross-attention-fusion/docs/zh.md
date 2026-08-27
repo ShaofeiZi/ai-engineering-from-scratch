@@ -58,7 +58,7 @@ decoder block 里的两种 attention 需要不同的 masks：
 
 在生成任何文本之前，整张图像已经是完全可见的。caption 的第 `t` 个 token 可以 attend 到图像里的任意一个 patch；图像 patches 本身不存在时间顺序。某些 Flamingo 变体在交织多个图像与多个文本片段时，会加上按样本变化的 masking pattern；但对于“一张图像 + 一条 caption”这一最基本情况，cross-attention 应该看到全部视觉内容。
 
-### Key/value caching
+### 键值缓存
 
 图像的 keys 和 values 会在 decode 开始时计算一次，然后放进 cache。之后每来一个新的文本 token，都直接复用这个 cache，而不重新计算。这正是 captioning 在推理阶段足够快的原因：重的 ViT 只运行一次；cross-attention 在后续每一步都只重复利用现成的 keys 和 values。本课会显式暴露 cache，并测试 cache-hit 路径。
 
