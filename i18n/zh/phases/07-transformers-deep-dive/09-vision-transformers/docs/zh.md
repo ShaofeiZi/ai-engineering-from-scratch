@@ -1,83 +1,83 @@
-# 视力转换器 (ViT)
+# 视觉 Transformer（ViT）
 
-> 一个图像是一个补丁格,一个句子是一个代币格,一个变压器吃了两者.
+> 图像是图块组成的网格，句子是词元组成的网格。同一个 Transformer 可以处理二者。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 7 · 05 (Full Transformer), Phase 4 · 03 (CNNs), Phase 4 · 14 (Vision Transformers intro)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 7 · 05（完整 Transformer）、阶段 4 · 03（CNN）、阶段 4 · 14（视觉 Transformer 入门）
+**Time:** 约 45 分钟
 
 ## 问题
 
-在2020年前,计算机视觉意味着曲.每一个图像网上的SOTA,COCO和检测基准都使用了CNN的脊柱.变体是语言.
+2020 年以前，计算机视觉意味着卷积。在 ImageNet、COCO 和各种检测基准上，每个顶尖模型都使用 CNN 骨干网络；Transformer 只用于语言。
 
-东索维茨基及其他 (2020) "一个图像值16x16字" 显示你可以完全放下曲.切片图像成固定尺寸的补丁,线性投影每个补丁成嵌入,将序列输送到尼拉变压器编码器.在足够的规模 (ImageNet-21k预训或更大),ViT匹配或超过ResNet基于的模型.
+Dosovitskiy 等人在 2020 年的论文《An Image is Worth 16x16 Words》中证明，可以彻底舍弃卷积。把图像切成大小固定的图块，以线性方式把每个图块投影为嵌入，再把这个序列送进普通 Transformer 编码器。当规模足够大时（在 ImageNet-21k 或更大数据集上预训练），ViT 可以达到或超过基于 ResNet 的模型。
 
-维特是2026年开始的更广泛模式:一个架构,许多模式. 语标记音频.维特标记图像. 机器人的行动代币. 视频的像素代币. 变压器不关心给它一个序列,它学习.
+ViT 开启了 2026 年的一种更广泛模式：同一种架构处理多种模态。Whisper 把音频变成词元，ViT 把图像变成词元，机器人使用动作词元，视频使用像素词元。Transformer 并不在乎——给它一个序列，它就能学习。
 
-到2026年,ViT及其后代 (DeiT,Swin,DINOv2,ViT-22B,SAM3) 拥有大部分视觉.CNN仍然在边缘设备和延迟敏感任务上获胜.其他所有东西都在堆中有ViT.
+到 2026 年，ViT 及其后继模型（DeiT、Swin、DINOv2、ViT-22B、SAM 3）主导了大多数视觉任务。CNN 仍然在边缘设备和延迟敏感任务上胜出，除此之外的技术栈中几乎都有某种 ViT。
 
 ## 概念
 
-![Image → patches → tokens → transformer](../assets/vit.svg)
+![图像 → 图块 → 词元 → Transformer](../assets/vit.svg)
 
-### 步骤 1  补丁
+### 第 1 步——划分图块
 
-分开一个`H × W × C`图像成一个`N × (P·P·C)`片的序列. 典型的设置: `224 × 224`图像`16 × 16`补丁 → 196个补丁,每个值为 768 个.
+把一张 `H × W × C` 图像切成 `N × (P·P·C)` 的扁平图块序列。典型设置：`224 × 224` 图像、`16 × 16` 图块 → 196 个图块，每个包含 768 个值。
 
 ```
 image (224, 224, 3) → 14 × 14 grid of 16x16x3 patches → 196 vectors of length 768
 ```
 
-补丁尺寸是杆. 较小的补丁 = 更多的代币,更好的分辨率,方形注意力成本.较大的补丁 = 粗,更便宜.
+图块大小是关键调节杆。图块越小，词元越多、分辨率越高，但注意力成本会按平方增长；图块越大，粒度越粗、成本越低。
 
-### 步骤 2 线性嵌入
+### 第 2 步——线性嵌入
 
-一个学习的矩阵将每个平面补丁投射到`d_model`相当于一个核子大小的卷积`P`走进步`P`在PyTorch中,这字面上是`nn.Conv2d(C, d_model, kernel_size=P, stride=P)`两行实施.
+使用一个学习式矩阵把每个扁平图块投影到 `d_model`。这等价于卷积核大小为 `P`、步幅为 `P` 的卷积。在 PyTorch 中，它实际上就是 `nn.Conv2d(C, d_model, kernel_size=P, stride=P)`——两行即可实现。
 
-### 步骤 3 预备`[CLS]`代码,添加位置嵌入
+### 第 3 步——前置 `[CLS]` 词元并加入位置嵌入
 
-- 准备一个可学习的东西`[CLS]`它们的最后隐藏状态是用于分类的图像表示.
-- 添加可学习的位置嵌入式 (ViT原始) 或双向二维 (后代变体).
-- 在2024+ RoPE 扩展到2D位置,有时没有明确的嵌入.
+- 在序列前添加一个可学习的 `[CLS]` 词元，它最终的隐藏状态会作为图像表示用于分类。
+- 加入可学习的位置嵌入（原始 ViT），或后续变体中的二维正弦编码。
+- 从 2024 年开始，RoPE 被扩展到二维位置，有时不再需要显式嵌入。
 
-### 步骤 4 标准变压器编码器
+### 第 4 步——标准 Transformer 编码器
 
-堆积 L 块`LayerNorm → Self-Attention → + → LayerNorm → MLP → +`没有视觉特定层次.这是论文的教学性突破.
+堆叠 L 个 `LayerNorm → Self-Attention → + → LayerNorm → MLP → +` 块，与 BERT 完全相同，不包含任何视觉专用层。这正是论文在教学意义上的核心结论。
 
-### 步骤 5 头
+### 第 5 步——输出头
 
-为了分类: 取`[CLS]`隐藏状态 →线性 →软max.对于DINOv2或SAM,丢弃`[CLS]`直接使用嵌件.
+用于分类时：取 `[CLS]` 隐藏状态 → 线性层 → softmax。对于 DINOv2 或 SAM，则丢弃 `[CLS]`，直接使用图块嵌入。
 
-### 重要的是哪些变体
+### 产生重要影响的变体
 
-| Model | Year | Change |
+| 模型 | 年份 | 变化 |
 |-------|------|--------|
-| ViT | 2020 | The original. Fixed patch size, full global attention. |
-| DeiT | 2021 | Distillation; trainable on ImageNet-1k only. |
-| Swin | 2021 | Hierarchical with shifted windows. Fixed sub-quadratic cost. |
-| DINOv2 | 2023 | Self-supervised (no labels). Best general vision features. |
-| ViT-22B | 2023 | 22B params; scaling laws apply. |
-| SigLIP | 2023 | ViT + language pair, sigmoid contrastive loss. |
-| SAM 3 | 2025 | Segment anything; ViT-Large + promptable mask decoder. |
+| ViT | 2020 | 原始版本。固定图块大小、完全全局注意力。 |
+| DeiT | 2021 | 知识蒸馏；只用 ImageNet-1k 即可训练。 |
+| Swin | 2021 | 使用移位窗口的层次化结构，成本稳定地低于二次方。 |
+| DINOv2 | 2023 | 自监督（无标签），最佳通用视觉特征。 |
+| ViT-22B | 2023 | 220 亿参数；同样遵循缩放定律。 |
+| SigLIP | 2023 | ViT + 语言对，使用 sigmoid 对比损失。 |
+| SAM 3 | 2025 | 分割一切；ViT-Large + 可提示掩码解码器。 |
 
-### 为什么这需要一段时间
+### 它为何花了一段时间才流行
 
-由于没有任何 CNN 诱导偏见 (翻译不变,本地).没有100万以上标记图像或强大的自我监督预训练,CNN 仍然在匹配计算中获胜. DeiT 在2021年通过蒸技巧解决了这一问题; DINOv2在2023年通过自我监督永久解决了这一问题.
+ViT 没有 CNN 的归纳偏置（平移不变性、局部性），因此需要*大量*数据才能追平 CNN。如果没有超过 1 亿张带标签图像或强大的自监督预训练，在计算量相同的情况下 CNN 仍然胜出。DeiT 在 2021 年用蒸馏技巧缓解了问题，DINOv2 则在 2023 年通过自监督彻底解决了它。
 
 ```figure
 n5-patch-stream
 ```
 
-## 建立它
+## 动手构建
 
-看到`code/main.py`没有实在规模的 ViT 需要 PyTorch 和数小时的 GPU 时间.
+见 `code/main.py`。其中使用纯标准库完成图块划分、线性嵌入与健全性检查，不进行训练——任何实际规模的 ViT 都需要 PyTorch 和数小时 GPU 时间。
 
-### 步骤1:假图像
+### 第 1 步：模拟图像
 
-作为列列的24 × 24 RGB图像`(R, G, B)`我们使用6×6补丁 →16补丁,每一个108D嵌入向量.
+用行列表中的 `(R, G, B)` 元组表示一张 24 × 24 RGB 图像。我们使用 6×6 图块 → 16 个图块，每个图块形成 108 维嵌入向量。
 
-### 步骤 2: 补丁
+### 第 2 步：划分图块
 
 ```python
 def patchify(image, P):
@@ -94,17 +94,17 @@ def patchify(image, P):
     return patches
 ```
 
-拉斯特序列:在网格上排列大.每个VIT都使用这种序列.
+栅格顺序：按行优先遍历网格。每个 ViT 都采用这一顺序。
 
-### 步骤3:线性嵌入
+### 第 3 步：线性嵌入
 
-乘以随机的每一个平面块`(patch_flat_size, d_model)`检查输出形状是`(N_patches + 1, d_model)`在预定后`[CLS]`现在,我们要去.
+将每个扁平图块乘以随机的 `(patch_flat_size, d_model)` 矩阵。验证前置词元后的输出形状为 `(N_patches + 1, d_model)`，其中包含 `[CLS]`。
 
-### 步骤4:对现实 ViT 计算参数
+### 第 4 步：计算实际 ViT 的参数量
 
-打印VIT-Base的参数数量:12层,12头,d=768,补丁=16.比较ResNet-50 (~25M).VIT-Base降落在~86M.VIT-Large~307M.VIT-Huge~632M.
+打印 ViT-Base 的参数量：12 层、12 个头、d=768、patch=16。与 ResNet-50（约 2500 万）比较。ViT-Base 约为 8600 万，ViT-Large 约为 3.07 亿，ViT-Huge 约为 6.32 亿。
 
-## 用它
+## 学以致用
 
 ```python
 from transformers import ViTImageProcessor, ViTModel
@@ -120,37 +120,37 @@ out = model(**inputs).last_hidden_state   # (1, 197, 768): [CLS] + 196 patches
 cls_emb = out[:, 0]                       # image representation
 ```
 
-**DINOv2 embeddings are the 2026 default for image features.**结脊椎,训练一个小头. 工作于分类,检索,检测,字幕. 测试点DINOv2超越Clip在任何非文字视觉任务.
+**DINOv2 嵌入是 2026 年图像特征的默认选择。** 冻结骨干网络，只训练一个小型输出头，即可用于分类、检索、检测和图像描述。在所有不涉及文本的视觉任务上，Meta 的 DINOv2 检查点都胜过 CLIP。
 
-**Patch-size picking.**小型模型使用16×16 (ViT-B/16).密集预测 (细分) 使用8×8或14×14 (SAM,DINOv2).非常大的模型使用14×14.
+**图块大小选择。** 小模型使用 16×16（ViT-B/16），密集预测（分割）使用 8×8 或 14×14（SAM、DINOv2），超大模型使用 14×14。
 
-## 运送它
+## 交付成果
 
-看到`outputs/skill-vit-configurator.md`技能选择了 ViT 变体和补丁大小,以应对新的视觉任务,因为数据集的尺寸,分辨率和计算预算.
+见 `outputs/skill-vit-configurator.md`。该技能会根据数据集大小、分辨率与计算预算，为新的视觉任务选择 ViT 变体和图块大小。
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`code/main.py`检查补丁数量是相同的`(H/P) * (W/P)`并且平面补丁的尺寸等于`P*P*C`现在,我们要去.
-2. **Medium.**实现2D突形位置嵌入 两个独立的突形代码`row`其他`col`它们被入一个小的 PyTorch ViT 中,并将CIFAR-10的位置嵌入式与可学习的位置嵌入式进行比较.
-3. **Hard.**建立一个3层的ViT (PyTorch),训练1000个MNIST图像,使用4×4补丁.测试精度.现在添加DINOv2预训练在相同的1000个图像上 (简单化:只需训练编码器预测从掩盖补丁的补丁).是否提高精度?
+1. **简单。** 运行 `code/main.py`。验证图块数量等于 `(H/P) * (W/P)`，扁平图块维度等于 `P*P*C`。
+2. **中等。** 实现二维正弦位置嵌入——分别为每个图块的 `row` 和 `col` 生成独立正弦编码，再拼接。把它们送入微型 PyTorch ViT，并在 CIFAR-10 上与可学习位置嵌入比较准确率。
+3. **困难。** 构建三层 ViT（PyTorch），使用 4×4 图块在 1000 张 MNIST 图像上训练，并测量测试准确率。随后在同样的 1000 张图像上增加 DINOv2 预训练（简化方式：只训练编码器根据被遮盖图块预测图块嵌入）。准确率提高了吗？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Patch | "The vision-transformer token" | Flat vector of pixel values for a `P × P × C` region of the image. |
-| Patchify | "Chop + flatten" | Slice image into non-overlapping patches, flatten each to a vector. |
-| `[CLS]` token | "The image summary" | Prepended learnable token; its final embedding is the image representation. |
-| Inductive bias | "What the model assumes" | ViT has fewer priors than CNNs; needs more data to make up the gap. |
-| DINOv2 | "Self-supervised ViT" | Trained without labels using image augmentation + momentum teacher. Best general image features in 2026. |
-| SigLIP | "CLIP's successor" | ViT + text encoder trained with sigmoid contrastive loss; better than CLIP on matched compute. |
-| Swin | "Windowed ViT" | Hierarchical ViT with local attention + shifted windows; sub-quadratic. |
-| Register tokens | "2023 trick" | A few extra learnable tokens that soak up attention sinks; improves DINOv2 features. |
+| 图块 | “视觉 Transformer 的词元” | 图像中 `P × P × C` 区域的扁平像素向量。 |
+| 图块化 | “切分 + 展平” | 把图像切成不重叠的图块，再将每块展平为向量。 |
+| `[CLS]` 词元 | “图像摘要” | 添加到序列前的可学习词元；其最终嵌入就是图像表示。 |
+| 归纳偏置 | “模型作出的假设” | ViT 的先验少于 CNN，因此需要更多数据来弥补差距。 |
+| DINOv2 | “自监督 ViT” | 使用图像增强 + 动量教师、无标签训练；2026 年最佳通用图像特征。 |
+| SigLIP | “CLIP 的后继者” | 使用 sigmoid 对比损失训练的 ViT + 文本编码器；相同计算量下优于 CLIP。 |
+| Swin | “窗口化 ViT” | 采用局部注意力 + 移位窗口的层次化 ViT，复杂度低于二次方。 |
+| 寄存器词元 | “2023 年技巧” | 少量额外的可学习词元，用于吸收注意力汇点；可改善 DINOv2 特征。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Dosovitskiy et al. (2020). An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)VIT的论文.
-- [Touvron et al. (2021). Training data-efficient image transformers & distillation through attention](https://arxiv.org/abs/2012.12877)  
-- [Liu et al. (2021). Swin Transformer: Hierarchical Vision Transformer using Shifted Windows](https://arxiv.org/abs/2103.14030) 
-- [Oquab et al. (2023). DINOv2: Learning Robust Visual Features without Supervision](https://arxiv.org/abs/2304.07193)   
-- [Darcet et al. (2023). Vision Transformers Need Registers](https://arxiv.org/abs/2309.16588) DINOv2 的注册代码固定.
+- [Dosovitskiy 等（2020），一张图像等价于 16×16 个词：用于大规模图像识别的 Transformer](https://arxiv.org/abs/2010.11929)——ViT 论文。
+- [Touvron 等（2021），通过注意力蒸馏训练数据高效的视觉 Transformer](https://arxiv.org/abs/2012.12877)——DeiT。
+- [Liu 等（2021），Swin Transformer：使用移位窗口的层次化视觉 Transformer](https://arxiv.org/abs/2103.14030)——Swin。
+- [Oquab 等（2023），DINOv2：无监督学习稳健视觉特征](https://arxiv.org/abs/2304.07193)——DINOv2。
+- [Darcet 等（2023），视觉 Transformer 需要寄存器](https://arxiv.org/abs/2309.16588)——DINOv2 的寄存器词元修复方案。
