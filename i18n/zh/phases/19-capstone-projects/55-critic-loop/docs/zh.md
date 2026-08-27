@@ -1,29 +1,29 @@
-# 批评者循环
+# 批评器循环
 
-> 一个评论家回来"看起来很好"的第一次被打破了. 一个评论家总是回来"需要工作"的评论家被打破了. 有趣的评论家是那些融合,你必须设计融合.
+> 一个第一次就返回 “looks good” 的 critic 是坏的。一个永远只会返回 “needs work” 的 critic 也是坏的。真正有意思的批评器，是那个会收敛的批评器，而你必须亲手把这种收敛性工程化出来。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 lessons 50-53
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段第 50 到 53 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 通过五个固定维度进行纸质草案:清晰度,新奇性,证据,方法,相关工作.
-- 应用每个轮的批评作为结构化修改差别而不是自由形式的重写.
-- 通过比较轮子中的分数来检测到相近性; 停在高原,目标达到或预算耗尽.
-- 限制使用最大的预算,所以一个不一致的批评者不会永远运行.
-- 发出每轮的痕迹,以便仪表板或下一个阶段可以呈现得分轨迹.
+- 从五个固定维度给 paper draft 打分：clarity、novelty、evidence、methodology、related-work。
+- 把每一轮 critique 应用为结构化 revision diff，而不是自由散文式重写。
+- 通过比较多轮分数来检测 convergence；在 plateau、目标达成或预算耗尽时停止。
+- 用 max-iteration budget 给轮数加上硬上限，避免一个不收敛的 critic 永远跑下去。
+- 为每一轮输出 trace，让 dashboard 或下游阶段能渲染分数轨迹。
 
 ```figure
 ch-critic-converge
 ```
 
-## 为什么五个固定尺寸
+## 为什么固定为五个维度
 
-自由形式的评论家是一个回复建议段落的模型.下一轮的修订将段落视为环境环境.重写是否针对批评是无法验证的,因为批评从未有结构.
+一个 freeform critic，本质上只是返回一段建议文字的模型。下一轮 revision 把这段文字当作环境上下文继续处理。最终这次重写到底有没有真正回应批评，是无法验证的，因为批评本身从来没有结构。
 
-五维度给了带一个合同.
+五个维度给 harness 建立了一份合同。
 
 ```mermaid
 flowchart LR
@@ -37,9 +37,9 @@ flowchart LR
     Scores --> Revs[revision suggestions]
 ```
 
-评分是一个向量. 带在轮子中监视每个维度. 修改提高了清晰度,但将证据储存,是证据的回归,并通过接近检查看到它. 仅仅是模型的批评者不能提供这种保证.
+score 是一个向量。harness 会在多轮里跟踪每一个维度。某次 revision 也许提升了 clarity，但同时把 evidence 拉低了，这在 evidence 维度上就是一次 regression，而 convergence check 能看见它。纯模型式 critic 无法给出这种保证。
 
-## 评论的形状
+## 批评结构
 
 ```mermaid
 flowchart TB
@@ -50,11 +50,11 @@ flowchart TB
     Critique --> Reason[overall reason str]
 ```
 
-每个建议都包含了它改善的尺寸,它针对的部分,`edit`修改器可以应用指令.修改器也可以调用.课程发送一个确定性修改器,它将修改指令解释为一个附加到部分操作.一个模型驱动的修改器将解释同一个字段.合同不会改变.
+每个 suggestion 都带上它要提升的维度、它指向的 section，以及 reviser 可以执行的 `edit` 指令。reviser 也是一个 callable。这门课附带的是确定性 reviser，它会把 edit 指令解释成 append-to-section 操作。一个模型驱动的 reviser 会把相同字段当作 prompt 来理解。合同本身不变。
 
-## 汇率规则,按顺序
+## 收敛规则，按优先级排序
 
-当任何三个条件发生火灾时,
+批评器循环会在以下三个条件中的任意一个触发时终止。
 
 ```mermaid
 flowchart TB
@@ -67,17 +67,17 @@ flowchart TB
     C -- no --> Next[Run round n plus 1]
 ```
 
-目标是最严格的情况:每一个五个维度 (清晰度,新奇性,证据,方法,相关_工作) 都必须达到`>= target_score`(默认方式`8.0`) 循环返回成功之前.一个较高的平均值,一个较弱的尺寸不够.高原检测比较当前轮的平均值与前轮的平均值.如果改善低于`plateau_epsilon`(默认方式`0.1`) 连续两轮,循环从中出发.`plateau`预算是轮子上限 (默认)`5`) 及出口`budget`现在,我们要去.
+target 是最严格的情况：五个维度中的每一个，clarity、novelty、evidence、methodology、related_work，都必须在返回成功前达到 `>= target_score`（默认 `8.0`）。高平均分但某个单维度偏弱，不算成功。plateau detection 会比较当前轮 mean 与上一轮 mean；如果 improvement 连续两轮都低于 `plateau_epsilon`（默认 `0.1`），循环就以 `plateau` 退出。budget 则是轮数硬上限（默认 `5`），退出原因是 `budget`。
 
-如果第三轮在同一次代中击中目标,也会触发平原,结果是`target`没有`plateau`现在,我们要去.
+顺序很重要。target 的优先级高于 plateau，plateau 又高于 budget。如果第三轮刚好达成 target，同时也满足 plateau 条件，结果必须是 `target`，而不是 `plateau`。
 
-## 为什么高原检测是两次的
+## 为什么 plateau 检测要看连续两轮
 
-一轮高原是噪音.一个真正的评论家即使在固定的草稿上都会回报每次代的点数,因为确定性得分仍然取决于哪些建议被应用和在哪种顺序下.需要连续的两个高原轮来过噪音.如果带报告高原,草稿实际上已经停止改善.
+一轮 plateau 只是噪音。即便是固定 draft，一个真实 critic 每轮也可能给出略有不同的分数，因为确定性 scoring 仍然取决于哪些 suggestions 被应用，以及应用顺序。要求连续两轮 plateau，正是为了把这类噪音滤掉。如果 harness 最终报告 plateau，那就说明 draft 的确已经停止改善。
 
-## 在这堂课中,确定主义的批评者
+## 本课中的确定性批评器
 
-课程不需要模型. 发送的评论家是一个调用器,根据三个信号评分一个草案:平均部分体长度 (清晰度),数字数量和引用数量 (证据),`originality_tag`修改者知道如何将每个分数推向上方.
+这门课不会调用模型。附带的 critic 是一个 callable，它依据三个信号给 draft 打分：平均 section body 长度（clarity）、figure count 与 citation count（evidence），以及 paper metadata 上的 `originality_tag`（novelty）。reviser 则知道如何把每个分数往上推。
 
 ```text
 clarity      grows when the average section body length increases
@@ -87,7 +87,7 @@ methodology  grows when a section titled "Method" exists with body
 related-work grows when a section titled "Related Work" exists with body
 ```
 
-修改器将每个建议解释为一个目标附加.在第一轮后,带可以观察得分上升.测试使用这种属性来证实循环减少差距.
+reviser 会把每条 suggestion 解释成一次定向追加。第一轮之后，harness 就能观察到分数开始上升。tests 正是利用这个性质来断言循环在缩小 gap。
 
 ## 完整循环合同
 
@@ -109,24 +109,24 @@ sequenceDiagram
     end
 ```
 
-带拥有圆数,跟踪和融合检查. 评论家拥有分数. 修改者拥有差异. 三种都没有触及其他状态.
+harness 拥有 round counter、trace 与 convergence check。critic 拥有 score。reviser 拥有 diff。三者都不应该触碰彼此的状态。
 
-## 排行量
+## 轨迹输出
 
-每轮发出一个跟踪事件,包括圆数,积分向量,建议数量和结判决.完整的跟踪记录在最终草案旁返回.下游仪表板可以呈现每轮的积分图表.下一个课程,即回复安排器,读取了跟踪记录,决定是否值得保留分支.
+每一轮都会发出一个 trace event，内容包括 round number、score vector、suggestion count，以及 convergence verdict。完整 trace 会和 final draft 一起返回。下游 dashboard 可以据此画出 score-per-round 图表。下一课 iteration scheduler 会读取这份 trace，决定这条 branch 是否值得保留。
 
-## 保护自己免受坏批评
+## 防止坏批评器失控的预算
 
-评论家提出建议,但不会改善得分,他会把循环锁在最大的表达限度上.`budget`作为一个批评 bug,而不是一个草案 bug. 另一个,只出现最后的草案,隐藏了诊断. 追踪设计表面.
+一个给出 suggestions 却永远无法提升分数的 critic，会把循环锁死在 max-iteration ceiling 上。trace 会把这件事暴露得很清楚：五轮、分数不动、verdict=`budget`。用户应该把这解读为 critic 的 bug，而不是 draft 的 bug。若只暴露 final draft，就会把这个诊断信息完全藏起来。trace-first design 正是为了把它显性化。
 
-## 如何读取代码
+## 如何阅读代码
 
-`code/main.py`定义`Critique`现在`Suggestion`现在`Critic`协议`Reviser`协议`CriticLoop`其他`make_deterministic_critic_pair`对于这些问题,我们需要一个简单的方法.`Paper`形状是包含的,所以课程是独立的.
+`code/main.py` 定义了 `Critique`、`Suggestion`、`Critic` protocol、`Reviser` protocol、`CriticLoop`，以及 `make_deterministic_critic_pair` factory，它会返回一个确定性 critic 和与之匹配的 reviser。还包含了一个最小版 `Paper` shape，因此本课是自洽的。
 
-`code/tests/test_critic_loop.py`内容:第一轮后的单调调度改善,调整的草案上目标融合,两轮后的平原检测,没有建议改善时的预算耗尽,修改者提出的建议应用以及痕迹形状.
+`code/tests/test_critic_loop.py` 覆盖：第一轮后的单调改善、在调优 draft 上达成 target convergence、两轮平坦后的 plateau detection、当 suggestions 不能改善分数时的 budget exhaustion、reviser 的 suggestion application，以及 trace shape。
 
-## 走得更远
+## 进一步扩展
 
-实际实施需要两个扩展.第一,维度权重:一个研讨会的论文重量新性高于方法;一个期刊重量反之. 融合检查成为重量平均.第二,对评员:一个评员得分,第二个评员在修改者看到之前判断建议.`Critique`它们的形状.
+真实实现通常还会想要两个扩展。第一，dimension weights：workshop 论文会把 novelty 的权重看得高于 methodology，而 journal 论文可能反过来；这会让 convergence check 变成 weighted mean。第二，paired critics：一个 critic 打分，另一个 critic 在 reviser 看到 suggestions 之前先做裁决。这两种增强都很有价值，而且都可以直接复用相同的 `Critique` shape。
 
-一旦批评结构化,每次改进,融合规则,仪表板,对策者,都会没有改变循环.
+真正下注的地方是 score vector。一旦 critique 被结构化，之后再加任何改进、convergence rule、dashboard、paired critic，都不需要改变这个 loop 的核心结构。
