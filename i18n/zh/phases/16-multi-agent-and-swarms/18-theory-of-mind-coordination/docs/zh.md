@@ -1,63 +1,63 @@
-# 思想理论和新兴协调
+# 心智理论与涌现协调
 
-> 李等人 (arXiv:2310.10701) 表明,在合作的文本游戏展览中,LLM代理人**emergent high-order Theory of Mind**由于环境管理和幻觉,但由于无法实现长远规划, 由于对第三个代理人的信念而认为其他代理人是否有所理解, 由于环境管理和幻觉而无法进行长远规划.**only**M即时条件产生与身份相关的差异化和目标导向的补充性;低容量的 LLM 仅显示出虚假的出现. 协调的出现是即时的,有条件的,依赖于模型,而不是免费的. 这一课程实现了最小的TOM知情代理,与ToM的提示以及没有TOM的合作任务,并测量了与Riedl 2025协议相比的协调.
+> Li 等（arXiv:2310.10701）发现，合作式文字游戏中的 LLM 智能体会表现出**涌现的高阶心智理论**（Theory of Mind，ToM）——即推理另一个智能体如何看待第三个智能体的信念——但由于上下文管理与幻觉问题，它们无法完成长时程规划。Riedl（arXiv:2510.05174）测量了智能体群体中的高阶协同作用，发现**只有** ToM 提示条件会产生与身份关联的差异化和目标导向的互补性；能力较低的 LLM 只表现出虚假的涌现。换言之，协调涌现取决于提示条件和模型能力，并非凭空产生。本课会实现一个最小的 ToM 感知智能体，分别在使用和不使用 ToM 提示的条件下运行合作任务，并按照 Riedl 2025 的实验方案测量协调差异。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 16 · 07 (Society of Mind and Debate), Phase 16 · 17 (Generative Agents)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 16 · 07（心智社会与辩论），阶段 16 · 17（生成式智能体）
+**Time:** 约 75 分钟
 
 ## 问题
 
-许多代理协调通常看起来很神奇:代理人分工,预测彼此,避免裁员.通常,这种"出现"是快速工程的文物.有人告诉代理人"协调".删除提示,删除协调.
+多智能体协调往往看似神奇：智能体划分工作、预判彼此行为并避免重复劳动。但这种“涌现”通常只是提示工程的产物——有人在提示中要求智能体“相互协作”。移除提示，协调也随之消失。
 
-根据Rieedl的2025年发现,在受控条件下,只有当被促使代理商推理**other agents' minds**没有ToM提示,即使是强大的模型也显示出无法存活的统计控制的协调模式.这对于生产来说很重要:团队运输"多代理协调"功能,这些功能是依赖于提示和脆弱的.
+Riedl 2025 年的发现更为严格：在受控条件下，只有当智能体被提示去推理**其他智能体的心智**（ToM）时，协调才会涌现。没有 ToM 提示时，即使强模型表现出协调模式，也无法通过统计控制。生产系统因此必须警惕：团队上线的“多智能体协调”功能可能依赖提示，而且非常脆弱。
 
-这一课将TOM视为一个特定的能力 (关于信仰的信念进行推理),建立一个最小的TOM意识的代理,并测量真正的协调与快速穿衣的样子.
+本课把 ToM 视为一项具体能力——推理关于信念的信念——构建一个最小的 ToM 感知智能体，并测量真实协调与提示包装出的表象有何区别。
 
 ## 概念
 
-### 什么是ToM
+### ToM 的含义
 
-发展心理学:3岁的孩子认为每个人的内心世界与他们相匹配.5岁的孩子理解别人有不同的信仰.7岁的孩子认为球在杯子下.
+发展心理学中，3 岁儿童会认为所有人的内心世界都与自己相同；5 岁儿童能够理解他人可能持有不同信念；7 岁儿童则能推理关于信念的信念（“她认为我觉得球在杯子下面”）。这些分别是零阶、一阶与二阶 ToM。
 
-对于LLM代理人,ToM命令地图:
+对 LLM 智能体而言，ToM 阶数可对应为：
 
-- **Zeroth-order:**没有别人的模型. 代理人只根据自己的观察行动.
-- **First-order:**经纪人对其他经纪人的信仰有模型.
-- **Second-order:**经纪人模拟了复发性信念.
+- **零阶：** 不建立他人模型。智能体只根据自己的观察行动。
+- **一阶：** 智能体建立其他每个智能体的信念模型。“Alice 相信 X。”
+- **二阶：** 智能体对信念进行递归建模。“Alice 相信 Bob 相信 X。”
 
-李及其他研究人员发现,在合作游戏中,第一级和第二级的TOM在LLM代理中出现,但随着长视野和不可靠的通信而降低.
+Li 等在 2023 年发现，一阶与二阶 ToM 会在合作游戏中的 LLM 智能体上涌现，但会随着时程增长和通信不可靠而退化。
 
-### 简而言之,萨利-安妮测试
+### 简述 Sally-Anne 测试
 
-1985年的一次虚假信仰测试:萨利把一个石放在篮子A里,离开了.安妮把它移到篮子B里.萨利回来时会看哪里?一个第一级TOM的孩子说篮子A (萨利的信念与现实不同).一个没有的孩子说篮子B.
+这是 1985 年提出的错误信念测试：Sally 把一颗弹珠放入篮子 A 后离开；Anne 把弹珠移到篮子 B。Sally 回来后会去哪里找？具备一阶 ToM 的儿童回答篮子 A，因为 Sally 的信念与现实不同；不具备该能力的儿童则回答篮子 B。
 
-简单地提出时,GPT-4时代的LLM通过了萨利-安妮风格的测试.当叙述长,场景发生多次变化,或者问题被间接表达时,它们会失败.这是2026年生产LLM中的ToM实际状态.
+GPT-4 时代的 LLM 在问题直接提出时可以通过 Sally-Anne 风格测试，但当叙事很长、场景多次变化或问题采用间接措辞时，它们就会失败。这就是 2026 年生产 LLM 在 ToM 方面的实际状态。
 
-### 里德尔的协调测量
+### Riedl 的协调测量
 
-瑞德 (arXiv:2510.05174) 构建了一个人口规模测试:N代理,合作目标,可变的快速条件.
+Riedl（arXiv:2510.05174）构建了一项群体规模测试：N 个智能体、一个合作目标，以及不同提示条件。测量指标包括：
 
-1. **Identity-linked differentiation.**经纪人是否随着时间的推移发展出稳定的角色区别?
-2. **Goal-directed complementarity.**代理人的行动是否相互补充 (不同次任务),而不是重复?
-3. **Higher-order synergy.**统计测量,以确定组是否实现了任何子组都无法实现的目标.
+1. **身份关联差异化。** 智能体是否会随时间形成稳定的角色区别？
+2. **目标导向互补性。** 智能体的操作是否彼此互补（处理不同子任务），而不是重复？
+3. **高阶协同作用。** 一项统计指标，用于判断群体是否实现了任意子集都无法达成的结果。
 
-结果:只有在ToM提示条件下,所有三项指标都产生信号超过基线.没有ToM提示,对中等容量模型来说,指标几乎没有机会.大型模型显示一些协调,但没有明确的ToM提示,但效果比明确的提示小.
+结果表明，只有在 ToM 提示条件下，三项指标才都产生高于基线的信号。对于中等能力模型，没有 ToM 提示时，各项指标接近随机水平。大型模型即使没有显式 ToM 提示也会表现出一些协调，但效果弱于显式提示。
 
-### 协调错觉
+### 协调幻象
 
-没有统计控制,演示中的"紧急协调"通常反映了:
+如果没有统计控制，演示中的“涌现协调”往往只是以下现象：
 
-- 快速工程,以协调 (系统提示说"一起工作").
-- 观察者偏见 (我们看到预期的模式).
-- 经过比赛后的成功选项.
+- 提示工程预先写入了协调要求（例如系统提示要求“共同工作”）。
+- 观察者偏差（我们会看到自己预期的模式）。
+- 事后挑选成功运行。
 
-没有可测量信号的"紧急协调"的生产系统应被视为市场化.
+生产系统如果宣传“涌现协调”，却无法提供可测量信号，就应把这种说法视为营销。先测量，再声明。
 
-### 对于TOM的认识,
+### 最小 ToM 感知智能体
 
-结构:
+结构如下：
 
 ```
 agent state:
@@ -75,93 +75,93 @@ action selection:
   - pick action that maximizes joint outcome under those predictions
 ```
 
-其他`other_models`属性是ToM状态.第一级ToM只保留一个级别.第二级添加`other_models[i][other_models_of_j]`我认为的,代理,我认为J代理相信.
+`other_models` 属性就是 ToM 状态。一阶 ToM 只保留一层；二阶则添加 `other_models[i][other_models_of_j]`——也就是“我认为智能体 i 觉得智能体 j 相信什么”。
 
-### 为什么长视线会疼
+### 为什么长时程会造成伤害
 
-李等文件:背景限制导致代理人忘记属于谁的信念.幻觉增加了其他代理模型的错误信念.这两者都会产生"我认为他认为X"错误,随着时间的推移,会增加.
+Li 等记录了两个问题：上下文限制会让智能体忘记某项信念属于谁；幻觉会把错误信念加入其他智能体模型。二者都会产生不断累积的“我以为他认为 X”式错误。
 
-报告中所记录的减轻措施以及2024-2026年进行的后续行动:
+论文及 2024–2026 年后续研究记录的缓解措施包括：
 
-- **Explicit ToM state in the prompt.**结构格式: `{agent_id: belief_list}`为了保持身份与信仰的联系.
-- **Shorter reasoning chains.**每次更新TOM的数量减少了复合幻觉.
-- **External ToM store.**保持模型在LLM背景之外;每轮只注入相关部件.
+- **在提示中显式表示 ToM 状态。** 使用结构化格式：`{agent_id: belief_list}`。这样可以迫使检索保留身份与信念的绑定。
+- **缩短推理链。** 每轮减少 ToM 更新次数，可以降低幻觉累积。
+- **外部 ToM 存储。** 在 LLM 上下文之外维护模型，每轮只注入相关部分。
 
-### 在生产中ToM失败时
+### ToM 在生产环境中的失败场景
 
-- **Adversarial settings.**具有良好的TOM的代理人更容易操纵 (你可以模拟他们对你的模型,然后利用).
-- **Heterogeneous teams.**当模型不同时,对一个对手的ToM模型不会通用.
-- **Ground-truth-dependent tasks.**对于"TOM"来说,是关于信仰;如果正确性取决于事实,
+- **对抗环境。** 具备良好 ToM 的智能体更容易被操纵：对手可以建模该智能体如何看待自己，再利用这一点。
+- **异构团队。** 当模型彼此不同时，适用于一个对手的 ToM 模型无法泛化到另一个对手。
+- **依赖事实真值的任务。** ToM 关乎信念；如果正确性取决于事实，ToM 反而可能造成干扰。
 
-### 实际上可以测量的协调
+### 真正可测量的协调
 
-团队的协调是真实的,而不是快速的:
+可以通过三项实际信号判断团队协调是真实的，而不是提示包装的：
 
-1. **Complementarity over time.**在多轮任务中, 代理人的行动是否涵盖不同次任务?
-2. **Anticipation.**根据B在T+2的预测,A的作用在T+1转向上是否取决于B的作用在T+2上是正确的?
-3. **Correction.**当A误解B的信念时,A是否通过转T+2纠正?
+1. **随时间表现出的互补性。** 在多轮任务中，智能体的操作是否覆盖彼此不重叠的子任务？
+2. **预判。** 智能体 A 在 T+1 轮的操作，是否依赖它对 B 在 T+2 轮操作的预测，而且该预测后来被证明正确？
+3. **纠正。** A 在 T 轮误读 B 的信念后，能否在 T+2 轮前完成纠正？
 
-它们可以在记录的多代理系统中测量.
+这些指标都能在保留日志的多智能体系统中测量。它们才是“协调”叙事的实质版本。
 
 ```figure
 sw-theory-of-mind
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现：
 
-- `ToMAgent`追踪自己的信仰和其他代理人的信仰模式.
-- 合作任务:三位代理必须从三个盒子中收集三个代币;每个盒子可以包含一个代币. 代理人不能沟通;他们从彼此的行为中推断意图.
-- 两个配置:`zeroth_order`没有TOM`first_order`(ToM与一个层次的信仰模型).
-- 测量超过200个随机试验:完成率,重复率 (两个针对同一盒子的代理),平均转向到完成.
+- `ToMAgent`——追踪自身信念与每个其他智能体的信念模型。
+- 一项合作任务：三个智能体必须从三个箱子中收集三个 token；每个箱子可以容纳一个 token。智能体无法通信，只能根据彼此的操作推断意图。
+- 两种配置：`zeroth_order`（无 ToM）和 `first_order`（包含一层信念模型的 ToM）。
+- 在 200 次随机试验中测量：完成率、重复率（两个智能体以同一个箱子为目标）和平均完成轮数。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-预期输出:零级代理在~35%的速度重复工作,并在10轮完成60%的试验.第一级ToM代理在~5%重复工作,完成95%.
+预期输出：零阶智能体约有 35% 的重复劳动率，并在 10 轮内完成约 60% 的试验。一阶 ToM 智能体的重复率约为 5%，完成率约为 95%。这一差值就是可测量的协调效应。
 
-## 用它
+## 实际使用
 
-`outputs/skill-tom-auditor.md`检查是否有快速的调整,对控制的统计意义,以及测量对互补性.
+`outputs/skill-tom-auditor.md` 是一项用于审计多智能体系统“涌现协调”声明的技能。它会检查提示包装、相对于控制条件的统计显著性，以及可测量的互补性。
 
-## 运送它
+## 交付成果
 
-协调要求检查列表:
+协调声明检查清单：
 
-- **Control condition.**没有协调提示的系统版本.
-- **Statistical test.**系统与控制之间的区别是否显著?`p < 0.05`在你的指标上?
-- **Complementarity measure.**随着时间的推移,行动的分歧,
-- **Failure-case log.**当特工协调错误时,TOM状态是什么样子的?
-- **Model-capacity disclosure.**如果在较小的模型上效果消失,
+- **控制条件。** 建立一个不含协调提示的系统版本，并对二者都进行测量。
+- **统计检验。** 系统与控制条件在你的指标上的差异，是否在 `p < 0.05` 水平上显著？
+- **互补性测量。** 测量随时间变化的操作不重叠程度，而不是只看最终成功。
+- **失败用例日志。** 智能体协调失败时，ToM 状态是什么样？
+- **模型能力披露。** 如果效果在较小模型上消失，请明确说明。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认一级ToM将重复率降低7倍.当你扩展到5个代理和5个盒子时,差距是否会持续下去?
-2. 实施第二级ToM (Agent A 模拟B 对C的想法).它是否改善了第一级?在哪些任务上?
-3. 注射一个**hallucination**随机翻转每轮一个信念. 这会降低一级性能多么?
-4. 读一读Li et al. (arXiv:2310.10701). 复制"长视线降解"发现:随着轮流从10转到30转,您的第一级ToM性能如何变化?
-5. 阅读Riedl 2025 (arXiv:2510.05174). 运用更高级的协同效应统计数据在模拟日志上.
+1. 运行 `code/main.py`，确认一阶 ToM 将重复率降低约 7 倍。扩展到 5 个智能体和 5 个箱子时，差距仍然存在吗？
+2. 实现二阶 ToM（智能体 A 建模 B 对 C 的看法）。相比一阶 ToM，它是否有所改善？在哪些任务上？
+3. 向 ToM 状态注入一次**幻觉**：每轮随机翻转一项信念。一阶性能会下降多少？
+4. 阅读 Li 等（arXiv:2310.10701）。复现“长时程退化”发现：轮数从 10 增长到 30 时，一阶 ToM 表现如何变化？
+5. 阅读 Riedl 2025（arXiv:2510.05174）。在模拟日志上实现高阶协同作用统计量。没有 ToM 提示条件时，效果是否存在？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|------------------------|
-| Theory of Mind | "Understanding others' minds" | The capacity to model another agent's beliefs. Graded by order (0, 1, 2+). |
-| Sally-Anne test | "The false-belief test" | 1985 developmental psychology; LLMs pass plain versions, fail complex ones. |
-| First-order ToM | "A believes X" | Modeling one other's beliefs about facts. |
-| Second-order ToM | "A believes B believes X" | Recursive modeling one level deeper. |
-| Identity-linked differentiation | "Stable roles over time" | Riedl's metric: roles persist, not random. |
-| Goal-directed complementarity | "Disjoint actions" | Agents target different subtasks, not the same one. |
-| Higher-order synergy | "Group exceeds any subset" | Riedl's statistical measure for real coordination. |
-| Coordination illusion | "It looks coordinated" | Prompt-dressed appearance of coordination without measurable signal. |
+| 心智理论 | “理解他人的心智” | 建模另一个智能体信念的能力，按阶数分为 0、1、2 及更高阶。 |
+| Sally-Anne 测试 | “错误信念测试” | 1985 年发展心理学测试；LLM 能通过直接版本，却会在复杂版本上失败。 |
+| 一阶 ToM | “A 相信 X” | 建模某一个他者对事实的信念。 |
+| 二阶 ToM | “A 相信 B 相信 X” | 再深入一层进行递归建模。 |
+| 身份关联差异化 | “随时间保持稳定的角色” | Riedl 的指标：角色持续存在，而非随机变化。 |
+| 目标导向互补性 | “不重叠的操作” | 智能体以不同子任务为目标，而不是都做同一项。 |
+| 高阶协同作用 | “群体超过任意子集” | Riedl 用来衡量真实协调的统计指标。 |
+| 协调幻象 | “看起来协调” | 没有可测量信号、仅由提示包装出的协调表象。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Li et al. — Theory of Mind for Multi-Agent Collaboration via Large Language Models](https://arxiv.org/abs/2310.10701)合作游戏中新兴TM;长视野失败模式
-- [Riedl — Emergent Coordination in Multi-Agent Language Models](https://arxiv.org/abs/2510.05174)人口规模测量;TOM提示是承载条件
-- [Premack & Woodruff — Does the chimpanzee have a theory of mind?](https://www.cambridge.org/core/journals/behavioral-and-brain-sciences/article/does-the-chimpanzee-have-a-theory-of-mind/1E96B02CD9850E69AF20F81FA7EB3595)TOM概念的起源于1978年
-- [Baron-Cohen, Leslie, Frith — Does the autistic child have a theory of mind?](https://doi.org/10.1016/0010-0277(85)90022-8) 萨利-安妮论文 (1985)
+- [Li 等——通过大语言模型实现多智能体协作中的心智理论](https://arxiv.org/abs/2310.10701)——合作游戏中的涌现 ToM 与长时程失败模式
+- [Riedl——多智能体语言模型中的涌现协调](https://arxiv.org/abs/2510.05174)——群体规模测量；ToM 提示是承重条件
+- [Premack 与 Woodruff——黑猩猩有心智理论吗？](https://www.cambridge.org/core/journals/behavioral-and-brain-sciences/article/does-the-chimpanzee-have-a-theory-of-mind/1E96B02CD9850E69AF20F81FA7EB3595)——1978 年 ToM 概念的起源
+- [Baron-Cohen、Leslie、Frith——自闭症儿童有心智理论吗？](https://doi.org/10.1016/0010-0277(85)90022-8)——Sally-Anne 论文（1985）
