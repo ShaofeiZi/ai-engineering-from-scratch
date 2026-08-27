@@ -1,31 +1,31 @@
-# 构建MCP服务器:无状态的Python和TypeScript
+# 构建 MCP 服务器：无状态 Python 与 TypeScript
 
-> 现代MCP服务器不记得握手. 它验证了每一个请求的元数据,运行一个处理器,并返回一个输入结果.
+> 现代 MCP 服务器不会记住握手。它会在每个请求上验证元数据、运行一个处理器，再返回一个类型化结果。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python, TypeScript
-**Prerequisites:** Phase 13, Lesson 06
-**Time:** ~85 minutes
+**Prerequisites:** 第 13 阶段 · 第 06 课（MCP 基础）
+**Time:** 约 85 分钟
 
 ## 学习目标
 
-- 执行强制性`server/discover`对于MCP`2026-07-28`现在,我们要去.
-- 在每一个请求中验证协议版本和客户端功能.
-- 通过确定性列表排序,将工具,资源和提示展示.
-- 返回`resultType`服务器身份,以及对正确结果的缓存提示.
-- 在Python和TypeScript中使用新线程有限的工作室使用相同的无国籍合同.
+- 实现必需的 `server/discover`，用于 MCP `2026-07-28`。
+- 在每个请求上验证协议版本与客户端能力。
+- 使用确定性列表顺序公开工具、资源与提示词。
+- 在正确的结果上返回 `resultType`、服务器身份与缓存提示。
+- 通过以换行符分隔的 stdio，在 Python 与 TypeScript 中提供同一份无状态契约。
 
 ## 问题
 
-服务器在第一次消息后存储客户端功能是容易构建的和难以操作的.同样的过程可能为序列客户端服务.远程请求可能会降落于不同的工作者.一个陈旧的功能声明可以泄露行为跨权限界限.
+在第一条消息之后保存客户端能力的服务器，编写起来很容易，运维起来却很困难。同一个进程可能连续服务多个客户端，远程请求也可能落到另一个工作器。过期的能力声明会让行为跨授权边界泄漏。
 
-股`2026-07-28`您的应用程序仍然可以保存持久的笔记,工作或明确状态处理.它无法保留的是隐藏的协议状态,改变了后来的请求如何解码.
+MCP `2026-07-28` 通过让每个请求能够自我描述，解决了这个问题的协议部分。应用仍然可以保存持久笔记、任务或显式状态句柄；不能保存的是会改变后续请求解码方式的隐藏协议状态。
 
-通过此课程,我们将两次构建一个笔记服务器.Python 和TypeScript版本仅使用其标准库用于协议核心.
+本课会分别用 Python 和 TypeScript 构建笔记服务器。两个版本的协议核心都只使用各自标准库，公开相同方法，并强制执行相同线路契约。
 
 ## 概念
 
-### 现代发送循环
+### 现代分派循环
 
 ```text
 read one JSON-RPC line
@@ -38,17 +38,17 @@ write one JSON-RPC response line
 forget request-scoped metadata
 ```
 
-工作室的三个规则仍然重要:
+stdio 仍有三条重要规则：
 
-- 写JSON-RPC短信给STOUT,发送诊断给STODR.
-- 通过新线来界定消息,然后将每个回复都填写在线.
-- 快速出发,当STDIN到达EOF.
+- 只向 stdout 写入 JSON-RPC 消息，诊断信息写入 stderr。
+- 使用换行符分隔消息，并在每次响应后立即刷新。
+- stdin 到达 EOF 时立即退出。
 
-过程寿命是运输寿命,而不是现代的MCP会议.
+进程生命周期属于传输层，不是现代 MCP 会话。
 
-### 申请验证
+### 请求验证
 
-每个请求都必须包含:
+每个请求都必须包含：
 
 ```json
 {
@@ -65,13 +65,13 @@ forget request-scoped metadata
 }
 ```
 
-需要使用前两种字段.`clientInfo`确认现有身份形状,但不要把它视为身份验证.
+前两个字段是必需的，建议提供 `clientInfo`。若身份字段存在，应验证其形态，但不要把它当作身份认证。
 
-如果版本不支持,返回代码`-32022`随着`requested`其他`supported`错失的请求元数据是无效的参数,代码`-32602`永远不要填写之前的电话中缺失的字段.
+版本不受支持时，返回代码 `-32022`，并包含 `requested` 和 `supported`。缺少请求元数据属于无效参数，代码为 `-32602`。绝不能从先前调用中补齐缺失字段。
 
-### 必须发现
+### 必需的发现方法
 
-现代服务器必须实现`server/discover`完整的发现结果包括支持的现代版本,功能,可选指令,缓存提示和结果中的服务器身份`_meta`其他:
+现代服务器必须实现 `server/discover`。完整的发现结果包含受支持的现代版本、能力、可选说明、缓存提示，以及结果 `_meta` 中的服务器身份：
 
 ```json
 {
@@ -93,38 +93,38 @@ forget request-scoped metadata
 }
 ```
 
-发现无法解锁服务器.`tools/list`没有说发现,因为`tools/list`已包含相同的请求元数据.
+发现不会解锁服务器。客户端可以在未调用发现的情况下直接调用 `tools/list`，因为 `tools/list` 已经携带同样的请求元数据。
 
 ### 工具
 
-`tools/list`稳定排序改善响应缓存并保持模型文本稳定.结果还需要`ttlMs`其他`cacheScope`现在,我们要去.
+`tools/list` 返回按确定顺序排列的工具描述符。稳定顺序可以改善响应缓存，并让模型上下文保持稳定。结果还必须包含 `ttlMs` 与 `cacheScope`。
 
-`tools/call`返回内容块和`isError`使用JSON-RPC错误,当协议包裹或方法参数不有效时. 使用 `isError: true`当有效的工具调用运行,但工具本身失败时.
+`tools/call` 返回内容块和 `isError`。如果协议信封或方法参数无效，使用 JSON-RPC 错误；如果有效工具调用已经运行，但工具自身失败，则返回 `isError: true`。
 
-工具注释仍然是提示,而不是执行:
+工具注解仍然只是提示，不是强制机制：
 
 - `readOnlyHint`
 - `destructiveHint`
 - `idempotentHint`
 - `openWorldHint`
 
-服务器必须执行真正的授权.
+宿主应使用它们进行确认与展示，但服务器仍必须强制执行真实授权。
 
 ### 资源
 
-`resources/list`返回稳定URI描述符. `resources/read`输入内容. 两个都可在 `2026-07-28`两个都包括`ttlMs`其他`cacheScope`现在,我们要去.
+`resources/list` 返回稳定的 URI 描述符，`resources/read` 返回类型化内容。二者在 `2026-07-28` 中都可缓存，因此都包含 `ttlMs` 和 `cacheScope`。
 
-使用`cacheScope: "private"`对于用户特定的注释数据. 分享缓存不能在授权环境中重复使用私人响应.
+用户专属笔记数据应使用 `cacheScope: "private"`。共享缓存不得跨授权上下文复用私有响应。
 
-现代变更交付不使用`resources/subscribe`一个客户打开了`subscriptions/listen`要求`resourceSubscriptions`课程10建立了流量.
+现代变更传递不使用 `resources/subscribe`。客户端会打开 `subscriptions/listen`，请求 `resourceSubscriptions` 或列表变更类别。第 10 课会构建该流程。
 
-### 提示
+### 提示词
 
-`prompts/list`它们是可隐藏的,也是确定性的.`prompts/get`转换提示结果是完整的,但它不是可缓存列表或读取结果之一,需要缓存提示.
+`prompts/list` 可缓存且顺序确定。`prompts/get` 使用参数渲染具名提示词。渲染后的提示词结果是完整结果，但它并不属于必须提供缓存提示的可缓存列表或读取结果。
 
-### 每个成功的结果都会被打字
+### 每个成功结果都有类型
 
-例子中每次成功都用一个包装:
+示例使用同一个包装函数处理所有成功结果：
 
 ```python
 def complete(payload):
@@ -135,27 +135,27 @@ def complete(payload):
     }
 ```
 
-列表,阅读和发现处理人员添加`ttlMs`另外`cacheScope`集中包装可以防止一个处理器默默忽略现代结果场地.
+列表、读取与发现处理器会额外添加 `ttlMs` 和 `cacheScope`。集中使用这层包装，可以防止某个处理器悄然遗漏现代结果字段。
 
-### 没有服务器启动的请求
+### 不允许服务器主动发起请求
 
-现代服务器可以发送与客户端请求相关的通知,或者在客户端开放的通知.`subscriptions/listen`它们不能发送自己的JSON-RPC请求.
+现代服务器可以发送与某个客户端请求有关的通知，也可以在客户端打开的 `subscriptions/listen` 数据流上发送通知，但不得自行发起 JSON-RPC 请求。
 
-当处理器需要采样,引发或根输入时,它返回一个`input_required`结果. 客户端完成嵌入式输入请求,并用新的请求ID重新尝试原始方法. 第11课涵盖了多轮访问请求模式.
+如果处理器需要采样、信息征询或根目录输入，就返回 `input_required` 结果。客户端满足其中嵌入的输入请求，再使用新的请求 ID 重试原方法。第 11 课会介绍这种多轮往返请求模式。
 
-### 显而易见的遗产兼容性
+### 显式旧版兼容
 
-双代服务器也可以实现`2025-11-25`它们在一个明显分离的遗产分支上握手.`_meta`收到时的现象和遗产行为`initialize`现在,我们要去.
+兼容新旧两个时代的服务器，也可以在明确隔离的旧版分支上实现 `2025-11-25` 握手。必需的现代 `_meta` 字段存在时选择现代行为，收到 `initialize` 时选择旧版行为。
 
-不要放一个`2026-07-28`通过传统的握手路径来请求.`resultType`在本课程中,代码是故意现代化的,所以其变量保持可见.
+不要把 `2026-07-28` 请求送入旧版握手路径，也不要在旧版初始化结果上添加现代 `resultType` 字段。本课代码刻意只实现现代协议，以便清晰呈现其不变量。
 
 ```figure
 t3-dispatch-loop
 ```
 
-## 用它
+## 投入使用
 
-运行Python服务器的有限演示和测试:
+运行 Python 服务器的有限演示与测试：
 
 ```bash
 cd code
@@ -163,44 +163,44 @@ python3 main.py --demo
 python3 -m unittest discover tests -v
 ```
 
-使用TypeScript运行器运行TypeScript端口:
+使用 TypeScript 运行器执行 TypeScript 移植版：
 
 ```bash
 npx tsx main.ts --demo
 ```
 
-演示器发送了`server/discover`现在,我们可以看到一个版本错误,然后我们可以看到一个版本错误,然后我们可以看到一个版本错误.
+演示会发送 `server/discover`，列出各类原语，调用工具，并展示不受支持的版本错误。每个现代请求都会重复元数据，每个成功结果都包含服务器身份。
 
-## 运送它
+## 交付成果
 
-这一课是很好的.`outputs/skill-mcp-server-scaffolder.md`它提供了一个现代化的服务器计划,包括一个发现合同,每次请求验证,确定性可缓存列表和可选的孤立遗产适配器.
+本课交付 `outputs/skill-mcp-server-scaffolder.md`。它会生成一份现代服务器方案，其中包含发现契约、逐请求验证、确定且可缓存的列表，以及可选的隔离旧版适配器。
 
-## 运动
+## 练习
 
-1. 删除一个请求的功能,证明服务器不重复使用前一个请求的声明.
-2. 扭转`TOOLS`现在`PROMPTS`确认所有列表结果保持稳定.
-3. 添加一个破坏性的`notes_delete`执行器内进行授权检查.`destructiveHint`只是一个 UX 暗示.
-4. 加入`resources/templates/list`随着`ttlMs`现在`cacheScope`它们是指"定性定制"的.
-5. 建立一个独立的传统适配器`2025-11-25`添加测试证明现代请求从来没有进入.
+1. 从一个请求中移除能力字段，证明服务器不会复用前一个请求的声明。
+2. 反转 `TOOLS`、`PROMPTS` 与笔记的插入顺序，确认所有列表结果仍然稳定。
+3. 添加一个破坏性的 `notes_delete` 工具，并要求执行器内部进行授权检查。`destructiveHint` 只保留为用户体验提示。
+4. 添加 `resources/templates/list`，包含 `ttlMs`、`cacheScope` 与确定性排序。
+5. 为 `2025-11-25` 构建独立旧版适配器，并添加测试证明现代请求绝不会进入它。
 
-## 关键词
+## 关键术语
 
-| Term | Meaning |
+| 术语 | 含义 |
 |------|---------|
-| Stateless server | Handles each request from its own metadata without protocol-session memory |
-| `server/discover` | Mandatory modern method that advertises versions and capabilities |
-| Complete result | Successful modern result with `resultType: "complete"` |
-| Cacheable result | Discovery, list, or resource-read result with `ttlMs` and `cacheScope` |
-| Deterministic list | Same logical registry produces the same item order |
-| Server identity | Recommended `io.modelcontextprotocol/serverInfo` in result `_meta` |
-| Tool error | Valid tool call that returns content with `isError: true` |
-| Protocol error | Invalid JSON-RPC or MCP request returned through `error` |
+| 无状态服务器 | 根据每个请求自身元数据处理请求，不保存协议会话记忆 |
+| `server/discover` | 公布版本与能力的必需现代方法 |
+| 完整结果 | 带 `resultType: "complete"` 的现代成功结果 |
+| 可缓存结果 | 包含 `ttlMs` 与 `cacheScope` 的发现、列表或资源读取结果 |
+| 确定性列表 | 相同逻辑注册表始终产生相同项目顺序 |
+| 服务器身份 | 建议提供的 `io.modelcontextprotocol/serverInfo`，位于结果 `_meta` 中 |
+| 工具错误 | 有效工具调用返回带 `isError: true` 的内容 |
+| 协议错误 | 通过 `error` 返回的无效 JSON-RPC 或 MCP 请求 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [MCP Specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/)
-- [MCP Server Discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
-- [MCP Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)
-- [MCP Resources](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
-- [MCP Prompts](https://modelcontextprotocol.io/specification/2026-07-28/server/prompts)
-- [MCP stdio Transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)
+- [MCP 2026-07-28 规范](https://modelcontextprotocol.io/specification/2026-07-28/)
+- [MCP 服务器发现](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP 工具](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)
+- [MCP 资源](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
+- [MCP 提示词](https://modelcontextprotocol.io/specification/2026-07-28/server/prompts)
+- [MCP stdio 传输](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)
