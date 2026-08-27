@@ -1,26 +1,26 @@
-# 语言模型评估套件
+# 语言模型评测框架
 
-> 没有什么可能的模型是一个不确定性的模型, 运用一个简短的形式, 换成一个.
+> 一个模型如果在“你自己都说不清的任务”上表现很好，那它多半只是碰巧做对了。harness 本身就是任务定义、度量标准、运行器和排行榜的合体，而且应该是一个足够短、足够清晰、足够可替换的形状。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 lessons 42 to 45
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段第 42 到 45 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 定义一个任务为一个JSONL文件`prompt`现在`targets`现在`metric`其他选择性`extras`举个例子.
-- 执行五个指标:精确匹配,Rouge-l F1,可执行的检查,多次选择,和子字符串含量.
-- 建立一个按任务进行批量的运行器,然后将其发送到可交换的模型适配器.
-- 发出一个排名表 JSON 每项任务分数,延迟,和可复制的总体平均值.
+- 把一个任务定义成 JSONL 文件，其中每个样本都包含 `prompt`、`targets`、`metric`，以及可选的 `extras`。
+- 实现五种 metric：exact match、rouge-l F1、executable check、multiple choice、substring contains。
+- 写一个 runner，按任务批量处理样本，并把请求派发到可替换的 model adapter。
+- 产出一个 leaderboard JSON，其中包含 per-task 分数、延迟，以及可复现实验所需的 overall average。
 
 ## 问题
 
-每周都有新的语言模型.营销声称它做得很好.诚实的问题是:在什么方面?诚实答案是你自己写的排名表,因为供应商的排名表是他们调整的.
+几乎每周都会有一个新语言模型落地。营销文案永远说它“表现很好”。真正诚实的问题应该是：它到底在哪些任务上表现好？而最诚实的答案，只能是你自己写的 leaderboard，因为供应商那份 leaderboard 往往就是他们自己调过的目标。
 
-没有一个带在你的 repo比较两个模型的振动.用一个带比较他们根据分数在一个固定任务组上,一个固定的指标,在一个JSON输出你可以区分.
+如果你的 repo 里没有 eval harness，那你比较两个模型的方式就只剩下“感觉”。一旦有了 harness，你比较的就是同一组固定任务、固定 metric 上的分数，而且输出还是一个可以直接 diff 的 JSON。harness 就是“昨天那次运行”和“今天这次运行”之间的 contract。没有它，回归会悄悄上线。
 
-陷是过度将带连接到单个模型. 解决方案是逆向的陷: 带足够小,可以在15分钟内读取,任务足够小,可以在备忘录中发送, 换个适配器,排名板移动;换个任务,排名板移动. 别的东西不应该移动.
+最常见的陷阱，是把 harness 过度绑定到某个具体模型。反过来的解法也很简单：让 harness 小到十五分钟能读完，任务文件小到可以直接随 repo 提交，metric 都从零写出、能被同事审计，而 adapter 成为唯一承载模型特定逻辑的地方。换 adapter，排行榜可以动；换 tasks，排行榜也可以动。除此之外，任何其他部分都不应该动。
 
 ## 概念
 
@@ -37,13 +37,13 @@ flowchart TD
 
 ### 任务规范
 
-每个例子都是一个JSONL行:
+每个样本都是 JSONL 中的一行：
 
 ```json
 {"id": "arith-00", "prompt": "compute: 2 + 2", "targets": ["4"], "metric": "exact_match"}
 ```
 
-对于需要助手的指标,`extras`携带侧面的有效载荷:
+如果某个 metric 需要辅助信息，则由 `extras` 提供旁路 payload：
 
 ```json
 {
@@ -55,29 +55,29 @@ flowchart TD
 }
 ```
 
-任务是一个任务.`.jsonl`下面的文件`outputs/tasks/`文件名是任务名称. 文件中的所有例子都具有一个指标.
+一个任务就是一个 `.jsonl` 文件，放在 `outputs/tasks/` 下。文件名本身就是 task name。同一个文件中的所有样本共享同一种 metric。
 
-### 五项固定任务
+### 五个固定任务
 
-| Task | Metric | What it tests |
-|------|--------|---------------|
-| arithmetic | exact_match | Token-level correctness on a deterministic answer |
-| summary | rouge_l | Longest common subsequence F1 against a one-line reference summary |
-| code-exec | code_exec | Executable test: the predicted function must satisfy a list of input-output pairs |
-| multiple-choice | multiple_choice | First letter of the prediction must match an allowed letter |
-| generation | substring_contains | Free-form text must contain at least one target substring |
+| 任务 | Metric | 测试内容 |
+|------|--------|----------|
+| arithmetic | exact_match | 对确定性答案的 token-level 正确性 |
+| summary | rouge_l | 与单行参考摘要之间最长公共子序列的 F1 |
+| code-exec | code_exec | 可执行测试：预测出的函数必须满足输入输出对列表 |
+| multiple-choice | multiple_choice | 预测结果的第一个字母必须匹配允许选项 |
+| generation | substring_contains | 自由文本中必须至少包含一个目标子串 |
 
-### 计量合同
+### 指标契约
 
-每个指标都是从`(prediction, targets, extras) -> float in [0.0, 1.0]`杆平均每个例子分数,以获得任务分数,然后平均任务分数,以获得总数.
+每个 metric 都是一个从 `(prediction, targets, extras) -> float in [0.0, 1.0]` 的函数。harness 先对每个样本求分，再取样本均值得到 task score，最后对所有任务求平均得到 overall score。五个 metric 都很小：
 
-- `exact_match`基本面:小文字,白色空间崩,平等.
-- `substring_contains`标准化,子字符串测试.
-- `multiple_choice`首个字符上.
-- `rouge_l`: LCS长度以预测和参考长度,精度和召回F1分.
-- `code_exec`: 执行预测在一个限制的名称空间,调用`f(x)`在每一个输出输入对, 计数匹配.
+- `exact_match`：转小写、折叠空白、判断完全相等。
+- `substring_contains`：同样做规范化，再做子串判断。
+- `multiple_choice`：读取预测结果的首字符并转成大写。
+- `rouge_l`：计算 LCS 长度，并对 prediction 与 reference 长度做 precision / recall，再合成为 F1。
+- `code_exec`：在受限命名空间中执行预测结果，对每个输入输出对调用 `f(x)`，统计匹配数量。
 
-代码_exec测量在一个剥离的内置命名空间中运行预测.课程测试表明`import os`爆炸是因为`os`文件系统不能从代码预测中访问.
+这个 metric 会把预测结果放进一个裁剪过的 builtins namespace 里执行。课程测试会断言：`import os` 会直接报错，因为 `os` 根本不在命名空间内，也就不可能碰到文件系统。
 
 ### 模型适配器
 
@@ -88,11 +88,11 @@ class ModelAdapter(Protocol):
     def name(self) -> str: ...
 ```
 
-适配器是接,课程是船只.`ToyAdapter`根据该系统的定义,一个确定性模式匹配器,在五个固定任务中返回每一个提示的正确答案.一个真正的适配器调用模型并返回其输出.
+adapter 就是唯一的缝。课程里附带了 `ToyAdapter`，它是一个确定性的模式匹配器，能够对五个固定任务里的每条 prompt 返回正确答案。真正的 adapter 则会去调用模型并返回输出。对于 harness 来说，两者没有区别。
 
-### 跑步者
+### 运行器
 
-`run_task`批量`batch_size`按时提示,并发送到测量函数. `run_leaderboard`完成每项任务,平均.`write_leaderboard`发射JSON与一个方案字符串,以便未来的格式变化不会默默打破仪表板.
+`run_task` 会按 `batch_size` 对 prompt 分批，然后把结果发到对应 metric。`run_leaderboard` 负责遍历所有任务并求平均。`write_leaderboard` 则会输出带有 schema string 的 JSON，好让未来格式升级不会悄悄打坏 dashboard。
 
 ```mermaid
 flowchart LR
@@ -107,41 +107,41 @@ flowchart LR
 eval-harness-matrix
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`它们是可运行的文物.
+`code/main.py` 是本课的可运行产物。
 
-### 步骤1:种子固定任务
+### 第 1 步：写入固定任务
 
-`seed_fixture_tasks(target_dir)`写出五个`.jsonl`文件的第一批`main.py`在目录空时种种它们.
+`seed_fixture_tasks(target_dir)` 会写出五个 `.jsonl` 文件。第一次运行 `main.py` 时，如果目录为空，就会先自动 seed 这些 fixtures。
 
-### 步骤2:负载任务
+### 第 2 步：加载任务
 
-`load_all_tasks(task_dir)`读到每一个`.jsonl`返回一个命令从任务名称到一个列表`Example`评论行开始于`#`没有空白的行列,以便贡献者可以注释文件.
+`load_all_tasks(task_dir)` 会读取所有 `.jsonl`，并返回一个从任务名到 `Example` 列表的 dict。以 `#` 开头的注释行和空行都会被跳过，方便贡献者给任务文件加说明。
 
-### 步骤3:实现指标
+### 第 3 步：实现 metrics
 
-每个指标都是一个小函数,一个单元测试.课程的测试套件包括13个案例,包括正常化,部分重叠,代码执行和不安全的代码拒绝.
+每个 metric 都是一个小函数，并配套单元测试。课程测试套件中总共覆盖了 13 个 case，包括规范化、部分重叠、代码执行，以及不安全代码的拒绝。
 
-### 步骤4:写出跑步
+### 第 4 步：编写 runner
 
-`run_task`代批量并产生一个`TaskResult`通过分数,正确的计算,总数和延迟.`run_leaderboard`完成所有任务并产生一个`Leaderboard`总体平均水平.
+`run_task` 会按批次遍历样本，并产出一个 `TaskResult`，其中包括 score、correct count、total count 和 latency。`run_leaderboard` 会遍历全部任务并返回一个 `Leaderboard`，里面带 overall average。
 
-### 步骤5:发射JSON
+### 第 5 步：输出 JSON
 
-`write_leaderboard`片的连载.`--include-per-example`标志将每例记录丢弃,以便你可以与前一次运行时的预测进行差异.
+`write_leaderboard` 负责序列化排行榜。`--include-per-example` 标志会额外输出每个样本的记录，这样当分数发生变化时，你就能直接 diff 当前预测和上一次运行的预测。
 
-运行它:
+运行它：
 
 ```bash
 python3 code/main.py
 ```
 
-脚本在第一次运行时种植装置,用玩具适配器 (它将每个装置都得到正确的),然后写`outputs/leaderboard.json`玩具适配器的总分为1.0, 玩具适配器的试验在`test_main.py`适配器不能回复时,相同的带产生0.0.
+脚本第一次运行会先写入 fixtures，再用 toy adapter 打分，它会把每个固定任务都答对，然后写出 `outputs/leaderboard.json`。用 toy adapter 时，overall score 是 1.0；而 `test_main.py` 里那个 stub adapter 测试则展示了：同样的 harness，在模型完全答不上来时会给出 0.0。
 
-## 用它
+## 实际使用
 
-为了连接一个真正的模型, 写一个适配器.
+要接入真实模型，只需要写一个 adapter。形状如下：
 
 ```python
 class HttpAdapter:
@@ -159,40 +159,40 @@ class HttpAdapter:
         return out
 ```
 
-换换`ToyAdapter`为了`HttpAdapter`在顶部`main()`杆,任务,指标和排名表保持不变.
+把 `ToyAdapter` 换成 `HttpAdapter` 即可，位置就在 `main()` 顶部。harness、tasks、metrics 和 leaderboard 其余部分完全不需要变。
 
-在一个真正的项目中,在运送带时必须执行三个模式:
+把这套 harness 真正放进项目时，建议强制执行三条规则：
 
-- **Pin the task files.**排名板.json 包含哈希嵌任务内容或它携带JSONLs;否则,任务文件在执行时,分数会移动,而您无法确定哪个.
-- **Diff predictions, not just scores.**其他`--include-per-example`标志让你看到模型在分数下降的那天说什么.
-- **Cap the batch size.**实际适配器的速度限制. 较小的批量量使得连接器在供应商之间保持兼容性.
+- **固定 task files。** leaderboard.json 要么携带哈希固定的 task 内容，要么把 JSONL 一起带上；否则 task 文件一改，分数也会跟着变，而你无法判断究竟是哪边动了。
+- **不仅 diff 分数，也 diff 预测。** `--include-per-example` 可以让你看到分数下降那天模型究竟回答了什么。
+- **限制 batch size。** 真实 adapter 往往受 rate limit 约束，小 batch 能让 harness 更容易跨供应商工作。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-lm-eval-harness.md`包含配方:JSONL任务规格,五个指标,可交换的适配器,批量运行器,排名表 JSON 与方案字符串.`outputs/tasks/`它们是固定装置, 它们可以作为一个真正的项目.
+`outputs/skill-lm-eval-harness.md` 给出的就是整套配方：JSONL task spec、五个 metrics、可替换 adapter、批处理 runner，以及带 schema string 的 leaderboard JSON。`outputs/tasks/` 下那几份 task 文件就是固定装置，可以直接复制到真实项目里作为起点。
 
-## 运动
+## 练习
 
-1. 添加一个第六个任务,使用一个自定义的指标,你从零开始写 (像BLEU的重叠,像BLEURT的参考分数,任何有明确的合同).
-2. 延长时间`code_exec`捕获击和接受预期击的目标列表.
-3. 添加一个排名表差命令:给了两个 `leaderboard.json`文件,打印哪些任务移动,以及多少.
-4. 缩适配器调用时间;单独地表面`timeouts`在排名表中列.
-5. 按排名表中的 sha256 标签,以便未来的读者可以验证他们取得了相同的任务.
+1. 增加第六个任务，并从零写一个自定义 metric，例如 BLEU-like overlap、BLEURT-like 参考打分，或者任何 contract 清晰的评分方式。
+2. 扩展 `code_exec`，让它能捕获 stdout，并接受一组预期 stdout 作为 targets。
+3. 增加 leaderboard diff 命令：输入两个 `leaderboard.json` 文件，输出哪些任务变了、变化了多少。
+4. 给每个样本设置延迟上限。把 adapter 调用包进 timeout，并在 leaderboard 里额外输出 `timeouts` 列。
+5. 在 leaderboard 中写入 task 内容的 sha256，让未来读者能验证自己跑的是同一批任务。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|-----------------|------------------------|
-| Task spec | "The eval format" | JSONL file with prompt, targets, metric, optional extras per example |
-| Metric | "How you score" | Function from (prediction, targets, extras) to a float in [0, 1] |
-| Adapter | "The model client" | Object with a generate(prompts) -> list[str] method; the only model-specific code |
-| Leaderboard | "The scoreboard" | JSON with per-task scores, total counts, latency, and an overall average |
-| Code exec metric | "Run it and check" | Execute the prediction in a restricted namespace, compare against input-output pairs |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| Task spec | "The eval format" | 包含 prompt、targets、metric 和可选 extras 的 JSONL 文件 |
+| Metric | "How you score" | 从 (prediction, targets, extras) 映射到 [0, 1] 浮点数的函数 |
+| Adapter | "The model client" | 拥有 generate(prompts) -> list[str] 方法的对象；唯一承载模型特定逻辑的地方 |
+| Leaderboard | "The scoreboard" | 包含 per-task 分数、总计数、延迟和 overall average 的 JSON |
+| Code exec metric | "Run it and check" | 在受限命名空间中执行预测结果，并与输入输出对比较 |
 
-## 进一步阅读
+## 延伸阅读
 
-- 生产参考原始lm评估,大得多,但形状相同.
-- 为了实现同样的合同,HuggingFace的轻松.
-- 阶段19课46涵盖了训练堆中使用的梯度积累模式.
-- 阶段19课时47课时,你将分数的检查点格式进行分析.
-- 第19阶段课时48涵盖了测试模型的分布式训练堆.
+- 原始的 lm-evaluation-harness，可作为生产参考实现，规模更大但整体形状相同。
+- HuggingFace 的 lighteval，提供同一契约的另一种实现方式。
+- 第 19 阶段第 46 课，介绍被本 harness 评分的训练栈所使用的梯度累积模式。
+- 第 19 阶段第 47 课，介绍你要评分的 checkpoint 格式；应把 checkpoint hash 固定进 leaderboard。
+- 第 19 阶段第 48 课，介绍产出待测模型的分布式训练栈。
