@@ -1,80 +1,81 @@
-# 双重使用风险 网络,生物,化学,核电
+# 双重用途风险：网络、生物、化学与核领域的能力提升
 
-> 双重使用的2026年图片,域名. 生物/化学:第17课涵盖WMDP;人类生物武器采购试验 (2.53倍升级) 和OpenAI的2025年4月准备框架v2警告 ("在帮助新手创造已知的生物威胁的准") 标志着转折点. 网络 (2025年11月的人类报告):与中国相关的国家行为者使用克劳德的代理编码工具自动化到90%的网络攻击活动,只需 4-6 步骤进行人类干预;OpenAI"可靠访问"试点为检查的安全组织提供了防御双重用途工作的能力. 化学/生物执行差距侵蚀:经典的防御是"仅仅获得信息是不够的".视觉驱动的边界模型 (GPT-5.2, Gemini 3 Pro,Claude Opus 4.5,Grok 4.1) 可以观察湿实验室视频并提供实时纠正. 2025年12月:OpenAI在湿实验室实验中展示了GPT-5的反复运行,通过人工智能驱动的协议优化实现了79倍的效率提高. 新手对专家模式:人工智能为新手提供了更大的相对提升,但为专家提供了更大的绝对能力.
+> 2026 年的双重用途风险图景，需要逐个领域审视。生物与化学方面：第 17 课介绍了 WMDP；Anthropic 的生物武器获取试验（能力提升 2.53 倍），以及 OpenAI 2025 年 4 月《Preparedness Framework v2》提出的警告——模型“已经接近能实质帮助新手制造已知生物威胁的临界点”——共同标志着一个拐点。网络安全方面（Anthropic 2025 年 11 月报告）：与中国有关联的国家行为者使用 Claude 的智能体式编码工具，将一场网络攻击行动中多达 90% 的工作自动化，只有 4～6 个步骤仍需人工介入；与此同时，OpenAI 通过“可信访问”试点向经过审核的安全组织开放相关能力，用于防御性的双重用途工作。化学与生物领域的执行鸿沟也在收窄：过去的经典防线是“仅凭信息不足以完成实际操作”，但具备视觉能力的前沿模型（GPT-5.2、Gemini 3 Pro、Claude Opus 4.5、Grok 4.1）已经能够观察湿实验室视频并实时纠错。2025 年 12 月，OpenAI 展示了 GPT-5 迭代改进湿实验室实验的能力，通过 AI 驱动的实验规程优化把效率提升了 79 倍。四个领域呈现出同一种模式：AI 给新手带来的相对提升更大，但专家能够达到的绝对能力上限更高。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** none
-**Prerequisites:** Phase 18 · 17 (WMDP), Phase 18 · 18 (safety frameworks), Phase 18 · 28 (ecosystem)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 18 · 17（WMDP）、阶段 18 · 18（安全框架）、阶段 18 · 28（研究生态系统）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 描述2024-2025年生物升高叙述:"轻升" -> "在峰" -> "2.53倍升高不足以排除ASL-3".
-- 描述2025年11月的"人类网络报告":网络攻击活动中,90%的中国自动化.
-- 描述化学/生物执行差距侵蚀:使视力能够实现湿实验室实验的实时纠正.
-- 说明初学者对专家的绝对不对度及其对安全案例构建的影响.
+- 描述 2024～2025 年生物领域能力提升的演变：“小幅提升”→“接近临界点”→“2.53 倍提升，已不足以排除 ASL-3”。
+- 概述 Anthropic 2025 年 11 月的网络安全报告：与中国有关联的行动者把一场网络攻击中多达 90% 的工作自动化。
+- 解释化学与生物领域执行鸿沟的收窄：视觉能力如何支持湿实验室实验的实时纠错。
+- 说明“新手相对提升”与“专家绝对能力”之间的不对称性，以及它对安全论证构建的影响。
 
 ## 问题
 
-第17课是测量方法.第30课是测量2026年状态.2024年到2025年底之间情况发生了重大变化:每个领域都跨越了2024年框架未预测的门.
+第 17 课讲测量方法，第 30 课讲截至 2026 年测得的现实状态。2024 年至 2025 年底，风险图景发生了实质变化：多个领域跨过了 2024 年安全框架未能充分预见的阈值。
 
 ## 概念
 
-### 生物/化学升级叙事
+### 生物与化学领域的能力提升
 
-三个阶段 (为了保持一致性,从第17课中重复):
+为了保持叙事连贯，这里重述第 17 课的三个阶段：
 
-1. **2024 "mild uplift."**早期准备/RSP评估报告了初学者对互联网搜索的小优势.
-2. **April 2025 "on the cusp."**开放AI PF v2警告说,模型"正在帮助新手创造已知的生物威胁的边缘上".
-3. **2025 Anthropic bioweapon-acquisition trial.**控制初学者研究;在收购阶段任务上提高了2.53倍;不够排除ASL-3.
+1. **2024 年的“小幅提升”。** 早期 Preparedness / RSP 评估只观察到：与单纯使用互联网搜索相比，新手获得了小幅优势。
+2. **2025 年 4 月的“接近临界点”。** OpenAI PF v2 警告称，模型“已经接近能实质帮助新手制造已知生物威胁的临界点”。
+3. **2025 年 Anthropic 的生物武器获取试验。** 在受控的新手研究中，AI 令获取阶段任务的表现提升 2.53 倍；这个结果已经不足以排除 ASL-3 风险。
 
-变化是质性的:即使没有能力突破,在18个月内",轻微"演变为"可信的实现".
+关键变化是定性的：即使没有出现某次单点的能力飞跃，“小幅帮助”也在 18 个月内演变成了“可能具备实质促成作用”。
 
-### 化学/生物执行差距侵蚀
+### 化学与生物领域执行鸿沟的收窄
 
-历史防御:信息是必要的,但不够的;执行协议的技能阻碍了初学者.
+历史上的经典防御是：信息固然必要，但并不充分；真正挡住新手的是“执行协议的技能门槛”。而 2025 年的具视觉能力前沿模型，已经开始部分击穿这条防线：
 
-- **Real-time protocol correction.**格普特-5.2,双子座3 Pro,克劳德·奥普斯 4.5,格洛克 4.1,可以在程序中观察湿实验室视频和标志错误.
-- **December 2025 OpenAI demonstration.**通过协议优化,GPT-5在湿实验室实验中实现了79倍的效率提高.
+- **实时协议纠错。** GPT-5.2、Gemini 3 Pro、Claude Opus 4.5、Grok 4.1 可以观察湿实验室视频，并在实验过程中指出错误。
+- **2025 年 12 月 OpenAI 演示。** GPT-5 通过反复优化实验规程，使湿实验室实验的效率提升了 79 倍。
 
-由于这些问题,我们必须要注意,
+这意味着：依靠“执行技能门槛”构成防线的效果正在减弱。采购、设备和场地门槛依然存在，但隐性知识鸿沟正在缩小。
 
-### 网络升级 (2025年11月)
+### 网络领域的能力提升（2025 年 11 月）
 
-亚洲人社2025年11月的报告:与中国相关的国家行为者使用克劳德的代理编码工具自动化80-90%的网络攻击活动. 人类干预只需要4-6步骤.
+Anthropic 2025 年 11 月的报告称：与中国有关联的国家行为者使用 Claude 的智能体式编码工具，将一场网络攻击行动中 80%～90% 的工作自动化。整条链路里，只有 4～6 个步骤仍需人工干预。
 
-影响:
-- 机器人编码是攻击自动化原始的.之前的人工智能网络援助仅限于代码片段水平;机器人工作流程集成侦察,利用,后利用和泄密.
-- 未来的能力增长将减少这一数量.
-- 防卫双重用途:OpenAI的"可靠访问"试点提供了检查的安全组织 (建立的事件响应公司,政府) 防卫能力访问.如果试点扩展,访问不对称性有利于防卫者.
+这带来的含义包括：
 
-### 核电
+- **智能体式编码（Agentic coding）** 已经成为攻击自动化的关键原语。此前 AI 在网络领域大多停留在代码片段级辅助；如今，智能体工作流已经能够串联侦察、漏洞利用、利用后操作和数据外传。
+- 那 4～6 个需要人工参与的步骤就是当前瓶颈；未来能力提升最可能首先减少这类步骤。
+- 在防御性双重用途方面，OpenAI 的“可信访问”试点向经过审核的安全组织（成熟的事件响应公司和政府机构）开放相关能力。如果这类试点扩大，访问权限的不对称将有利于防守方。
 
-公共文档中最少分析的四个CBRN域.威胁模型不同:裂变材料的采购占据了困难,而不是信息.信息层上的人工智能升级在实践中提供了有限的初学者升级.2024-2025年主要实验室报告确定了核特征门.
+### 核风险
 
-### 初学者对专家对绝对
+在四个 CBRN 领域中，核风险是公开文档分析最少的一项。它的威胁模型与其他领域不同：真正的难点主要是获取易裂变材料，而不是获得信息。因此，AI 在信息层带来的能力提升，在实践中对新手的帮助相对有限。2024～2025 年间，也没有任何主要实验室报告指出核领域跨过了特定风险阈值。
 
-在四个领域都有一个模式:
+### 新手相对提升与专家绝对能力
 
-- **Novice-relative uplift.**根据人类2025年生物,2.53倍.
-- **Expert-absolute capability.**专家能提取更多的东西,
+四个领域里都能看到一个共同模式：
 
-对于安全情况的含义:仅通过输入过器,拒绝,不确定性解决初学者升级不足以实现专家绝对控制.
+- **新手相对提升（Novice-relative uplift）。** 相对提升通常很高，而且呈乘法式增长。以 Anthropic 2025 年的生物实验为例，提升达到 2.53 倍。
+- **专家绝对能力（Expert-absolute capability）。** 专家的能力上限更高。专家比新手更清楚该问什么、如何解释结果，因此能从模型中获得更高的绝对能力。
+
+这对安全论证的含义是：仅关注“如何限制新手的能力提升”，例如只采用输入过滤、拒答和不确定性处理，还远远不够。要控制专家能够获得的绝对能力，还需要额外措施，例如强化能力引出防护、能力遗忘（第 17 课）和控制协议（第 10 课）。
 
 ### 跨领域合成
 
-| Domain | 2024 | 2025 | Inflection |
+| 领域 | 2024 | 2025 | 拐点 |
 |---|---|---|---|
-| Bio | mild uplift | 2.53x uplift, ASL-3 approach | acquisition-phase automation |
-| Chem | mild uplift | execution-gap erosion via vision | real-time wet-lab correction |
-| Cyber | code assistance | 80-90% campaign automation | agentic coding |
-| Nuclear | limited | limited | material-access bottleneck holds |
+| 生物 | 小幅提升 | 提升 2.53 倍，接近 ASL-3 | 获取阶段自动化 |
+| 化学 | 小幅提升 | 视觉能力使执行鸿沟收窄 | 实时纠正湿实验室操作 |
+| 网络 | 代码辅助 | 攻击行动自动化 80%～90% | 智能体式编码 |
+| 核 | 有限 | 有限 | 获取材料仍是瓶颈 |
 
-另外,三个领域已经跨越了门,其中一个仍然受到非信息的障碍.
+三个领域已经跨过阈值，一个领域仍被非信息型门槛所约束。
 
-### 在这个阶段的第18阶段
+### 本课在第 18 阶段中的位置
 
-第30课是结尾:每一个上课都能为测量,限制或管理做出贡献的现有双重使用图像. 第17-18课提供了测量和框架; 第12-16课提供了评估工具; 第24-25课提供了监管和披露层; 第28课提供了研究生态系统. 第30课是证据的降落.
+第 30 课是本阶段的综合课题：它汇总此前课程共同指向的当前双重用途风险图景。第 17～18 课提供测量方法与安全框架，第 12～16 课提供评估工具，第 24～25 课提供监管与披露机制，第 28 课介绍研究生态系统。第 30 课则把这些证据汇集到一起。
 
 ```figure
 an-uplift-asymmetry
@@ -82,39 +83,39 @@ an-uplift-asymmetry
 
 ## 用它
 
-阅读人类2025年11月网络报告,OpenAI的准备框架 v22025年4月更新,以及2025年战略风险理事会AI x生物总结.
+本课没有代码。建议直接阅读 Anthropic 2025 年 11 月网络报告、OpenAI 2025 年 4 月 Preparedness Framework v2 更新，以及 Council on Strategic Risks 的 2025 AI x Bio 年终总结。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-dual-use-triage.md`根据2026年能力要求或事件报告,它将四个领域进行分类,确定该要求是否影响初学者相关的升级,专家绝对能力或两者.
+本课产出 `outputs/skill-dual-use-triage.md`。给定一条 2026 年的能力声明或事件报告，它会将问题归入四个领域之一，并判断其影响的是新手相对提升、专家绝对能力，还是两者都会受到影响。
 
-## 运动
+## 练习
 
-1. 阅读人类2025年11月的网络报告.列出4至6个人类干预步骤,并讨论在下一代模型中首次自动化哪些.
+1. 阅读 Anthropic 2025 年 11 月网络报告。列出那 4-6 个仍需人工介入的步骤，并讨论下一代模型最可能先自动化哪一个。
 
-2. 通过视觉来消除化学/生物执行差距. 设计一个评估,以测量不过跨越ITAR/EAR界限的默默知识提升.
+2. 化学与生物领域的执行鸿沟正在因视觉能力而收窄。请设计一项评估，用来测量隐性知识带来的能力提升，同时又不跨越 ITAR / EAR 边界。
 
-3. 支持和反对未来人工智能突破可能会改变这一瓶.
+3. 核领域的能力提升目前似乎仍受材料获取限制。请分别论证“未来的 AI 突破会改变这一瓶颈”与“不会改变这一瓶颈”两个立场。
 
-4. 构建一个安全案例 (课程18三支柱) 为一个能够网络运行的边界模型,将初学者和专家提升联系在一起.
+4. 采用第 18 课的三支柱结构，为一个具备网络能力的前沿模型构造一份安全论证，同时约束新手提升与专家提升。
 
-5. 根据2024-2025年轨迹,选择四个领域中的一个,并根据2024-2025年轨迹编写一段2027年的预测.
+5. 从四个领域中任选一个，根据 2024～2025 年的轨迹写一段对 2027 年的预测，并指出哪些证据会推翻你的预测。
 
 ## 关键词
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|------------------------|
-| Uplift | "AI helps attackers" | Increase in attacker capability attributable to AI assistance |
-| Novice-relative uplift | "multiplicative" | How much AI helps a novice vs status-quo |
-| Expert-absolute capability | "ceiling" | Maximum capability an expert can extract from the model |
-| Execution gap | "doing vs knowing" | Historical defense: tacit wet-lab skill blocks novices |
-| Agentic coding | "autonomous attacks" | Multi-step autonomous cyber-task execution |
-| Acquisition phase | "pre-synthesis steps" | Procurement, equipment, permit stages of a bio threat |
-| Trusted access | "defender-only pilot" | OpenAI 2025 program giving vetted defenders capability access |
+| 能力提升（Uplift） | “AI 帮助攻击者” | 可归因于 AI 辅助的攻击者能力增幅 |
+| 新手相对提升（Novice-relative uplift） | “乘法式增益” | 与现状相比，AI 能为新手带来多大帮助 |
+| 专家绝对能力（Expert-absolute capability） | “能力天花板” | 专家能够从模型中获得的最高能力水平 |
+| 执行差距（Execution gap） | “会做与知道” | 一道传统防线：难以言传的湿实验技能会阻挡新手把知识付诸实践 |
+| 智能体式编码（Agentic coding） | “自主攻击” | 由智能体自主执行的多步骤网络任务 |
+| 获取阶段（Acquisition phase） | “合成前阶段” | 生物威胁中的采购、设备取得和许可办理等阶段 |
+| 可信访问（Trusted access） | “只给防守方的试点” | OpenAI 于 2025 年推出的计划，向经过审核的防守组织开放相关能力 |
 
 ## 进一步阅读
 
-- [Anthropic — November 2025 cyber threat report](https://www.anthropic.com/news/disrupting-AI-espionage)与中国相关的竞选自动化
-- [OpenAI — Preparedness Framework v2 (April 15, 2025)](https://openai.com/index/updating-our-preparedness-framework/)生物"在边"
-- [Anthropic — RSP v3.0 (February 2026)](https://www.anthropic.com/responsible-scaling-policy)ASL-3生物门
-- [Council on Strategic Risks — 2025 AI x Bio wrapup](https://councilonstrategicrisks.org/2025/12/22/2025-aixbio-wrapped-a-year-in-review-and-projections-for-2026/) 年终综合
+- [Anthropic — November 2025 cyber threat report](https://www.anthropic.com/news/disrupting-AI-espionage) - 与中国相关的 campaign automation
+- [OpenAI — Preparedness Framework v2 (April 15, 2025)](https://openai.com/index/updating-our-preparedness-framework/) - 生物领域的 “on the cusp” 警告
+- [Anthropic — RSP v3.0 (February 2026)](https://www.anthropic.com/responsible-scaling-policy) - ASL-3 生物阈值
+- [Council on Strategic Risks — 2025 AI x Bio wrapup](https://councilonstrategicrisks.org/2025/12/22/2025-aixbio-wrapped-a-year-in-review-and-projections-for-2026/) - 年终综合
