@@ -1,120 +1,120 @@
 # 优化器
 
-> 渐进式下降告诉你哪个方向移动. 它没有说多少距离或速度. SGD 是一个 компас.亚当是GPS与交通数据.
+> 梯度下降告诉你应该朝哪个方向移动，却没有说明应该走多远、走多快。SGD 像指南针，Adam 则像掌握实时路况的 GPS。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Lesson 03.05 (Loss Functions)
-**Time:** ~75 minutes
+**Prerequisites:** 第 03.05 课（损失函数）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 在Python中从零开始实现SGD,SGD与动力,亚当和亚当W优化器
-- 解释亚当的偏见纠正如何补偿早期训练阶段零初始化时刻估计
-- 证明为什么AdamW在同一任务上具有L2规律化,比Adam产生更好的概括性
-- 选择适合转换器,CNN,GAN和细调的优化器和默认超参数
+- 使用 Python 从零实现 SGD、带动量的 SGD、Adam 和 AdamW 优化器
+- 解释 Adam 的偏差修正如何补偿训练初期从零初始化的矩估计
+- 在同一任务上演示 AdamW 为何比采用 L2 正则化的 Adam 具有更好的泛化能力
+- 为 Transformer、CNN、GAN 和微调任务选择合适的优化器与默认超参数
 
 ## 问题
 
-你计算了梯度.你知道重量#4,721应该减少0.003减少损失.但0.003在哪个单位?通过什么?
+你已经计算出梯度，也知道要降低损失，编号 4,721 的权重应该减小 0.003。但 0.003 使用什么单位？应乘以什么缩放因子？第 1 步与第 1,000 步应该移动相同距离吗？
 
-基梯度下降对每一步的每个参数都应用相同的学习速度:w = w - lr *梯度. 这造成了三种问题,使得训练神经网络在实践中很痛苦.
+最基础的梯度下降会在每一步对每个参数采用同一个学习率：w = w - lr * gradient。这会带来三个问题，使神经网络训练在实践中十分痛苦。
 
-首先,振荡. 失败的景观很少像一个滑. 这更像是一个长而狭窄的谷. 梯度指向谷 (向),而不是沿谷 (浅向). 渐进的下降反弹前后穿越狭窄的维度,同时在有用的维度上取得微小的进展. 你已经看到了:损失比高原快速下降,不是因为模型合,而是因为它正在振荡.
+首先是振荡。损失曲面很少像一个平滑的碗，更像一条狭长的山谷。梯度指向横穿山谷的陡峭方向，而不是沿山谷前进的平缓方向。梯度下降会在狭窄维度上来回弹跳，却只能沿真正有用的方向缓慢前进。你可能见过这种现象：损失先快速下降，随后进入平台期；不是因为模型已经收敛，而是因为它正在振荡。
 
-另一方面,所有参数的学习速度都是错误的.有些重量需要大规模更新 (它们处于早期的,不适合的阶段).其他需要小规模的更新 (它们接近最佳值).一个适合前者学习率破坏后者,反之亦然.
+其次，对所有参数使用同一个学习率并不合理。有些权重需要较大更新，因为它们还处于训练早期、拟合不足；另一些权重已经接近最优值，只需要很小的更新。适合前者的学习率会破坏后者，反之亦然。
 
-第三,车点.在高层次,损失景观有广的平面区域,梯度接近零. 瓦尼拉 SGD 爬行这些在梯度的速度,实际上是零. 模型看起来卡住了. 它不是卡住的 - - 它在一个平面区域,另一边有有用的下降.
+第三是鞍点。在高维空间中，损失曲面存在大片梯度接近零的平坦区域。普通 SGD 只能按照梯度的速度穿过它们，也就是几乎不动。模型看起来像是卡住了，其实只是处在一个平坦区域，而另一侧仍有可用的下降方向；但 SGD 没有推动自己穿过去的机制。
 
-亚当解决了所有三个问题. 它保持每参数的两个运行平均值 - - 平均梯度 (momentum,处理振荡) 和平均二次梯度 (适应速度,处理不同的尺度). 结合前几步的偏差纠正,它给你一个优化器,它可以解决80%的默认超参数问题. 这一课将它从头开始,所以你会明白,
+Adam 同时解决了这三个问题。它为每个参数维护两个移动平均：梯度均值，也就是动量，用于缓解振荡；以及梯度平方的均值，也就是自适应速率，用于处理不同尺度。再结合训练最初几步的偏差修正，就得到一个使用默认超参数便能解决 80% 问题的优化器。本课会从零实现它，让你准确理解它在剩余 20% 的问题中为何以及何时失效。
 
-## 概念
+## 核心概念
 
-### 缩率下降 (SGD)
+### 随机梯度下降（SGD）
 
-计算一个小批量上的梯度,然后朝着相反的方向行进.
+这是最简单的优化器。先在一个小批次上计算梯度，再向梯度的相反方向迈出一步。
 
 ```
 w = w - lr * gradient
 ```
 
-位式意味着你使用一个随机的子集 (迷你批量) 数据来估计梯度,而不是整个数据集.这个噪音实际上是有用的 - 它帮助逃避严峻的局部最小值.
+“随机”意味着使用随机数据子集，也就是小批次，来估计梯度，而不是使用完整数据集。这种噪声其实很有用，可以帮助模型逃离尖锐的局部极小值，但也会导致振荡。
 
-学习率是唯一的. 太高:损失差异.太低:训练需要永远.最佳的价值取决于架构,数据,批量大小和训练的当前阶段. 在现代网络上,凡尼拉 SGD 的典型价值在0.01~0.1之间.
+学习率是唯一可调旋钮。过高时损失会发散；过低时训练会耗费极长时间。最佳取值取决于架构、数据、批大小以及当前训练阶段。现代网络采用普通 SGD 时，典型学习率在 0.01 到 0.1 之间。但即使在同一次训练中，理想学习率也会不断变化。
 
-### 动力
+### 动量
 
-滚球下坡比喻过度使用,但确切.
+“小球滚下山坡”的比喻虽然被用得太多，却确实准确。更新时不再只使用当前梯度，而是维护一个累积历史梯度的速度。
 
 ```
 m_t = beta * m_{t-1} + gradient
 w = w - lr * m_t
 ```
 
-贝塔 (通常是0.9) 控制了要保存多少历史记录. 贝塔 =0.9,动力大致是最后10个梯度 (1 / (1 -0.9) =10的平均值.
+Beta 通常取 0.9，用来控制保留多少历史信息。当 beta = 0.9 时，动量大致相当于最近 10 个梯度的平均值，因为 1 / (1 - 0.9) = 10。
 
-由于这种方法可以调整振荡,在同一方向指向的梯度积累.反向方向的梯度取消.在那个狭窄的谷中,"横"组件翻转每一步,减温."沿"组件保持一致,得到放大.结果是在有用方向上平稳加速.
+它能缓解振荡，是因为指向同一方向的梯度会不断累积，而反复改变方向的梯度会彼此抵消。在狭长山谷中，“横向”分量每一步都会变号，因此被抑制；“纵向”分量始终一致，因此得到增强。最终，优化器会沿有用方向平滑加速。
 
-实际数字:在一个不良条件的损失景观上,SGD单独可能需要10,000步.在动力 (beta=0.9) 的SGD通常需要3,000-5,000步.
+来看具体数字：在条件很差的损失曲面上，普通 SGD 可能需要 10,000 步；带动量的 SGD（beta=0.9）在同一问题上通常只需 3,000–5,000 步。这不是微不足道的加速。
 
-### 标
+### RMSProp
 
-实际上有效的第一个每参数适应性学习率方法. 希顿在Coursera讲座中提出 (从未正式发表).
+这是第一个真正有效的逐参数自适应学习率方法。Hinton 在 Coursera 课程中提出了它，但从未正式发表论文。
 
 ```
 s_t = beta * s_{t-1} + (1 - beta) * gradient^2
 w = w - lr * gradient / (sqrt(s_t) + epsilon)
 ```
 
-随着一个小的学习率,一个小的学习率 (s_t) 能够分为一个小的学习率.
+s_t 追踪梯度平方的移动平均。梯度持续较大的参数会除以较大的数，因此有效学习率更小；梯度较小的参数会除以较小的数，因此有效学习率更大。
 
-这解决了"所有参数的学习速度"的问题. 一个已经获得了大规模更新的重量可能接近目标 - - 减速. 一个已经获得了小规模更新的重量可能不够训练 - - 加速.
+这解决了“所有参数共用一个学习率”的问题。一个持续进行大幅更新的权重可能已经接近目标，因此应让它慢下来；一个只能获得微小更新的权重可能训练不足，因此应让它加速。
 
-子 (通常是1e-8) 在没有更新参数时,防止零分.
+Epsilon 通常取 1e-8，用于防止尚未更新的参数发生除零错误。
 
-### 动力+RMSProp
+### Adam：动量 + RMSProp
 
-亚当将这两个想法结合在一起,每参数保持两个指数动平均值:
+Adam 结合了上述两种思想，为每个参数维护两个指数移动平均：
 
 ```
 m_t = beta1 * m_{t-1} + (1 - beta1) * gradient        (first moment: mean)
 v_t = beta2 * v_{t-1} + (1 - beta2) * gradient^2       (second moment: variance)
 ```
 
-**Bias correction**基本的解释是最少的细节.在步骤1时,m_1= (1 - beta1) *梯度.在beta1=0.9时,这是0.1 *梯度--太小了10倍.移动平均值还没有升温.偏差纠正补偿:
+**偏差修正**是许多讲解会略过的关键细节。在第 1 步，m_1 = (1 - beta1) * gradient。当 beta1 = 0.9 时，它只有 0.1 * gradient，比应有值小了十倍，因为移动平均还没有完成预热。偏差修正会补偿这一点：
 
 ```
 m_hat = m_t / (1 - beta1^t)
 v_hat = v_t / (1 - beta2^t)
 ```
 
-在步骤1 (beta1 = 0.9):m_hat =m_1 / (1 - 0.9) =m_1 / 0.1 =实际梯度.在步骤100: (1 - 0.9^100) 约为1.0,因此纠正消失.偏差纠正对第10步很重要,在50后是无关紧要的.
+第 1 步且 beta1 = 0.9 时，m_hat = m_1 / (1 - 0.9) = m_1 / 0.1，正好等于实际梯度。到第 100 步时，(1 - 0.9^100) 已经约等于 1.0，修正项也就自然消失。偏差修正对最初约 10 步很重要，50 步之后基本可以忽略。
 
-更新:
+最终更新为：
 
 ```
 w = w - lr * m_hat / (sqrt(v_hat) + epsilon)
 ```
 
-亚当默认:lr=0.001,beta1=0.9,beta2=0.999,epsilon=1e-8.这些默认解决80%的问题.如果没有,先更改lr.然后beta2.几乎从来没有更改beta1或epsilon.
+Adam 的默认值为：lr = 0.001、beta1 = 0.9、beta2 = 0.999、epsilon = 1e-8。这组默认值适用于 80% 的问题。如果效果不好，先调整 lr，其次调整 beta2，几乎永远不需要改 beta1 或 epsilon。
 
-### 体重减轻是正确的
+### AdamW：正确实现权重衰减
 
-在尼拉 SGD 中,这相当于体重衰减 (减去每一步的体重中的 lambda * w).在亚当中,这种等效性断裂.
+L2 正则化会把 lambda * w^2 加入损失。在普通 SGD 中，它等价于权重衰减，也就是每一步从权重中减去 lambda * w；但在 Adam 中，这种等价关系不再成立。
 
-洛希洛夫和哈特的见解:当你把L2加到损失中,然后亚当处理梯度时,适应性学习率也会扩大调节术语. 具有较大的梯度差异的参数得到较少的调节.具有较小的变异的参数得到更多.这不是你想要的 - - 你想要的调节是不论梯度统计数据如何.
+Loshchilov 与 Hutter 的关键洞见是：如果把 L2 加入损失，再由 Adam 处理梯度，自适应学习率也会缩放正则项。梯度方差较大的参数受到的正则化更弱，方差较小的参数受到的正则化更强。这并不是我们想要的结果，因为无论梯度统计如何，正则化都应该保持一致。
 
-在亚当更新后,亚当W直接将重量衰减应用于重量:
+AdamW 在 Adam 更新完成后，直接对权重施加衰减，从而修复这个问题：
 
 ```
 w = w - lr * m_hat / (sqrt(v_hat) + epsilon) - lr * lambda * w
 ```
 
-减肥率 (lr * lambda * w) 不由亚当的适应因子缩小.每个参数都得到相同的比例缩小.
+权重衰减项 lr * lambda * w 不会被 Adam 的自适应因子缩放，每个参数都会按相同比例收缩。
 
-这似乎是一个小细节.它不是.亚当W几乎在每一个任务上都与亚当+L2规律化相比更好的解决方案相近.它是 PyTorch 中的默认优化器,用于训练变压器,扩散模型和大多数现代建筑.BERT,GPT,LLaMA,稳定扩散--所有这些都是使用亚当W训练的.
+这看似只是一个小细节，实际上并非如此。在几乎所有任务上，AdamW 都能收敛到比 Adam + L2 正则化更好的解。它是 PyTorch 训练 Transformer、扩散模型及大多数现代架构时的默认优化器。BERT、GPT、LLaMA、Stable Diffusion 都使用 AdamW 训练。
 
-### 学习率:最重要的超级参数
+### 学习率：最重要的超参数
 
 ```mermaid
 graph TD
@@ -131,14 +131,14 @@ graph TD
     Schedule --> Decay["Decay: reduce over time<br/>Cosine or linear"]
 ```
 
-学习速度的变化比任何建筑决定都重要.
+如果只调一个超参数，就调学习率。学习率变化 10 倍带来的影响，比你作出的任何架构选择都大。常见默认值如下：
 
-- 清算量: lr = 0.01 至 0.1
-- 亚当/亚当W: lr = 1e-4到 3e-4
-- 精细调节预训练的模型:lr = 1e-5至 5e-5
-- 学习速度升温:在第一步的1-10%上线性坡道
+- SGD：lr = 0.01 到 0.1
+- Adam/AdamW：lr = 1e-4 到 3e-4
+- 微调预训练模型：lr = 1e-5 到 5e-5
+- 学习率预热：在最初 1%–10% 的步骤中线性提升
 
-### 优化比较
+### 优化器比较
 
 ```mermaid
 flowchart LR
@@ -151,7 +151,7 @@ flowchart LR
     SGD_P --> Mom_P --> Adam_P --> AdamW_P
 ```
 
-### 每个优化器都会赢得
+### 每种优化器适用于何时
 
 ```mermaid
 flowchart TD
@@ -168,9 +168,9 @@ flowchart TD
 optimizer-trajectory
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:瓦尼拉 SGD
+### 第 1 步：普通 SGD
 
 ```python
 class SGD:
@@ -182,7 +182,7 @@ class SGD:
             params[i] -= self.lr * grads[i]
 ```
 
-### 步骤2:SGD与动力
+### 第 2 步：带动量的 SGD
 
 ```python
 class SGDMomentum:
@@ -199,7 +199,7 @@ class SGDMomentum:
             params[i] -= self.lr * self.velocities[i]
 ```
 
-### 第三步:亚当
+### 第 3 步：Adam
 
 ```python
 import math
@@ -231,7 +231,7 @@ class Adam:
             params[i] -= self.lr * m_hat / (math.sqrt(v_hat) + self.epsilon)
 ```
 
-### 步骤4:亚当W
+### 第 4 步：AdamW
 
 ```python
 class AdamW:
@@ -263,9 +263,9 @@ class AdamW:
             params[i] -= self.lr * self.weight_decay * params[i]
 ```
 
-### 步骤5:训练比较
+### 第 5 步：训练对比
 
-训练从05课开始的圆数据集上使用四个优化器.
+使用全部四种优化器，在第 05 课的圆形数据集上训练同一个双层网络，并比较收敛速度。
 
 ```python
 import random
@@ -385,9 +385,9 @@ class OptimizerTestNetwork:
         return losses
 ```
 
-## 用它
+## 实际应用
 
- PyTorch 优化器处理参数组,梯度剪辑和学习速度规划:
+PyTorch 优化器可以处理参数组、梯度裁剪和学习率调度：
 
 ```python
 import torch
@@ -413,45 +413,45 @@ for epoch in range(100):
     scheduler.step()
 ```
 
-模式总是:零_级,前进,损失,后退, (剪辑),步骤, (时间表).记住这个顺序.错误 (例如,在优化器.步骤之前调用时间表.步骤()) 是微妙的错误的常见来源.
+执行顺序始终是：zero_grad、forward、loss、backward、可选的 clip、step、可选的 schedule。请记住这个顺序。顺序错误，例如在 optimizer.step() 之前调用 scheduler.step()，是许多隐蔽缺陷的常见来源。
 
-对于CNN,许多实践者仍然更喜欢SGD+动力 (lr=0.1,动力=0.9,重量_衰减=1e-4) 具有步骤或共数时间表.SGD发现更平坦的最小值,这些通常更好地概括.对于变压器和LLM来说,AdamW+共数衰减是普遍的默认.不要没有测量原因而战.
+训练 CNN 时，许多实践者仍然偏爱带动量的 SGD（lr=0.1、momentum=0.9、weight_decay=1e-4），并配合阶梯式或余弦调度。SGD 会找到更平坦的极小值，往往具有更好的泛化能力。对于 Transformer 和 LLM，带预热与余弦衰减的 AdamW 是通用默认选择。除非有可衡量的理由，否则不必挑战这一共识。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/prompt-optimizer-selector.md`-- 选择任何架构的最佳优化器和学习率的决定提示
+本课会产出：
+- `outputs/prompt-optimizer-selector.md`——帮助你为任意架构选择正确优化器和学习率的决策提示词
 
-## 运动
+## 练习
 
-1. 运行Nesterov动力,计算在"看头"位置 (w - lr * beta * v) 转移的梯度,而不是当前位置.
+1. 实现 Nesterov 动量：不在当前位置，而是在“前瞻”位置（w - lr * beta * v）计算梯度。在圆形数据集上比较它与标准动量的收敛速度。
 
-2. 实施学习速度升温时间表:在训练步骤的前10%中从0到max_lr的线性坡路,然后降低到0.与亚当+加热相比亚当没有加热的训练.测量圆数据集中达到90%的准确度需要多少时代.
+2. 实现学习率预热调度：在训练最初 10% 的步骤中，从 0 线性提升到 max_lr，随后按余弦衰减到 0。比较带预热的 Adam 与不带预热的 Adam，测量在圆形数据集上达到 90% 准确率各需多少个 epoch。
 
-3. 追踪亚当训练期间每个参数的有效学习率.有效率是lr * m_hat / (sqrt(v_hat) + eps).在10 ,50和200步后绘制有效率的分布.所有参数都以相同的速度更新吗?
+3. 追踪 Adam 训练期间每个参数的有效学习率。有效更新量是 lr * m_hat / (sqrt(v_hat) + eps)。绘制第 10、50 和 200 步后有效更新量的分布。所有参数都以相同速度更新吗？
 
-4. 执行梯度剪辑 (按全球标准剪辑).设置最高梯度标准为1.0.使用高学习率 (lr=0.01为亚当) 进行剪辑和没有剪辑训练.计算几次跑步分离 (损失到NaN) 进行10个随机种子或没有剪辑.
+4. 实现按全局范数裁剪梯度，把最大梯度范数设为 1.0。使用较高学习率，也就是 Adam 的 lr=0.01，分别采用和不采用裁剪进行训练。在 10 个随机种子上统计有多少次运行会发散，也就是损失变为 NaN。
 
-5. 在一个大型权重网络上比较亚当与亚当W. 启动所有权重以随机值为 [-5, 5] (比正常大得多). 训练200个时代,体重_衰减=0.1. 绘制L2权重标准对两个优化器的训练.亚当W应该显示更快的体重缩小.
+5. 在具有较大权重的网络上比较 Adam 与 AdamW。把所有权重初始化为 [-5, 5] 中的随机值，这比正常值大得多。使用 weight_decay=0.1 训练 200 个 epoch，绘制两种优化器训练期间的权重 L2 范数。AdamW 应该表现出更快的权重收缩。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Learning rate | "Step size" | The scalar multiplier on the gradient update; the single most impactful hyperparameter in training |
-| SGD | "Basic gradient descent" | Stochastic gradient descent: update weights by subtracting lr * gradient, computed on a mini-batch |
-| Momentum | "Rolling ball analogy" | Exponential moving average of past gradients; dampens oscillation and accelerates consistent directions |
-| RMSProp | "Adaptive learning rate" | Divides each parameter's gradient by the running RMS of its recent gradients; equalizes learning rates |
-| Adam | "The default optimizer" | Combines momentum (first moment) and RMSProp (second moment) with bias correction for the initial steps |
-| AdamW | "Adam done right" | Adam with decoupled weight decay; applies regularization directly to weights rather than through the gradient |
-| Bias correction | "Warmup for running averages" | Dividing by (1 - beta^t) to compensate for the zero-initialization of Adam's moment estimates |
-| Weight decay | "Shrink the weights" | Subtracting a fraction of the weight value at each step; a regularizer that penalizes large weights |
-| Learning rate schedule | "Changing lr over time" | A function that adjusts the learning rate during training; warmup + cosine decay is the modern default |
-| Gradient clipping | "Capping the gradient norm" | Scaling down the gradient vector when its norm exceeds a threshold; prevents exploding gradient updates |
+| 学习率 | “步长” | 梯度更新中的标量乘数，是训练过程中影响最大的单个超参数 |
+| SGD | “基本梯度下降” | 随机梯度下降：减去 lr * gradient 来更新权重，梯度由一个小批次计算 |
+| 动量 | “滚动小球的比喻” | 历史梯度的指数移动平均，可以抑制振荡并加速一致方向上的移动 |
+| RMSProp | “自适应学习率” | 用近期梯度的均方根移动平均除每个参数的梯度，使不同参数的学习率趋于均衡 |
+| Adam | “默认优化器” | 把动量（一阶矩）与 RMSProp（二阶矩）结合起来，并对初始步骤进行偏差修正 |
+| AdamW | “正确的 Adam” | 使用解耦权重衰减的 Adam；直接对权重应用正则化，而不是通过梯度应用 |
+| 偏差修正 | “移动平均的预热” | 除以 (1 - beta^t)，补偿 Adam 矩估计从零初始化造成的偏差 |
+| 权重衰减 | “缩小权重” | 每一步都减去权重值的一定比例；用于惩罚过大权重的正则化方法 |
+| 学习率调度 | “随时间改变 lr” | 训练期间调整学习率的函数；预热 + 余弦衰减是现代默认方案 |
+| 梯度裁剪 | “限制梯度范数” | 当梯度向量范数超过阈值时按比例缩小，防止梯度爆炸式更新 |
 
-## 进一步阅读
+## 延伸阅读
 
-- Kingma & Ba, "亚当:一种方法来实现斯托哈斯主义优化" (2014) -- 原始的亚当论文与融合分析和偏差纠正衍生
-- 洛希洛夫和哈特, "脱节体重衰减规范化" (2017) -- 证明L2规范化和体重衰减在亚当中并非等同,并提出亚当W
-- 史密斯,"训练神经网络周期性学习率" (2017) -- 引入了LR范围测试和周期性时间表,
-- 鲁德, "渐进下降优化算法的概述" (2016) - - 优化器变体中最好的单一调查,有明确的比较和直觉
+- Kingma 与 Ba，《Adam: A Method for Stochastic Optimization》（2014）——包含收敛分析和偏差修正推导的 Adam 原始论文
+- Loshchilov 与 Hutter，《Decoupled Weight Decay Regularization》（2017）——证明 L2 正则化与权重衰减在 Adam 中并不等价，并提出 AdamW
+- Smith，《Cyclical Learning Rates for Training Neural Networks》（2017）——提出学习率范围测试和周期调度，无需再调节固定学习率
+- Ruder，《An Overview of Gradient Descent Optimization Algorithms》（2016）——对各种优化器变体最出色的综合综述，比较清晰、直觉易懂
