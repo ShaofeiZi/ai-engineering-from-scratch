@@ -1,25 +1,25 @@
-# 混合式检索,使用BM25和密集嵌入式
+# 用 BM25 与 Dense Embeddings 实现混合检索
 
-> 复式检索与相互排列融合的混合检索不交叉,它投票 - 投票赢得每个查询类.
+> lexical retrieval 和 semantic retrieval 会分别在相反的查询分布上失效。用 reciprocal rank fusion 做 hybrid retrieval，不是在两者之间做插值，而是让它们投票，而这种投票机制能在各类查询上都占优。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 11 lessons 04 (embeddings), 06 (RAG); Phase 19 Track B foundations (lessons 20-29); Phase 19 lesson 64 (chunking strategies)
-**Time:** ~90 minutes
+**Prerequisites:** 第 11 阶段第 04 课（embeddings）、第 06 课（RAG）；第 19 阶段 Track B 基础课（第 20–29 课）；第 19 阶段第 64 课（chunking strategies）
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 从罗伯逊和斯帕克·斯的公式中从零开始实现BM25,使用场面权重,文件长度正常化,以及可调节的k1和b.
-- 建立一个密集的回收器, 建立一个定性模拟嵌入式,
-- 按照科尔麦克,克拉克和布埃特切尔2009年发表的情况,实施相互级别融合,并解释为什么它占据了分数权重的插图.
-- 调整RRF k常量和每种模式权重,并在小的固定器件体上读取交易.
+- 按 Robertson 和 Sparck Jones 的公式从零实现 BM25，包含 field weighting、document length normalization，以及可调的 k1 和 b。
+- 基于一个确定性的 mock embedding 构建 dense retriever，使整个循环可离线运行。
+- 严格按 Cormack、Clarke、Buettcher 在 2009 年发表的形式实现 reciprocal rank fusion，并解释它为什么优于基于分数权重的插值。
+- 调节 RRF 的 k 常量和各模态权重，并在一个小型 fixture corpus 上读出其中的权衡。
 
 ## 问题
 
-字母搜索获胜,当查询包含字面标识符时,该表包含字面标识.`AbortMultipartOnFail`在微秒内通过BM25返回正确的Go函数.相同的查询,嵌入式,位于三个相似度集群的边界,密集的检索器首先排名错误的文件.
+当查询里带有语料中逐字出现的 identifier 时，lexical search 会赢。比如针对 `AbortMultipartOnFail` 的查询，BM25 能在微秒级把正确的 Go 函数排到前面。同样的查询如果走 embedding，会落在三个相似 cluster 的边缘，dense retriever 反而可能把错误文件排在第一位。
 
-密集搜索在查询被抛词而远离体积的字面标记时获胜.一个用户问"我们如何处理取消的上传"从来没有打入"取消"或"多部分"这个词.BM25将文件部分返回"上传大型文件"上,因为该页面包含"上传"这个词.密集检索发现了"取消"这个函数,总结中提到取消.
+而当查询是对原文的 paraphrase 时，dense search 会赢。一个用户问 “how do we handle cancelled uploads”，并没有显式出现 abort 或 multipart。BM25 会因为 uploads 这个词，把 “uploading large files” 的文档 chunk 提上来。dense retrieval 则更可能找到那个摘要里提到了 cancellation 的 abort function。
 
-两个之间的选择不是静态的.查询分布是变量.一个生产RAG系统从同一端点处理两个类,所以检索必须同时处理两类.这就是混合检索. 合并步骤是必须正确的部分.
+两者之间并不是做一次静态选择就结束了。变化项在于 query distribution。一个生产级 RAG 系统要在同一个 endpoint 上同时处理这两类查询，因此检索层必须能同时覆盖它们。这就是 hybrid retrieval，而真正必须做对的部分，是 merge step。
 
 ## 概念
 
@@ -34,48 +34,44 @@ flowchart LR
   RRF --> Top[Top-k Chunks]
 ```
 
-### 在一个段落中,BM25
+### 用一段话说清 BM25
+BM25 的打分方式是：对查询里的每个 term，计算一个 inverse document frequency，再乘上一个会饱和的 term-frequency 因子，并附带 document length normalization。它有两个旋钮。`k1` 控制 term frequency 的饱和速度；默认值 1.5 是论文推荐值，没有 benchmark 就不该乱动。`b` 控制文档长度在多大程度上参与惩罚；默认值 0.75 表示长文档会受罚，但不是线性受罚。
 
-BM25通过在查询条件上总算一个反向文件频率因子乘以一个和术语频率因子,包括长度正常化纠正.`k1`标准的1.5是公布的建议,并且您不应该没有基准值移动它. `b`根据标准的0.75 个标准,长文件会受到惩罚,但不是线性.
+IDF 采用带平滑的 Robertson and Sparck Jones 形式，也就是 `log((N - df + 0.5) / (df + 0.5) + 1)`。log 里面额外加的 1 很关键，它保证了当某个 term 出现在超过半数语料中时，IDF 仍然保持正值。在小语料里，这一点尤其重要，因为 stopwords 往往在统计意义上并没有高到足以被自然压平。
 
-据说,以色列国防军使用了罗伯逊和斯帕克·斯的定义,`log((N - df + 0.5) / (df + 0.5) + 1)`总体而言,在一个小组中, 关键词技术上很少存在.
+field weighting 允许你告诉 BM25：symbol name 上的命中，比正文里的命中更值钱。实现方式是在索引阶段对 term count 做乘法，而不是在打分阶段再去加权。这样数学形状保持不变，也不用为每个 field 再单独维护一套分数。
 
-字段权重让你告诉BM25符号名称上的匹配比体内的匹配更重要. 实现是指数过程中的术语数量的乘法,而不是得分时间. 这使得数学保持相同,避免每个字段的分分分分.
+### 用一段话说清 Dense Retrieval
+对每个 chunk，用 embedding model 把它映射到固定维度的向量。查询时，对 query 也做 embedding，然后按 cosine similarity 对所有 chunk 排序，取 top-k。真正决定质量的是 model 本身；retrieval 算法本身只有两步：dot product 和 sort。
 
-### 密集的检索在一个段落
+本课用的是一个确定性的 hash-based embedding，这样你可以在完全离线的情况下看清 fusion 的数学。这个 hash 会把 token-keyed offsets 累加到一个 96 维向量里，然后做归一化。因为跨运行是确定性的，所以测试套件才能稳定断言排序结果。
 
-嵌入每个部分在一个固定维度向量中,使用嵌入模型.在查询时,嵌入查询,通过相似性排名每个部分,并返回顶部k.模型是决定质量的变量.检索算法本身是两个线:点产量和排序.
+### Reciprocal Rank Fusion 的正式公式
+两份 ranked list。对于出现在任意一份列表中的每个 candidate，把它在每个列表里的 reciprocal-rank contribution 加起来。2009 年论文用的公式是 `1 / (k + rank)`，默认 k 取 60。最后按总分排序。算法本体就这么简单。
 
-这一课使用确定性基于哈希的嵌入式,以便您可以在没有网络调用的情况下阅读融合数学.哈希将代币键的抵消数量加成96维向量并正常化.测试套件所要求的代数数数列是确定性跨行.
+论文里给出的 k = 60 不是随手拍的。取 k = 60 时，rank-1 的贡献是 1 / 61，rank-10 的贡献是 1 / 70。也就是说，贡献衰减得比较慢，排位较深的候选项依然保有投票权。较小的 k 会让最前面的结果更占主导；较大的 k 会把整条贡献曲线压平。
 
-### 相互级别融合,公布的公式
+我们的实现里还有两个可调旋钮。一个是 `k` 常量本身，另一个是每个 modality 的权重，这样当你已经有证据知道某个模态在你的 corpus 上更强时，就可以适度 boost BM25 或 dense。最直接、也最合理的实现方式，是把每个 rank contribution 乘上该模态的权重；这样既保留了 rank-decay 的形状，也仍然是 scale-free 的。
 
-两名排名名.对于每位名单中出现在的候选人,总结其相互排名贡献. 2009年论文使用`1 / (k + rank)`按总分数排序.这是整个算法.
+### 为什么它优于分数插值
+BM25 的分数没有上界，而且高度依赖 corpus。cosine similarity 则被限制在 -1 到 1 之间。像 `alpha * bm25 + (1 - alpha) * cosine` 这样的线性插值，意味着你得按 corpus 调 alpha，而且每次 reindex 之后都可能要重调。rank-based fusion 则没有这个问题，因为 rank 在不同 modality 之间天然可比较。RRF 这条基线，自 2010 年以来在公开 TREC track 上一直比 score interpolation 更稳。
 
-发表的常数 k = 60 不是任意的.在 k = 60 时,排名-1贡献是1/61和排名-10贡献是1/70. 贡献会慢慢衰退,所以深层的候选人仍然投票.较小的 k 让顶级结果占主导地位.较大的 k 方便了贡献曲线.
-
-两个调节式按在我们的实施.`k`根据标准,一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.一个对比的数量是不变的.
-
-### 为什么合比分权重插射更好
-
- BM25分数是无限的,依赖于体积. 科西因相似性是以 -1 到 1 边界的.`alpha * bm25 + (1 - alpha) * cosine`根据排名的融合没有.两个排名可以在各个模式中比较. 发表的RRF基线比2010年以来在每个公共TREC轨道中分数插入.
-
-它们得出相同的结论:除非有非常强有力的证据来调整分数.
+这也是你在 Vespa 和 Weaviate 文档里会反复听到的结论：除非你手里有非常强的证据表明应该融合分数，否则就坚持 rank-based fusion。
 
 ```figure
 rrf-fusion
 ```
 
-## 建立它
+## 动手实现
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `tokenize(text)`- 一个快速的regex标记.
-- `BM25Index`- 按场面权重,`add`其他`search`置式 k1, b.
-- `mock_embed`现在`DenseIndex`它们的分数是可比较的.
-- `rrf(rankings, k, weights)`- 已公布的多模式权重融合.
-- `HybridRetriever`- 结合BM25和密集.
-- 一个演示`main()`运行三个查询,针对每个回收器的强度和弱点, 并打印出每个模拟的排名,
+- `tokenize(text)`，一个快速 regex tokenizer。
+- `BM25Index`，支持 field weighting，提供 `add` 与 `search`，并允许调节 k1 与 b。
+- `mock_embed` 和 `DenseIndex`，使用与第 64 课相同的确定性 embedding，这样 chunk 可直接比较。
+- `rrf(rankings, k, weights)`，即带 multi-modality weights 的 published fusion 公式。
+- `HybridRetriever`，把 BM25 和 dense 组合起来。
+- 一个 demo `main()`：它会加载一个小型 fixture corpus，运行三种分别针对各 retriever 强项和短板的查询，然后打印每个 modality 的 ranking 以及融合后的 fused list。
 
 运行它:
 
@@ -83,65 +79,65 @@ rrf-fusion
 python3 code/main.py
 ```
 
-阅读示范输出一边.字面标识查询到BM25排名1,密集排名4,RRF排名1. 抛词查询到BM25排名6,密集排名1,RRF排名1. 模糊查询到BM25排名3,密集排名3,RRF排名1. 融合不是打破;它是每一个查询类中赢得的系统.
+把 demo 输出并排读一遍。literal identifier 查询会落在 BM25 rank 1、dense rank 4、RRF rank 1。paraphrased query 会落在 BM25 rank 6、dense rank 1、RRF rank 1。ambiguous query 会落在 BM25 rank 3、dense rank 3、RRF rank 1。fusion 不是一个 tie-breaker，它本身就是那个能在各类查询上都赢的系统。
 
-## 调节子
+## 调参旋钮
 
-| Knob | Default | Move it up when | Move it down when |
+| 旋钮 | 默认值 | 适合调高的情况 | 适合调低的情况 |
 |------|---------|----------------|------------------|
-| BM25 k1 | 1.5 | Terms repeat in documents and you want frequency to matter more | Documents are short and term repetition is noise |
-| BM25 b | 0.75 | Long documents really do say less per word | Document length is uncorrelated with topic |
-| RRF k | 60 | Deep candidates should keep voting | The top-1 should dominate |
-| BM25 weight | 1.0 | Your corpus contains literal identifiers and queries match them | Your queries are user-paraphrased |
-| Dense weight | 1.0 | Queries are paraphrased | Queries are literal |
+| BM25 k1 | 1.5 | 术语在文档中频繁重复，而且你希望词频更有影响力 | 文档很短，重复更多只是噪音 |
+| BM25 b | 0.75 | 长文档确实平均每个词承载更少信息 | 文档长度与主题关系不大 |
+| RRF k | 60 | 希望排位较深的候选仍然保有投票权 | 希望 top-1 更强势地主导结果 |
+| BM25 weight | 1.0 | 语料里有大量字面 identifier，且查询会直接命中它们 | 查询更多是用户自己的转述 |
+| Dense weight | 1.0 | 查询以转述为主 | 查询大多是字面表达 |
 
-通过重新运行第68课的评估, 调整你的保留查询集, 不是直觉.
+调参要靠重新运行第 68 课的 eval harness，基于你的 held-out query set，而不是靠直觉。
 
-## 失败模式的演示将隐藏
+## Demo 无法暴露的失败模式
 
-**Out-of-vocabulary tokens.**密集嵌入式对同一术语进行幻觉.在外体识别器上,密集模拟 returns plausible-looking but wrong neighbors. 融合吸收了这一点,因为BM25返回什么都没有,而排名贡献下降,但只有如果你通过文档,而不是通过分片进行复制.
+**Out-of-vocabulary tokens.** BM25 的 IDF 完全来自语料，因此只出现在 query 里的词不会带来任何贡献。dense embeddings 则会给同样的 term“幻觉出”一个向量。对于语料外 identifier，这往往会返回看起来很合理但实际错误的 neighbors。fusion 能部分吸收这个问题，因为 BM25 什么也没返回时，它的 rank contribution 就自然缺席了，但前提是你做的是按 document 去重，而不是按 chunk 去重。
 
-**Stop-token domination.**根据"the"的词,BM25在表格上产生统一排名. 过索引中的停止代币或接受高IDF术语自然占主导地位.
+**Stop-token domination.** 如果 query 是 the 这种词，BM25 会在全语料上给出几乎均匀的排序。要么在 indexer 里过滤 stop tokens，要么接受高-IDF terms 会自然占主导。
 
-**Identical content across modalities.**如果你的体积足够小,以至于BM25的顶-1也是密集的顶-1,RRF给你带来了相同的邻居的顶-1.这是正确的行为,不是失败,但它使得融合看起来看不见.在你的评估中添加一个对立查询对来验证融合实际上是有效的.
+**Identical content across modalities.** 如果你的语料小到 BM25 的 top-1 也是 dense 的 top-1，那么 RRF 也只会给你同样的 top-1 和相近邻居。这不是失败，而是正确行为，但它会让 fusion 看起来像是“没起作用”。在 eval 里补一组 adversarial query pair，才能验证 fusion 真的在工作。
 
 ## 用它
 
-生产模式:
+生产实践：
 
-- 索引BM25在进程中;瓶是术语频率字典,而不是向量.
-- 在单独的商店中索引密集向量 (在这一课中我们使用平面列表;在生产中,您将使用HNSW).
-- 运行两个查询并行; 融合是连接的持续时间合并.
-- 保持每次获取的重击方式,以便下游重新排名者可以看到哪种方式投票支持它.
+- 在进程内建立 BM25 index；瓶颈是 term-frequency 字典，不是向量。
+- 在单独的 store 里维护 dense vectors。本课里我们用 flat list，生产里一般会用 HNSW。
+- 两路查询并行发出；fusion 只是在 union 上做常数时间级别的 merge。
+- 记录每个 hit 是由哪个 modality 投票支持的，这样下游 reranker 才能利用这些信息。
 
-## 运送它
+## 放进系统里
 
-第66课从本课中取出了合并的顶k,并用一个跨码器重新排列. 第68课精确评估整个管道,回忆,MRR和nDCG.本课中的混合回收器是第69课中的端到端系统的第一阶段.
+第 66 课会接收本课 fused top-k 的输出，再用 cross-encoder 做 rerank。第 68 课会用 precision、recall、MRR、nDCG 对整个 pipeline 做评估。本课里的 hybrid retriever，是第 69 课端到端系统的第一阶段。
 
-## 运动
+## 练习
 
-1. 取代`mock_embed`运行演示,并报告如何在抛词查询中变化.
-2. 加入第三种方式:分别索引的零件总结,并作为第三排名列表合并.
-3. 扫描RRF k在 10, 30, 60, 100, 200 上. 从第68课程绘制回忆@k曲线. 报告曲线在你的体积上达到的 k 的值.
-4. 运行BM25F正确 (每场长度正常化而不是乘法技巧) 并在符号匹配最重要的体积上进行比较.
+1. 把 `mock_embed` 换成你 provider 的真实模型。重新跑 demo，并报告 paraphrased query 上 dense-only ranking 发生了什么变化。
+2. 增加第三个 modality：单独索引 chunk summaries，然后把它作为第三个 ranked list 融合进去。测量增益。
+3. 把 RRF k 扫过 10、30、60、100、200。用第 68 课的 eval harness 画 recall@k 曲线，并报告你语料上曲线的峰值出现在什么 k。
+4. 正式实现 BM25F，也就是 per-field length normalization，而不是当前这个 multiplier trick。然后在一个 symbol match 特别重要的语料上比较两者。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说的话 | 它真正表示什么 |
 |------|-----------------|------------------------|
-| BM25 | "Lexical search" | Probabilistic ranking with idf x saturating tf x length normalization |
-| RRF | "Rank fusion" | Sum of 1 / (k + rank) across ranked lists; k = 60 default |
-| k1 | "TF saturation" | Controls how fast a repeated term stops adding more score |
-| b | "Length penalty" | 0 means ignore document length, 1 means full normalization |
-| Field weighting | "Symbol boost" | Repeat tokens during indexing to boost matches in that field |
-| Rank-based vs score-based fusion | "Why RRF beats linear" | Ranks are comparable across modalities; scores are not |
+| BM25 | "Lexical search" | idf x 饱和 tf x 长度归一化的概率排序 |
+| RRF | "Rank fusion" | 在 ranked list 上求 1 / (k + rank) 之和；默认 k = 60 |
+| k1 | "TF saturation" | 控制重复 term 多快停止继续增加分数 |
+| b | "Length penalty" | 0 表示忽略文档长度，1 表示完全归一化 |
+| Field weighting | "Symbol boost" | 在索引时重复某 field 中的 token，以抬高该 field 的命中 |
+| Rank-based vs score-based fusion | "Why RRF beats linear" | rank 在不同 modality 间可比较，而 raw score 不可比较 |
 
 ## 进一步阅读
 
-- 科尔麦克,克拉克,布埃特切尔,"互惠级别融合优于康多塞特和个人级别学习方法",SIGIR 2009
-- 罗伯逊,沃克,伯利,加特福德,佩恩,"在TREC-3的Okapi" (原本BM25纸)
+- Cormack, Clarke, Buettcher, "Reciprocal Rank Fusion outperforms Condorcet and individual rank learning methods", SIGIR 2009
+- Robertson, Walker, Beaulieu, Gatford, Payne, "Okapi at TREC-3"（最早的 BM25 论文）
 - [Vespa: Hybrid Retrieval with BM25 and Embeddings](https://docs.vespa.ai/en/tutorials/hybrid-search.html)
 - [Weaviate: Hybrid Search](https://weaviate.io/developers/weaviate/search/hybrid)
-- 第十一阶段第六课 - RAG基本面
-- 第19阶段课时64 - 产量在这里被索引
-- 阶段19课66 - 跨编码重排器消耗了融合的顶-k
+- 第 11 阶段第 06 课 - RAG 基础
+- 第 19 阶段第 64 课 - 其输出会在这里被编入索引的 chunker
+- 第 19 阶段第 66 课 - 消费融合后 top-k 结果的 cross-encoder reranker
