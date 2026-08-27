@@ -1,28 +1,28 @@
-# 计划执行控制流量
+# 规划与执行控制流
 
-> 一个无法生存的计划是脚本,一个能够重建的脚本是代理.
+> 一个无法经受失败的计划，只是脚本。一个会在失败后重新规划的脚本，才是代理。先把 replanner 做出来。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 13 lessons 01-07, Phase 14 lesson 01
-**Time:** ~90 minutes
+**Prerequisites:** 第 13 阶段第 01-07 课，第 14 阶段第 01 课
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 描述一个计划作为编写步骤的顺序列表,以便执行者可以考虑进展和结果.
-- 执行步骤顺序,控制失败转移到规划器.
-- 根据当前的线索标记,重新编写前一个错误,以便通知下一个计划.
-- 每次修改时发出一个计划差异,以便下游追踪器或UI可以显示为什么计划改变.
-- 执行两个预算:一个硬步骤天花板和一个硬重建天花板.
+- 把 plan 表示成一个有序的 typed steps 列表，让 executor 能够推理进度与结果。
+- 按顺序执行步骤，并在失败时受控地把控制权移交回 planner。
+- 以当前 cursor 为起点，带着上一次错误上下文重新规划，让下一版 plan 真正基于失败信息调整。
+- 每次 revision 都发出 plan diff，让下游 tracer 或 UI 能解释“为什么计划变了”。
+- 同时强制执行两类预算：硬性的 step ceiling 与硬性的 replan ceiling。
 
 ```figure
 cg-plan-replan
 ```
 
-## 计划和执行,而不是思考链
+## 计划并执行，而不是 chain-of-thought
 
-链思维代理发出代币,让循环猜测工具调用结束的地方.一个计划执行代理首先发出结构化计划,然后确定性地执行每个步骤.计划是数据,带可以内视.执行是通过发送器运行数据的带.
+chain-of-thought agent 会先吐出一串 tokens，再让 loop 去猜工具调用到底在什么地方结束。plan-and-execute agent 则先给出一个结构化 plan，然后再逐步、确定性地执行每一步。plan 是 harness 可检查的数据；execution 是 harness 把这些数据交给 dispatcher 去运行。
 
-计划的执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,执行者,
+整个系统只有两块：planner 负责产出 plan，executor 负责执行 plan。真正有意思的，是 executor 遇到失败之后怎么办。一共只有三种选择：
 
 ```text
 1. Abort         (return failed, surface the error)
@@ -30,7 +30,7 @@ cg-plan-replan
 3. Replan        (hand the error to the planner, get a new plan from the cursor)
 ```
 
-复原是把剧本变成一个代理的.
+正是 replan 这一条，把脚本变成了代理。
 
 ## 步骤的形状
 
@@ -44,7 +44,7 @@ Step
   error           : str | None
 ```
 
-`expected_outcome`计划器在修改计划时读取它;事件流则发出它,以便追踪器可以显示"这个步骤应该做X".
+`expected_outcome` 是 planner 在每个步骤旁边附带的一句简短成功条件。executor 不会真的去强制验证它。它存在的意义有两个：一是 replanner 在修改计划时会读取它；二是 event stream 会把它发出去，这样 tracer 才能展示“这个步骤原本应该完成什么”。
 
 ## 规划器的形状
 
@@ -53,13 +53,13 @@ def planner(goal: str, history: list[Step], last_error: str | None) -> list[Step
     ...
 ```
 
-纯粹的功能.`goal`对于用户来说,`history`是已经执行的步骤 (填写结果和错误).`last_error`计划器将从线索开始返回下一个计划.
+它是一个纯函数。`goal` 是用户目标，`history` 是已经执行过的步骤列表（其中 result 和 error 已经被填上），`last_error` 在第一次调用时为 None，之后每次调用则携带最近一次失败信息。planner 返回的是从当前 cursor 往后的下一版 plan。
 
-计划者不知道执行者,他不知道重试,他不知道时间限制,他制造了一个计划.
+planner 不知道 executor 的存在，不知道 retry，也不知道 timeout。它只负责产出计划，仅此而已。
 
-## 执行者
+## 执行器
 
-执行器是一个小状态机器.每一步都通过发送器.结果是三个事情之一:成功,失败可重复计划,失败可致命.重复的失败将归还给规划师.致命的失败 (预算超出,重复计划天花板撞击) 返回一个`FAILED`会议结果.
+executor 本质上是一个很小的状态机。每一步都通过 dispatcher 来执行。结果只有三类：成功、可重规划的失败、致命失败。可重规划的失败会把控制权交还给 planner；致命失败（例如预算耗尽、replan ceiling 撞线）则直接返回 `FAILED` 会话结果。
 
 ```mermaid
 stateDiagram-v2
@@ -74,9 +74,9 @@ stateDiagram-v2
     DONE --> [*]
 ```
 
-## 计划的修改不同
+## 计划 revision 的 diff
 
-计划后,执行者发出一个`plan.diff`活动有三个场地.
+当 planner 在失败后返回一份新 plan 时，executor 会发出一个 `plan.diff` 事件，其中包含三项字段：
 
 ```text
 removed: list of step ids that were in the old plan and are not in the new
@@ -84,17 +84,17 @@ added  : list of step ids in the new plan that were not in the old
 revised: list of step ids whose tool_name or args changed
 ```
 
-追踪器或UI可以将此作为删除步骤的突破和添加步骤的突出. 问题不是不同格式. 问题是修改是一个可见的事件,而不是一个默默的重写.
+tracer 或 UI 可以把它渲染成：被删掉的步骤显示删除线，新加的步骤高亮出来。重点不在 diff 的具体格式，而在于 revision 必须是可见事件，而不是一次静默重写。
 
-## 两项预算,两项预算都很难
+## 两类预算，而且都必须是硬上限
 
-`max_steps`根据第一个规则,执行者将拒绝重新规划并返回失败. 执行者将拒绝重新规划并返回失败.
+`max_steps` 限制的是整个 session 里总共能执行多少步，包括 replan 之后新增的步骤。默认值是十二。比如一个线性的五步计划，若中途 replan 两次，每次又新加三步，总执行步数就会达到十六，超过预算。此时 executor 会拒绝这次 replan 并返回 FAILED。
 
-`max_replans`设置后,计划器调用了第一个计划后的次数.默认是五次.这是更重要的限制.一个计划器连续五次返回相同的破产计划,否则会循环直到步骤预算抓住它.设置后的重新计划使故障更快,原因更清楚.
+`max_replans` 限制的是第一次 plan 之后，planner 最多还能被重新调用几次。默认值是五。这个限制其实更重要。因为如果 planner 一直五次都返回同一份坏掉的计划，而没有 replan ceiling，系统就只能等 step budget 去兜底。限制 replan 次数，可以更快失败，也能让失败原因更清晰。
 
-## 在这个课程中,确定性规划者
+## 本课里的 deterministic planner
 
-我们在这个课程中不称作模型.课程运输一个决定性规划者,`last_error`现在,我们要去.
+本课不会真的调用模型。我们提供一个 deterministic planner，它根据 `last_error` 来决定产出哪一版计划。
 
 ```text
 last_error is None    -> emit a four-step plan
@@ -103,7 +103,7 @@ last_error matches Y  -> emit a two-step plan that gives up gracefully
 otherwise             -> return [] (signals nothing to replan)
 ```
 
-这足以测试执行者的行为在每个过渡路径:成功,重复计划一次,重复计划两次,重复计划耗尽,
+这已经足够测试 executor 在所有关键状态转移路径上的行为：成功、replan 一次、replan 两次、replan 耗尽，以及 step-budget 耗尽。
 
 ## 结果形状
 
@@ -116,16 +116,16 @@ SessionResult
   events      : list[Event]
 ```
 
-课二十节的带链循环可以直接读取.课二十三节的发送器是执行每个步骤的.课二十一节的注册表验证每个步骤的 args.课二十二节的输送将将整个流程通过JSON-RPC向模型客户端表面.
+第二十课里的 harness loop 可以直接消费这个结果。第二十三课的 dispatcher 负责执行每个步骤。第二十一课的 registry 负责验证每一步的 args。第二十二课的 transport 则可以把整条流程通过 JSON-RPC 暴露给模型客户端。
 
-## 如何读取代码
+## 如何阅读代码
 
-`code/main.py`定义`PlanExecuteAgent`现在`Step`现在`PlanDiff`现在`SessionResult`执行者是单独的.`run(goal)`返回一个方法`SessionResult`计划差异通过比较步骤ID和`(tool_name, args)`两.
+`code/main.py` 会定义 `PlanExecuteAgent`、`Step`、`PlanDiff`、`SessionResult` 以及 deterministic planner。executor 只有一个 `run(goal)` 方法，返回一个 `SessionResult`。plan diff 的计算逻辑很直接：比较 step ids，以及 `(tool_name, args)` 元组是否变化。
 
-`code/tests/test_agent.py`计划中失败一次重新规划,重新规划退出的疲劳`failed:replan_budget`计划差异事件格式.
+`code/tests/test_agent.py` 会覆盖线性成功路径、中途失败后 replan 一次、replan 耗尽后返回 `failed:replan_budget`、step-budget 耗尽，以及 plan-diff 事件格式。
 
-## 走得更远
+## 往前走
 
-首先,部分计划缓存:当一个计划成功的第三个六步骤,然后失败,你不想重新运行第三个.执行器已经保存历史;规划器只需要阅读它.第二,并行分支:当前执行器是严格的序列.一个发射独立分支的规划器 (`gather_step`没有`next_step`) 可以通过发送器同时进行两个工具调用.
+接入真实模型之后，你会很自然地想加两样东西。第一，是 partial-plan caching：如果一个六步计划前面三步已经成功，第四步才失败，你并不想在 replan 后把前面三步重跑。executor 已经保存了 history，planner 只要学会读它就行。第二，是 parallel branches：当前 executor 完全是串行的。如果 planner 能发出独立分支，比如用 `gather_step` 而不是 `next_step`，那它就可以通过 dispatcher 并发跑多个工具调用。
 
-两者都增加了真正的复杂性. 一旦把线性执行器固定起来,两者都更容易增加.
+这两项都会带来真实复杂度。但等你先把线性 executor 钉稳之后，再加它们就容易得多。这正是本课的目的。
