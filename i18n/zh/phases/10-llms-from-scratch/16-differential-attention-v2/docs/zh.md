@@ -1,111 +1,111 @@
-# 差异性注意力 (V2)
+# 差分注意力（V2）
 
-> 软max注意力在每一个不匹配的代币上分散了少量的概率. 超过100万个代币,这些噪音加起来,淹没了信号. 差异变压器 (Ye et al., ICLR 2025) 通过计算注意力为两个软max的差异来解决这一问题,减去共享噪音地面. DIFF V2 (微软,2026年1月) 是生产堆重写:与基线变压器相匹配的解码延迟,没有自定义内核,兼容FlashAttention. 这一课程是V1到V2端到端,用一个工作玩具实现的区别操作你可以运行在Stdlib Python.
+> Softmax 注意力会向每个不匹配的词元分配少量概率。在 10 万个词元上，这些噪声会不断累加并淹没信号。差分 Transformer（Ye 等，ICLR 2025）通过计算两个 Softmax 的差值来消除共同噪声底。DIFF V2（Microsoft，2026 年 1 月）则是面向生产技术栈的重写版本：解码延迟与基线 Transformer 相当，不需要自定义内核，并兼容 FlashAttention。本课将端到端讲解从 V1 到 V2 的演进，并提供一个可用标准库 Python 运行的差值操作玩具实现。
 
-**Type:** Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 7 · 02 (self-attention), Phase 7 · 15 (attention variants), Phase 10 · 14 (architecture walkthrough)
-**Time:** ~60 minutes
+**Type:** 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 7 · 02（自注意力）、阶段 7 · 15（注意力变体）、阶段 10 · 14（架构剖析）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 具体说明为什么软max注意力具有噪音地面,以及为什么随着环境长度而增长.
-- 推导差异注意力公式,并解释为什么减去在保持信号时取消共享噪音组件.
-- 走向V1到V2的差异:什么变得更快,什么变得更简单,什么变得更稳定,以及为什么每个变化是生产预训练所必需的.
-- 在纯Python中从零开始实现差异注意力,并对合成信号加噪声查询进行噪音取消特性经验验证.
+- 准确说明 Softmax 注意力为何存在噪声底，以及它为何会随上下文长度增长。
+- 推导差分注意力公式，并解释相减为何能消除共同噪声分量，同时保留信号。
+- 梳理从 V1 到 V2 的差异：哪些部分变得更快、更简单、更稳定，以及为什么每项变化都是生产级预训练所必需的。
+- 使用纯 Python 从零实现差分注意力，并在合成的“信号 + 噪声”查询上实证验证噪声消除性质。
 
 ## 问题
 
-标准软max注意力具有数学特性,它会变成规模上的操作头痛.`q`关注重量是`softmax(qK^T / sqrt(d))`软max 永远无法产生精确的零 每一个不匹配的代币都获得了一些正质量.那个残余质量是噪音,它随着背景长度而扩展.在128k代币时,即使每个不匹配的代币只有0.001%的可能性,其中127,999代币总共贡献了总量的12%.模型必须学习绕着环境增长的噪音地面路线.
+标准 Softmax 注意力有一种数学性质，规模扩大后会演变成棘手的工程问题。对于查询 `q`，注意力权重为 `softmax(qK^T / sqrt(d))`。Softmax 永远无法产生精确的零——每个不匹配词元都会获得一定的正概率质量。这些残余概率就是噪声，而且会随上下文长度增长。在 128k 个词元中，即使每个不匹配词元只获得 0.001% 的概率，127,999 个词元合起来也会贡献约 12% 的总量。模型必须学会绕过一个随上下文增长的噪声底。
 
-经验上,这表现为注意力头部干扰:长文本RAG中的幻觉引用,在100k标记检索任务中失败中失败,在32k以上的针基准上微妙的精度降低. 差异变压器论文 (arXiv:2410.05258,ICLR 2025) 测量了差距:DIFF变压器的困惑程度较低,长文本精度更高,幻觉比相同尺寸的基线更少.
+这种现象在实证上表现为注意力头干扰：长上下文 RAG 中凭空捏造引用、10 万词元检索任务中的“中间信息遗失”，以及超过 32k 后“干草堆寻针”基准的细微准确率下降。《Differential Transformer》论文（arXiv:2410.05258，ICLR 2025）测量了这种差距：同等规模下，DIFF Transformer 的困惑度更低、长上下文准确率更高、幻觉更少。
 
-由于DIFF V1存在三个问题, 它的值缓存必须每次解码步骤加载两次,它需要自定义的CUDA内核,它破坏了FlashAttention兼容性,并且其每头RMSNorm在70B以上规模上破坏了长期训练的稳定性. 微软的云科技博客 (DIFF V2), 这一课程将两个版本都运行,构建区别运算符,并在玩具查询中进行噪音取消.
+DIFF V1 有三个问题，阻碍了它进入前沿预训练流水线：每个解码步骤都必须加载两次值缓存；它需要破坏 FlashAttention 兼容性的自定义 CUDA 内核；逐头 RMSNorm 在 70B 以上规模的长时间训练后期会造成不稳定。DIFF V2（Microsoft unilm 博客，2026 年 1 月 20 日）解决了全部三个问题。本课会讲解两个版本，构建差值算子，并在一个玩具查询上测量噪声消除效果。
 
 ## 概念
 
-### 软max的噪音地板
+### Softmax 的噪声底
 
-为了查询`q`关键`K = [k_1, ..., k_N]`注意力重量为:
+对于查询 `q` 和键 `K = [k_1, ..., k_N]`，注意力权重为：
 
 ```
 w_i = exp(q . k_i / sqrt(d)) / sum_j exp(q . k_j / sqrt(d))
 ```
 
-没有.`w_i`如果`k_i`完全无关`q`总结`q . k_i`不是0 它随着变异而波动在零左右`||q||^2 / d`软max正常化后,每一个不相关的代币仍然贡献.`O(1/N)`无关代币的总贡献为`O((N-1)/N) = O(1)`不是小量.
+任何 `w_i` 都不会为零。如果 `k_i` 与 `q` 完全无关，得分 `q . k_i` 也不会是 0，而是在零附近波动，方差为 `||q||^2 / d`。经过 Softmax 归一化后，每个无关词元仍会为加权和贡献 `O(1/N)`。全部无关词元的总贡献为 `O((N-1)/N) = O(1)`——绝不是一个很小的量。
 
-模型想要的是硬顶k:匹配的代币的重量很高,其他地方的重量几乎是零.
+模型真正想要的效果类似硬 top-k：匹配词元获得较高权重，其他位置的权重接近零。Softmax 过于平滑，无法直接做到这一点。
 
-### 差异性概念
+### 差分思想
 
-分开各头的Q和K投影为两个:Q = (Q_1,Q_2) 和K = (K_1,K_2).计算两个注意力地图:
+把每个头的 Q、K 投影分别拆成两部分：Q = (Q_1, Q_2)，K = (K_1, K_2)。计算两张注意力图：
 
 ```
 A_1 = softmax(Q_1 K_1^T / sqrt(d))
 A_2 = softmax(Q_2 K_2^T / sqrt(d))
 ```
 
-输出:
+输出为：
 
 ```
 DiffAttn = (A_1 - lambda * A_2) V
 ```
 
-减值取消了两个地图共享的任何噪音分布.如果两个地图在127k不相关的代币上重量大约均 (随机初始化后),则这些都会取消.信号在少数实际相关的代币上最大重量只会取消如果它在两个地图上出现相同的 magnitud,这将不会一旦模型列车.
+相减会抵消两张注意力图共有的噪声分布。如果两者都在 12.7 万个无关词元上分配近似均匀的权重（随机初始化时确实如此），这些权重就会相互抵消。只有当真正相关的少数词元在两张图中以完全相同幅度形成尖峰时，信号才会被抵消；模型开始训练后，它们不会如此。
 
-`lambda`标记为:`lambda = exp(lambda_q1 dot lambda_k1) - exp(lambda_q2 dot lambda_k2) + lambda_init`它们可能是负面的.`lambda_init`默认的数字是小的正数,比如0.8.
+`lambda` 是每个头上的可学习标量，参数化形式为 `lambda = exp(lambda_q1 dot lambda_k1) - exp(lambda_q2 dot lambda_k2) + lambda_init`。它可以为负，`lambda_init` 默认为 0.8 一类的小正数。
 
-### 为什么这匹配的头声取消
+### 为什么这类似带方向性的降噪
 
-想象一下两个杂的麦克风录制相同的声音. 两者都接收扬声器加上相关背景噪音. 减去一个和另一个,共享的噪音下降. 声音存活下来,因为两个信号相或幅度相差足以防止完全取消.`lambda`能学到这种平衡.
+想象两个带噪麦克风在录制同一个人说话。两者都记录了说话者声音和相关的背景噪声。将一段录音减去另一段，共享噪声就会消退；人声则因为两路信号在相位或幅度上存在足够差异，不会完全抵消。每个头的 `lambda` 学习的正是这种平衡。
 
-###  V1 vs V2:差异
+### V1 与 V2 的差异
 
-V1 保持参数数量与基线变压器等.为了获得每头两个查询,它将头寸减半.这使得头部表达性成本和更痛苦的损失减半了每头的值缓存.解码必须每步两次加载值缓存 (每软max分支一次).结果:除码速度比基线慢,尽管参数数数量相匹配.
+V1 让参数量与基线 Transformer 相同。为了让每个头拥有两个查询，它把头维度减半。这既牺牲了注意力头的表达能力，更麻烦的是让每个头的值缓存也减半。每个解码步骤必须加载两次值缓存（每个 Softmax 分支一次），因此即使参数量相同，解码也比基线更慢。
 
-V2 翻倍查询头数量,保持KV头数相同 (借取上映的参数).头寸与基线保持相同.减去后,额外的维度被投影回下来,以匹配基线变压器的O_W投影.三个事情同时发生:
+V2 将查询头数量翻倍，KV 头数量保持不变（所需参数从上投影中借用）。头维度与基线保持相同。相减之后，额外维度会先投影回基线 Transformer 的维度，再送入 O_W 投影。由此同时实现三件事：
 
-1. 解码速度与基线匹配 (KV缓存一次加载).
-2. FlashAttention运行不变 (没有自定义内核).
-3. 在解码时的算术强度增加 (从HBM中加载的每字节的计算量增加).
+1. 解码速度与基线相同（KV 缓存只加载一次）。
+2. 可以原样使用 FlashAttention（不需要自定义内核）。
+3. 解码时的算术强度提高（每个从 HBM 加载的字节承担更多计算）。
 
-V2还删除了V1用来稳定减法的每头RMSNorm.在70B类预训练尺度上,RMSNorm破坏了晚训练的稳定性.V2将其取代为更简单的初始化方案,使训练保持稳定,而无需额外模块.
+V2 还移除了 V1 用于稳定相减操作的逐头 RMSNorm。在 70B 级预训练规模上，该 RMSNorm 会导致训练后期不稳定。V2 改用更简单的初始化方案，无须额外模块也能保持训练稳定。
 
-### 什么时候要达到它
+### 何时使用它
 
-| Workload | Benefit |
+| 工作负载 | 收益 |
 |----------|---------|
-| Long-context RAG (64k+) | Cleaner attention maps, fewer hallucinated citations |
-| Needle-in-haystack benchmarks | Substantial accuracy lift past 32k |
-| Multi-document QA | Less cross-document interference |
-| Code completion at 8k | Marginal, not worth the architecture change |
-| Short chat (< 4k) | Essentially indistinguishable from baseline |
+| 长上下文 RAG（64k 以上） | 注意力图更干净，虚构引用更少 |
+| 干草堆寻针基准 | 超过 32k 后准确率显著提升 |
+| 多文档问答 | 文档间干扰更少 |
+| 8k 上下文代码补全 | 收益有限，不值得改变架构 |
+| 短对话（< 4k） | 与基线基本无法区分 |
 
-随着背景长度的增长,在4k代币时,噪音的地面足够小,以使标准注意力正常.在128k时,它会伤害你.
+收益会随上下文长度增长。4k 词元时，噪声底足够小，标准注意力即可胜任；到 128k 时，它已经会造成伤害。
 
-### 如何与其他2026个子相匹配
+### 如何与 2026 年其他旋钮组合
 
-| Feature | Compatible with DIFF V2? |
+| 特性 | 与 DIFF V2 兼容？ |
 |---------|------------------------|
-| GQA | Yes (V2 increases Q heads, not KV heads) |
-| MLA (DeepSeek) | Yes in principle, no published paper combining them |
-| MoE | Yes (attention is independent of MLP block) |
-| RoPE | Yes (unchanged) |
-| YaRN / long-context scaling | Yes (exactly where DIFF helps most) |
-| FlashAttention | Yes in V2 (was no in V1) |
-| Speculative decoding | Yes (attention change is invisible to the spec-decode loop) |
+| GQA | 是（V2 增加 Q 头，而非 KV 头） |
+| MLA（DeepSeek） | 原理上兼容，但尚无结合二者的公开论文 |
+| MoE | 是（注意力与 MLP 块彼此独立） |
+| RoPE | 是（保持不变） |
+| YaRN / 长上下文缩放 | 是（正是 DIFF 收益最大的场景） |
+| FlashAttention | V2 兼容（V1 不兼容） |
+| 推测解码 | 是（注意力变化对推测解码循环不可见） |
 
 ```figure
 differential-attention
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`玩具查询,具有已知信号加噪结构,可以直接测量噪音取消比率.
+`code/main.py` 使用纯 Python 实现差分注意力。一个具有已知“信号 + 噪声”结构的玩具查询，让你可以直接测量噪声消除比。
 
-### 步骤1:标准软max注意力
+### 第 1 步：标准 Softmax 注意力
 
-分数矩阵操作:列表列表,手动分,软max,数值稳定减小最大.
+使用标准库实现矩阵运算：列表套列表、手写矩阵乘法，以及先减去最大值以保证数值稳定的 Softmax。
 
 ```python
 def softmax(row):
@@ -115,11 +115,11 @@ def softmax(row):
     return [e / s for e in exps]
 ```
 
-### 步骤2:将Q,K分为两半
+### 第 2 步：把 Q、K 拆成两半
 
-玩具实施使用V1为教学清晰度 数学相同,只有会计不同.
+V1 风格会把头维度减半；V2 风格则保持头维度不变，并把头数量翻倍。为了便于教学，玩具实现使用 V1；两者数学完全相同，区别只在记录方式。
 
-### 步骤3:两个软max分支 +减小
+### 第 3 步：两个 Softmax 分支 + 相减
 
 ```python
 A1 = [softmax([dot(q1, k) / scale for k in K1]) for q1 in Q1]
@@ -128,75 +128,75 @@ diff_weights = [[a1 - lam * a2 for a1, a2 in zip(r1, r2)] for r1, r2 in zip(A1, 
 out = [[sum(w * v[j] for w, v in zip(row, V)) for j in range(d_v)] for row in diff_weights]
 ```
 
-注:输出权重可能是负的. 没关系. 值缓存仍然处理签署的贡献. 随后的V投影吸收标志.
+注意：输出权重可以为负。这没有问题——值缓存仍可处理带符号贡献，后续的 V 投影会吸收符号。
 
-### 步骤4:噪音取消测量
+### 第 4 步：测量噪声消除
 
-构建一个长度1024的合成序列. 放信号标志在已知位置, 填充其余的噪音. 计算 (a) 信号位置的标准软max注意力重量和 (b) 差异注意力重量. 测量每个信号与噪音的比例. 根据两支分支的不同程度,DIFF注意力可靠地产生了3x-10x的信号与噪音比率.
+构造一个长度为 1024 的合成序列，把信号词元放到已知位置，其余位置全部填入噪声。分别计算：（a）标准 Softmax 注意力在信号位置上的权重；（b）差分注意力权重。测量二者的信噪比。根据两个分支训练后差异的大小，DIFF 注意力通常可把信噪比提高 3～10 倍。
 
-### 步骤 5: V1 vs V2参数会计
+### 第 5 步：统计 V1 与 V2 的参数
 
-根据配置 (隐藏=4096,头=32,d_head=128),打印:
+给定配置（hidden=4096、heads=32、d_head=128），打印：
 
-- 基线变压器:每个尺寸的Q,K,V `hidden * hidden`隐藏在4*的MLP.
-- 标准 V1:每尺寸的Q,K `hidden * hidden` V 尺寸`hidden * hidden`头部的薄度在内面减半.`lambda`参数 (O(头 * d_头)).
-- 型号:`2 * hidden * hidden`尺寸K`hidden * hidden` V 尺寸`hidden * hidden`超薄的投影在O_W之前. 增加相同的`lambda`参数
+- 基线 Transformer：Q、K、V 的大小均为 `hidden * hidden`，MLP 为 4 * hidden。
+- DIFF V1：Q、K 大小均为 `hidden * hidden`，V 大小为 `hidden * hidden`（不变），内部头维度减半。增加逐头 `lambda` 参数（O(heads * d_head)）。
+- DIFF V2：Q 大小为 `2 * hidden * hidden`，K 大小为 `hidden * hidden`，V 大小为 `hidden * hidden`。在 O_W 前把额外维度投影回原大小。增加相同的 `lambda` 参数。
 
-玩具测量了V2的额外参数成本 (大约`hidden * hidden`按一下,每个注意区块的额外数量)
+玩具程序会测量 V2 的额外参数成本（每个注意力块约增加 `hidden * hidden`），并打印结果。
 
-## 用它
+## 学以致用
 
-截至2026年4月,DIFF V2尚未在每个生产推断服务器中出货,但vLLM和SGLang正在进行集成.
+截至 2026 年 4 月，DIFF V2 尚未进入每个生产推理服务器，但 vLLM 与 SGLang 已在进行集成。与此同时，这种模式已经出现在：
 
-- 微软内部长文本生产模型.
-- 针对256k以上的环境的几个开放模型培训中进行了研究复制.
-- 混合架构,将DIFF注意力与在替代层上的滑动窗口注意力结合在一起.
+- Microsoft 内部长上下文生产模型中。
+- 多个面向 256k 以上上下文的开放模型训练复现中。
+- 在交替层中组合 DIFF 注意力与滑动窗口注意力的混合架构中。
 
-在2026年,你将实现这一点:
+2026 年适合采用它的情况：
 
-- 培训一个新的模型从零开始,针对64k+有效的环境.从一开始就增加差异性注意力;后来重新培训是昂贵的.
-- 调整一个长文本模型,其中中途失败占据了你的评估.
+- 从头训练一个目标有效上下文为 64k 以上的新模型。应从一开始就加入差分注意力，事后重新训练成本很高。
+- 微调一个“中间信息遗失”问题主导评测结果的长上下文模型。对 Q 投影应用 LoRA，可以近似 DIFF 结构。
 
-当你不愿意:
+不适合采用它的情况：
 
-- 您正在使用一个预先训练的密集型号,具有稳定的长文本性能.
-- 你的背景总是低于16K. 噪音的地面是微不足道的.
+- 正在服务一个长上下文表现稳定的预训练稠密模型。对现有权重重新训练的成本通常无法收回。
+- 上下文始终短于 16k。此时噪声底可以忽略。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-diff-attention-integrator.md`鉴于模型架构,目标背景长度,幻觉形象和培训预算,它产生了一个集成计划,以增加对新预训练运行或LoRA细节调节的差异性注意力.
+本课会生成 `outputs/skill-diff-attention-integrator.md`。给定模型架构、目标上下文长度、幻觉特征和训练预算，它会生成在新预训练任务或 LoRA 微调中加入差分注意力的集成方案。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`检查对差异注意力报告的信号-噪音比合成查询标准软max注意力高. 变化噪音幅度,显示标准注意力变得无法使用的交叉点.
+1. 运行 `code/main.py`。验证合成查询上报告的差分注意力信噪比高于标准 Softmax 注意力。改变噪声幅度，找出标准注意力开始无法使用的交叉点。
 
-2. 计算从基线到DIFF V1和从基线到DIFF V2的参数数 delta为7B类模型 (隐藏=4096,头=32,d_head=128,32层).显示哪些组件获得参数,哪些保持相同.
+2. 对一个 7B 级模型（hidden=4096、heads=32、d_head=128、32 层），计算从基线到 DIFF V1，以及从基线到 DIFF V2 的参数量增量。指出哪些组件增加了参数，哪些保持不变。
 
-3. 在DIFF V1论文的第3节 (arXiv:2410.05258) 和DIFF V2 Hugging Face博客的第2节中,用两句话解释为什么每头V1是必要的,以及为什么V2可以在不导致训练分歧的情况下删除它.
+3. 阅读 DIFF V1 论文（arXiv:2410.05258）第 3 节，以及 DIFF V2 Hugging Face 博客第 2 节。用两句话解释 V1 为什么需要逐头 RMSNorm，以及 V2 为什么可以移除它而不导致训练发散。
 
-4. 执行一个减法:计算与 `lambda = 0`(纯的第一软max) 和`lambda = 1`测量信号到噪音在扫描中如何变化. 确定`lambda`通过这种方式,我们可以最大限度地实现信号到噪音.
+4. 实现一项消融：使用 `lambda = 0`（纯第一路 Softmax）和 `lambda = 1`（完整相减）计算差分注意力。在合成查询上，测量信噪比在整个扫描范围内如何变化，并找出使信噪比最大的 `lambda`。
 
-5. 扩展玩具到GQA+DIFF V2. 选择8个KV头和32个Q头. 显示KV缓存尺寸与相同 (8,32) 配置的基线GQA模型相匹配.
+5. 把玩具实现扩展为 GQA + DIFF V2。选择 8 个 KV 头和 32 个 Q 头，证明 KV 缓存大小与采用相同（8、32）配置的基线 GQA 模型一致。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|------------------------|
-| Differential attention | "Two softmaxes minus each other" | Split Q, K into two halves, compute two softmax maps, subtract the second (scaled by lambda) from the first, then multiply by V |
-| Noise floor | "The non-zero tail of softmax" | The O(1/N) weight softmax puts on every unrelated token, which sums to O(1) across long contexts |
-| lambda | "The subtraction scale" | Per-head learnable scalar parameterized as `exp(lq1.lk1) - exp(lq2.lk2) + lambda_init`; can be negative |
-| DIFF V1 | "The ICLR 2025 version" | Original Differential Transformer; halves head dim to preserve parameter count, needs custom kernel, slower decode |
-| DIFF V2 | "The January 2026 fix" | Doubles Q heads keeping KV heads; matches baseline decode speed and works with FlashAttention |
-| Per-head RMSNorm | "The V1 stabilizer" | Extra norm V1 applied after the difference; V2 removed it to prevent late-training instability |
-| Signal-to-noise ratio | "How much attention is wasted" | Ratio of weight on the true signal position to average weight on unrelated positions |
-| Lost in the middle | "Long-context failure mode" | Empirical phenomenon where retrieval accuracy dips for documents in the middle of a long context — DIFF attention reduces this |
-| Arithmetic intensity | "FLOPs per byte loaded" | Ratio V2 increased at decode by doubling queries per KV load; important for memory-bound decode |
+| 差分注意力 | “两个 Softmax 相减” | 把 Q、K 分成两半，计算两张 Softmax 图，从第一张中减去由 lambda 缩放的第二张，再乘以 V |
+| 噪声底 | “Softmax 的非零尾部” | Softmax 分配给每个无关词元的 O(1/N) 权重；在长上下文中合计为 O(1) |
+| lambda | “相减比例” | 每个头的可学习标量，参数化为 `exp(lq1.lk1) - exp(lq2.lk2) + lambda_init`；可以为负 |
+| DIFF V1 | “ICLR 2025 版本” | 最初的差分 Transformer；为保持参数量而把头维度减半，需要自定义内核，解码较慢 |
+| DIFF V2 | “2026 年 1 月修正版” | 查询头翻倍、KV 头不变；解码速度与基线相同，并兼容 FlashAttention |
+| 逐头 RMSNorm | “V1 的稳定器” | V1 在差分后应用的额外归一化；V2 将其移除，以避免训练后期不稳定 |
+| 信噪比 | “注意力浪费了多少” | 真实信号位置的权重与无关位置平均权重之比 |
+| 中间信息遗失 | “长上下文失效模式” | 长上下文中位于中部的文档检索准确率下降的实证现象——DIFF 注意力可缓解此问题 |
+| 算术强度 | “每加载一字节执行多少 FLOP” | V2 通过让每次 KV 加载服务更多查询，提高了解码时的该比率；这对内存受限的解码十分重要 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Ye et al. — Differential Transformer (arXiv:2410.05258, ICLR 2025)](https://arxiv.org/abs/2410.05258)原始论文,含噪音取消理论和长文本的废除
-- [Microsoft unilm — Differential Transformer V2 (Hugging Face blog, January 2026)](https://huggingface.co/blog/microsoft/diff-attn-v2)生产堆重写,匹配的基线解码,兼容FlashAttention
-- [Understanding Differential Transformer Unchains Pretrained Self-Attentions (arXiv:2505.16333)](https://arxiv.org/abs/2505.16333)理论分析减法恢复预训练的注意力结构的原因
-- [Shared DIFF Transformer (arXiv:2501.17900)](https://arxiv.org/html/2501.17900) 分享参数的变体
-- [Vaswani et al. — Attention Is All You Need (arXiv:1706.03762)](https://arxiv.org/abs/1706.03762)基线变压器 DIFF从
-- [Liu et al. — Lost in the Middle (arXiv:2307.03172)](https://arxiv.org/abs/2307.03172)长文本基准指标
+- [Ye 等——差分 Transformer（arXiv:2410.05258，ICLR 2025）](https://arxiv.org/abs/2410.05258)——提出噪声消除理论并提供长上下文消融的原始论文
+- [Microsoft unilm——差分 Transformer V2（Hugging Face 博客，2026 年 1 月）](https://huggingface.co/blog/microsoft/diff-attn-v2)——面向生产技术栈的重写版本，解码速度与基线相同，并兼容 FlashAttention
+- [理解差分 Transformer 如何释放预训练自注意力（arXiv:2505.16333）](https://arxiv.org/abs/2505.16333)——解释相减为何能恢复预训练注意力结构的理论分析
+- [共享式 DIFF Transformer（arXiv:2501.17900）](https://arxiv.org/html/2501.17900)——参数共享变体
+- [Vaswani 等——Attention Is All You Need（arXiv:1706.03762）](https://arxiv.org/abs/1706.03762)——DIFF 所改进的基线 Transformer
+- [Liu 等——Lost in the Middle（arXiv:2307.03172）](https://arxiv.org/abs/2307.03172)——DIFF 注意力针对的长上下文基准
