@@ -1,95 +1,95 @@
-#  套装和会议店
+# 将 Harness 作为库使用：子代理与会话存储
 
-> 您可以进口的带:内置工具,环境隔离的子管,子,W3C痕迹传播,会议持久性. 克劳德代理SDK是参考例子 克劳德代码带的库形式 克劳德管理代理是长期的异步工作的托管替代品.
+> 一个可以直接导入的 harness：内置工具、用于上下文隔离的子代理、hooks、W3C trace 传播、会话持久化。Claude Agent SDK 是这一模式的代表性实现，也是 Claude Code harness 的库形态；Claude Managed Agents 则是面向长时间异步任务的托管替代方案。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 14 · 01 (Agent Loop), Phase 14 · 10 (Skill Libraries)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 第 14 阶段 · 01（Agent Loop），第 14 阶段 · 10（技能库）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 解释Anthropic Client SDK (原料API) 和Claude Agent SDK (形) 的区别.
-- 描述子体并行和背景隔离以及何时达到它们.
-- 命名Python SDK的会议存储表面 (`append`现在`load`现在`list_sessions`现在`delete`现在`list_subkeys`) 和 `--session-mirror`现在,我们要去.
-- 实现一个有内置工具的 stdlib 带,一个孤立的背景,生命周期子,和一个会议商店的子弹.
+- 解释 Anthropic Client SDK（原始 API）与 Claude Agent SDK（harness 形态）之间的区别。
+- 描述子代理的两大用途：并行化与上下文隔离，以及何时应使用它们。
+- 说出 Python SDK 的会话存储接口（`append`、`load`、`list_sessions`、`delete`、`list_subkeys`）以及 `--session-mirror` 的作用。
+- 用 stdlib 实现一个包含内置工具、具备隔离上下文的子代理生成、生命周期 hooks 和会话存储的 harness。
 
 ## 问题
 
-制作代理需要工具执行,MCP服务器,生命周期,子弹生殖,会议持续性,痕迹传播.Claude Agent SDK将这种形状作为库相同的使用工具Claude Code,暴露于定制代理.
+原始 LLM API 只能完成一次往返。一个生产级 agent 还需要工具执行、MCP 服务器、生命周期 hooks、子代理生成、会话持久化以及 trace 传播。Claude Agent SDK 把这种完整形态作为库提供出来，也就是把 Claude Code 所使用的同类 harness 公开给你，用于构建自定义 agent。
 
 ## 概念
 
-### 客户端 SDK VS 代理 SDK
+### Client SDK 与 Agent SDK
 
-- **Client SDK (`anthropic`).**你拥有循环,工具,状态.
-- **Agent SDK (`claude-agent-sdk`).**集成的工具执行,MCP连接,子,子弹产,会议存储.
+- **Client SDK (`anthropic`)。** 原始 Messages API。循环、工具和状态都由你自己维护。
+- **Agent SDK (`claude-agent-sdk`)。** 内置工具执行、MCP 连接、hooks、子代理生成与会话存储。相当于把 Claude Code 的循环做成了一个库。
 
-### 嵌入式工具
+### 内置工具
 
- SDK 运输出10多种工具:文件阅读/写, shell, grep, glob, web fetch等. 通过标准工具方案接口进行自定义工具注册.
+SDK 开箱即带有 10 多种工具：文件读写、shell、grep、glob、web fetch 等。自定义工具则通过标准的 tool-schema 接口注册。
 
-### 子
+### 子代理
 
-两种目的由人类记录:
+Anthropic 文档里明确给出两个主要用途：
 
-1. **Parallelization.**同时执行独立工作. "找到每个20个模块的测试文件"是20个并行的子组任务.
-2. **Context isolation.**们使用自己的背景窗口;只有结果返回管家.管家的预算被保存.
+1. **并行化。** 把彼此独立的工作同时跑起来。比如“为这 20 个模块分别找到测试文件”，就可以拆成 20 个并行的子代理任务。
+2. **上下文隔离。** 子代理使用自己的上下文窗口；只有结果返回给编排器。这样可以保住编排器的上下文预算。
 
-最近添加的Python SDK: `list_subagents()`现在`get_subagent_messages()`阅读副本文稿.
+Python SDK 最近还新增了 `list_subagents()` 与 `get_subagent_messages()`，用于读取子代理的转录内容。
 
-### 会议商店
+### 会话存储
 
-与TypeScript的协议平衡:
+它与 TypeScript 版本在协议层面对齐：
 
-- `append(session_id, message)`加一个转.
-- `load(session_id)`恢复对话.
-- `list_sessions()`列出.
-- `delete(session_id)`                     
-- `list_subkeys(session_id)`列出子键.
+- `append(session_id, message)`：追加一轮消息。
+- `load(session_id)`：恢复一段对话。
+- `list_sessions()`：枚举会话。
+- `delete(session_id)`：删除会话。
+- `list_subkeys(session_id)`：列出子代理键。
 
-`--session-mirror`通过传输,将转录映射到外部文件中,用于调试.
+`--session-mirror`（CLI 参数）会在流式输出时把转录同步写入外部文件，便于调试。
 
-### 子
+### Hooks
 
-您可以注册的生命周期:
+你可以注册这些生命周期 hooks：
 
-- `PreToolUse`现在`PostToolUse` 门户或审计工具的通话.
-- `SessionStart`现在`SessionEnd`建立和拆除.
-- `UserPromptSubmit`在模型看到之前,在用户输入上采取行动.
-- `PreCompact`在文本紧缩之前运行.
-- `Stop`在代理出口时进行清理.
-- `Notification`侧通道警报.
+- `PreToolUse`、`PostToolUse`：拦截或审计工具调用。
+- `SessionStart`、`SessionEnd`：做启动与清理。
+- `UserPromptSubmit`：在模型看到用户输入之前先进行处理。
+- `PreCompact`：在上下文压缩前执行。
+- `Stop`：agent 退出时清理资源。
+- `Notification`：发出旁路通知。
 
-子是如何支持工作流程 (阶段14课程参考) 和类似的系统增加跨界行为.
+pro-workflow（Phase 14 课程中的参考系统）以及类似系统，就是通过 hooks 叠加这种横切行为的。
 
-###  W3C 追踪环境
+### W3C trace context
 
-通过W3C跟踪语境标题,在调用器上活动的OTel跨度通过CLI子进程传播到后端.整个多进程跟踪显示为一个跟踪.
+调用方当前活跃的 OTel span，会通过 W3C trace context headers 传播到 CLI 子进程。最终你在后端看到的是一条完整的跨多进程 trace。
 
-### 克劳德管理了代理人
+### Claude Managed Agents
 
-托管的替代方案 (beta 头条`managed-agents-2026-04-01`长期的异步工作,内置快速缓存,内置紧缩,管理基础设施的贸易控制.
+这是托管替代方案（beta header `managed-agents-2026-04-01`）。它适合长时间运行的异步任务，并且内置 prompt caching 与 compaction。你用更少控制权换取托管基础设施。
 
-### 在这个模式出现错误的地方
+### 这种模式会出错的地方
 
-- **Subagent over-spawn.**让100个小任务完成100个小任务. 总体占主导地位.
-- **Hook creep.**每个团队都会增加子,启动时间气球,每季度检查子.
-- **Session bloat.**会议积累,规模增加.`list_sessions`退出政策
+- **子代理滥发。** 为 100 个微小任务生成 100 个子代理。最终是开销压倒收益，应该先做批处理。
+- **Hook 蔓延。** 每个团队都加几个 hook，启动时间会迅速膨胀。应该按季度审查一次 hook。
+- **会话膨胀。** 会话不断累积，体积越来越大。要配合 `list_sessions` 制定过期策略。
 
 ```figure
 ae-subagent-isolation
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`在 stdlib 中实现SDK形状:
+`code/main.py` 用 stdlib 实现了这种 SDK 形态：
 
-- `Tool`现在`ToolRegistry`具有内置的`read_file`现在`write_file`现在`list_dir`现在,我们要去.
-- `Subagent`私人环境,孤立运行,结果返回.
-- `SessionStore`添加,加载,列表,删除,列表_子键.
-- `Hooks` `pre_tool_use`现在`post_tool_use`现在`session_start`现在`session_end`现在,我们要去.
-- 演示:主代理并行生成3个子组 (每个单独),总结结果,持续会议.
+- `Tool`、`ToolRegistry`，带有内置的 `read_file`、`write_file`、`list_dir`。
+- `Subagent`：拥有私有上下文、隔离运行，并把结果返回回来。
+- `SessionStore`：支持 append、load、list、delete、list_subkeys。
+- `Hooks`：包含 `pre_tool_use`、`post_tool_use`、`session_start`、`session_end`。
+- 一个演示：主 agent 并行生成 3 个子代理（彼此隔离），汇总结果并持久化会话。
 
 运行它:
 
@@ -97,43 +97,43 @@ ae-subagent-isolation
 python3 code/main.py
 ```
 
-痕迹显示了亚级文本隔离 (乐队主持人文本尺寸保持限制),执行和会议持久性.
+输出 trace 会展示子代理的上下文隔离效果（编排器上下文大小保持有界）、hook 的执行，以及会话持久化。
 
-## 用它
+## 如何使用
 
-- **Claude Agent SDK**对于需要Cloed Code的产品来说,
-- **Claude Managed Agents**对于长期的主机无同步工作.
-- **OpenAI Agents SDK**(第16课) 对OpenAI首批对手.
-- **LangGraph + custom tools**如果您想要图形状态机,
+- **Claude Agent SDK**：适合希望直接采用 Claude Code harness 形态的 Claude-first 产品。
+- **Claude Managed Agents**：适合托管的长时间异步任务。
+- **OpenAI Agents SDK**（Lesson 16）：对应的 OpenAI-first 方案。
+- **LangGraph + 自定义工具**：如果你更想要图状态机式的结构。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-claude-agent-scaffold.md`提供了Claude Agent SDK应用程序,包括子弹,子,会议存储,MCP服务器附件,以及W3C的痕迹传播.
+`outputs/skill-claude-agent-scaffold.md` 提供了 Claude Agent SDK 应用脚手架，包含子代理、hooks、会话存储、MCP server 挂载，以及 W3C trace 传播。
 
-## 运动
+## 练习
 
-1. 加入一个分组分组分20项任务为5个平行分组分组的分组分组分组. 测量管弦器背景大小与每项任务的一个.
-2. 实施一个`PreToolUse`住这些利率限制`write_file`追踪行为.
-3. 电线`list_subkeys`树的树是什么样子?
-4. 把玩具带到真实世界里`claude-agent-sdk`工具注册的变化是什么?
-5. 你从自主托管转到管理的时间?
+1. 添加一个子代理生成器，把 20 个任务按每批 5 个并行子代理来处理。比较这种方案与“一任务一子代理”时编排器上下文大小的差异。
+2. 实现一个 `PreToolUse` hook，对 `write_file` 调用做限流（每个 session 每分钟 5 次）。把整个行为 trace 出来。
+3. 把 `list_subkeys` 接到可视化渲染里，输出一棵子代理树。深度嵌套会是什么样？
+4. 把这个 toy 移植到真正的 `claude-agent-sdk` Python 包上。工具注册方式会发生什么变化？
+5. 去读 Claude Managed Agents 文档。你会在什么情况下从自托管切换到托管？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Agent SDK | "Claude Code as a library" | Harness shape: tools, MCP, hooks, subagents, session store |
-| Subagent | "Child agent" | Separate context, own budget; results bubble up |
-| Session store | "Conversation DB" | Persist, load, list, delete turns with subagent cascade |
-| Hook | "Lifecycle callback" | Pre/post tool, session, prompt submit, compact, stop |
-| W3C trace context | "Cross-process trace" | Parent span propagates into CLI subprocess |
-| Managed Agents | "Hosted harness" | Anthropic-hosted long-running async work |
-| `--session-mirror` | "Transcript mirror" | Writes session turns to an external file as they stream |
-| MCP server | "Tool surface" | External tool/resource source attached to the agent |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| Agent SDK | “Claude Code as a library” | 一种 harness 形态：工具、MCP、hooks、子代理、会话存储 |
+| Subagent | “Child agent” | 独立上下文、独立预算；结果向上返回 |
+| Session store | “Conversation DB” | 持久化、加载、列举、删除消息轮次，并级联到子代理 |
+| Hook | “Lifecycle callback” | 在工具调用前后、会话、提示提交、压缩、停止等时机执行 |
+| W3C trace context | “Cross-process trace” | 父 span 被传播进 CLI 子进程 |
+| Managed Agents | “Hosted harness” | Anthropic 托管的长时间异步工作 |
+| `--session-mirror` | “Transcript mirror” | 将流式会话轮次写入外部文件 |
+| MCP server | “Tool surface” | 挂接到 agent 上的外部工具/资源来源 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Claude Agent SDK overview](https://platform.claude.com/docs/en/agent-sdk/overview)克劳德代码的图书馆形式
-- [Anthropic, Building agents with the Claude Agent SDK](https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk)生产模式
-- [Claude Managed Agents overview](https://platform.claude.com/docs/en/managed-agents/overview) 接待的替代方案
-- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)对应
+- [Claude Agent SDK overview](https://platform.claude.com/docs/en/agent-sdk/overview) — Claude Code 的库形态
+- [Anthropic, Building agents with the Claude Agent SDK](https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk) — 生产实践模式
+- [Claude Managed Agents overview](https://platform.claude.com/docs/en/managed-agents/overview) — 托管替代方案
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) — 对应方案
