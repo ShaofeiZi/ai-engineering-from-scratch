@@ -1,35 +1,35 @@
-# 快速缓存和文本缓存
+# 提示缓存与上下文缓存
 
-> 您的系统提示是4000个代币.您的RAG文本是20,000个代币.您每次请求都会发送两种代币.您每次都会支付两种代币.快速缓存允许提供商将该预先端放在其侧面,并将正常使用率的10%收费.如果正确使用,它将推断成本减少5090%和第一次代币延迟4085%.
+> 你的系统提示词有 4,000 个词元，RAG 上下文有 20,000 个词元。每次请求都要发送二者，也每次都要为二者付费。提示缓存允许提供商在服务端保持该前缀的热状态，并在复用时只收取正常价格的 10%。使用得当，它可以把推理成本降低 50%～90%，并把首词元延迟降低 40%～85%。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 11 · 01 (Prompt Engineering), Phase 11 · 05 (Context Engineering), Phase 11 · 11 (Caching and Cost)
-**Time:** ~60 minutes
+**Prerequisites:** 阶段 11 · 01（提示工程）、阶段 11 · 05（上下文工程）、阶段 11 · 11（缓存与成本）
+**Time:** 约 60 分钟
 
 ## 问题
 
-编码代理在每次对话中都会向克劳德发送相同的15000代币系统提示.$3/M input tokens is $只有 0.90 美元的输入成本, 之前用户的任何实际消息.乘以每天的10,000次对话,账单达到9,000美元/天,
+一个编程智能体在对话的每一轮都会向 Claude 发送相同的 15,000 词元系统提示词。按每百万输入词元 3 美元计算，20 轮对话仅输入成本就达到 0.90 美元——还没有算用户真正发出的任何消息。乘以每天 10,000 次对话，这段从不变化的文本每天就会产生 9,000 美元账单。
 
-您不能减少提示,而不会损害质量.您不能避免发送它. 模型需要它在每一个转折.唯一的举动是停止支付完整的价格为供应商已经看到的预写.
+你无法在不损害质量的前提下缩短提示词，也无法不发送它——模型每一轮都需要这段内容。唯一的办法，是不要再为提供商已经看过的前缀支付全价。
 
-这一举动是快速缓存.安特罗皮克在2024年8月发布 (在2025年推出1小时的延长TTL变体),OpenAI自动化了该年晚些时候,谷歌在双子座1.5号的同时发布了明确的语境缓存,现在这三个都将其作为其边界模型的一流功能.
+这个办法就是提示缓存。Anthropic 于 2024 年 8 月推出该功能（并在 2025 年增加了 1 小时的延长 TTL 版本），OpenAI 在当年稍晚时将其自动化，Google 则随 Gemini 1.5 一起推出显式上下文缓存。如今，三家都已在前沿模型上将它作为一等功能提供。
 
 ## 概念
 
-![Prompt caching: write once, read cheap](../assets/prompt-caching.svg)
+![提示缓存：写入一次，低价读取](../assets/prompt-caching.svg)
 
-**The mechanic.**当请求的前与最近请求的前相匹配时,提供商将从前运行中提供KV缓存,而不是重新编码代币.你第一次支付小写费,每次都会收取大阅读折扣.
+**工作机制。** 当一个请求的前缀与近期请求匹配时，提供商会复用上一次运行的 KV 缓存，而不是重新编码这些词元。第一次写入时支付少量溢价，此后每次读取都享受大幅折扣。
 
-**Three provider flavors in 2026.**
+**2026 年三种提供商方案。**
 
-| Provider | API style | Hit discount | Write premium | Default TTL | Min cacheable |
+| 提供商 | API 风格 | 命中折扣 | 写入溢价 | 默认 TTL | 最小可缓存长度 |
 |---------|-----------|--------------|---------------|-------------|---------------|
-| Anthropic | Explicit `cache_control` markers on content blocks | 90% off input | 25% surcharge | 5 min (extendable to 1 hour) | 1,024 tokens (Sonnet/Opus), 2,048 (Haiku) |
-| OpenAI | Automatic prefix detection | 50% off input | none | Up to 1 hour (best-effort) | 1,024 tokens |
-| Google (Gemini) | Explicit `CachedContent` API | Storage-billed; read at ~25% of normal | Storage fee per token·hour | User-set (default 1 hour) | 4,096 tokens (Flash), 32,768 (Pro) |
+| Anthropic | 在内容块上显式添加 `cache_control` 标记 | 输入价格降低 90% | 加收 25% | 5 分钟（可延长至 1 小时） | 1,024 个词元（Sonnet/Opus），2,048 个（Haiku） |
+| OpenAI | 自动前缀检测 | 输入价格降低 50% | 无 | 最长 1 小时（尽力保留） | 1,024 个词元 |
+| Google（Gemini） | 显式 `CachedContent` API | 读取价格约为正常价格的 25%；另收存储费 | 按词元·小时收取存储费 | 用户设置（默认 1 小时） | 4,096 个词元（Flash）/ 32,768 个（Pro） |
 
-**The invariant.**如果任何代币在请求之间不同,则在第一个不同代币之后的一切都是错误. 放在顶部的 *稳定* 部分,下面的 *变量* 部分.
+**不变量。** 三家都只缓存前缀。如果两次请求之间有任何词元不同，从第一个不同词元开始的全部内容都会缓存未命中。把*稳定*部分放在顶部，把*可变*部分放在底部。
 
 ### 缓存友好的布局
 
@@ -42,19 +42,19 @@
 [current user message]   <-- never cache (different every time)
 ```
 
-违反命令 将用户消息放在系统提示上面, 间接几次截图之间动态检索 和缓存永远不会打.
+如果违反这个顺序——把用户消息放在系统提示词上方，或把动态检索内容穿插在少样本示例之间——缓存将永远无法命中。
 
-### 破产平衡计算
+### 盈亏平衡计算
 
-为了节省净资金,预存区块必须至少读到两次. 1 写 + 1 读平均每次请求成本 0.675x (节省 32%); 1 写 + 10 读平均 0.205x (节省 80%). 指规则:预计在 TTL 中至少 3 次重复使用任何预存.
+Anthropic 的 25% 写入溢价意味着，一个缓存块至少要读取两次才能产生净节省。1 次写入 + 1 次读取，平均每次请求的成本为原来的 0.675 倍（节省 32%）；1 次写入 + 10 次读取，平均为 0.205 倍（节省 80%）。经验法则：预计在 TTL 内至少会复用 3 次的内容才值得缓存。
 
 ```figure
 prompt-cache-hit
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1: 通过明确标记进行人类提示缓存
+### 第 1 步：使用显式标记的 Anthropic 提示缓存
 
 ```python
 import anthropic
@@ -78,9 +78,9 @@ def review(code: str):
     )
 ```
 
-其他`cache_control`标记告诉人类存储区块5分钟. 在窗口中重复使用; 过期后重复使用,然后再写.
+`cache_control` 标记告诉 Anthropic 将这个内容块存储 5 分钟。在该时间窗口内复用就会命中；超过时间则过期并重新写入。
 
-**Response usage fields:**
+**响应用量字段：**
 
 ```python
 response = review(code_a)
@@ -98,21 +98,21 @@ response_b.usage
 # cache_read_input_tokens=15023           # paid at 0.1x
 ```
 
-检查IC 中的两个字段,如果 `cache_read_input_tokens`在请求中保持零,你的缓存密钥漂移.
+在 CI 中检查这两个字段——如果多个请求中的 `cache_read_input_tokens` 始终为零，说明缓存键正在发生漂移。
 
-### 步骤2:延长1小时的TTL
+### 第 2 步：一小时延长 TTL
 
-对于长期的批次工作,工作间的5分钟违约期会到期.`ttl`其他:
+对于长时间运行的批处理任务，默认的 5 分钟会在两次作业之间过期。设置 `ttl`：
 
 ```python
 {"type": "text", "text": RUBRIC, "cache_control": {"type": "ephemeral", "ttl": "1h"}}
 ```
 
-一小时的TTL成本是写费的两倍 (50%比基线而不是25%),但在任何批次中重复使用前的时间超过5次时,会很快回报.
+1 小时 TTL 的写入溢价是原来的 2 倍（比基准价高 50%，而非 25%），但只要批处理在此期间复用前缀超过 5 次，很快就能回本。
 
-### 步骤3:OpenAI自动缓存
+### 第 3 步：OpenAI 自动缓存
 
-任何与最近的请求相匹配的1024个代币以上的预写符都会自动获得50%折扣.
+OpenAI 不需要任何配置。只要一个超过 1,024 个词元的前缀与近期请求匹配，就会自动享受 50% 折扣。
 
 ```python
 from openai import OpenAI
@@ -128,11 +128,11 @@ resp = client.chat.completions.create(
 resp.usage.prompt_tokens_details.cached_tokens  # the discounted portion
 ```
 
-两个因素会杀死OpenAI的缓存,而不是杀死Anthropic的:改变 `user`字段 (作为缓存密钥组件使用) 和重新排序工具.
+同样需要遵循缓存友好的布局规则。有两件不会破坏 Anthropic 缓存、却会破坏 OpenAI 缓存的事情：改变 `user` 字段（它是缓存键的组成部分）和调整工具顺序。
 
-### 步骤4:双子座明确的语境缓存
+### 第 4 步：Gemini 显式上下文缓存
 
-双子座将缓存视为你创建的第一类对象,
+Gemini 把缓存视为你创建并命名的一等对象：
 
 ```python
 from google import genai
@@ -157,37 +157,37 @@ resp = client.models.generate_content(
 )
 ```
 
-双子座每一个代币·小时的存储费用是缓存存存储存存存存存存存存存存存存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存存储存存存存存存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存储存存存储存存储存存储存存储存存存存储存存存储存存储存存存存存储存储存存存存存储存存存存存储存存存存存存储存存存存存储存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存存
+只要缓存存在，Gemini 就会按词元·小时收取存储费，而读取价格约为正常输入价格的 25%。如果需要在多天内跨多个会话复用同一份巨型提示词，这种形式最合适。
 
-### 步骤5:测量生产中撞击率
+### 第 5 步：在生产环境中测量命中率
 
-看到`code/main.py`对于一个模拟的三供应商会计师,该会追踪写/阅读/错过计算和计算每1K请求的混合成本. 门部署在目标的成功率大多数生产的人类设置应看到>80%的读数分数在加热后.
+`code/main.py` 包含一个模拟的三提供商计费器，可跟踪写入、读取与未命中次数，并计算每 1,000 次请求的混合成本。应为部署设置目标命中率门禁——大多数生产级 Anthropic 配置在预热后，读取比例应超过 80%。
 
-## 陷在2026年仍存在
+## 2026 年仍会被带到生产环境的陷阱
 
-- **Dynamic timestamps at the top.** `"Current time: 2026-04-22 15:30:02"`系统提示的顶部,每个请求都错过了. 移动时间标签在缓存破点以下.
-- **Tool reordering.**系统化工具稳定顺序 部署之间的命令调整,
-- **Free-text near-duplicates.**"你是有帮助的. "vs"你是有帮助的助手. "一个字节差异 = 完全错过.
-- **Too-small blocks.**哈伊库的小块默默不存储.
-- **Blind cost dashboards.**输入代码分为缓存与未缓存.否则流量下降看起来像缓存获利.
+- **顶部的动态时间戳。** 把 `"Current time: 2026-04-22 15:30:02"` 放在系统提示词顶部，每次请求都会未命中。应把时间戳移动到缓存断点之后。
+- **工具顺序变化。** 以稳定顺序序列化工具——部署间出现一次字典重排，就会破坏所有命中。
+- **自由文本的近似重复。** “You are helpful.”与“You are a helpful assistant.”——哪怕只差一个字节，也会完全未命中。
+- **内容块太小。** Anthropic 要求至少 1,024 个词元（Haiku 为 2,048）。更小的块会静默地不进入缓存。
+- **盲目的成本仪表板。** 把“输入词元”拆分为缓存和未缓存两类，否则流量下降看起来也会像缓存取得了成效。
 
-## 用它
+## 投入使用
 
-预备备库2026:
+2026 年的缓存技术栈：
 
-| Situation | Pick |
+| 场景 | 选择 |
 |-----------|------|
-| Agent with stable 10k+ system prompt, many turns | Anthropic `cache_control` with 5-min TTL |
-| Batch job reusing a prefix for 30+ minutes | Anthropic with `ttl: "1h"` |
-| Serverless endpoints on GPT-5, no custom infra | OpenAI automatic (just make your prefix stable and long) |
-| Multi-day reuse of a giant code/doc corpus | Gemini explicit `CachedContent` |
-| Cross-provider fallback | Keep the cacheable prefix layout identical across providers so any hit works |
+| 智能体拥有稳定的 10k 以上词元系统提示词，且对话轮次较多 | Anthropic `cache_control`，使用 5 分钟 TTL |
+| 批处理作业复用前缀超过 30 分钟 | Anthropic，使用 `ttl: "1h"` |
+| GPT-5 上的无服务器端点，无自定义基础设施 | OpenAI 自动缓存（只需让前缀稳定且足够长） |
+| 多天复用大型代码/文档语料库 | Gemini 显式 `CachedContent` |
+| 跨提供商后备 | 在各提供商间保持相同的可缓存前缀布局，让任意一方都能命中 |
 
-结合用户信息层的语义缓存 (阶段11 · 11):提示缓存处理 *代币相同*重复使用,语义缓存处理 *意义相同*重复使用.
+把它与语义缓存（阶段 11 · 11）结合，处理用户消息层：提示缓存处理*词元完全相同*的复用，语义缓存处理*含义相同*的复用。
 
-## 运送它
+## 交付成果
 
-保存`outputs/skill-prompt-caching-planner.md`其他:
+保存 `outputs/skill-prompt-caching-planner.md`：
 
 ```markdown
 ---
@@ -210,33 +210,33 @@ Given a prompt (system + tools + few-shot + retrieval + history + user) and a us
 Refuse to ship a cache plan that places a dynamic field above the breakpoint. Refuse to enable 1h TTL without a reuse count that makes the 2x write premium pay back.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**通过5000个代币系统来对抗克劳德进行10轮对话.`cache_control`报告每个输入代码的账单.
-2. **Medium.**写一个测试,根据提示模板和请求日志,计算每个提供商的预期成功率和美元节省 (Anthropic 5m,Anthropic 1h,OpenAI自动,Twin explicit).
-3. **Hard.**创建布局优化器:给出提示和标记的字段列表 `stable=True/False`通过一个简单的缓存,将一个缓存破解点放在最大的缓存友好的位置,而不输掉信息.
+1. **简单。** 使用 Claude 运行一段包含 5,000 词元系统提示词的 10 轮对话。先不使用 `cache_control`，再启用它，分别报告输入词元账单。
+2. **中等。** 编写测试工具：给定提示词模板和请求日志，计算各提供商方案（Anthropic 5 分钟、Anthropic 1 小时、OpenAI 自动、Gemini 显式）的预期命中率与节省金额。
+3. **困难。** 构建布局优化器：给定一个提示词，以及标记为 `stable=True/False` 的字段列表，在不丢失信息的前提下重写提示词，把单个缓存断点放到最有利于缓存的位置。在真实 Anthropic 端点上验证。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Prompt caching | "Makes long prompts cheap" | Reusing a provider-side KV-cache for matching prefixes; 50-90% discount on repeated input tokens. |
-| `cache_control` | "The Anthropic marker" | Content-block attribute that declares "everything up to here is cacheable"; `{"type": "ephemeral"}`. |
-| Cache write | "Paying the premium" | The first request that populates the cache; billed at ~1.25x input rate on Anthropic, free on OpenAI. |
-| Cache read | "The discount" | Subsequent requests matching the prefix; billed at 10% (Anthropic), 50% (OpenAI), ~25% (Gemini). |
-| TTL | "How long it lives" | Seconds the cache stays warm; Anthropic 5m default (extendable 1h), OpenAI best-effort up to 1h, Gemini user-set. |
-| Extended TTL | "1-hour Anthropic cache" | `{"type": "ephemeral", "ttl": "1h"}`; 2x write premium but worth it for batch reuse. |
-| Prefix match | "Why my cache missed" | Caches only hit when every token from the start up to the breakpoint is byte-identical. |
-| Context caching (Gemini) | "The explicit one" | Google's named, storage-billed cache object; best for multi-day reuse of large corpora. |
+| 提示缓存 | “让长提示词变便宜” | 为匹配的前缀复用提供商侧 KV 缓存；重复输入词元可享受 50%～90% 折扣。 |
+| `cache_control` | “Anthropic 标记” | 声明“此前所有内容均可缓存”的内容块属性；格式为 `{"type": "ephemeral"}`。 |
+| 缓存写入 | “支付溢价” | 填充缓存的第一次请求；Anthropic 按输入价约 1.25 倍计费，OpenAI 免费。 |
+| 缓存读取 | “享受折扣” | 匹配前缀的后续请求；分别按正常价格的 10%（Anthropic）、50%（OpenAI）和约 25%（Gemini）计费。 |
+| TTL | “能存活多久” | 缓存保持热状态的秒数；Anthropic 默认 5 分钟（可延长至 1 小时），OpenAI 尽力保留最长 1 小时，Gemini 由用户设置。 |
+| 延长 TTL | “Anthropic 一小时缓存” | `{"type": "ephemeral", "ttl": "1h"}`；写入溢价为 2 倍，但适合批量复用。 |
+| 前缀匹配 | “为什么缓存未命中” | 只有从开头到缓存断点的每个词元逐字节相同时，缓存才会命中。 |
+| 上下文缓存（Gemini） | “显式缓存” | Google 提供的具名、按存储计费的缓存对象；最适合多天复用大型语料库。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Anthropic — Prompt caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) `cache_control`时间1小时,平衡表.
-- [OpenAI — Prompt caching](https://platform.openai.com/docs/guides/prompt-caching)自动前匹配.
-- [Google — Context caching](https://ai.google.dev/gemini-api/docs/caching) `CachedContent`存储器和存储器的价格.
-- [Anthropic engineering — Prompt caching for long-context workloads](https://www.anthropic.com/news/prompt-caching)原始发射站,延迟号码.
-- 阶段11 · 05 (文本工程)  如何切断提示器,以便缓存可登陆.
-- 对应缓存与用户消息的语义缓存.
-- [Pope et al., "Efficiently Scaling Transformer Inference" (2022)](https://arxiv.org/abs/2211.05102) KV缓存存储器模型,提示缓存将用户暴露在缓存中;解释为什么缓存前置器的重读比重新计算便宜10x.
-- [Agrawal et al., "SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills" (2023)](https://arxiv.org/abs/2308.16369)预填是阶段提示缓存快捷方式;本文解释了为什么TTFT在缓存中大幅下降,而TPOT不受影响.
-- [Leviathan et al., "Fast Inference from Transformers via Speculative Decoding" (2023)](https://arxiv.org/abs/2211.17192)快速缓存与投机解码,闪光注意力和MQA/GQA作为曲线的杆,
+- [Anthropic——提示缓存](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)——`cache_control`、1 小时 TTL 与盈亏平衡表。
+- [OpenAI——提示缓存](https://platform.openai.com/docs/guides/prompt-caching)——自动前缀匹配。
+- [Google——上下文缓存](https://ai.google.dev/gemini-api/docs/caching)——`CachedContent` API 与存储定价。
+- [Anthropic 工程——长上下文工作负载的提示缓存](https://www.anthropic.com/news/prompt-caching)——包含延迟数据的最初发布文章。
+- 阶段 11 · 05（上下文工程）——如何切分提示词，让缓存能够命中。
+- 阶段 11 · 11（缓存与成本）——将提示缓存与用户消息层的语义缓存结合起来。
+- [Pope 等，“Efficiently Scaling Transformer Inference”（2022）](https://arxiv.org/abs/2211.05102)——提示缓存向用户暴露的 KV 缓存内存模型；解释为何重新读取缓存前缀的成本约为重新计算的十分之一。
+- [Agrawal 等，“SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills”（2023）](https://arxiv.org/abs/2308.16369)——提示缓存跳过的是预填充阶段；本文解释为何命中缓存会显著降低首词元时间（TTFT），却不影响每输出词元时间（TPOT）。
+- [Leviathan 等，“Fast Inference from Transformers via Speculative Decoding”（2023）](https://arxiv.org/abs/2211.17192)——提示缓存与推测解码、Flash Attention、MQA/GQA 都是改变推理成本曲线的手段；可通过本文了解另外三种。
