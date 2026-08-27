@@ -1,61 +1,61 @@
-# 风格
+# StyleGAN
 
-> 大多数发电机都会动`z`时刻将它们分开.`z`通过中间`w`接着*注射*`w`通过AdaIN,每一个分辨率级别. 这一变化解开了隐藏的空间,
+> 大多数生成器会把 `z` 同时搅入每一层。StyleGAN 将这件事拆开：先把 `z` 映射为中间变量 `w`，再通过 AdaIN 把 `w` *注入*每一级分辨率。仅这一项改变就解开了潜在空间，让照片级人脸生成连续七年成为已解决的问题。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 8 · 03 (GANs), Phase 4 · 08 (Normalization), Phase 3 · 07 (CNNs)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 8 · 03（GAN）、阶段 4 · 08（归一化）、阶段 3 · 07（CNN）
+**Time:** 约 45 分钟
 
 ## 问题
 
-一个DCGAN地图`z`问题是: 通过一堆转换的转变来将图像转换成图像.`z`控制一切 姿势,照明,身份,背景  结合在一起.`z`模型不能问"同一个人,不同的姿势",因为表现不以这种方式考虑.
+DCGAN 通过一系列转置卷积把 `z` 映射成图像。问题在于：`z` 同时控制姿态、光照、身份和背景，所有因素都纠缠在一起。沿 `z` 的一个轴移动，这四项都会变化。你无法要求模型生成“同一个人、不同姿态”，因为它的表示方式并未这样分解。
 
-卡拉斯等人 (2019,NVIDIA) 提出:停止养`z`直接进入层.`4×4×512`了解一个8层MLP,它将图表绘制`z ∈ Z → w ∈ W`注射`w`在每个分辨率通过 *适应实例正常化* (AdaIN):将每个 conv 特性地图正常化,然后通过相似的投影来扩展和移动`w`增加每层噪音以确保体细节 (皮肤孔孔,头发线).
+Karras 等人（NVIDIA，2019）提出：停止把 `z` 直接送入卷积层。使用一个恒定的 `4×4×512` 张量作为网络输入，再学习一个八层 MLP，把 `z ∈ Z → w ∈ W`。通过*自适应实例归一化*（AdaIN），在每一级分辨率注入 `w`：先归一化每张卷积特征图，再用 `w` 的仿射投影缩放和平移。每层还会加入噪声，用于控制随机细节（皮肤毛孔、发丝）。
 
-结果是:`W`图像的位置和形状是相对的. 图像的位置和形状是相对的.`w`对于低分辨率的水平和B图像`w`对于高层,这个开放的编辑,跨域风格化,以及整个"StyleGAN-inversion"的研究线.
+结果是：`W` 中用于“高层风格”（姿态、身份）与“精细风格”（光照、颜色）的坐标轴大致正交。你可以用图像 A 的 `w` 控制低分辨率层，再用图像 B 的 `w` 控制高分辨率层，从而混合两张图像的风格。这开启了图像编辑、跨领域风格化，以及整个“StyleGAN 反演”研究方向。
 
 ## 概念
 
-![StyleGAN: mapping network + AdaIN + per-layer noise](../assets/stylegan.svg)
+![StyleGAN：映射网络 + AdaIN + 逐层噪声](../assets/stylegan.svg)
 
-**Mapping network.** `f: Z → W`只有一个8层的MLP.`Z = N(0, I)^512`现在,我们要去.`W`没有被迫成为高斯人,它学习了数据适应的形状.
+**映射网络。** `f: Z → W`，一个八层 MLP。`Z = N(0, I)^512`，而 `W` 不被强制为高斯分布——它会学习适应数据的形状。
 
-**Synthesis network.**从一个学习的常数开始`4×4×512`每个分辨率块:`upsample → conv → AdaIN(w_i) → noise → conv → AdaIN(w_i) → noise`两次决议: 4, 8, 16, 32, 64, 128, 256, 512, 1024.
+**合成网络。** 从学习得到的常量 `4×4×512` 开始。每个分辨率块执行：`upsample → conv → AdaIN(w_i) → noise → conv → AdaIN(w_i) → noise`。分辨率依次翻倍：4、8、16、32、64、128、256、512、1024。
 
-**AdaIN.**
+**AdaIN。**
 
 ```
 AdaIN(x, y) = y_scale · (x - mean(x)) / std(x) + y_bias
 ```
 
-在哪里`y_scale`其他`y_bias`来自于 `w`按特征地图进行正常化,然后重新样式化. "样式"是特征地图的第一和第二级统计数据.
+其中，`y_scale` 与 `y_bias` 来自 `w` 的仿射投影。先逐特征图归一化，再重新赋予风格。这里的“风格”就是特征图的一阶与二阶统计量。
 
-**Per-layer noise.**单通道高斯噪音加上每个特征地图,以每通道的学习因素进行扩展.
+**逐层噪声。** 为每张特征图加入单通道高斯噪声，并用学习得到的逐通道系数进行缩放。它控制随机细节，而不影响全局结构。
 
-**Truncation trick.**在推断时,样本`z`计算`w = mapping(z)`现在`w' = ŵ + ψ·(w - ŵ)`在哪里`ŵ`是平均值`w`通过许多样本.`ψ < 1`几乎所有的Stylagan演示都使用了`ψ ≈ 0.7`现在,我们要去.
+**截断技巧。** 推理时，采样 `z`，计算 `w = mapping(z)`，再计算 `w' = ŵ + ψ·(w - ŵ)`，其中 `ŵ` 是大量样本中 `w` 的均值。`ψ < 1` 会用多样性换取质量。几乎每个 StyleGAN 演示都使用 `ψ ≈ 0.7`。
 
-## 风格GAN 1 → 2 → 3
+## StyleGAN 1 → 2 → 3
 
-| Version | Year | Innovation |
+| 版本 | 年份 | 创新 |
 |---------|------|------------|
-| StyleGAN | 2019 | Mapping network + AdaIN + noise + progressive growing. |
-| StyleGAN2 | 2020 | Weight demodulation replaces AdaIN (fixes droplet artifacts); skip/residual architecture; path-length regularization. |
-| StyleGAN3 | 2021 | Alias-free convolution + equivariant kernels; eliminates texture sticking to pixel grid. |
-| StyleGAN-XL | 2022 | Class-conditional, 1024², ImageNet. |
-| R3GAN | 2024 | Rebrands with stronger reg; closes gap to diffusion on FFHQ-1024 with 20x fewer params. |
+| StyleGAN | 2019 | 映射网络 + AdaIN + 噪声 + 渐进式增长。 |
+| StyleGAN2 | 2020 | 权重解调取代 AdaIN（修复水滴伪影）；跳跃/残差架构；路径长度正则化。 |
+| StyleGAN3 | 2021 | 无混叠卷积 + 等变内核；消除纹理粘在像素网格上的现象。 |
+| StyleGAN-XL | 2022 | 条件式、感知类别、1024²、ImageNet。 |
+| R3GAN | 2024 | 以更强正则化重新包装；参数少 20 倍，却在 FFHQ-1024 上缩小了与扩散模型的差距。 |
 
-在2026年,StyleGAN3仍然是 (a) 狭域光现实主义的默认标准,高FPS, (b) 短拍的域调整 (在100图片的新数据集上进行训练,结地图), (c) 基于逆转的编辑 (查看 `w`修改一个真实照片,然后编辑它.`w`对于开放域的文字到图像,它不是工具传播是.
+到 2026 年，StyleGAN3 在以下场景中仍是默认选择：（a）狭窄领域内以高 FPS 生成照片级真实内容；（b）少样本领域适配（只用 100 张图像训练新数据集，同时冻结映射网络）；（c）基于反演的编辑（找到能重建真实照片的 `w`，再编辑该 `w`）。它不适合开放域文本生成图像——那是扩散模型的领域。
 
 ```figure
 gx-stylegan-mapping
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`实现1D中的玩具"风格-GAN 莱特":一个绘图MLP,一个合成函数,它采用学习的常量向量并通过`w`射的效果是可观的.`w`通过结调节匹配或结结`z`它们可以在发电机的输入中输入.
+`code/main.py` 在一维空间中实现了玩具版“Style-GAN lite”：一个映射 MLP；一个从学习式常量向量开始、通过由 `w` 导出的缩放与偏置进行调制的合成函数；以及逐层噪声。它会展示，通过仿射调制注入 `w`，可以达到或超过将 `z` 拼接到生成器输入的效果。
 
-### 步骤1:地图网络
+### 第 1 步：映射网络
 
 ```python
 def mapping(z, M):
@@ -65,7 +65,7 @@ def mapping(z, M):
     return h
 ```
 
-### 步骤2:适应实例正常化
+### 第 2 步：自适应实例归一化
 
 ```python
 def adain(x, w_scale, w_bias):
@@ -75,74 +75,72 @@ def adain(x, w_scale, w_bias):
     return [w_scale * xi + w_bias for xi in x_norm]
 ```
 
-性能图的尺度和偏差来自`w`通过线性投影.
+逐特征图缩放与偏置通过 `w` 的线性投影得到。
 
-### 步骤3:每层噪音
+### 第 3 步：逐层噪声
 
 ```python
 def add_noise(x, sigma, rng):
     return [xi + sigma * rng.gauss(0, 1) for xi in x]
 ```
 
-通过道学习可以.
+每个通道的 Sigma 都可以学习。
 
-## 陷
+## 陷阱
 
-- **Droplet artifacts.**由于AdaIN 零了平均值,StyleGAN 1 在功能地图中产生了滴.StyleGAN 2 的权重解调通过缩小卷积权重来修复它.
-- **Texture sticking.**模拟器1和2的纹理遵循像素坐标,而不是对象坐标 (在插曲时可见).StyleGAN3的无形曲线通过窗口的sinc过器来解决这一问题.
-- **Mode coverage.**切割`ψ < 0.7`表面清洁,但来自狭角的样本;使用`ψ = 1.0`如果需要多样性.
-- **Inversion is lossy.**转换一个真实照片成`W`结果通常通过优化或编码器 (e4e,ReStyle,HyperStyle) 进行.
+- **水滴伪影。** StyleGAN 1 会在特征图中产生块状水滴，因为 AdaIN 把均值归零。StyleGAN 2 使用权重解调代替它，改为缩放卷积权重，从而解决问题。
+- **纹理粘连。** StyleGAN 1 和 2 的纹理会跟随像素坐标，而不是物体坐标（插值时可以观察到）。StyleGAN 3 的无混叠卷积通过加窗 sinc 滤波器修复了这一点。
+- **模式覆盖。** 截断 `ψ < 0.7` 可以得到干净样本，却只会从狭窄锥体中采样；需要多样性时应使用 `ψ = 1.0`。
+- **反演有损。** 把真实照片反演到 `W` 通常通过优化或编码器（e4e、ReStyle、HyperStyle）完成，迭代多次后结果会漂移。
 
-## 用它
+## 学以致用
 
-| Use case | Approach |
+| 用例 | 方法 |
 |----------|----------|
-| Photoreal human faces (anime, product, narrow) | StyleGAN3 FFHQ / custom fine-tune |
-| Face editing from a photo | e4e inversion + StyleSpace / InterFaceGAN directions |
-| Face swap / reenactment | StyleGAN + encoder + blending |
-| Avatar pipelines | StyleGAN3 w/ ADA for low-data fine-tune |
-| Domain adaptation from a few images | Freeze mapping network, fine-tune synthesis |
-| Multi-modal or text-conditioned generation | Don't — use diffusion |
+| 照片级人脸（动漫、产品、狭窄领域） | StyleGAN3 FFHQ / 自定义微调 |
+| 编辑真实人脸照片 | e4e 反演 + StyleSpace / InterFaceGAN 方向 |
+| 换脸/动作重演 | StyleGAN + 编码器 + 混合 |
+| 头像流水线 | StyleGAN3 + ADA，用于低数据微调 |
+| 使用少量图像进行领域适配 | 冻结映射网络，微调合成网络 |
+| 多模态或文本条件生成 | 不要使用——改用扩散模型 |
 
-对于产品级演示,答案是"人的脸照片",StyleGAN比推断成本 (单向传递,4090ms <10ms) 的扩散率和相同质量条的敏度更高.
+对于答案是“某个人脸照片”的产品级演示，StyleGAN 在推理成本（4090 上单次前向传播低于 10 毫秒）和达到同等质量门槛时的清晰度上胜过扩散模型。
 
-## 运送它
+## 交付成果
 
-保存`outputs/skill-stylegan-inversion.md`技能拍摄真实照片和输出:逆转方法 (e4e / ReStyle / HyperStyle),预期隐藏损失,编辑预算 (到底在`W`您可以在文物之前移动),以及已知编辑指南 (年龄,表情,姿势) 的列表.
+保存 `outputs/skill-stylegan-inversion.md`。该技能接收一张真实照片，并输出：反演方法（e4e / ReStyle / HyperStyle）、预期潜变量损失、编辑预算（在 `W` 中移动多远后会出现伪影），以及已知有效的编辑方向列表（年龄、表情、姿态）。
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`code/main.py`随着`adain_on=True`其他`adain_on=False`对于固定隐形与扰乱隐形的输出分布进行比较.
-2. **Medium.**实施混合规律化:对于训练批次,计算`w_a`现在`w_b`应用`w_a`对于合成的第一半年`w_b`解码器能学到没有任何分歧的风格吗?
-3. **Hard.**采用预训练的StyleGAN3 FFHQ模型 (ffhq-1024.pkl).`w`通过在标记样品上训练SVM来控制"微笑"的方向;报告在身份漂移之前,您可以推向多远.
+1. **简单。** 运行 `code/main.py`，分别设置 `adain_on=True` 与 `adain_on=False`。比较固定潜变量与扰动潜变量下输出的分散程度。
+2. **中等。** 实现混合正则化：对一个训练批次计算 `w_a`、`w_b`，在合成网络前半段使用 `w_a`，后半段使用 `w_b`。解码器是否学到了相互解耦的风格？
+3. **困难。** 使用预训练 StyleGAN3 FFHQ 模型（ffhq-1024.pkl）。在带标签样本上训练 SVM，找出控制“微笑”的 `w` 方向；报告在身份发生漂移前最多可以推动多远。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Mapping network | "The MLP" | `f: Z → W`, 8 layers, decouples latent geometry from data statistics. |
-| W space | "The style space" | Output of the mapping network; roughly disentangled. |
-| AdaIN | "Adaptive instance norm" | Normalize feature map, then scale + shift by `w`-projection. |
-| Truncation trick | "Psi" | `w = mean + ψ·(w - mean)`, ψ<1 trades diversity for quality. |
-| Path-length regularization | "PL reg" | Penalizes large changes in image per unit change in `w`; makes `W` smoother. |
-| Weight demodulation | "The StyleGAN2 fix" | Normalize conv weights instead of activations; kills droplet artifacts. |
-| Alias-free | "StyleGAN3's trick" | Windowed sinc filters; eliminates texture sticking to the pixel grid. |
-| Inversion | "Find w for a real image" | Optimize or encode `x → w` so `G(w) ≈ x`. |
+| 映射网络 | “那个 MLP” | `f: Z → W`，共 8 层，将潜空间几何与数据统计解耦。 |
+| W 空间 | “风格空间” | 映射网络的输出，大致完成了解耦。 |
+| AdaIN | “自适应实例归一化” | 归一化特征图，再通过 `w` 的投影进行缩放与平移。 |
+| 截断技巧 | “Psi” | `w = mean + ψ·(w - mean)`，ψ<1 时以多样性换取质量。 |
+| 路径长度正则化 | “PL 正则” | 惩罚图像相对于 `w` 单位变化产生的巨大改变，使 `W` 更平滑。 |
+| 权重解调 | “StyleGAN2 修复” | 归一化卷积权重而不是激活，消除水滴伪影。 |
+| 无混叠 | “StyleGAN3 的技巧” | 使用加窗 sinc 滤波器，消除纹理粘连到像素网格的现象。 |
+| 反演 | “为真实图像寻找 w” | 优化或编码 `x → w`，使 `G(w) ≈ x`。 |
 
-## 产品注释:为什么StayGAN仍在2026年出货
+## 生产说明：StyleGAN 为何在 2026 年仍会被部署
 
-在4090上,StyleGAN3在10ms内产生10242 FFHQ面孔`num_steps = 1`没有VAE解码,没有跨度注意力通过.在生产方面,这是任何图像生成器的地板延迟.一个50步的SDXL +VAE解码管道在相同分辨率是 ~3秒.**300× gap**对于狭域产品 (avatar服务,身份证件管道,股票面孔生成)
+StyleGAN3 在 4090 上生成一张 1024² FFHQ 人脸只需不到 10 毫秒——`num_steps = 1`，不需要 VAE 解码，也不需要交叉注意力。从生产角度看，这是任何图像生成器的延迟下限。典型对比如下：
 
-两种操作后果:
+- **没有调度器，也不需要动态批处理器。** 目标占用率下的静态批处理就是最佳方案。连续批处理（对大语言模型与扩散至关重要）没有任何收益，因为每个请求需要相同的 FLOPs。
+- **截断参数 `ψ` 是安全旋钮。** `ψ < 0.7` 只从映射网络输出范围中的狭窄锥体采样。这是服务层控制样本方差的唯一手段。高峰负载时降低 `ψ`，高级用户场景中再提高它。
 
-- **No scheduler, no batcher.**目标占用量最佳的静态批量.持续批量 (对于LLM和传播至关重要) 提供零效益,因为每个请求都采用相同的FLOP.
-- **Truncation `ψ` is the safety knob.** `ψ < 0.7`图测网络范围的狭窄角角的样本.这是服务层对样本变异的唯一杆.`ψ`在高负载时,将其提高为优质用户.
+## 延伸阅读
 
-## 进一步阅读
-
-- [Karras et al. (2019). A Style-Based Generator Architecture for GANs](https://arxiv.org/abs/1812.04948) 风格GAN
-- [Karras et al. (2020). Analyzing and Improving the Image Quality of StyleGAN](https://arxiv.org/abs/1912.04958)    
-- [Karras et al. (2021). Alias-Free Generative Adversarial Networks](https://arxiv.org/abs/2106.12423)    
-- [Tov et al. (2021). Designing an Encoder for StyleGAN Image Manipulation](https://arxiv.org/abs/2102.02766)e4e逆转
-- [Sauer et al. (2022). StyleGAN-XL: Scaling StyleGAN to Large Diverse Datasets](https://arxiv.org/abs/2202.00273)     
-- [Huang et al. (2024). R3GAN: The GAN is dead; long live the GAN!](https://arxiv.org/abs/2501.05441)现代的最小GAN食谱.
+- [Karras 等（2019），基于风格的 GAN 生成器架构](https://arxiv.org/abs/1812.04948)——StyleGAN。
+- [Karras 等（2020），分析并改进 StyleGAN 的图像质量](https://arxiv.org/abs/1912.04958)——StyleGAN2。
+- [Karras 等（2021），无混叠生成对抗网络](https://arxiv.org/abs/2106.12423)——StyleGAN3。
+- [Tov 等（2021），为 StyleGAN 图像编辑设计编码器](https://arxiv.org/abs/2102.02766)——e4e 反演。
+- [Sauer 等（2022），将 StyleGAN 扩展到大型多样化数据集](https://arxiv.org/abs/2202.00273)——StyleGAN-XL。
+- [Huang 等（2024），R3GAN：GAN 已死，GAN 万岁！](https://arxiv.org/abs/2501.05441)——现代极简 GAN 配方。
