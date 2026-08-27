@@ -1,92 +1,92 @@
-# 音频语言模型  Qwen2.5-Omni,音频弗拉明戈,GPT-4o音频
+# 音频语言模型——Qwen2.5-Omni、Audio Flamingo、GPT-4o Audio
 
-> 2026年音频语言模型推理语音+环境声音+音乐.Qwen2.5-Omni-7B与MMAU-Pro的GPT-4o音频相匹配.Audio Flamingo Next在LongAudioBench上超过了Gemini 2.5 Pro.开放和关闭之间的差距基本上是关闭的除了多音频任务,每个人都几乎是随机的.
+> 2026 年的音频语言模型能够综合推理语音、环境声音和音乐。Qwen2.5-Omni-7B 在 MMAU-Pro 上比肩 GPT-4o Audio，Audio Flamingo Next 在 LongAudioBench 上胜过 Gemini 2.5 Pro。开放与封闭模型之间的差距几乎已经消失——唯独多音频任务例外，所有模型都接近随机水平。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python
-**Prerequisites:** Phase 6 · 04 (ASR), Phase 12 · 03 (Vision-Language Models), Phase 7 · 10 (Audio Transformers)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 6 · 04（ASR）、阶段 12 · 03（视觉语言模型）、阶段 7 · 10（音频 Transformer）
+**Time:** 约 45 分钟
 
 ## 问题
 
-您有5秒的音频:狗吠叫,有人喊"停止!",然后沉默.
+你有一段 5 秒音频：狗叫、有人喊“stop!”，随后归于寂静。可以提出的问题横跨多个维度：
 
-- **Transcription.**"有什么说?" 阿斯里亚地区.
-- **Semantic reasoning.**"人是否处于危险之中?" 需要共同理解叫+喊叫+沉默.
-- **Music reasoning.**"什么乐器演奏这首歌曲?"
-- **Long-audio retrieval.**"在这90分钟的讲座中,教师在哪里解释了梯度下降?"
+- **转写。** “说了什么？”——属于 ASR 范畴。
+- **语义推理。** “这个人有危险吗？”——需要综合理解狗叫、喊声与随后的静音。
+- **音乐推理。** “哪些乐器在演奏旋律？”
+- **长音频检索。** “在这场 90 分钟的讲座中，讲师在哪里解释了梯度下降？”
 
-一个单个模型,只能用一个提示来回答所有这些问题,**audio-language model**单独与纯ASR:LALM产生自由形式的自然语言答案,而不是仅仅是转录.
+能够通过一个提示回答所有这些问题的模型，就是**音频语言模型**（LALM / ALM）。它不同于纯 ASR：LALM 会生成自由形式的自然语言答案，而不只是转写文本。
 
 ## 概念
 
-![Audio-language model: audio encoder + projector + LLM decoder](../assets/alm-architecture.svg)
+![音频语言模型：音频编码器 + 投影器 + 大语言模型解码器](../assets/alm-architecture.svg)
 
-### 三个组成部分的模板
+### 三组件模板
 
-每个2026年的LALM都具有相同的骨:
+2026 年的每个 LALM 都采用相同骨架：
 
-1. **Audio encoder.**语编码器 · BEATs · CLAP · WavLM ·或每款车型的定制编码器.
-2. **Projector.**线性或MLP桥接音频编码器功能在LLM的代币嵌入空间.
-3. **LLM.**基于Llama/Qwen/Gemma的解码器. 接收交织的文本 + 音频代币;生成文本.
+1. **音频编码器。** Whisper 编码器、BEATs、CLAP、WavLM，或各模型自己的编码器。
+2. **投影器。** 用线性层或 MLP 把音频编码器特征桥接到大语言模型的词元嵌入空间。
+3. **大语言模型。** 基于 Llama / Qwen / Gemma 的解码器。接收交错的文本与音频词元，生成文本。
 
-培训:
+训练过程：
 
-- **Stage 1.**结编码器 + LLM;仅使用ASR/字幕数据的火车投影机.
-- **Stage 2.**完成/LoRA细节调整后续指令的音频任务 (QA,推理,音乐理解).
-- **Stage 3 (optional).**语音输入/发音增加语音解码器. Qwen2.5Omni和AF3聊天这样做.
+- **阶段 1。** 冻结编码器和大语言模型，只在 ASR/字幕数据上训练投影器。
+- **阶段 2。** 在遵循指令的音频任务（问答、推理、音乐理解）上进行全量或 LoRA 微调。
+- **阶段 3（可选）。** 语音输入/语音输出功能会增加语音解码器。Qwen2.5-Omni 和 AF3-Chat 都支持这种方式。
 
-### 2026年模型地图
+### 2026 年模型版图
 
-| Model | Backbone | Audio encoder | Output modality | Access |
+| 模型 | 骨干网络 | 音频编码器 | 输出模态 | 获取方式 |
 |-------|----------|---------------|-----------------|--------|
-| Qwen2.5-Omni-7B | Qwen2.5-7B | Custom + Whisper | text + speech | Apache-2.0 |
-| Qwen3-Omni | Qwen3 | Custom | text + speech | Apache-2.0 |
-| Audio Flamingo 3 | Qwen2 | AF-CLAP | text | NVIDIA non-commercial |
-| Audio Flamingo Next | Qwen2 | AF-CLAP v2 | text | NVIDIA non-commercial |
-| SALMONN | Vicuna | Whisper + BEATs | text | Apache-2.0 |
-| LTU / LTU-AS | Llama | CAV-MAE | text | Apache-2.0 |
-| GAMA | Llama | AST + Q-Former | text | Apache-2.0 |
-| Gemini 2.5 Flash/Pro (closed) | Gemini | proprietary | text + speech | API |
-| GPT-4o Audio (closed) | GPT-4o | proprietary | text + speech | API |
+| Qwen2.5-Omni-7B | Qwen2.5-7B | 自定义 + Whisper | 文本 + 语音 | Apache-2.0 |
+| Qwen3-Omni | Qwen3 | 自定义 | 文本 + 语音 | Apache-2.0 |
+| Audio Flamingo 3 | Qwen2 | AF-CLAP | 文本 | NVIDIA 非商业许可 |
+| Audio Flamingo Next | Qwen2 | AF-CLAP v2 | 文本 | NVIDIA 非商业许可 |
+| SALMONN | Vicuna | Whisper + BEATs | 文本 | Apache-2.0 |
+| LTU / LTU-AS | Llama | CAV-MAE | 文本 | Apache-2.0 |
+| GAMA | Llama | AST + Q-Former | 文本 | Apache-2.0 |
+| Gemini 2.5 Flash/Pro（封闭） | Gemini | 专有 | 文本 + 语音 | API |
+| GPT-4o Audio（封闭） | GPT-4o | 专有 | 文本 + 语音 | API |
 
-### 实实况检查标准 (2026)
+### 基准现实检验（2026）
 
-**MMAU-Pro.**1800 个QA对涵盖语音/声音/音乐/混合.多音频子集包括在内.
+**MMAU-Pro。** 包含 1800 个问答对，覆盖语音、声音、音乐和混合任务，也包括多音频子集。
 
-| Model | Overall | Speech | Sound | Music | Multi-audio |
+| 模型 | 总体 | 语音 | 声音 | 音乐 | 多音频 |
 |-------|---------|--------|-------|-------|-------------|
-| Gemini 2.5 Pro | ~60% | 73.4% | 51.9% | 64.9% | ~22% |
-| Gemini 2.5 Flash | ~57% | 73.4% | 50.5% | 64.9% | 21.2% |
+| Gemini 2.5 Pro | 约 60% | 73.4% | 51.9% | 64.9% | 约 22% |
+| Gemini 2.5 Flash | 约 57% | 73.4% | 50.5% | 64.9% | 21.2% |
 | GPT-4o Audio | 52.5% | — | — | — | 26.5% |
-| Qwen2.5-Omni-7B | 52.2% | 57.4% | 47.6% | 61.5% | ~20% |
-| Audio Flamingo 3 | ~54% | — | — | — | — |
-| Audio Flamingo Next | SOTA on LongAudioBench | — | — | — | — |
+| Qwen2.5-Omni-7B | 52.2% | 57.4% | 47.6% | 61.5% | 约 20% |
+| Audio Flamingo 3 | 约 54% | — | — | — | — |
+| Audio Flamingo Next | LongAudioBench 顶尖水平 | — | — | — | — |
 
-其他**multi-audio column is damning for everyone.**随机机会在4选项多选项=25%;大多数模型在此处得分.LALM仍然难以比较两个剪辑.
+**多音频这一列对所有模型都很不利。** 四选一的随机准确率为 25%，大多数模型只在这一水平附近。LALM 仍不善于比较两段音频。
 
-### 2026年LALM的使用
+### LALM 在 2026 年适用的场景
 
-- **Compliance audit of call-center recordings.**"代理人提及了必要的披露吗?"
-- **Accessibility.**描述听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力者听力障碍者听力障碍者听力者听力障碍者听力者听力障碍者听力者听力障碍者听力者听力障碍者听力障碍者听力障碍者听力者听力障碍者听力者听力障碍者听力障碍者听力障碍者听力者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力障碍者听力者听力障碍者听力障碍者听力障碍者听力障碍者听力者听力障碍者听力者听力障碍者听力者听力.
-- **Content moderation.**检测暴力语言+威胁性语调+背景背景.
-- **Podcast / meeting chaptering.**语义概述,而不是演讲者转转.
-- **Music catalog analysis.**"用B部分键变换找到所有轨道".
+- **呼叫中心录音的合规审计。** “客服是否提到了规定披露事项？”
+- **无障碍功能。** 向听障用户描述声音事件，而不只是转写语音。
+- **内容审核。** 综合检测暴力语言、威胁语气与背景环境。
+- **播客/会议章节划分。** 生成语义摘要，而不只是划分说话轮次。
+- **音乐目录分析。** “找出所有 B 段发生转调的曲目。”
 
-### 它们 (尚未) 有用处
+### 它们还不适用的场景
 
-- 精细的音乐理论 (低于合唱水平).
-- 长时间对话 (过去10分钟的程度) 时,讲者所归功的推理.
-- 无线电和无线电的比较 (22-26%几乎不超过随机).
-- 实时流媒体推理 (大多数是离线批量推理).
+- 精细音乐理论分析（低于和弦层级）。
+- 长对话中带说话人归属的推理（超过 10 分钟后退化）。
+- 多音频比较（22%～26% 只勉强达到随机水平）。
+- 实时流式推理（大多数模型都采用离线批量推理）。
 
 ```figure
 v4-alm-tokens
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:查询Qwen2.5-Omni
+### 第 1 步：查询 Qwen2.5-Omni
 
 ```python
 from transformers import AutoModelForCausalLM, AutoProcessor
@@ -107,7 +107,7 @@ output = model.generate(**inputs, max_new_tokens=200)
 print(processor.decode(output[0], skip_special_tokens=True))
 ```
 
-### 步骤2:投影仪模式
+### 第 2 步：投影器模式
 
 ```python
 import torch.nn as nn
@@ -123,9 +123,9 @@ class AudioProjector(nn.Module):
         return self.up(self.act(self.down(audio_features)))
 ```
 
-预测器通常是1-3个线性层.在ASR对 (音频 →转录) 上训练它是第一阶段的借口任务.
+就是这样。投影器通常只有 1～3 个线性层。在 ASR 样本对（音频 → 转写）上训练它，就是阶段 1 的预训练任务。
 
-### 步骤3:MMAU/LongAudioBench的基准评估
+### 第 3 步：评测 MMAU / LongAudioBench
 
 ```python
 from datasets import load_dataset
@@ -139,52 +139,52 @@ for item in mmau["test"]:
 print(f"Accuracy: {correct / len(mmau['test']):.3f}")
 ```
 
-单独报告每类别 (语音/声音/音乐/多音频). 总数隐藏在模型失败的地方.
+分别报告每个类别（语音/声音/音乐/多音频）的结果。汇总数字会掩盖模型究竟在哪里失败。
 
-## 用它
+## 学以致用
 
-| Task | 2026 pick |
+| 任务 | 2026 年选择 |
 |------|-----------|
-| Free-form audio QA (open) | Qwen2.5-Omni-7B |
-| Best open on long audio | Audio Flamingo Next |
-| Best closed | Gemini 2.5 Pro |
-| Voice-in / voice-out agent | Qwen2.5-Omni or GPT-4o Audio |
-| Music reasoning | Audio Flamingo 3 or 2 (music-specialized AF-CLAP) |
-| Call-center audit | Gemini 2.5 Pro via API, with RAG over your policy docs |
+| 自由形式音频问答（开放模型） | Qwen2.5-Omni-7B |
+| 开放模型中的最佳长音频能力 | Audio Flamingo Next |
+| 最佳封闭模型 | Gemini 2.5 Pro |
+| 语音输入/语音输出智能体 | Qwen2.5-Omni 或 GPT-4o Audio |
+| 音乐推理 | Audio Flamingo 3 或 2（音乐专用 AF-CLAP） |
+| 呼叫中心审计 | 通过 API 使用 Gemini 2.5 Pro，并对政策文档执行 RAG |
 
-## 陷
+## 陷阱
 
-- **Over-trust on multi-audio.**如果你的任务需要"哪个剪辑有X", 随机运算水平的性能是真实的.
-- **Long-audio degradation.**过去10分钟,大多数模型的扬声器属性断裂.
-- **Hallucinations on silence.**像LALM一样,使用Whisper编码器的Whisper样式问题.
-- **Benchmark cherry-picking.**销售商博客文章突出了最佳类别.
+- **过度信任多音频能力。** 如果任务需要回答“哪段音频包含 X”，模型接近随机水平的表现是真实存在的。
+- **长音频退化。** 超过 10 分钟后，大多数模型的说话人归属判断都会失效。应先进行说话人分离（第 6 课），再生成摘要。
+- **静音上的幻觉。** 使用 Whisper 编码器的 LALM 会继承同样的问题。必须使用 VAD 把关。
+- **挑选有利基准。** 供应商博客只会突出表现最好的类别。应亲自运行 MMAU-Pro 的多音频子集。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/skill-alm-picker.md`选择LALM+基准子集+输出模式 (文字与语音) 为特定的音频理解任务.
+保存为 `outputs/skill-alm-picker.md`。针对具体音频理解任务选择 LALM、基准子集和输出模态（文本或语音）。
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`code/main.py`查看玩具投影器模式 + 输出代币的虚假 LALM 路由 (音频嵌入,文本代币) →
-2. **Medium.**根据100个MMAU-Pro语音项目, 评分Qwen2.5Omni-7B.
-3. **Hard.**建立一个最小的音频标题基线:BEAT编码器+2层投影器+结的Llama-3.2-1B. 仅在AudioCaps上调整投影器.比较Clotho-AQA上的SALMONN.
+1. **简单。** 运行 `code/main.py`，观察玩具投影器模式如何把（音频嵌入、文本词元）路由为输出词元。
+2. **中等。** 在 100 个 MMAU-Pro 语音项目上评测 Qwen2.5-Omni-7B，并与论文报告值比较。
+3. **困难。** 构建最小音频字幕基线：BEATs 编码器 + 两层投影器 + 冻结的 Llama-3.2-1B。只在 AudioCaps 上微调投影器，并与 SALMONN 在 Clotho-AQA 上比较。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| LALM | Audio ChatGPT | Audio encoder + projector + LLM decoder. |
-| Projector | Adapter | Small MLP mapping audio features into LLM embedding space. |
-| MMAU | The benchmark | 10k audio-QA pairs across speech, sound, music. |
-| MMAU-Pro | Harder MMAU | 1800 multi-audio / reasoning-heavy questions. |
-| LongAudioBench | Long-form eval | Multi-minute clips with semantic queries. |
-| Voice-in / voice-out | Speech-native | Model ingests speech and emits speech without text detour. |
+| LALM | 音频版 ChatGPT | 音频编码器 + 投影器 + 大语言模型解码器。 |
+| 投影器 | 适配器 | 把音频特征映射到大语言模型嵌入空间的小型 MLP。 |
+| MMAU | 基准 | 覆盖语音、声音和音乐的 1 万个音频问答样本。 |
+| MMAU-Pro | 更难的 MMAU | 1800 个强调多音频与推理的问题。 |
+| LongAudioBench | 长音频评估 | 带语义查询的多分钟音频片段。 |
+| 语音输入/语音输出 | 原生语音 | 模型直接接收语音并输出语音，不经过文本中转。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Chu et al. (2024). Qwen2-Audio](https://arxiv.org/abs/2407.10759)参考架构.
-- [Alibaba (2025). Qwen2.5-Omni](https://huggingface.co/Qwen/Qwen2.5-Omni-7B)说话中说话.
-- [NVIDIA (2025). Audio Flamingo 3](https://arxiv.org/abs/2507.08128)开放长音频领导者.
-- [NVIDIA (2026). Audio Flamingo Next](https://arxiv.org/abs/2604.10905)长音频.
-- [Tang et al. (2023). SALMONN](https://arxiv.org/abs/2310.13289)双码码开创者
-- [MMAU-Pro leaderboard](https://mmaubenchmark.github.io/)2026年现场排名.
+- [Chu 等（2024），Qwen2-Audio](https://arxiv.org/abs/2407.10759)——参考架构。
+- [阿里巴巴（2025），Qwen2.5-Omni](https://huggingface.co/Qwen/Qwen2.5-Omni-7B)——语音输入、语音输出。
+- [NVIDIA（2025），Audio Flamingo 3](https://arxiv.org/abs/2507.08128)——开放长音频领先模型。
+- [NVIDIA（2026），Audio Flamingo Next](https://arxiv.org/abs/2604.10905)——LongAudioBench 顶尖模型。
+- [Tang 等（2023），SALMONN](https://arxiv.org/abs/2310.13289)——双编码器先驱。
+- [MMAU-Pro 排行榜](https://mmaubenchmark.github.io/)——2026 年实时排名。
