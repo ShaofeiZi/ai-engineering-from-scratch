@@ -1,29 +1,29 @@
-# 注意 变量 滑动窗口,稀疏,差异性
+# 注意力变体——滑动窗口、稀疏与差分注意力
 
-> 完全的注意力是圆. 每个代币都看到每一个代币,而记忆支付了代价. 四种变体折曲圆形,恢复了成本的一半.
+> 完整注意力像一个圆。每个词元都能看到其他所有词元，内存则为此付出代价。四种变体改变了这个圆的形状，并省下过半成本。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 7 · 02 (Self-Attention), Phase 7 · 03 (Multi-Head), Phase 7 · 12 (KV Cache / Flash Attention)
-**Time:** ~60 minutes
+**Prerequisites:** 阶段 7 · 02（自注意力）、阶段 7 · 03（多头注意力）、阶段 7 · 12（KV 缓存 / Flash Attention）
+**Time:** 约 60 分钟
 
 ## 问题
 
-完全注意力成本`O(N²)`记忆力和`O(N²)`对于一个128K文本的Llama 3 70B,这就是每层16亿注意力输入,乘以80层.闪光注意力 (课 12) 隐藏了`O(N²)`激活存储器,但不会改变算术成本 每个代币仍然会关注其他代币.
+完整注意力的内存成本为 `O(N²)`，计算成本同样为 `O(N²)`，二者都随序列长度增长。对于上下文长度 128K 的 Llama 3 70B，每一层都有 160 亿个注意力条目，而模型共有 80 层。Flash Attention（第 12 课）隐藏了 `O(N²)` 的激活内存，却没有改变算术成本——每个词元仍要关注其他所有词元。
 
-三类变体改变了注意力矩阵本身的拓学:
+有三类变体会改变注意力矩阵本身的拓扑：
 
-1. **Sliding window attention (SWA).**每个代币都会在一个固定的邻居窗口中,而不是完整的预सर्ग.`O(N · W)`在哪里`W`马2/3,米斯特拉尔7B的第一层,菲-3-龙.
-2. **Sparse / block attention.**只有选择的对`(i, j)`长,大鸟,开AI稀疏变压器.
-3. **Differential attention.**计算两个注意力地图,使用不同的Q/K投影,减去一个.杀死"注意力沉浸器",使重量流入第一几个代币.微软的DIFF变压器 (2024).
+1. **滑动窗口注意力（SWA）。** 每个词元只关注固定窗口内的邻居，而不是完整前缀。内存和计算量降至 `O(N · W)`，其中 `W` 是窗口大小。Gemma 2/3、Mistral 7B 的前几层、Phi-3-Long 都采用它。
+2. **稀疏/分块注意力。** 只对选定的位置对 `(i, j)` 评分，其余位置的权重被强制设为零。代表模型有 Longformer、BigBird、OpenAI sparse transformer。
+3. **差分注意力。** 使用独立的 Q/K 投影计算两张注意力图，再从其中一张减去另一张。这样可以消除把权重泄漏给最前几个词元的“注意力汇点”。Microsoft 在 2024 年提出了 DIFF Transformer。
 
-它们共存.2026年边界模型经常混合它们:大多数层都是SWA-1024,每五层都是全球全关注,少数是分区头,清理检索.Gemma3的5:1 SWA-to-global ratio是当前的教科书默认.
+这些方法可以共存。2026 年的前沿模型经常混合使用：大多数层是 SWA-1024，每五层插入一个全局完整注意力层，再加入少量差分头以改善检索。Gemma 3 的 5:1 SWA 与全局注意力比例，是当前教科书式默认设置。
 
 ## 概念
 
-### 滑动窗口注意 (SWA)
+### 滑动窗口注意力（SWA）
 
-每个查询在位置`i`仅在职位`[i - W, i]`(因果性SWA) 或`[i - W/2, i + W/2]`窗外的代币得到了`-inf`在分数矩阵中.
+位置 `i` 上的每个查询只关注 `[i - W, i]`（因果 SWA）或 `[i - W/2, i + W/2]`（双向）范围内的位置。窗口之外的词元在分数矩阵中被设为 `-inf`。
 
 ```
 full causal:           sliding window (W=4):
@@ -39,27 +39,27 @@ positions 0-7          positions 0-7, W=4
 7 | x x x x x x x x  7 |          x x x x
 ```
 
-为了`N = 8192`其他`W = 1024`预期的数值矩阵有1024 × 8192个非零行  8 × 减少.
+当 `N = 8192`、`W = 1024` 时，分数矩阵预计有 1024 × 8192 个非零条目——减少 8 倍。
 
-**KV cache shrinks with SWA.**只有最后一个`W`对于Gemma-3ish配置 (1024窗口, 128K文本),KV缓存量下降 128x.
+**SWA 也会缩小 KV 缓存。** 每一层只需保留最近 `W` 个词元的 K 与 V。对于类似 Gemma 3 的配置（窗口 1024，上下文 128K），KV 缓存会缩小 128 倍。
 
-**Quality cost.**仅使用SWA的变压器与远程检索斗争.解决方案:将SWA层与全注意层交换.Gemma 3使用 5:1 SWA:全球.Mistral 7B使用了因果性SWA堆,信息通过重叠窗户"向前流动".`W`在此之后`L`模型可以参加的层次`L × W`返回代币.
+**质量代价。** 只使用 SWA 的 Transformer 不善于长距离检索。解决办法是在 SWA 层之间穿插完整注意力层。Gemma 3 使用 5:1 的 SWA:全局比例。Mistral 7B 采用因果 SWA 堆栈，信息会通过重叠窗口“向前流动”——每增加一层，有效感受野就向前扩展 `W`，经过 `L` 层后，模型可以关注此前 `L × W` 个词元。
 
-### 缩/阻注意力
+### 稀疏/分块注意力
 
-选择一个`N × N`率模式是提前的.
+预先选择一个 `N × N` 稀疏模式。有三种经典形态：
 
-- **Local + strided (OpenAI sparse transformer).**待在最后一个`W`代币加上每一个`stride`捕捉了当地和远程的`O(N · sqrt(N))`计算.
-- **Longformer / BigBird.**局部窗口+一个小组全球代币 (例如 `[CLS]`) 随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随的随时随时随时随时随的随时随时随时随的随时随时随时随时随的随时随时随时随的随时随时随的随时随的随时随的随时随时随的随时随的随时随的随时随的随的随时随的随的随时随的随的随的随时随时随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的随的.
-- **Native Sparse Attention (DeepSeek, 2025).**了解哪些区块的`(Q, K)`核层面的零块,可以兼容FlashAttention.
+- **局部 + 跨步稀疏（OpenAI sparse transformer）。** 关注最近 `W` 个词元，再关注之前每隔 `stride` 个位置的词元，以 `O(N · sqrt(N))` 计算量同时捕捉局部和长距离信息。
+- **Longformer / BigBird。** 局部窗口 + 少量全局词元（例如 `[CLS]`），这些词元关注所有位置，也被所有位置关注，再加随机稀疏连接。在质量相同时，实证可获得 2 倍上下文长度。
+- **原生稀疏注意力（DeepSeek，2025）。** 学习哪些 `(Q, K)` 块重要，并在内核层面跳过全零块；与 FlashAttention 兼容。
 
-稀疏注意是一个核工程故事.数学很简单 (掩盖分数矩阵);获胜来自从未将零条目加载到SRAM中.FlashAttention-3和2026 FlexAttention API在 PyTorch中实现了自定义稀疏模式的第一类.
+稀疏注意力的关键在于内核工程。数学很简单（屏蔽分数矩阵），收益则来自根本不把零值条目加载到 SRAM。FlashAttention-3 和 2026 年的 FlexAttention API 让自定义稀疏模式成为 PyTorch 的一等能力。
 
-### 变化注意 (DIFF变压器, 2024)
+### 差分注意力（DIFF Transformer，2024）
 
-定期关注有一个"注意力沉没"问题:软max强迫每一行总和到1,所以不想关注任何特定的代币在第一个代币 (或第一几个) 上掉了重量. 这就会窃取应该进入真实内容的容量.
+普通注意力存在“注意力汇点”问题：softmax 强制每行之和为 1，因此没有明确关注对象的词元会把权重倾倒到第一个（或最前几个）词元上。这会偷走本应分配给真实内容的容量。
 
-差异性注意力通过计算来解决这个问题**two**关注地图和减值:
+差分注意力通过计算**两张**注意力图并相减来解决问题：
 
 ```
 A1 = softmax(Q1 K1^T / √d)
@@ -67,39 +67,39 @@ A2 = softmax(Q2 K2^T / √d)
 DiffAttn = (A1 - λ · A2) V
 ```
 
-在哪里`λ`取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取取
+其中，`λ` 是学习得到的标量（通常为 0.5～0.8）。A1 捕捉真实内容权重，A2 捕捉汇点，相减后抵消汇点，把权重重新分配给相关词元。
 
-报告结果 (微软 2024): 510%较低的困惑,在相同的训练长度下效果较长的环境 1.52x,针在子中更敏的检索.
+Microsoft 2024 年报告的结果：困惑度降低 5%～10%，在相同训练长度下有效上下文延长 1.5～2 倍，大海捞针检索也更敏锐。
 
-### 变量比较
+### 变体对比
 
-| Variant | Compute | KV cache | Quality vs full | Production use |
+| 变体 | 计算量 | KV 缓存 | 相对完整注意力的质量 | 生产用途 |
 |---------|---------|----------|-----------------|----------------|
-| Full attention | O(N²) | O(N) per layer | baseline | every model's default layer |
-| SWA (window 1024) | O(N·W) | O(W) per layer | -0.1 ppl, good with global layers | Gemma 2/3, Phi-3-Long |
-| Local + strided sparse | O(N·√N) | mixed | similar to SWA | OpenAI sparse transformer, Longformer |
-| BigBird (local + global + random) | O(N) approx | mixed | matches full at 2× context | early long-context BERT |
-| Native Sparse (DeepSeek-V3.2) | O(N · active fraction) | O(N) | within 0.05 ppl | DeepSeek-V3.2, 2025 |
-| Differential | O(2·N²) | O(2N) | -5 to -10% ppl | DIFF Transformer, early 2026 models |
+| 完整注意力 | O(N²) | 每层 O(N) | 基线 | 每个模型的默认层 |
+| SWA（窗口 1024） | O(N·W) | 每层 O(W) | 困惑度差 0.1，搭配全局层时良好 | Gemma 2/3、Phi-3-Long |
+| 局部 + 跨步稀疏 | O(N·√N) | 混合 | 与 SWA 相近 | OpenAI sparse transformer、Longformer |
+| BigBird（局部 + 全局 + 随机） | 近似 O(N) | 混合 | 上下文扩大 2 倍时可匹配完整注意力 | 早期长上下文 BERT |
+| 原生稀疏（DeepSeek-V3.2） | O(N · 激活比例) | O(N) | 困惑度差小于 0.05 | DeepSeek-V3.2，2025 |
+| 差分注意力 | O(2·N²) | O(2N) | 困惑度降低 5%～10% | DIFF Transformer、2026 年早期模型 |
 
 ```figure
 gqa-kv-sharing
 ```
 
-## 建立它
+## 动手构建
 
-看到`code/main.py`我们实施了一个因果化面具比较器,显示一个玩具序列的全,SWA,本地+步骤,和差别注意力.
+见 `code/main.py`。我们实现一个因果掩码比较器，在玩具序列上并列展示完整注意力、SWA、局部 + 跨步稀疏注意力和差分注意力。
 
-### 步骤1:完整的因果性面具 (基线)
+### 第 1 步：完整因果掩码（基线）
 
 ```python
 def causal_mask(n):
     return [[0.0 if j <= i else float("-inf") for j in range(n)] for i in range(n)]
 ```
 
-从第七课开始的基线.
+沿用第 07 课的基线。下三角区域有效，对角线上方权重为零。
 
-### 步骤2:滑窗因果化面具
+### 第 2 步：滑动窗口因果掩码
 
 ```python
 def swa_mask(n, window):
@@ -111,9 +111,9 @@ def swa_mask(n, window):
     return M
 ```
 
-一个参数`window`为了`window >= n`由于你已经开始恢复了完全的因果性注意力.`window = 1`每个代币只能为自己提供服务.
+只有一个参数——`window`。当 `window >= n` 时，就恢复完整因果注意力；当 `window = 1` 时，每个词元只关注自身。
 
-### 步骤3:局部+步骤稀疏面具
+### 第 3 步：局部 + 跨步稀疏掩码
 
 ```python
 def strided_mask(n, window, stride):
@@ -127,9 +127,9 @@ def strided_mask(n, window, stride):
     return M
 ```
 
-密集的地方窗户加上每一个`stride`接收场在日志步骤增加了额外的层次.
+它使用稠密局部窗口，并从当前位置向序列开头每隔 `stride` 个词元建立连接。增加层数后，感受野会以对数步数增长。
 
-### 步骤4: 差异性注意
+### 第 4 步：差分注意力
 
 ```python
 def diff_attention(Q1, K1, Q2, K2, V, lam):
@@ -138,15 +138,15 @@ def diff_attention(Q1, K1, Q2, K2, V, lam):
     return (A1 - lam * A2) @ V
 ```
 
-在代码中,我们比较单对差的注意力-沉热地图,看着洗崩.
+执行两次注意力，再用学习得到的混合系数相减。在代码中，我们会比较单一注意力与差分注意力的注意力汇点热力图，并观察汇点如何消失。
 
-### 步骤5: KV缓存尺寸
+### 第 5 步：KV 缓存大小
 
-按每层打印缓存尺寸`N = 131072`对于每个变体.SWA和稀有变体下降了10100×. 差异性双倍. 意识地支付你的内存账单.
+打印每种变体在 `N = 131072` 时的逐层缓存大小。SWA 与稀疏变体可缩小 10～100 倍，差分注意力则会翻倍。应有意识地承担内存成本。
 
-## 用它
+## 学以致用
 
-2026年生产模式:
+2026 年的生产模式：
 
 ```python
 from transformers import AutoModelForCausalLM
@@ -155,7 +155,7 @@ model = AutoModelForCausalLM.from_pretrained("google/gemma-3-27b-it")
 # print(model.config.sliding_window, model.config.layer_types)
 ```
 
-在 PyTorch 2.5+ 中,FlexAttention 接受一个面具功能:
+PyTorch 2.5+ 中的 FlexAttention 接收掩码函数：
 
 ```python
 from torch.nn.attention.flex_attention import flex_attention, create_block_mask
@@ -167,46 +167,46 @@ mask = create_block_mask(swa_pattern, B=batch, H=heads, Q_LEN=n, KV_LEN=n)
 out = flex_attention(q, k, v, block_mask=mask)
 ```
 
-这将编译成一个定制的Triton内核.在普通模式的FlashAttention-3速度的10%内,面具函数是Python调用.
+它会被编译成自定义 Triton 内核。在常见模式下，速度与 FlashAttention-3 的差距不超过 10%，而掩码函数本身只是一个 Python 可调用对象。
 
-**When to pick each:**
+**各变体的选择方式：**
 
-- **Pure full attention**每层到16K的文本,或者检索质量至关重要时.
-- **SWA + global mix**长文本 (>32K),训练和推断内存. 2026年默认超过32K.
-- **Sparse block attention**定制内核,定制模式. 专用工作负载 (检索,音频) 预留.
-- **Differential attention**任何注意力污染造成伤害的工作负载 (长文本RAG,子子子).
+- **纯完整注意力**——上下文不超过约 16K 的所有层，或检索质量至关重要的情况。
+- **SWA + 全局混合**——长上下文（超过 32K），训练与推理受内存限制。这是 2026 年处理 32K 以上上下文的默认方案。
+- **稀疏块注意力**——自定义内核、自定义模式，仅用于专门工作负载（检索、音频）。
+- **差分注意力**——注意力汇点污染会造成损害的任何工作负载（长上下文 RAG、大海捞针）。
 
-## 运送它
+## 交付成果
 
-看到`outputs/skill-attention-variant-picker.md`技能选择一个针对新模型的注意力拓,因为目标背景长度,检索要求和训练/推理计算配置.
+见 `outputs/skill-attention-variant-picker.md`。该技能会根据目标上下文长度、检索要求和训练/推理计算特征，为新模型选择注意力拓扑。
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`code/main.py`检查SWA`window=4`检查查,每行最后4个代币以外的所有东西都是零的.`window=n`完全因果注意力的重复比特相同.
-2. **Medium.**执行因果性SWA`window=1024`训练1000步小小, 什么值减值与全注意力?
-3. **Hard.**在顶点模型中实现Gemma-3式 5:1层混合 (5 SWA, 1 全球).在匹配参数时,对纯SWA和纯全球基线进行损失,内存和生成质量进行比较.
-4. **Hard.**通过学习的学习者来实现分别注意力`λ`按头.训练一个合成检索任务 (一个针,2000个分心器).在匹配的参数上测量检索精度与单次注意的基线.
+1. **简单。** 运行 `code/main.py`。验证 `window=4` 的 SWA 会把每行最近 4 个词元之外的所有位置置零；验证 `window=n` 能逐比特还原完整因果注意力。
+2. **中等。** 在第 07 课综合模型上实现 `window=1024` 的因果 SWA，在 tinyshakespeare 上训练 1000 步。与完整注意力相比，验证损失退化多少？峰值内存下降多少？
+3. **困难。** 在综合模型中实现 Gemma 3 风格的 5:1 层混合（5 层 SWA、1 层全局）。在参数量相同的情况下，与纯 SWA 和纯全局基线比较损失、内存与生成质量。
+4. **困难。** 为每个头实现带学习式 `λ` 的差分注意力。在一个合成检索任务（一根针、2000 个干扰项）上训练，并在参数量相同时与单注意力基线比较检索准确率。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Sliding window attention (SWA) | "Local attention" | Each query attends to its last `W` tokens; KV cache shrinks to `O(W)`. |
-| Effective receptive field | "How far back the model sees" | In an `L`-layer SWA stack with window `W`, up to `L × W` tokens. |
-| Longformer / BigBird | "Local + global + random" | Sparse patterns with a few always-attending global tokens; early long-context approach. |
-| Native Sparse Attention | "DeepSeek's kernel trick" | Learn block-level sparsity; skip zero blocks at the kernel level while keeping quality. |
-| Differential attention | "Two maps, one subtracts" | DIFF Transformer: subtract a learned `λ` times a second attention map from the first to cancel attention sinks. |
-| Attention sink | "Weight bleeds to token 0" | Softmax normalization forces rows to sum to 1; uninformative queries dump weight on position 0. |
-| FlexAttention | "Mask-as-Python" | PyTorch 2.5+ API that compiles arbitrary mask functions into FlashAttention-shape kernels. |
-| Layer type mix | "5:1 SWA-to-global" | Interleave sparse and full attention layers in a stack to keep quality at lower memory. |
+| 滑动窗口注意力（SWA） | “局部注意力” | 每个查询只关注最近 `W` 个词元；KV 缓存缩小为 `O(W)`。 |
+| 有效感受野 | “模型能回看多远” | 在 `L` 层、窗口为 `W` 的 SWA 堆栈中，最多回看 `L × W` 个词元。 |
+| Longformer / BigBird | “局部 + 全局 + 随机” | 使用少量始终参与注意力的全局词元的稀疏模式；早期长上下文方案。 |
+| 原生稀疏注意力 | “DeepSeek 的内核技巧” | 学习块级稀疏性，在内核层面跳过全零块，同时保持质量。 |
+| 差分注意力 | “两张图，相减一张” | DIFF Transformer：从第一张注意力图中减去学习式 `λ` 倍的第二张图，以消除注意力汇点。 |
+| 注意力汇点 | “权重泄漏到词元 0” | softmax 强制每行之和为 1；无明确目标的查询会把权重倾倒到位置 0。 |
+| FlexAttention | “用 Python 写掩码” | PyTorch 2.5+ API，可把任意掩码函数编译成类似 FlashAttention 的内核。 |
+| 层类型混合 | “SWA 与全局注意力按 5:1 混合” | 在堆栈中交错使用稀疏与完整注意力层，以更低内存保持质量。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Beltagy, Peters, Cohan (2020). Longformer: The Long-Document Transformer](https://arxiv.org/abs/2004.05150)可行滑动窗口+全球标志纸.
-- [Zaheer et al. (2020). Big Bird: Transformers for Longer Sequences](https://arxiv.org/abs/2007.14062)本地+全球+随机.
-- [Child et al. (2019). Generating Long Sequences with Sparse Transformers](https://arxiv.org/abs/1904.10509)OpenAI的本地+步骤模式.
-- [Gemma Team (2024). Gemma 2: Improving Open Language Models at a Practical Size](https://arxiv.org/abs/2408.00118)全球混合物:1:
-- [Gemma Team (2025). Gemma 3 technical report](https://arxiv.org/abs/2503.19786)5:1的混合和窗口=1024现在是教科书默认的.
-- [Ye et al. (2024). Differential Transformer](https://arxiv.org/abs/2410.05258) DIFF变压器纸.
-- [Yuan et al. (2025). Native Sparse Attention](https://arxiv.org/abs/2502.11089)深度搜索V3.2的学习度注意力.
-- [PyTorch — FlexAttention blog and docs](https://pytorch.org/blog/flexattention/)使用它中的面具作为可调用模式的API参考.
+- [Beltagy、Peters、Cohan（2020），Longformer：长文档 Transformer](https://arxiv.org/abs/2004.05150)——经典的滑动窗口 + 全局词元论文。
+- [Zaheer 等（2020），Big Bird：处理更长序列的 Transformer](https://arxiv.org/abs/2007.14062)——局部 + 全局 + 随机注意力。
+- [Child 等（2019），使用稀疏 Transformer 生成长序列](https://arxiv.org/abs/1904.10509)——OpenAI 的局部 + 跨步模式。
+- [Gemma 团队（2024），Gemma 2：改进实用规模的开放语言模型](https://arxiv.org/abs/2408.00118)——1:1 SWA 与全局注意力混合。
+- [Gemma 团队（2025），Gemma 3 技术报告](https://arxiv.org/abs/2503.19786)——窗口为 1024、如今成为教科书默认方案的 5:1 混合。
+- [Ye 等（2024），差分 Transformer](https://arxiv.org/abs/2410.05258)——DIFF Transformer 论文。
+- [Yuan 等（2025），原生稀疏注意力](https://arxiv.org/abs/2502.11089)——DeepSeek-V3.2 的学习式稀疏注意力。
+- [PyTorch——FlexAttention 博客与文档](https://pytorch.org/blog/flexattention/)——“掩码即可调用函数”模式的 API 参考。
