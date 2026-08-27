@@ -1,64 +1,64 @@
-# 机器学习的图形理论
+# 机器学习图论
 
-> 如果你的数据有联系,你需要图形理论.
+> 图是表达关系的数据结构。只要数据中存在连接，就需要图论。
 
-**Type:** Build
-**Language:**字符串
-**Prerequisites:** Phase 1, Lessons 01-03 (linear algebra, matrices)
-**Time:** ~90 minutes
+**Type:** 构建
+**Language:** Python
+**Prerequisites:** 第 1 阶段，第 01–03 课（linear algebra, matrices）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 建立一个附属矩阵/列表表示的图形类,并实现BFS和DFS穿越
-- 计算拉普拉斯图,并使用其本值检测连接的组件和集群节点
-- 实现一个轮 GNN 式消息通过正常化的邻接矩阵乘法
-- 应用光谱集群来使用Fiedler向量分区图
+- 构建支持邻接矩阵/邻接表表示的图类，并实现 BFS 和 DFS 遍历
+- 计算图 Laplacian，使用其特征值检测连通分量并对节点聚类
+- 把一次 GNN 风格消息传递实现为归一化邻接矩阵乘法
+- 使用 Fiedler 向量应用谱聚类，对图进行划分
 
 ## 问题
 
-社交网络,分子,知识库,引用网络,路线图,都是图表.传统的ML将数据视为平面表.每个行都是独立的.每个特征都是列.
+社交网络、分子、知识库、引用网络、道路地图都是图。传统机器学习把数据当作扁平表格，每一行彼此独立，每个特征占一列。但当连接结构本身很重要时，表格就无法胜任。
 
-想想预测用户会购买什么产品.他们的购买历史是重要的. 但他们的朋友的购买历史更重要. 连接传递信号.
+以社交网络为例：你想预测用户会购买什么产品，个人购买历史固然重要，但朋友的购买历史可能更重要，连接本身携带着信号。
 
-原子是重要的,但真正重要的是原子是如何相互结合的.结构是数据.
+再考虑分子：你想预测它能否与某种蛋白质结合。原子本身重要，但真正关键的是原子之间如何成键，结构就是数据。
 
-图神经网络 (GNN) 是深度学习领域增长最快的领域.它们支持药物发现,社会推,欺诈检测和知识图论.每个GNN都建立在同一基础上:基本图理论.
+图神经网络（GNN）是深度学习中增长最快的领域之一，驱动着药物发现、社交推荐、欺诈检测和知识图谱推理。每种 GNN 都建立在同一个基础上：基本图论。
 
-你需要四件事:
-1. 作为矩阵表示图表的方式 (这样你可以乘以它们)
-2. 跨度算法探索图形结构
-3. 拉普拉西亚 - - 在光谱图理论中最重要的单一矩阵
-4. 传递消息 - - 使 GNN 运行的操作
+你需要四项能力：
+1. 把图表示成矩阵，以便执行矩阵乘法
+2. 使用遍历算法探索图结构
+3. 理解 Laplacian——谱图论中最重要的矩阵
+4. 理解消息传递——让 GNN 工作的核心运算
 
-## 概念
+## 核心概念
 
-### 图:节点和边缘
+### 图：节点与边
 
-一个图 G = (V,E) 由顶点 (节点) V 和边缘 E组成.每个边缘连接两个节点.
+图 G = (V, E) 由顶点（节点）集合 V 和边集合 E 构成，每条边连接两个节点。
 
-**Directed vs undirected.**在未定向图中,边缘 (u,v) 表示u连接到v,而v连接到u. 在定向图 (图形),边缘 (u,v) 表示u指向v,但不一定是相反的.
+**有向与无向。**在无向图中，边 (u, v) 表示 u 连接 v，同时 v 也连接 u；在有向图中，边 (u, v) 表示 u 指向 v，但反向关系不一定存在。
 
-**Weighted vs unweighted.**在一个不加权图中,边缘要么存在,要么没有.在一个加权图中,每个边缘都有数值的重量 - - 距离,成本,强度.
+**加权与无权。**无权图中，边只有存在或不存在；加权图中，每条边还带有数值权重，例如距离、成本或强度。
 
-| Graph type | Example |
+| 图类型 | 示例 |
 |-----------|---------|
-| Undirected, unweighted | Facebook friendship network |
-| Directed, unweighted | Twitter follow network |
-| Undirected, weighted | Road map (distances) |
-| Directed, weighted | Web page links (PageRank scores) |
+| 无向、无权 | Facebook 好友网络 |
+| 有向、无权 | Twitter 关注网络 |
+| 无向、加权 | 道路地图（距离） |
+| 有向、加权 | 网页链接（PageRank 分数） |
 
-### 接近矩阵
+### 邻接矩阵
 
-邻近矩阵A是核心表示.为一个具有n节点的图表:
+邻接矩阵 A 是核心表示。对于含 n 个节点的图：
 
 ```
 A[i][j] = 1    if there is an edge from node i to node j
 A[i][j] = 0    otherwise
 ```
 
-对于未定向图表,A是对称:A[i][j] =A[j][i].对于权重图表,A[i][j] =边缘重量 (i,j).
+无向图的 A 对称：A[i][j] = A[j][i]。加权图中的 A[i][j] 等于边 (i, j) 的权重。
 
-**Example -- a triangle:**
+**示例——三角形：**
 
 ```
 Nodes: 0, 1, 2
@@ -69,28 +69,28 @@ A = [[0, 1, 1],
      [1, 1, 0]]
 ```
 
-邻近矩阵是每个 GNN 的输入. A 上的矩阵操作与图表上的操作相符.
+邻接矩阵是每种 GNN 的输入。对 A 执行矩阵运算，就对应在图上执行操作。
 
-### 学位
+### 度
 
-节点的度是与节点连接的边缘数量.对于指向图表,你有进度 (进度边缘) 和出度 (出边缘).
+节点的度等于与它相连的边数。有向图还会区分入度（指向该节点的边）与出度（从该节点出发的边）。
 
-度矩阵D是对角形:
+度矩阵 D 是对角矩阵：
 
 ```
 D[i][i] = degree of node i
 D[i][j] = 0    for i != j
 ```
 
-对于三角形的例子:D=diag(2,2,2) 因为每个节点连接到另外两个节点.
+在三角形示例中，D = diag(2, 2, 2)，因为每个节点都连接另外两个节点。
 
-度告诉你关于节点的重要性.高度 = 枢纽节点.网络的度分布揭示了其结构.社交网络遵循电力规律 (少数枢纽,许多叶子节点).随机图表具有波森分布式的度数.
+度能够反映节点重要性。高度节点是枢纽节点，网络的度分布则揭示网络结构。社交网络遵循幂律分布，只有少数枢纽、大量叶节点；随机图的度近似服从 Poisson 分布。
 
-### 和
+### BFS 与 DFS
 
-需要两个基本的图形穿越算法.
+这是两种基本图遍历算法，都需要掌握。
 
-**Breadth-First Search (BFS):**首先探索所有邻居,然后使用邻居的邻居.
+**广度优先搜索（BFS）：**先探索所有邻居，再探索邻居的邻居，使用队列（FIFO）。
 
 ```
 BFS from node 0:
@@ -104,9 +104,9 @@ BFS from node 0:
   Queue: []            (done)
 ```
 
-基于BFS的数据,BFS在未加权图中找到最短的路径.从开始到任何节点的距离等于该节点首次发现的BFS水平.
+BFS 能找到无权图中的最短路径。从起点到任意节点的距离，就等于该节点第一次被发现时所在的 BFS 层级。因此，社交网络中的跳数距离会使用 BFS 计算。
 
-**Depth-First Search (DFS):**在回溯之前尽可能深入. 使用子 (LIFO) 或复发.
+**深度优先搜索（DFS）：**沿一条路径尽可能深入，再回溯，使用栈（LIFO）或递归。
 
 ```
 DFS from node 0:
@@ -120,21 +120,21 @@ DFS from node 0:
   Stack: []             (done)
 ```
 
-对于:
-- 找到连接组件 (从未访问的节点运行DFS)
-- 循环检测 (DFS树的后边)
-- 拓分类 (反向DFS完成顺序)
+DFS 适用于：
+- 寻找连通分量（从尚未访问的节点启动 DFS）
+- 检测环（DFS 树中的回边）
+- 拓扑排序（反转 DFS 完成顺序）
 
-| Algorithm | Data structure | Finds | Use case |
+| 算法 | 数据结构 | 找到的内容 | 使用场景 |
 |-----------|---------------|-------|----------|
-| BFS | Queue | Shortest paths | Social network distance, knowledge graph traversal |
-| DFS | Stack | Components, cycles | Connectivity, topological sort |
+| BFS | 队列 | 最短路径 | 社交网络距离、知识图谱遍历 |
+| DFS | 栈 | 连通分量、环 | 连通性、拓扑排序 |
 
-### 拉普拉西亚图
+### 图 Laplacian
 
-频谱图理论中最重要的矩阵.
+L = D - A，是谱图论中最重要的矩阵。
 
-对于三角形:
+对于三角形：
 
 ```
 D = [[2, 0, 0],    A = [[0, 1, 1],    L = [[2, -1, -1],
@@ -142,15 +142,15 @@ D = [[2, 0, 0],    A = [[0, 1, 1],    L = [[2, -1, -1],
      [0, 0, 2]]         [1, 1, 0]]         [-1, -1,  2]]
 ```
 
-拉普拉西亚人具有着显著的特征:
+Laplacian 具有一些非凡性质：
 
-1. **L is positive semi-definite.**所有的本值都是 >= 0.
+1. **L 为半正定矩阵。**所有特征值都 >= 0。
 
-2. **The number of zero eigenvalues equals the number of connected components.**连接的图表具有一个零的本值.一个连接不连接的3个组件的图表具有三个零的本值.
+2. **零特征值的数量等于连通分量数量。**连通图恰好有一个零特征值，包含 3 个不连通分量的图则有 3 个零特征值。
 
-3. **The smallest non-zero eigenvalue (Fiedler value) measures connectivity.**较大的Fiedler值意味着图表是有联系的.较小的Fiedler值意味着图表有一个弱点 - - 瓶.
+3. **最小非零特征值（Fiedler value）衡量连通性。**Fiedler value 大，说明图连通良好；值很小，说明图存在薄弱位置或瓶颈。
 
-4. **The eigenvector of the Fiedler value (Fiedler vector) reveals the best split.**带有正值的节点进入一个组,带有负值的节点进入另一个组.
+4. **Fiedler value 对应的特征向量（Fiedler vector）揭示最佳划分。**特征向量值为正的节点归入一组，值为负的节点归入另一组，这就是谱聚类。
 
 ```mermaid
 graph TD
@@ -169,43 +169,43 @@ graph TD
     end
 ```
 
-### 频谱特性
+### 谱性质
 
-邻近矩阵和拉普拉西亚的本值显示了没有任何穿越的结构性质.
+邻接矩阵与 Laplacian 的特征值，无需遍历图就能揭示结构性质。
 
-**Spectral clustering**运行方式是这样的:
-1. 计算拉普拉西亚 L
-2. 找出L的 k最小的自向量 (跳过第一个,这是连接图的全部)
-3. 使用这些自向量作为每个节点的新坐标
-4. 在这些坐标上运行k-means
+**谱聚类**的步骤如下：
+1. 计算 Laplacian L
+2. 找到 L 最小的 k 个特征向量；对于连通图，跳过第一个全 1 特征向量
+3. 把这些特征向量作为每个节点的新坐标
+4. 在这些坐标上运行 k-means
 
-为什么这么做?L的自向量编码图上的"最光滑"函数. 结合良好的节点得到类似的自向量值. 结合瓶分离的节点得到不同的值. 自向量自然分离集群.
+为什么有效？L 的特征向量编码图上最“平滑”的函数。连通良好的节点会得到相近的特征向量值，被瓶颈分开的节点则会得到不同值，特征向量因此自然地分隔簇。
 
-**Random walk connection.**正常化拉普拉西亚语与图上的随机行走有关.随机行走的静止分布与节点程度相比例.混合时间 (行走的接近速度) 取决于光谱差距.
+**与随机游走的联系。**归一化 Laplacian 与图上的随机游走有关。随机游走的平稳分布与节点度成正比，而混合时间——随机游走收敛的速度——取决于谱隙。
 
-### 传递信息
+### 消息传递
 
-每个节点都收集了邻居的信息,汇集它们,并更新了自己的状态.
+这是图神经网络的核心操作。每个节点从邻居收集消息、聚合消息，再更新自己的状态。
 
 ```
 h_v^(k+1) = UPDATE(h_v^(k), AGGREGATE({h_u^(k) : u in neighbors(v)}))
 ```
 
-在最简单的形式中,AGGREGATE =平均值,UPDATE =线性转换 +激活:
+最简单的形式中，AGGREGATE = mean，UPDATE = 线性变换 + 激活函数：
 
 ```
 h_v^(k+1) = sigma(W * mean({h_u^(k) : u in neighbors(v)}))
 ```
 
-如果H是所有节点特征的矩阵,A则是邻近矩阵:
+这实际上就是矩阵乘法。如果 H 是所有节点特征组成的矩阵，A 是邻接矩阵：
 
 ```
 H^(k+1) = sigma(A_norm * H^(k) * W)
 ```
 
-在 A_norm 是正常化的邻近矩阵 (每个行总数为 1).
+其中 A_norm 是归一化邻接矩阵，每行之和为 1。
 
-一轮传递消息使每个节点"看到"其近邻.两个轮让它看到邻居的邻居.K轮给每个节点从其K-hop邻居的信息.
+一轮消息传递让每个节点“看到”直接邻居；两轮让它看到邻居的邻居；K 轮则让每个节点获得 K-hop 邻域的信息。
 
 ```mermaid
 graph LR
@@ -228,26 +228,26 @@ graph LR
     B0 --> C1
 ```
 
-### 概念和 ML 应用
+### 概念与机器学习应用
 
-| Concept | ML Application |
+| 概念 | 机器学习应用 |
 |---------|---------------|
-| Adjacency matrix | GNN input representation |
-| Graph Laplacian | Spectral clustering, community detection |
-| BFS/DFS | Knowledge graph traversal, path finding |
-| Degree distribution | Node importance, feature engineering |
-| Message passing | GNN layers (GCN, GAT, GraphSAGE) |
-| Eigenvalues of L | Community detection, graph partitioning |
-| Spectral clustering | Unsupervised node grouping |
-| PageRank | Node importance, web search |
+| 邻接矩阵 | GNN 输入表示 |
+| 图 Laplacian | 谱聚类、社区检测 |
+| BFS/DFS | 知识图谱遍历、路径查找 |
+| 度分布 | 节点重要性、特征工程 |
+| 消息传递 | GNN 层（GCN、GAT、GraphSAGE） |
+| L 的特征值 | 社区检测、图划分 |
+| 谱聚类 | 无监督节点分组 |
+| PageRank | 节点重要性、网页搜索 |
 
 ```figure
 graph-degree-distribution
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:从零开始的图形课程
+### 第 1 步：从零构建 Graph 类
 
 ```python
 class Graph:
@@ -286,9 +286,9 @@ class Graph:
         return self.degree_matrix() - self.adjacency_matrix()
 ```
 
-邻近的列表 (`self.adj`邻近矩阵转换使用numpy,因为所有光谱操作都需要它.
+邻接表（`self.adj`）能够高效存储邻居。邻接矩阵转换使用 NumPy，因为后续谱运算都需要它。
 
-### 步骤2:BFS和DFS
+### 第 2 步：BFS 与 DFS
 
 ```python
 from collections import deque
@@ -326,9 +326,9 @@ def dfs(graph, start):
     return order
 ```
 
-BFS使用一个 deque (双端排队) 为 O(1) 弹出左. DFS 使用列表作为一个堆.两个访问每个节点确切一次 - O(V + E) 时间.
+BFS 使用 deque（双端队列），使 popleft 的复杂度为 O(1)；DFS 使用列表作为栈。二者都会恰好访问每个节点一次，时间复杂度都是 O(V + E)。
 
-### 关联组件和拉普拉斯人本值
+### 第 3 步：连通分量与 Laplacian 特征值
 
 ```python
 def connected_components(graph):
@@ -349,9 +349,9 @@ def laplacian_eigenvalues(graph):
     return eigenvalues
 ```
 
-`eigvalsh`拉普拉西亚语对不定向图表来说总是对称.它以上升顺序返回自值.
+`eigvalsh` 适用于对称矩阵；无向图的 Laplacian 始终对称。它会按升序返回特征值，统计零值数量即可得到连通分量数量。
 
-### 步骤4:光谱集群
+### 第 4 步：谱聚类
 
 ```python
 def spectral_clustering(graph, k=2):
@@ -369,9 +369,9 @@ def spectral_clustering(graph, k=2):
     return labels
 ```
 
-对于 k=2,Fiedler向量的标志将图分为两个集群.对于 k>2,你会在第一个 k 个体向量上运行 k-平均值 (不包括微小的所有对象的个体向量).
+k=2 时，Fiedler 向量的符号会把图分成两个簇。k>2 时，应在前 k 个特征向量上运行 k-means，但要排除平凡的全 1 特征向量。
 
-### 步骤5:传递信息
+### 第 5 步：消息传递
 
 ```python
 def message_passing(graph, features, weight_matrix):
@@ -385,11 +385,11 @@ def message_passing(graph, features, weight_matrix):
     return output
 ```
 
-这是一个 GNN 消息传递的一轮.每个节点的新特性是其邻居的特征的权重平均值,由重量矩阵转化.堆叠多轮来进一步传播信息.
+这就是一轮 GNN 消息传递。每个节点的新特征等于邻居特征的加权平均，再经过权重矩阵变换。堆叠多轮即可让信息传播到更远位置。
 
-## 用它
+## 实际使用
 
-网络x和numpy,相同的操作是单行:
+使用 networkx 和 NumPy，上述操作都可以用一行函数调用完成：
 
 ```python
 import networkx as nx
@@ -412,9 +412,9 @@ top_nodes = sorted(pr.items(), key=lambda x: x[1], reverse=True)[:5]
 print(f"Top 5 PageRank nodes: {top_nodes}")
 ```
 
-网络x处理任何尺寸的图表,使用优化的C后端. 在生产中使用它. 使用从零开始的实现来了解它做什么.
+networkx 通过优化的 C 后端处理任意规模的图。生产环境应使用它，从零实现则用于理解底层原理。
 
-### 光谱分析
+### NumPy 谱分析
 
 ```python
 import numpy as np
@@ -442,65 +442,65 @@ print(f"Cluster A: {group_a}")
 print(f"Cluster B: {group_b}")
 ```
 
-德勒向量做了重点.一个集群中正值输入,另一个集群中负值输入.不需要再进化优化,只需要一个自定义组合.
+真正承担划分工作的就是 Fiedler 向量：正值进入一个簇，负值进入另一个簇。无需迭代优化，只需一次特征分解。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/skill-graph-analysis.md`-- 分析图形结构数据的技能参考
+本课会产出：
+- `outputs/skill-graph-analysis.md`——分析图结构数据的技能参考
 
-## 联系
+## 知识关联
 
-| Concept | Where it shows up |
+| 概念 | 出现位置 |
 |---------|------------------|
-| Adjacency matrix | GCN, GAT, GraphSAGE input |
-| Laplacian | Spectral clustering, ChebNet filters |
-| BFS | Knowledge graph traversal, shortest path queries |
-| Message passing | Every GNN layer, neural message passing |
-| Spectral gap | Graph connectivity, mixing time of random walks |
-| Degree distribution | Power-law networks, node feature engineering |
-| Connected components | Preprocessing, handling disconnected graphs |
-| PageRank | Node importance ranking, attention initialization |
+| 邻接矩阵 | GCN、GAT、GraphSAGE 输入 |
+| Laplacian | 谱聚类、ChebNet 滤波器 |
+| BFS | 知识图谱遍历、最短路径查询 |
+| 消息传递 | 每一种 GNN 层、神经消息传递 |
+| 谱隙 | 图连通性、随机游走混合时间 |
+| 度分布 | 幂律网络、节点特征工程 |
+| 连通分量 | 预处理、处理不连通图 |
+| PageRank | 节点重要性排序、注意力初始化 |
 
-基因图的卷积操作 (Kipf & Welling, 2017) 使用附加自行循环的邻接矩阵,A_hat = A + I:
+GNN 值得特别说明。GCN（Kipf 与 Welling，2017）中的图卷积会使用加入自环的邻接矩阵 A_hat = A + I：
 
 ```text
 H^(l+1) = sigma(D_hat^(-1/2) * A_hat * D_hat^(-1/2) * H^(l) * W^(l))
 ```
 
-在 A_hat = A + I (邻近性加自环) 和 D_hat 是 A_hat 的度矩阵. 单自环确保每个节点在聚合过程中包含自己的特征. 这正是与对称正常化传递的信息. 子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子 拉普拉西亚出现,因为这种正常化与L_sym = I - D^(-1/2) *A * D^(-1/2) 有关. 了解拉普拉西亚语意味着理解GCN为什么工作.
+其中 A_hat = A + I，也就是邻接矩阵加自环；D_hat 是 A_hat 的度矩阵。自环保证每个节点在聚合时也包含自身特征。这正是带对称归一化的消息传递。D_hat^(-1/2) * A_hat * D_hat^(-1/2) 是归一化邻接矩阵。Laplacian 会出现，是因为这种归一化与 L_sym = I - D^(-1/2) * A * D^(-1/2) 有关。理解 Laplacian，也就理解了 GCN 为什么有效。
 
-## 运动
+## 练习
 
-1. **Implement PageRank from scratch.**开始以均的分数. 在每一步:分数(v) = (1-d) /n + d * sum(score(u) /out_degree(u)) 对于所有指向v的 u. 使用d=0.85. 运行到融合 (变化 < 1e-6). 在一个小的网页图上测试.
+1. **从零实现 PageRank。**从均匀分数开始，每一步计算：score(v) = (1-d)/n + d * sum(score(u)/out_degree(u))，其中求和遍历所有指向 v 的 u。使用 d=0.85，直到变化量 < 1e-6 时停止，并在一个小型网页图上测试。
 
-2. **Find communities using spectral clustering.**创建一个图表,有两个明显分离的集群 (例如,两个单边连接的点).运行光谱集群并验证它找到正确的分区.当你添加更多的跨集群边缘时会发生什么?
+2. **使用谱聚类寻找社区。**创建一个包含两个明显簇的图，例如两个 clique 只由一条边连接。运行谱聚类并验证划分是否正确。逐渐增加跨簇边时会发生什么？
 
-3. **Implement Dijkstra's algorithm**对于重量图中最短的路径. 进行相同的图表中与BFS的结果进行比较.
+3. **实现 Dijkstra 算法，**计算加权图的最短路径。把结果与同一个图在权重统一时的 BFS 结果进行比较。
 
-4. **Build a 2-layer message passing network.**运行两个重量矩阵的消息,显示在2轮之后,每个节点都从其2跳邻里得到信息.
+4. **构建两层消息传递网络。**使用不同权重矩阵连续执行两次消息传递，展示两轮后每个节点都获得了 2-hop 邻域的信息。
 
-5. **Analyze a real-world graph.**使用卡拉特俱乐部图 (34节点,78边缘).计算程度分布,拉普拉斯人自值和光谱集群.将光谱集群结果与已知地面真理分区进行比较.
+5. **分析真实图。**使用 Karate Club 图（34 个节点、78 条边），计算度分布、Laplacian 特征值和谱聚类，再与已知真实划分比较。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Graph | "Nodes and edges" | A mathematical structure G=(V,E) encoding pairwise relationships |
-| Adjacency matrix | "The connection table" | An n x n matrix where A[i][j] = 1 if nodes i and j are connected |
-| Degree | "How connected a node is" | The number of edges touching a node |
-| Laplacian | "D minus A" | L = D - A, the matrix whose eigenvalues reveal graph structure |
-| Fiedler value | "The algebraic connectivity" | The smallest non-zero eigenvalue of L, measuring how well-connected the graph is |
-| BFS | "Level-by-level search" | Traversal that visits all neighbors before going deeper, finds shortest paths |
-| DFS | "Go deep first" | Traversal that follows one path to its end before backtracking |
-| Message passing | "Nodes talk to neighbors" | Each node aggregates information from its neighbors, the core of GNNs |
-| Spectral clustering | "Cluster by eigenvectors" | Partition a graph using eigenvectors of its Laplacian |
-| Connected component | "A separate piece" | A maximal subgraph where every node can reach every other node |
+| Graph | “节点和边” | 用于编码成对关系的数学结构 G=(V,E) |
+| Adjacency matrix | “连接表” | n x n 矩阵；节点 i 与 j 相连时 A[i][j] = 1 |
+| Degree | “节点有多连通” | 与节点相接的边数 |
+| Laplacian | “D 减 A” | L = D - A，其特征值会揭示图结构 |
+| Fiedler value | “代数连通度” | L 的最小非零特征值，衡量图的连通程度 |
+| BFS | “逐层搜索” | 先访问所有邻居再深入的遍历，可以找到最短路径 |
+| DFS | “先深入” | 沿一条路径走到底，再回溯的遍历 |
+| Message passing | “节点与邻居交流” | 每个节点聚合邻居信息，是 GNN 的核心 |
+| Spectral clustering | “使用特征向量聚类” | 使用图 Laplacian 的特征向量划分图 |
+| Connected component | “独立的一块” | 其中任意节点都能到达其他节点的极大子图 |
 
-## 进一步阅读
+## 延伸阅读
 
-- **Kipf & Welling (2017)**报告中发现,光谱图的转变使信息传递变得简单.
-- **Spielman (2012)**关于"光谱图理论"的讲座说明. 关于拉普拉西亚人的最终介绍,
-- **Hamilton (2020)**关于GNN从基础到应用的书.
-- **Bronstein et al. (2021)**基何学深度学习:网格,组,图形,地质学和测量器.
-- **Veličković et al. (2018)**通过注意力机制传递信息.
+- **Kipf 与 Welling（2017）**——《使用图卷积网络进行半监督分类》。这篇论文开启了现代 GNN，展示谱图卷积如何简化为消息传递。
+- **Spielman（2012）**——《谱图论》课程笔记，是 Laplacian、谱隙和图划分的权威入门。
+- **Hamilton（2020）**——《Graph Representation Learning》，涵盖从 GNN 基础到应用的完整内容。
+- **Bronstein 等（2021）**——《Geometric Deep Learning: Grids, Groups, Graphs, Geodesics, and Gauges》，提出统一框架。
+- **Veličković 等（2018）**——《Graph Attention Networks》，使用注意力机制扩展消息传递。
