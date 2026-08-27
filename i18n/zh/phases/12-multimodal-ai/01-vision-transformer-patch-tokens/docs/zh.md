@@ -1,81 +1,81 @@
-# 视力变化器和补丁标记原始
+# 视觉 Transformer 与图像块词元原语
 
-> 在任何多元化东西之前,图像必须成为一个变压器可以吃的代币的序列. 2020年ViT论文以16x16像素补丁,线性投影和位置嵌入来回答这一问题. 五年后,每一个2026年边界模型 (Claude Opus 4.7 at 2576px native, Gemini 3.1 Pro, Qwen3.5-Omni) 都仍然以这种方式开始编码器从ViT转换为DINOv2转换为SigLIP 2,注册代币被添加,位置方案成为2D-RoPE,但原始保持. 这一课程读到补丁代币管道的终端到终端,并用Stdlib Python构建它,所以第12阶段的其他部分有一个"视觉代币"的具体的心理模型.
+> 在处理任何多模态任务之前，图像必须先变成 Transformer 能够接收的词元序列。2020 年的 ViT 论文使用 16x16 像素图像块、线性投影和位置嵌入解决了这个问题。五年后，2026 年的每个前沿模型（原生支持 2576px 的 Claude Opus 4.7、Gemini 3.1 Pro、Qwen3.5-Omni）仍从这里起步——编码器从 ViT 演进为 DINOv2、SigLIP 2，又加入了寄存器词元，位置方案也变成 2D-RoPE，但这项原语始终不变。本课会端到端解读图像块词元流水线，并使用标准库 Python 构建它，为阶段 12 后续课程中的“视觉词元”建立具体的心智模型。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python (stdlib, patch tokenizer + geometry calculator)
-**Prerequisites:** Phase 7 (Transformers), Phase 4 (Computer Vision)
-**Time:** ~120 minutes
+**Prerequisites:** 第 7 阶段（Transformer）、第 4 阶段（计算机视觉）
+**Time:** 约 120 分钟
 
 ## 学习目标
 
-- 将HxWx3图像转换为正确位置编码的补丁代币序列.
-- 计算一个给定的 ViT 的序列长度,参数数量和FLOP (补丁尺寸,分辨率,隐藏的暗色,深度).
-- 举个例子说明2020年研究到2026年的 ViT 产品的三个升级:自主监督预训 (DINO/MAE),注册代币和本地分辨率包装.
-- 选择CLS集成,平均集成,或注册代币用于下游任务.
+- 将形状为 HxWx3 的图像转换成带有正确位置编码的图像块词元序列。
+- 计算给定（图像块大小、分辨率、隐藏维度、深度）的 ViT 的序列长度、参数量和 FLOPs。
+- 说出推动 ViT 从 2020 年研究成果走向 2026 年生产应用的三项升级：自监督预训练（DINO / MAE）、寄存器词元和原生分辨率打包。
+- 为下游任务选择 CLS 池化、平均池化或寄存器词元。
 
 ## 问题
 
-变压器运行在向量序列上.文本已经是一个序列 (字节或代币).图像是一个3色通道的2D像素格格格,而不是一个序列.如果你平平平每一个像素,一个224x224 RGB图像会变成150,528个代币,而在这个长度上的自我注意力是非启动 (序列长度的平方).
+Transformer 处理的是向量序列。文本本来就是序列（字节或词元），而图像是包含三个颜色通道的二维像素网格，并不是序列。如果把每个像素都展平，一个 224x224 RGB 图像会变成 150,528 个词元；在这种长度上执行自注意力根本不可行，因为其成本随序列长度呈二次方增长。
 
-2020年之前的方法将CNN特征提取器带到前面:ResNet生成了2048维向量的7×7特征地图,将这些49个代币输送到变压器中.这有效,但继承了CNN的偏见 (翻译等差,本地接收场) 并失去了变压器对尺度的食欲.
+2020 年之前的方法会在前端附加 CNN 特征提取器：ResNet 生成由 2048 维向量组成的 7x7 特征图，再把这 49 个词元交给 Transformer。它可以工作，却继承了 CNN 的偏置（平移等变性、局部感受野），也失去了 Transformer 随规模持续提升的优势。
 
-东索维茨基等 现在,如果我们跳过CNN, 将图像分成固定尺寸的补丁 (例如16x16像素),将每个补丁线性投射到向量中,添加一个定位嵌入,并将序列输送到瓦尼拉变压器中. 在当时,这是一种异端主义, 由于足够的数据 (JFT-300M,然后是LAION),它击败了ResNet在ImageNet,并继续改进.
+Dosovitskiy 等人（2020）提出了一个直接的问题：如果跳过 CNN 会怎样？把图像切分成固定大小的图像块（例如 16x16 像素），对每个图像块执行线性投影，使其变成向量，再加入位置嵌入，最后把序列送入普通 Transformer。当时，这被视为离经叛道——视觉模型竟然不用卷积。但只要数据量足够大（先是 JFT-300M，后来是 LAION），它就能在 ImageNet 上击败 ResNet，并继续随规模增长而提升。
 
-到2026年,VIT原始是无疑的基础.每一个开放重量的VLM视觉塔都是某种后代 (DINOv2,SigLIP2,CLIP,EVA,InternViT).问题不再是"我们应该使用补丁吗?"而是"什么补丁尺寸,什么分辨率计划,什么预训练目标,什么位置编码".
+到 2026 年，ViT 原语已经成为公认的基础。每个开放权重 VLM 的视觉塔都源于这一家族（DINOv2、SigLIP 2、CLIP、EVA、InternViT）。如今的问题不再是“要不要使用图像块”，而是“图像块多大、采用什么分辨率调度、什么预训练目标，以及什么位置编码”。
 
 ## 概念
 
-### 作为代币的补丁
+### 把图像块视为词元
 
-给出一个图像`x`形状`(H, W, 3)`片的尺寸`P`现在,你把图像刻成一个网格.`(H/P) x (W/P)`没有重叠的补丁. 每个补丁都是一个`P x P x 3`方块的像素. 方块的每个方块为一个`3 P^2`运用共享线性投影`W_E`形状`(3 P^2, D)`为了将每个补丁映射到模型的隐藏维度中`D`现在,我们要去.
+给定图像 `x`，其形状为 `(H, W, 3)`，图像块大小为 `P`；把图像切成一个由 `(H/P) x (W/P)` 个互不重叠图像块组成的网格。每个图像块都是一个 `P x P x 3` 的像素立方体。把每个立方体展平为 `3 P^2` 向量，再应用共享线性投影 `W_E`，其形状为 `(3 P^2, D)`，从而把每个图像块映射到模型的隐藏维度 `D`。
 
-对于ViT-B/16的法典配置:
-- 解析度224,补丁尺寸16 → 网格14x14 → 196个补丁代币.
-- 每个补丁都是`16 x 16 x 3 = 768`预测到`D = 768`现在,我们要去.
-- 添加一个可学习的东西`[CLS]`标志 →序列长度197.
+以 ViT-B/16 的经典配置为例：
+- 分辨率 224，图像块大小 16 → 14x14 网格 → 196 个图像块词元。
+- 每个图像块包含 `16 x 16 x 3 = 768` 个像素值，并投影到 `D = 768`。
+- 添加一个可学习的 `[CLS]` 词元 → 序列长度为 197。
 
-补丁投影数学上与核子大小的2D卷积相同`P`走进`P`其他`D`产品代码实际上是这样实现的`nn.Conv2d(3, D, kernel_size=P, stride=P)`线性投影框架是概念性的;内核框架是高效的.
+从数学上看，图像块投影完全等同于核大小为 `P`、步幅为 `P`、输出通道数为 `D` 的二维卷积。生产代码实际上正是这样实现的——`nn.Conv2d(3, D, kernel_size=P, stride=P)`。“线性投影”是一种概念表达，“卷积核”则是高效实现。
 
-### 位置嵌入式
+### 位置嵌入
 
-补丁没有固有的顺序.变压器把它们视为袋子.早期的ViT添加了一个可学习的1D定位嵌入 (每一个位置有768个dim向量,其中197个).它运行,但将模型与训练分辨率联系在一起:在推断下,如果你改变格格,你必须插入位置表.
+图像块本身没有固有顺序——Transformer 看到的只是一袋图像块。早期 ViT 会添加可学习的一维位置嵌入（每个位置一个 768 维向量，共 197 个）。这种方法可以工作，却把模型绑定在训练分辨率上：推理时改变网格大小，就必须对位置表进行插值。
 
-现代视觉背骨使用2D-RoPE (Qwen2-VL的M-RoPE,SigLIP 2的默认) 或因数化2D位置. 2D-RoPE根据补丁的索引 (行,列) 引擎旋转查询和关键向量,因此模型从旋转角推算相对2D位置.没有位置表.该模型处理任意的网格大小在推断时.
+现代视觉骨干使用 2D-RoPE（Qwen2-VL 的 M-RoPE、SigLIP 2 的默认方案）或分解式二维位置。2D-RoPE 根据图像块的（行、列）索引旋转查询向量和键向量，让模型从旋转角度推断相对二维位置。它不需要位置表，因此推理时可以处理任意网格大小。
 
-### 关键字:CLS代币,合并输出,注册代币
+### CLS 词元、池化输出与寄存器词元
 
-图像水平表示是什么?三个选择共存:
+图像级表示应该是什么？目前有三种并存的选择：
 
-1. `[CLS]`标记. 预备一个可学习的向量到补丁序列. 在所有变压器块之后,CLS标记的隐藏状态是图像表示. 继承了BERT. 原始 ViT,CLIP使用.
-2. 平均积分,是补丁代币的输出隐藏状态.
-3. 登记令牌.Darcet等人 (2023) 观察到,没有明确的洗面令牌训练的ViTs开发高标准的"文物"补丁,这些补丁劫持自我注意.添加416可学习的登记令牌吸收了这种负载,并改善了密集预测质量 (细分,深度).DINOv2和SigLIP 2都具有登记器.
+1. `[CLS]` 词元。在图像块序列前添加一个可学习向量。经过所有 Transformer 块后，CLS 词元的隐藏状态就是图像表示。它继承自 BERT，由原始 ViT 和 CLIP 使用。
+2. 平均池化。对图像块词元的输出隐藏状态取平均。SigLIP、DINOv2 和多数现代 VLM 都使用这种方式。
+3. 寄存器词元。Darcet 等人（2023）发现，在没有显式汇聚词元的情况下训练 ViT，会产生高范数的“伪影”图像块，并劫持自注意力。加入 4～16 个可学习的寄存器词元，可以吸收这部分负载，并改善分割、深度估计等稠密预测任务的质量。DINOv2 和 SigLIP 2 都带有寄存器词元。
 
-选择对于下游任务很重要.CLS对于分类来说很好.对于VLM来说,这些VLM将补丁代币输入到LLM中,您将完全跳过合并每个补丁都会成为LLM输入代币.在交付前,注册会被丢弃 (它们是架架,而不是内容).
+下游任务不同，选择也不同。CLS 很适合分类。对于把图像块词元送入大语言模型的 VLM，则完全跳过池化——每个图像块都会成为大语言模型输入词元。交接之前会丢弃寄存器，因为它们是支架，不是内容。
 
-### 预训练:监督,反,面具,自蒸
+### 预训练：监督式、对比式、掩码式与自蒸馏式
 
-2020年ViT预训练了JFT-300M的监督分类.
+2020 年的 ViT 使用 JFT-300M 进行监督分类预训练，很快便被以下方法取代：
 
-- 课程 12.02.
-- 面膜 75% 补丁,重建像素. 自主监督,在纯图像上工作.
-- 迪诺 (2021) /迪诺夫2 (2023):自蒸与学生-老师,没有标签,没有标题. 2023 迪诺夫2 ViT-g/14 是最强的纯视觉脊柱,也是"密集特征"使用案例的默认.
-- 利普/利普2 (2023, 2025):利普与利达损失和纳弗莱克斯为本地视角比. 2026年主导视觉塔开放VLM (Qwen,Idefics2,LLaVA-OneVision).
+- CLIP（2021）：在 4 亿个图像—文本对上进行对比学习。参见第 12.02 课。
+- MAE（2021，He 等）：掩盖 75% 的图像块，再重建像素。它是自监督方法，可以只使用图像训练。
+- DINO（2021）/ DINOv2（2023）：使用学生—教师结构进行自蒸馏，不需要标签，也不需要图像说明文字。2023 年的 DINOv2 ViT-g/14 是最强的纯视觉骨干，也是“稠密特征”使用场景的默认选择。
+- SigLIP / SigLIP 2（2023、2025）：使用 Sigmoid 损失并通过 NaFlex 支持原生宽高比的 CLIP。它是 2026 年开放 VLM（Qwen、Idefics2、LLaVA-OneVision）中占主导地位的视觉塔。
 
-您的预训练选择决定了脊柱是什么好:Clip/SigLIP用于语义与文本匹配,DINOv2用于密集的视觉特征,MAE作为下游细节调整的起点.
+预训练方式决定骨干擅长什么：CLIP/SigLIP 适合与文本进行语义匹配，DINOv2 适合稠密视觉特征，MAE 则适合作为下游微调的起点。
 
-### 规模化法
+### 缩放定律
 
-维特扩展 (Zhai et al. 2022) 确定了维特的质量遵守模型大小,数据大小和计算的可预测的法律.
-- 较大的模型+更多的数据 →更好的质量.
-- 补丁尺寸是对序列长度和忠诚度的杆.补丁14 (典型于DINOv2/SigLIP SO400m) 给出比补丁16更多的图像代码;对OCR和密集任务更好,速度更差.
-- 解决方案是另一个大杆. 从224到384到512几乎总是有助于,
+ViT 缩放研究（Zhai 等，2022）证实，ViT 的质量会遵循模型大小、数据规模和计算量上的可预测规律。在固定计算量下：
+- 模型更大 + 数据更多 → 质量更高。
+- 图像块大小是序列长度与保真度之间的调节杆。Patch 14（DINOv2/SigLIP SO400m 的典型值）会比 Patch 16 为每幅图像产生更多词元；它更适合 OCR 和稠密任务，但速度更慢。
+- 分辨率是另一个重要调节杆。从 224 提高到 384、再到 512 几乎总能提升质量，但 FLOPs 会按二次方增加。
 
-维特g/14 (1B参数,补丁 14,解析度 224 → 256 代币) 和SigLIP SO400m/14 (400M参数,补丁 14) 是2026年开放的VLM的两个工作马编码器.
+ViT-g/14（10 亿参数，Patch 14，分辨率 224 → 256 个词元）与 SigLIP SO400m/14（4 亿参数，Patch 14）是 2026 年开放 VLM 的两款主力编码器。
 
-### 维特的参数数
+### ViT 的参数量
 
-整个计算在`code/main.py`对于VIT-B/16在224号:
+完整计算位于 `code/main.py`。以分辨率 224 的 ViT-B/16 为例：
 
 ```
 patch_embed = 3 * 16 * 16 * 768 + 768  =  591k
@@ -87,71 +87,71 @@ final LN    = 1.5k
 total       ≈ 86M
 ```
 
-在你加载检查点之前,把每一个VIT都这样停下来.
+加载任何 ViT 检查点之前，都先用这种方法估算其数量级。视觉骨干的大小决定了任何下游 VLM 的显存下限。
 
-### 2026年生产配置
+### 2026 年生产配置
 
-2026年最开放的VLM编码器是SigLIP 2 SO400m/14 (NaFlex). 它具有:
-- 标准标准为400米.
-- 补丁尺寸 14,默认分辨率为384 → 729个补丁代币.
-- 图像级任务的平均积分;所有729个补丁都流入VQA的LLM.
-- 在LLM转让之前丢弃的4个注册代币.
-- 具有图像水平扩展的2D-RoPE,以实现原生面对比.
+2026 年多数开放 VLM 使用的编码器，是以原生分辨率（NaFlex）运行的 SigLIP 2 SO400m/14。它具有：
+- 4 亿个参数。
+- 图像块大小 14，默认分辨率 384 → 每幅图像 729 个图像块词元。
+- 图像级任务使用平均池化；VQA 则把全部 729 个图像块送入大语言模型。
+- 4 个寄存器词元，在交接给大语言模型前丢弃。
+- 采用带图像级缩放的 2D-RoPE，以支持原生宽高比。
 
-任何决定都追溯到你能读到的论文.
+这项配置中的每一个决定，都可以追溯到一篇可供阅读的论文。
 
 ```figure
 image-patch-tokens
 ```
 
-## 用它
+## 投入使用
 
-`code/main.py`采用图像H,W,贴片P,隐藏D,深度L) 并报告:
+`code/main.py` 是一个图像块分词器与几何计算器。它接收（图像高度 H、宽度 W、图像块大小 P、隐藏维度 D、深度 L），并报告：
 
-- 接后的网格形状和序列长度.
-- 合成8x8像素玩具图像的代币序列 (通过平面+项目路径进行步行).
-- 按补丁嵌入,位置嵌入,变压器块和头进行分类.
-- 目标分辨率的前进通过的FLOP.
-- 通过 ViT-B/16 @ 224, ViT-L/14 @ 336, DINOv2 ViT-g/14 @ 224, SigLIP SO400m/14 @ 384 的比较表.
+- 图像分块后的网格形状与序列长度。
+- 一幅合成 8x8 像素玩具图像的词元序列（逐步展示展平 + 投影路径）。
+- 按图像块嵌入、位置嵌入、Transformer 块与头部拆分的参数量。
+- 目标分辨率下单次前向传播的 FLOPs。
+- ViT-B/16 @ 224、ViT-L/14 @ 336、DINOv2 ViT-g/14 @ 224、SigLIP SO400m/14 @ 384 的对比表。
 
-运行它,与公布的数量匹配,用补丁尺寸和分辨率来感觉到代币计数成本.
+运行它，把参数量与公开数据进行核对。调整图像块大小和分辨率，直观感受词元数量带来的成本。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-patch-geometry-reader.md`鉴于 ViT 配置 (补丁尺寸,分辨率,隐藏的暗淡,深度),它产生了代币数量,参数数数量和VRAM估计,并有理由.当您选择视觉脊柱为VLM时,使用这种技能,它可以防止"代币爆炸和我的LLM环境填满"惊喜.
+本课会产出 `outputs/skill-patch-geometry-reader.md`。给定一份 ViT 配置（图像块大小、分辨率、隐藏维度、深度），它会给出有依据的词元数、参数量与显存估算。每当为 VLM 选择视觉骨干时，都应使用这项技能——它可以避免“词元数量爆炸，塞满了大语言模型上下文”的意外。
 
-## 运动
+## 练习
 
-1. 计算Qwen2.5-VL的补丁代码序列长度在原始输入1280x720时,带有补丁尺寸14.这与仅CLS的表示如何相比?
+1. 计算 Qwen2.5-VL 在原生 1280x720 输入、图像块大小 14 时的图像块词元序列长度。它与仅使用 CLS 的表示相比如何？
 
-2. 在1080p的片 (1920x1080) 在补丁14产生多少代币?在5分钟的视频中,在30FPS时,总共有多少视觉代币?哪个成本节省你最多:聚合,片样本,或代币合并?
+2. 一帧 1080p（1920x1080）视频在 Patch 14 下会产生多少词元？以 30 FPS 播放 5 分钟，总共会产生多少视觉词元？池化、帧采样和词元合并中，哪一种最节省成本？
 
-3. 实现纯Python中补丁代币的平均聚合. 检查DINOv2输出中196个代币的平均聚合量是否匹配模型的平均聚合值.`forward`您需要一个集成的嵌入式.
+3. 使用纯 Python 实现图像块词元的平均池化。验证对 DINOv2 输出的 196 个词元进行平均池化后，与请求模型返回池化嵌入时 `forward` 的结果一致。
 
-4. 阅读"视觉变换器需要注册" (arXiv:2309.16588) 第3节.
+4. 阅读“Vision Transformers Need Registers”（arXiv:2309.16588）第 3 节。用两句话说明寄存器吸收了什么伪影，以及为什么这对下游稠密预测很重要。
 
-5. 修改`code/main.py`给出不同分辨率的图像列表,生成单个包装序列和区块图形注意力面具.
+5. 修改 `code/main.py` 以支持 patch-n'-pack：给定一组分辨率各不相同的图像，生成一个打包序列和分块对角注意力掩码。学习到第 12.06 课时，与其实现进行核对。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Patch | "16x16 pixel square" | A fixed-size non-overlapping region of the input image; becomes one token |
-| Patch embedding | "Linear projection" | A shared learned matrix (or Conv2d with stride=P) mapping flattened patch pixels to D-dim vectors |
-| CLS token | "Class token" | Prepended learnable vector whose final hidden state represents the whole image; optional in 2026 |
-| Register token | "Sink token" | Extra learnable tokens that absorb the high-norm attention artifacts ViTs develop during pretraining |
-| Position embedding | "Positional info" | Per-position vector or rotation making the sequence-order-aware; 2D-RoPE is the modern default |
-| Grid | "Patch grid" | The (H/P) x (W/P) 2D array of patches for a given resolution and patch size |
-| NaFlex | "Native flexible resolution" | SigLIP 2 feature: single model serves multiple aspect ratios and resolutions without retraining |
-| Backbone | "Vision tower" | The pretrained image encoder whose patch-token outputs feed the LLM in a VLM |
-| Pooling | "Image-level summary" | Strategy to turn patch tokens into one vector: CLS, mean, attention pool, or register-based |
-| Patch 14 vs 16 | "Finer vs coarser grid" | Patch 14 produces more tokens per image, better fidelity for OCR, slower; patch 16 is the classic default |
+| 术语 | 人们常说 | 实际含义 |
+|------|-----------------|------------------------|
+| 图像块 | “16x16 像素方块” | 输入图像中大小固定且互不重叠的区域；每个区域变成一个词元 |
+| 图像块嵌入 | “线性投影” | 将展平的图像块像素映射到 D 维向量的共享学习矩阵（或 stride=P 的 Conv2d） |
+| CLS 词元 | “分类词元” | 添加到序列最前方的可学习向量，其最终隐藏状态代表整幅图像；到 2026 年已非必需 |
+| 寄存器词元 | “汇聚词元” | 额外的可学习词元，用来吸收 ViT 在预训练中形成的高范数注意力伪影 |
+| 位置嵌入 | “位置信息” | 让序列感知顺序的逐位置向量或旋转；2D-RoPE 是现代默认方案 |
+| 网格 | “图像块网格” | 给定分辨率与图像块大小后形成的（H/P）x（W/P）二维图像块数组 |
+| NaFlex | “原生灵活分辨率” | SigLIP 2 的功能：一个模型无需重新训练，即可处理多种宽高比与分辨率 |
+| 骨干 | “视觉塔” | 预训练图像编码器；它输出的图像块词元会送入 VLM 中的大语言模型 |
+| 池化 | “图像级摘要” | 将图像块词元汇总为一个向量的策略：CLS、平均、注意力池化或基于寄存器的池化 |
+| Patch 14 与 16 | “更细与更粗的网格” | Patch 14 每幅图像产生更多词元，OCR 保真度更高但速度更慢；Patch 16 是经典默认值 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Dosovitskiy et al. — An Image is Worth 16x16 Words (arXiv:2010.11929)](https://arxiv.org/abs/2010.11929)原始的ViT.
-- [He et al. — Masked Autoencoders Are Scalable Vision Learners (arXiv:2111.06377)](https://arxiv.org/abs/2111.06377)MAE,自我监督预训练.
-- [Oquab et al. — DINOv2 (arXiv:2304.07193)](https://arxiv.org/abs/2304.07193)自化量,没有标签.
-- [Darcet et al. — Vision Transformers Need Registers (arXiv:2309.16588)](https://arxiv.org/abs/2309.16588)注册代币和文物分析.
-- [Tschannen et al. — SigLIP 2 (arXiv:2502.14786)](https://arxiv.org/abs/2502.14786)2026年默认的视觉塔.
-- [Zhai et al. — Scaling Vision Transformers (arXiv:2106.04560)](https://arxiv.org/abs/2106.04560)经验性扩展法则.
+- [Dosovitskiy 等——An Image is Worth 16x16 Words（arXiv:2010.11929）](https://arxiv.org/abs/2010.11929)——原始 ViT 论文。
+- [He 等——Masked Autoencoders Are Scalable Vision Learners（arXiv:2111.06377）](https://arxiv.org/abs/2111.06377)——MAE 与自监督预训练。
+- [Oquab 等——DINOv2（arXiv:2304.07193）](https://arxiv.org/abs/2304.07193)——无标签的大规模自蒸馏。
+- [Darcet 等——Vision Transformers Need Registers（arXiv:2309.16588）](https://arxiv.org/abs/2309.16588)——寄存器词元与伪影分析。
+- [Tschannen 等——SigLIP 2（arXiv:2502.14786）](https://arxiv.org/abs/2502.14786)——2026 年默认视觉塔。
+- [Zhai 等——Scaling Vision Transformers（arXiv:2106.04560）](https://arxiv.org/abs/2106.04560)——经验缩放定律。
