@@ -1,148 +1,150 @@
-# 安全  秘密,API关键旋转,审计日志,护
+# 安全：密钥、API Key 轮换、审计日志与护栏
 
-> 通过集中式库存 (HashiCorp Vault, AWS 秘密管理器,Azure 密钥库) 消除秘密扩散. 永远不要存储凭据在配置文件, 使用IAM角色而不是静态键;用于CI/CD的OIDC. AI-gateway模式是2026年解决方案:应用程序 → gateway →模型提供商, 换机,没有 Slack"谁有新钥匙"的消息. 转换政策 ≤90天;每次提交时使用TruffleHog/GitGuardian/Gitleaks扫描. 零信任:MFA,SSO,RBAC/ABAC,短寿命的代币,设备姿势.  PII 清理使用实体识别来掩盖 PHI/PII 在转发之前;一致的代码化 (Mesh 方法) 将对稳定的位持有人的敏感值映射,因此 LLM 保持代码/关系语义. 网络退出:仅在专用VPC/VNet子网上提供LLM服务`api.openai.com`现在`api.anthropic.com`通过被破坏的CI/CD凭证攻击, 通过数千个客户部署, 泄露了环境.
+> 2026 年要消除 secrets sprawl，标准做法是使用集中式密钥库，例如 HashiCorp Vault、AWS Secrets Manager、Azure Key Vault。凭据绝不能存进配置文件、版本库里的 env 文件或电子表格。应用优先使用 IAM roles 而不是静态 key；CI/CD 优先使用 OIDC。AI-gateway 模式是 2026 年的主流答案：apps → gateway → model provider，gateway 在运行时从 vault 拉取凭据。只要在 vault 里完成 rotation，所有应用几分钟内就会拿到新 key，不需要 redeploy，也不需要在 Slack 里到处问“谁有新 key”。rotation policy 应该 ≤90 天；每次 commit 都要用 TruffleHog、GitGuardian 或 Gitleaks 做扫描。零信任基线包括 MFA、SSO、RBAC/ABAC、短生命周期 token 和 device posture。PII scrubbing 则依靠 entity recognition 在转发前遮蔽 PHI/PII；consistent tokenization（Mesh approach）把敏感值映射成稳定占位符，以便 LLM 保留代码与关系语义。网络出站方面，LLM 服务应放在独立 VPC/VNet 子网，只允许访问 `api.openai.com`、`api.anthropic.com` 等必要域名，其余一律阻断。2026 年最值得记住的事故驱动案例，是 Vercel 供应链攻击：攻击者通过受损的 CI/CD 凭据，跨数千个客户部署窃取了 env vars。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy PII-scrubber + audit-log writer)
-**Prerequisites:** Phase 17 · 19 (AI Gateways), Phase 17 · 13 (Observability)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库，玩具级 PII 脱敏器与审计日志写入器）
+**Prerequisites:** 阶段 17 · 19（AI 网关）、阶段 17 · 13（可观测性）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 列出四种秘密管理反模式 (VCS中的配置文件,硬码的 env,电子表格,静态密钥) 并命名它们的替代.
-- 解释AI-gateway-pulls-from-vault模式作为2026年生产标准.
-- 实现一个具有一致的代码化 (相同值 →相同的位置持有者) 的 PII 清洗器,以便语义存活下来.
-- 举个2026年维尔塞尔供应链事件,以及它所教导的关于CI/CD认证卫生情况.
+- 列出 4 种 secrets management 反模式：把配置文件提交到 VCS、硬编码 env、用电子表格管密钥、长期静态 key，并说出各自替代方案。
+- 解释 AI-gateway-pulls-from-vault 这一模式为什么已经成为 2026 年生产环境标准。
+- 实现一个带 consistent tokenization 的 PII scrubber，让相同敏感值始终映射到相同占位符，并保留语义关系。
+- 说出 2026 年 Vercel 供应链事件，以及它对 CI/CD credential hygiene 的警示。
 
 ## 问题
 
-实习生承诺`.env`关键已经在 git 历史中 GitGuardian 扫描捕获它,你的旋转过程是"缓慢团队,更新40个配置文件,重新部署所有服务". 8 小时后,你的服务的半数已经开启,而另一半正在等待部署窗户.
+一个实习生把带 API key 的 `.env` 提交进了仓库。虽然很快删掉了，但 key 已经进入 git history。GitGuardian 扫描发现后，你们的 rotation 流程却是：“Slack 通知全员、更新 40 份配置、重部署所有服务。”8 小时后，一半服务已经切到新 key，另一半还在等变更窗口。
 
-单独,用户提示包括"我的SSN是123-45-6789."提示是向OpenAI.你有BAA,但你的内部政策是在转发之前掩盖个人信息.你没有.
+与此同时，用户 prompt 里包含了 “My SSN is 123-45-6789.”，请求被直接发给了 OpenAI。你们虽然签了 BAA，但内部 policy 明明要求在转发前屏蔽 PII，结果并没有做到。
 
-另外,你的EKS集群的LLM组件可以到达任何互联网主机.有人通过DNS搜索将数据输入攻击者控制的域名.
+再同时，你们 EKS 集群里的 LLM pod 可以访问任意公网主机。于是有人通过指向攻击者域名的 DNS 查询把数据外带了出去，而你们没有任何拦截。
 
-法律法师服务的安全必须解决三个向量:安全库支持的凭证,个人信息清除,网络输出过,审计日志.
+LLM 服务的安全必须同时覆盖这三类问题：vault-backed credentials、PII scrubbing、network egress filtering，以及审计日志。
 
 ## 概念
 
-### 集中式保险柜+IAM角色拉
+### 集中式密钥库 + IAM role 拉取
 
-**Vault**鱼公司的秘密管理器,Azure Key Vault,GCP秘密管理器.
+**Vault**：HashiCorp Vault、AWS Secrets Manager、Azure Key Vault、GCP Secret Manager。它们共同承担“一处存真相”的角色。
 
-**IAM role**:app/gateway通过其IAM身份进行认证,而不是静态密钥.Vault返回代币的终身秘密.
+**IAM role**：应用或 gateway 用自己的 IAM 身份完成认证，而不是携带静态 key。vault 再按 token 生命周期把 secret 返回给它。
 
-**The AI-gateway pattern**门口拉动`OPENAI_API_KEY`随着请求的时间,从库存中转换,下一个请求得到了新的钥匙.
+**AI-gateway 模式**：gateway 在处理请求时，从 vault 动态拉取 `OPENAI_API_KEY`。只要在 vault 中完成 rotation，下一次请求就会自动拿到新 key，不需要 redeploy。
 
-### 转换政策 ≤90天
+### 轮换周期不超过 90 天
 
-所有API密钥,库存根代币,CI/CD凭证,自动旋转,如果可能,手动旋转记录和追踪.
+所有 API key、vault root token、CI/CD 凭据都应该遵守这个窗口。能自动轮换的就自动轮换；必须手动轮换的，也要留下日志并可追踪。
 
-### 秘密扫描
+### 密钥扫描
 
-- **TruffleHog**                     
-- **GitGuardian**商业,高精度.
-- **Gitleaks**OSS,运行在CI.
+- **TruffleHog**：基于 regex + entropy 扫描 commit。
+- **GitGuardian**：商业方案，准确率较高。
+- **Gitleaks**：开源方案，常见于 CI。
 
-击每一个承诺,如果发现新的秘密.
+每次 commit 都要扫描。一旦发现新增 secret，就阻断 PR。
 
-### 零可靠的姿势
+### 零信任姿态
 
-- 对于所有账户,必须进行外汇.
-- 通过SAML/OIDC进行SSO.
-- 基于角色的RBAC或基于属性的ABAC,用于细粒度的访问.
-- 短暂的代币 (小时,不是几天).
-- 设备姿势  只有具有磁盘加密的体内设备.
+- 所有账号都必须启用 MFA。
+- SSO 走 SAML 或 OIDC。
+- 细粒度访问控制使用 RBAC 或 ABAC。
+- token 尽量短命，按小时而不是按天计算。
+- 设备姿态要纳入控制，只允许启用磁盘加密的企业设备接入。
 
-### 清洗PII/PHI
+### PII / PHI 脱敏
 
-在提示离开你的内射之前:
+在 prompt 离开你自己的基础设施之前，需要经过下面几个步骤：
 
-1. 实体认可 (空间NER,Presidio,商业).
-2. 面具匹配的实体: `"My SSN is 123-45-6789"`其他`"My SSN is [SSN_TOKEN_A3F]"`现在,我们要去.
-3. 连贯的标记化 (Mesh方法):将相同的值映射到同一位持有者,因此LLM保持关系.
-4. 选择性反向映射,用于LLM响应.
+1. 做 entity recognition，可以用 spaCy NER、Presidio 或商业方案。
+2. 屏蔽命中的实体，例如把 `"My SSN is 123-45-6789"` 变成 `"My SSN is [SSN_TOKEN_A3F]"`。
+3. 使用 consistent tokenization（Mesh approach），让相同的敏感值始终映射到同一个 placeholder，以便 LLM 保留关系语义。
+4. 如果业务需要，可以为 LLM 输出做可选的 reverse mapping。
 
-静态regex过器捕获基本模式,NER捕获更多.使用两者.
+静态 regex 过滤器适合抓基础模式，NER 适合抓更复杂的实体。实际生产里两者都要上。
 
-### 输入+输出防护
+### 输入与输出护栏
 
-输入:阻止已知 jailbreaks,禁止主题;每用户的利率限制.
+输入侧：阻断已知 jailbreak、禁止话题，并按用户做 rate limit。
 
-输出:泄露的秘密 (API密钥模式,拒绝文本中的电子邮件模式),政策违规的分类器.
+输出侧：用 regex 检查是否泄露 secret，例如 API key pattern，或在拒答上下文里是否出现 email pattern；再叠加 classifier 检测 policy violation。
 
-### 网络出口白名单
+### 网络出站白名单
 
-在专门的子网中提供LLM服务:
-- 清单:`api.openai.com`现在`api.anthropic.com`导向DB终点,保险终点.
-- 其他一切:放下.
-- 通过只允许列表的解决器 (避免 DNS 道输出).
+把 LLM 服务放进独立子网，并把出站策略收紧到 allowlist：
+
+- 允许访问：`api.openai.com`、`api.anthropic.com`、vector DB endpoint、vault endpoint。
+- 其他所有外联全部 drop。
+- DNS 也通过只允许 allowlist 的 resolver，以防 DNS tunneling exfiltration。
 
 ### 审计日志
 
-每次LLM电话的不可变记录:
-- 时间标签.
-- 用户/租户
-- 快速哈希 (不是原始的隐私提示).
-- 模型+版本.
-- 标志数量.
-- 价格.
-- 响应哈希.
-- 任何护旅行.
+每一次 LLM 调用都应该留下不可变日志，至少包括：
 
-根据监管要求保留 (SOC2 1年,HIPAA 6年).
+- Timestamp
+- User / tenant
+- Prompt hash，而不是原始 prompt，以降低隐私风险
+- Model + version
+- Token counts
+- Cost
+- Response hash
+- 任何 guardrail 触发记录
 
-### 2026年,弗塞尔事件
+日志保留时间按监管要求来做，例如 SOC 2 通常保 1 年，HIPAA 通常保 6 年。
 
-供应链攻击:受损的CI/CD凭证在数千个客户部署中被泄露. 课程:CI/CD凭证是产品等等价. 存储在保险箱中. 范围狭窄. 激进旋转.
+### 2026 年 Vercel 事件
+
+这是一次典型的供应链攻击：攻击者利用被攻陷的 CI/CD 凭据，从数千个客户部署中外带 env vars。结论非常直接：CI/CD 凭据就是 production-equivalent credential。它们必须放进 vault、尽可能缩小权限范围，并且激进轮换。
 
 ### 你应该记住的数字
 
-- 转换政策: ≤90天
-- 查看每一个提交:TruffleHog / GitGuardian / Gitleaks.
-- 据报道, 据报道, 据报道, 据报道,
-- 审计日志保存:SOC2 = 1年,HIPAA = 6年.
+- Rotation policy：≤ 90 天。
+- 每次 commit 都要跑扫描：TruffleHog、GitGuardian、Gitleaks。
+- Vercel 2026 事件：CI/CD 凭据失陷，导致数千个客户的 env vars 泄露。
+- Audit log retention：SOC 2 = 1 年，HIPAA = 6 年。
 
 ```figure
 i4-vault-rotation
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`实现具有一致的标记化和仅附录的审计日志的玩具 PII清洗器.
+`code/main.py` 实现了一个玩具版 PII scrubber，带有 consistent tokenization 和 append-only audit log。
 
-## 运送它
+## 交付物
 
-这一课产生了`outputs/skill-llm-security-plan.md`鉴于监管范围和当前状态, 计划库迁移,清洗,出口,审计日志.
+这一课产出 `outputs/skill-llm-security-plan.md`。给定监管范围和当前状态，它会规划 vault migration、scrubber、egress policy 和 audit log。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`发送两个引用相同的SSN的提示,确认两者都得到了相同的位置.
-2. 设计一个vLLM-on-EKS部署的网络退出政策,称为OpenAI + Anthropic + Weaviate.
-3. 您在 git 历史中发现一个关键 (2岁) 什么是正确的答案?
-4. 设计保留层次 (热30天,热12个月,冷6个月).
-5. 辩论反向标记 (将实际值替换为LLM响应) 是否值得复杂性与保持位持有人可见性.
+1. 运行 `code/main.py`。发送两个引用同一个 SSN 的 prompt，确认它们都被替换成同一个 placeholder。
+2. 为一个调用 OpenAI + Anthropic + Weaviate 的 vLLM-on-EKS 部署设计 network egress policy。
+3. 你在 git history 里发现了一把 2 年前的 key。正确动作是什么：只 rotation、只清 history，还是两者都做？说明理由。
+4. 如果 audit log 每天增长 10 GB，设计一个分层保留策略，例如 hot 30d、warm 12mo、cold 6yr。
+5. 论证 reverse-tokenization 是否值得这套复杂度，还是直接让 placeholder 保持可见更合理。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说什么 | 实际含义 |
 |------|----------------|------------------------|
-| Vault | "secrets store" | Centralized credential management service |
-| IAM role | "identity-based auth" | Role assumed by app; returns short-lived creds |
-| OIDC for CI/CD | "cloud-issued tokens" | No static keys in CI — identity via OIDC |
-| TruffleHog / GitGuardian / Gitleaks | "secret scanners" | Commit-time secret detection |
-| RBAC / ABAC | "access control" | Role-based vs attribute-based |
-| PII scrubbing | "data masking" | Remove or tokenize sensitive entities |
-| Consistent tokenization | "stable placeholders" | Same value → same token each time |
-| Mesh approach | "Mesh tokenization" | Semantic-preserving tokenization pattern |
-| Egress whitelist | "outbound allowlist" | Only permitted domains reachable |
-| Audit log | "immutable history" | Append-only record for compliance |
+| Vault | “密钥存储” | 集中式凭据管理服务 |
+| IAM role | “基于身份的认证” | 由应用承担的角色，用于换取短生命周期凭据 |
+| OIDC for CI/CD | “云签发 token” | CI 中不放静态 key，而是用 OIDC 做身份交换 |
+| TruffleHog / GitGuardian / Gitleaks | “密钥扫描器” | 在 commit 时发现 secrets 的扫描器 |
+| RBAC / ABAC | “访问控制” | 基于角色与基于属性的授权方式 |
+| PII scrubbing | “数据脱敏” | 删除或 token 化敏感实体 |
+| Consistent tokenization | “稳定占位符” | 相同值每次都映射为同一个 token |
+| Mesh approach | “Mesh 令牌化” | 一种尽量保留语义关系的 tokenization 模式 |
+| Egress whitelist | “出站 allowlist” | 只允许访问明确批准的域名 |
+| Audit log | “不可变历史” | 用于合规和审计的 append-only 记录 |
 
-## 进一步阅读
+## 延伸阅读
 
 - [Doppler — Advanced LLM Security](https://www.doppler.com/blog/advanced-llm-security)
 - [Portkey — Manage LLM API keys with secret references](https://portkey.ai/blog/secret-references-ai-api-key-management/)
 - [Datadog — LLM Guardrails Best Practices](https://www.datadoghq.com/blog/llm-guardrails-best-practices/)
 - [JumpServer — Secrets Management Best Practices 2026](https://www.jumpserver.com/blog/secret-management-best-practices-2026)
-- [Microsoft Presidio](https://github.com/microsoft/presidio) 检测和匿名化个人信息.
+- [Microsoft Presidio](https://github.com/microsoft/presidio)：PII 检测与匿名化工具。
 - [HashiCorp Vault docs](https://developer.hashicorp.com/vault/docs)
