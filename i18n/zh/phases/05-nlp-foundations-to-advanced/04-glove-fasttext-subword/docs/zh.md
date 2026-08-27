@@ -1,39 +1,39 @@
-#  GloVe,FastText和子词嵌入
+# GloVe、FastText 与子词嵌入
 
-> 词2Vec训练每字一个嵌入. GloVe因数化了共发生矩阵. 快文本嵌入了零件. BPE 与变压器桥梁.
+> Word2Vec 为每个词训练一个嵌入。GloVe 分解共现矩阵，FastText 嵌入词的组成部分，BPE 则搭起了通往 Transformer 的桥梁。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 5 · 03 (Word2Vec from Scratch)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 5 · 03（从零实现 Word2Vec）
+**Time:** 约 45 分钟
 
 ## 问题
 
-Word2Vec留下了两个问题.
+Word2Vec 留下了两个悬而未决的问题。
 
-首先,有一个平行的研究线,直接因子化了共发生矩阵 (LSA,HAL) 而不是在线跳转图更新. Word2Vec的反复方法基本上更好,还是两种方法处理的方式的差异是构成的?**GloVe**答案是:对矩阵因数分解,以精心选择的损失匹配或超过Word2Vec,
+首先，另有一条研究路线直接分解共现矩阵（LSA、HAL），而不是在线执行 Skip-gram 更新。Word2Vec 的迭代方法真的从根本上更优，还是差异仅源自两种方法处理计数的方式？**GloVe** 给出了答案：只要精心选择损失函数，矩阵分解便能达到或超过 Word2Vec 的效果，而且训练成本更低。
 
-第二,这两种方法都没有一个故事,`Zoomer-approved`现在`dogecoin`任何本质的名词,上周发明,每一个曲的罕见根.**FastText**字符是其部分的总和,包括形态,所以即使是词汇之外的字符也得到了合理的向量.
+其次，两种方法都无法处理从未见过的词。`Zoomer-approved`、`dogecoin`、上周刚创造的任何专有名词，以及罕见词根的每一种屈折形式。**FastText** 通过嵌入字符 n 元语法解决了这个问题：一个词等于其各组成部分（包括词素）之和，因此即使是词表外单词，也能得到合理的向量。
 
-第三,当变革者到达时,问题又发生了变化.**Byte-pair encoding (BPE)**现在,我们在研究中发现,每一个现代的代码符号都是一种代码符号.
+第三，Transformer 出现后，问题再次发生变化。词级词表最多只能容纳约一百万个条目，而真实语言远比这开放。**字节对编码（BPE）**及其同类方法学习由高频子词单元构成的词表，并覆盖所有输入，从而解决了这个问题。每一种现代大语言模型的现代分词器都是子词分词器。
 
-这一课将包括三个,然后解释哪个是什么时候.
+本课将逐一讲解这三种方法，然后说明在不同情况下应选择哪一种。
 
 ## 概念
 
-**GloVe (Global Vectors).**构建一个词-词共发生矩阵`X`在哪里`X[i][j]`是多么经常的词`j`在"字"中出现`i`列车向量,这样`v_i · v_j + b_i + b_j ≈ log(X[i][j])`减肥,所以频繁的对子不占主导地位.
+**GloVe（全局向量）。** 构建词—词共现矩阵 `X`，其中 `X[i][j]` 表示词 `j` 在词 `i` 的上下文中出现了多少次。训练向量，使 `v_i · v_j + b_i + b_j ≈ log(X[i][j])`。对损失加权，避免高频词对支配结果。完成。
 
-**FastText.**一个词是其字符n-grams的总和加上单词本身.`where`成为`<wh, whe, her, ere, re>, <where>`作为 Word2Vec,训练:不可见的单词 (`whereupon`) 由已知n-gram组成.
+**FastText。** 一个词由其字符 n 元语法与这个词本身相加而成。`where` 会变成 `<wh, whe, her, ere, re>, <where>`。词向量就是这些组成向量之和。训练方式与 Word2Vec 相同。好处是：未见过的词（`whereupon`）也可以由已知的 n 元语法组合出来。
 
-**BPE (Byte-Pair Encoding).**开始使用单个字节 (或字符) 的词汇库. 计算体内每个相邻的对. 将最频繁的对合并成一个新的代币. 重复为 `k`结果:一个词汇库`k + 256`标记,其中频繁的序列 (`ing`现在`tion`现在`the`单个代币,稀有词被分解成熟悉的部分.
+**BPE（字节对编码）。** 从单个字节（或字符）组成的词表开始，统计语料库中的每一对相邻元素，把出现最频繁的一对合并为一个新词元，重复 `k` 轮。最终得到包含 `k + 256` 个词元的词表：高频序列（`ing`、`tion`、`the`）成为单一词元，罕见词则被拆成熟悉的片段。任何句子都能被分词。
 
 ```figure
 n5-subword-merge
 ```
 
-## 建立它
+## 动手构建
 
-### 聚合物:对合发生矩阵进行因素化
+### GloVe：分解共现矩阵
 
 ```python
 import numpy as np
@@ -81,9 +81,9 @@ def glove_train(vocab, pair_counts, dim=16, epochs=100, lr=0.05, x_max=100, alph
     return W + W_tilde
 ```
 
-值得命名的两个移动件.`f(x) = (x/x_max)^alpha`低权重非常频繁的对 (如`(the, and)`总数是总数,总数是总数,总数是总数,总数是总数.`W`其他`W_tilde`总结两者都是一个公布的技巧,
+这里有两个值得点明的关键环节。加权函数 `f(x) = (x/x_max)^alpha` 会降低极高频词对（如 `(the, and)`）的权重，使它们不会支配损失。最终嵌入是 `W`（中心词）与 `W_tilde`（上下文）两张表之和。把二者相加是论文中公开的一项技巧，效果通常优于只使用其中一张表。
 
-### 快文:有潜词的嵌入
+### FastText：感知子词的嵌入
 
 ```python
 def char_ngrams(word, n_min=3, n_max=6):
@@ -100,7 +100,7 @@ def char_ngrams(word, n_min=3, n_max=6):
 {'<where>', '<wh', 'whe', 'her', 'ere', 're>', '<whe', 'wher', 'here', 'ere>', '<wher', 'where', 'here>'}
 ```
 
-每个词由其 n-gram 集合 (通常是3至6个字符) 表示.词嵌入是其 n-gram 嵌入的总和.对于跳转-gram 训练,在 Word2Vec 使用单个向量时,插入此.
+每个词都用它的一组 n 元语法表示（通常为 3～6 个字符）。词嵌入是各个 n 元语法嵌入之和。在 Skip-gram 训练中，只需把 Word2Vec 原本使用的单一向量替换为它。
 
 ```python
 def fasttext_vector(word, ngram_table):
@@ -111,9 +111,9 @@ def fasttext_vector(word, ngram_table):
     return np.sum(vecs, axis=0)
 ```
 
-对于一个未见的词,只要知道它的n-gram,你仍然得到一个向量.`whereupon`股票`<wh`现在`her`现在`ere`其他`<where`随着`where`两者彼此靠近.
+对于未见过的词，只要它的一部分 n 元语法已知，你仍能得到向量。`whereupon` 共享 `<wh`、`her`、`ere` 和 `<where` 等已在 `where` 中出现的片段，因此二者会落在彼此附近。
 
-### 语:学习子词汇
+### BPE：学习式子词词表
 
 ```python
 def learn_bpe(corpus, k_merges):
@@ -172,13 +172,13 @@ def apply_bpe(word, merges):
 ['low', 'est</w>']
 ```
 
-首先,重复的重复将最常见的邻居对合并.`low`现在`est`现在`tion`) 成为单个代币,稀有词语也会破碎.
+第一轮会合并最常见的相邻对。经过足够多轮后，高频子串（`low`、`est`、`tion`）会成为单一词元，罕见词则被清晰地拆开。
 
-实际的GPT/BERT/T5代币化器学习了30k-100k的合并.结果:任何文本都将代币化为已知ID的有限长度序列,没有OOV.
+真正的 GPT / BERT / T5 分词器会学习 3 万～10 万次合并。结果是：任何文本都可以转换成长度受控的已知 ID 序列，不再出现 OOV。
 
-## 用它
+## 学以致用
 
-实际上,你很少自己训练这些.
+在实际工作中，你很少亲自训练这些模型，而是加载预训练检查点。
 
 ```python
 import fasttext.util
@@ -188,7 +188,7 @@ print(ft.get_word_vector("whereupon").shape)
 print(ft.get_word_vector("zoomerapproved").shape)
 ```
 
-对于变压器时代的BPE式子词代码化:
+在 Transformer 时代，可以这样使用 BPE 风格的子词分词：
 
 ```python
 from transformers import AutoTokenizer
@@ -201,21 +201,21 @@ print(tok.tokenize("unbelievably tokenized"))
 ['un', 'bel', 'iev', 'ably', 'Ġtoken', 'ized']
 ```
 
-其他`Ġ`预सर्ग标志着词界限 (GPT-2 公约).每个现代代币是BPE变体,WordPiece (BERT),或SentencePiece (T5,LLaMA).
+`Ġ` 前缀表示单词边界（GPT-2 的约定）。每一种现代分词器都属于 BPE 变体、WordPiece（BERT）或 SentencePiece（T5、LLaMA）。
 
-### 什么时候选择哪个
+### 如何选择
 
-| Situation | Pick |
+| 场景 | 选择 |
 |-----------|------|
-| Pretrained general-purpose word vectors, no OOV tolerance needed | GloVe 300d |
-| Pretrained general-purpose word vectors, must handle misspellings / neologisms / morphologically rich languages | FastText |
-| Anything going into a transformer (training or inference) | Whatever tokenizer the model shipped with. Never swap. |
-| Training your own language model from scratch | Train a BPE or SentencePiece tokenizer on your corpus first |
-| Production text classification with a linear model | Still TF-IDF. Lesson 02. |
+| 预训练通用词向量，不要求容忍 OOV | GloVe 300d |
+| 预训练通用词向量，必须处理拼写错误、新词或形态丰富的语言 | FastText |
+| 任何送入 Transformer 的内容（训练或推理） | 使用模型自带的分词器，绝不要替换。 |
+| 从零训练自己的语言模型 | 先在语料库上训练 BPE 或 SentencePiece 分词器 |
+| 使用线性模型的生产文本分类 | 仍然选择 TF-IDF，见第 02 课。 |
 
-## 运送它
+## 交付成果
 
-保存如`outputs/skill-embeddings-picker.md`其他:
+保存为 `outputs/skill-embeddings-picker.md`：
 
 ```markdown
 ---
@@ -237,25 +237,25 @@ Given a task and dataset description, you output:
 Refuse to recommend training a custom tokenizer when the user is fine-tuning a pretrained LLM. Refuse to recommend word-level tokenization for any model targeting production inference. Flag non-English / multi-script corpora as needing SentencePiece with byte fallback.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`char_ngrams("playing")`其他`char_ngrams("played")`计算两个n-gram集合的Jaccard重叠.`pla`现在`lay`现在`play`),这就是为什么FastText很好地转移到其他形式变体中.
-2. **Medium.**延长时间`learn_bpe`根据数组合数,绘制每个字符的代码.你应该看到快速的压缩,每代码的压缩量接近2-3个字符.
-3. **Hard.**训练一个K合并BPE在莎士比亚的完整作品.比较普通词的标记与罕见的正名词. 测量每字的平均标记前后.写出你惊的东西.
+1. **简单。** 运行 `char_ngrams("playing")` 和 `char_ngrams("played")`，计算两个 n 元语法集合的 Jaccard 重叠度。你应当能看到大量共享片段（`pla`、`lay`、`play`），这就是 FastText 能在形态变体间良好迁移的原因。
+2. **中等。** 扩展 `learn_bpe` 以跟踪词表增长。绘制每个语料字符对应的词元数随合并次数变化的曲线。你会看到压缩率起初快速提高，随后渐近于每个词元约 2～3 个字符。
+3. **困难。** 在莎士比亚全集上训练一个执行 1000 次合并的 BPE。比较常见词和罕见专有名词的分词结果，测量合并前后每个词的平均词元数，并写下令你意外的发现。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Co-occurrence matrix | Word-word frequency table | `X[i][j]` = how often word `j` appears in a window around word `i`. |
-| Subword | Piece of a word | A character n-gram (FastText) or learned token (BPE/WordPiece/SentencePiece). |
-| BPE | Byte-pair encoding | Iterative merging of most-frequent adjacent pairs until vocabulary hits target size. |
-| OOV | Out of vocabulary | Word the model has never seen. Word2Vec/GloVe fail. FastText and BPE handle it. |
-| Byte-level BPE | BPE on raw bytes | GPT-2's scheme. Vocabulary starts with 256 bytes, so nothing is ever OOV. |
+| 共现矩阵 | 词—词频率表 | `X[i][j]` = 词 `j` 在词 `i` 周围的窗口中出现了多少次。 |
+| 子词 | 单词的一部分 | 字符 n 元语法（FastText）或学习到的词元（BPE/WordPiece/SentencePiece）。 |
+| BPE | 字节对编码 | 反复合并最频繁的相邻对，直到词表达到目标大小。 |
+| OOV | 词表外 | 模型从未见过的词。Word2Vec/GloVe 无法处理，FastText 和 BPE 可以。 |
+| 字节级 BPE | 对原始字节执行 BPE | GPT-2 的方案。词表从 256 个字节开始，因此任何内容都不会成为 OOV。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Pennington, Socher, Manning (2014). GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/pubs/glove.pdf)七页的GloVe论文,仍然是损失的最佳衍生.
-- [Bojanowski et al. (2017). Enriching Word Vectors with Subword Information](https://arxiv.org/abs/1607.04606)快讯.
-- [Sennrich, Haddow, Birch (2016). Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909)是引入BPE到现代NLP的论文.
-- [Hugging Face tokenizer summary](https://huggingface.co/docs/transformers/tokenizer_summary)BPE,WordPiece和SentencePiece实际上是如何不同的.
+- [Pennington、Socher、Manning（2014），GloVe：词表示的全局向量](https://nlp.stanford.edu/pubs/glove.pdf)——GloVe 论文，只有七页，至今仍是对损失函数最好的推导。
+- [Bojanowski 等（2017），以子词信息丰富词向量](https://arxiv.org/abs/1607.04606)——FastText。
+- [Sennrich、Haddow、Birch（2016），使用子词单元进行稀有词神经机器翻译](https://arxiv.org/abs/1508.07909)——把 BPE 引入现代自然语言处理的论文。
+- [Hugging Face 分词器概览](https://huggingface.co/docs/transformers/tokenizer_summary)——BPE、WordPiece 与 SentencePiece 在实践中的具体区别。
