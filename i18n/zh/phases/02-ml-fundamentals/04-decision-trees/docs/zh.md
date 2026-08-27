@@ -1,32 +1,32 @@
-# 决策树木和随机森林
+# 决策树与随机森林
 
-> 决策树只是一个流程图,但森林是 ML 中最强大的工具之一.
+> 决策树不过是一张流程图，但由许多树组成的森林，却是机器学习中最强大的工具之一。
 
-**Type:** Build
-**Language:**字符串
-**Prerequisites:** Phase 1 (Lessons 09 Information Theory, 06 Probability)
-**Time:** ~90 minutes
+**Type:** 构建
+**Language:** Python
+**Prerequisites:** 阶段 1（第 09 课信息论、第 06 课概率论）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 实现基尼杂质,缩和信息获取计算,以找到最佳的决策树分区
-- 建立一个从零开始的决策树分类器,使用切割前控制 (最大深度,最小样本)
-- 使用启动线抽样和特征随机化构建随机森林,并解释为什么它减少差异性
-- 比较MDI特征的重要性与变量重要性,并确定MDI偏见何时
+- 实现 Gini impurity、entropy 和 information gain 计算，以寻找最优决策树分裂
+- 从零构建带预剪枝控制（最大深度、最小样本数）的决策树分类器
+- 使用 bootstrap sampling 与特征随机化构建随机森林，并解释它为何能降低方差
+- 比较 MDI 特征重要性与 permutation importance，并识别 MDI 何时存在偏差
 
 ## 问题
 
-您有表格数据.行列是样本,列是特征,您想预测的目标列.您可以将神经网络扔进它.但对于表格数据,基于树的模型 (决策树,随机森林,梯度增强树) 始终超过深度学习.结构数据上的Kaggle竞赛由XGBoost和LightGBM主导,而不是转换器.
+你有一份表格数据：每行是一个样本，每列是一个特征，还有一列需要预测的目标。你当然可以把神经网络用在它上面，但对表格数据而言，树模型——决策树、随机森林、梯度提升树——持续优于深度学习。结构化数据的 Kaggle 竞赛由 XGBoost 和 LightGBM 主导，而不是 Transformer。
 
-为什么?树木处理混合特征类型 (数量和类型) 没有预处理.它们处理无线性关系,没有特征工程.它们可以解释:你可以看树木并看到为什么确切地做出预测.随机森林,平均有很多树木,非常耐适合中等规模的数据集.
+为什么？树无需预处理就能处理数值与类别等混合特征类型，无需特征工程就能处理非线性关系，而且具有可解释性：查看树结构，就能准确知道预测依据。随机森林会对许多树取平均，因此在中等规模数据集上具有很强的抗过拟合能力。
 
-通过使用复发分离,这个课程从零开始构建决策树,然后在顶部构建一个随机的森林.你将实现分离标准 (基尼杂质,透,获取信息) 背后的数学,并了解为什么一个弱的学习者集团成为一个强大的.
+本课会先通过递归分裂从零构建决策树，再在其上构建随机森林。你将实现分裂准则背后的数学，包括 Gini impurity、entropy 和 information gain，并理解弱学习器组成的 ensemble 为何会成为强学习器。
 
-## 概念
+## 核心概念
 
-### 决策树的作用
+### 决策树做什么
 
-决策树通过问答答/否问题进行序列,将特征空间分为矩形区域.
+决策树通过一连串“是/否”问题，把特征空间划分为矩形区域。
 
 ```mermaid
 graph TD
@@ -38,15 +38,15 @@ graph TD
     C -->|No| G["Deny"]
 ```
 
-每个内部节点都会测试一个特征,对一个门进行测试. 每个叶节点都会做一个预测.
+每个内部节点都会用阈值检验某个特征，每个叶节点则给出预测。对新数据分类时，从根节点开始沿分支向下，直到到达叶节点。
 
-树由顶部下构建,在每个节点上选择最好分离数据的特征和门. "最好"是通过分类标准定义的.
+树会自顶向下构建：在每个节点选择最能分隔数据的特征和阈值。“最好”由分裂准则定义。
 
-### 分类标准:测量杂质
+### 分裂准则：衡量不纯度
 
-我们想把它们分为尽可能"纯净"的子节点,这意味着每个子都包含一个类.
+每个节点都包含一组样本。我们希望分裂后，子节点尽可能“纯”，也就是每个子节点主要包含一个类别。
 
-**Gini impurity**测量随机选择的样本如果根据该节点的类分布标记,将被错误分类的概率.
+**Gini impurity** 衡量：如果按照该节点的类别分布随机给样本贴标签，随机选中的样本被错误分类的概率。
 
 ```
 Gini(S) = 1 - sum(p_k^2)
@@ -54,7 +54,7 @@ Gini(S) = 1 - sum(p_k^2)
 where p_k is the proportion of class k in set S.
 ```
 
-对于一个纯节点 (所有一个类),吉尼=0.对于一个50/50类的二进制分区,吉尼=0.5.较低更好.
+纯节点中所有样本属于一个类别，Gini = 0；二分类各占一半时，Gini = 0.5。越低越好。
 
 ```
 Example: 6 cats, 4 dogs
@@ -62,13 +62,13 @@ Example: 6 cats, 4 dogs
 Gini = 1 - (0.6^2 + 0.4^2) = 1 - (0.36 + 0.16) = 0.48
 ```
 
-**Entropy**测量节点中的信息内容 (混乱).
+**Entropy** 衡量节点中的信息量，也就是混乱程度，第 1 阶段第 09 课已经介绍。
 
 ```
 Entropy(S) = -sum(p_k * log2(p_k))
 ```
 
-对于纯节点,进化值=0.对于50/50的二进制分区,进化值=1.0.较低更好.
+纯节点 entropy = 0；二分类各占一半时 entropy = 1.0。越低越好。
 
 ```
 Example: 6 cats, 4 dogs
@@ -79,7 +79,7 @@ Entropy = -(0.6 * log2(0.6) + 0.4 * log2(0.4))
         = 0.971 bits
 ```
 
-**Information gain**分后的杂质 (化或基尼) 减少.
+**Information gain** 是分裂后不纯度（entropy 或 Gini）的下降量。
 
 ```
 IG(S, feature, threshold) = Impurity(S) - weighted_avg(Impurity(S_left), Impurity(S_right))
@@ -87,53 +87,53 @@ IG(S, feature, threshold) = Impurity(S) - weighted_avg(Impurity(S_left), Impurit
 where the weights are the proportions of samples in each child.
 ```
 
-它们的目标是: 尝试每一个功能和每一个可能的门.
+每个节点上的贪心算法会尝试每个特征和每个可能阈值，选择使 information gain 最大的（特征，阈值）组合。
 
-### 分裂的方法
+### 分裂如何进行
 
-对于一个数据集,在当前节点上具有 n 个特征和 m 样本:
+当前节点含 m 个样本、n 个特征时：
 
-1. 对于每个特征 j (j = 1 到 n):
-   - 按特征排序样本
-   - 试试连续不同的值之间的每个中点作为门
-   - 计算每个门的信息收益
-2. 选择具有最高信息获取的特征和门
-3. 按左 (特征 <=门) 和右 (特征 >门) 分开数据
-4. 每个孩子的重复
+1. 对每个特征 j（j = 1 到 n）：
+   - 按特征 j 对样本排序
+   - 依次尝试相邻不同数值的中点作为阈值
+   - 计算每个阈值的 information gain
+2. 选择 information gain 最高的特征和阈值
+3. 把数据分成左侧（feature <= threshold）与右侧（feature > threshold）
+4. 对两个子节点递归执行
 
-利的方法不能保证全球最佳树.找到最佳树很难.
+这种贪心方法无法保证得到全局最优树，因为寻找最优树是 NP-hard 问题，但贪心分裂在实践中效果很好。
 
 ### 停止条件
 
-树木在不停的条件下生长,直到每一张叶子都清纯 (每叶一样子). 这可以完美地记住训练数据,并将其普遍化得非常糟糕.
+没有停止条件时，树会一直生长到每个叶节点都纯净，甚至每个叶节点只有一个样本。这样会完美记住训练数据，却无法泛化。
 
-**Pre-pruning**在树完全长大之前,停止:
-- 树木达到设定的深度时停止分开
-- 每叶的最小样本:如果节点的样本数小于k,则停止
-- 最低信息获取:如果最好的分离改善不度,则停止
-- 最多叶节:限制叶子总数
+**预剪枝**会在树完全长成前停止：
+- 最大深度：达到设定深度后停止分裂
+- 每个叶节点最少样本数：节点样本少于 k 时停止
+- 最小 information gain：最佳分裂带来的不纯度改善低于阈值时停止
+- 最大叶节点数量：限制叶节点总数
 
-**Post-pruning**树长满,然后剪下去.
-- 成本复杂性剪裁 (使用于剪刀学习):增加与叶子数量的比例的罚款.增加罚款以获得较小的树木
-- 减少错误剪裁:如果验证错误不增加,则删除子树
+**后剪枝**会先让树完整生长，再向回修剪：
+- 代价复杂度剪枝（scikit-learn 使用）：加入与叶节点数量成正比的惩罚；惩罚越大，树越小
+- 降低误差剪枝：如果删除一个子树不会提高验证误差，就将其删除
 
-切割前更简单,更快.切割后通常会产生更好的树木,因为它不会提前阻止可能导致更有用的切割的裂.
+预剪枝更简单、更快；后剪枝往往能得到更好的树，因为它不会过早阻止那些继续分裂后才显现价值的节点。
 
-### 归归的决策树
+### 回归决策树
 
-对于回归,叶子预测是该叶子中目标值的平均值. 分裂标准也会改变:
+用于回归时，叶节点预测该叶内目标值的均值，分裂准则也随之改变。
 
-**Variance reduction**取代信息获取:
+**Variance reduction** 取代 information gain：
 
 ```
 VR(S, feature, threshold) = Var(S) - weighted_avg(Var(S_left), Var(S_right))
 ```
 
-选择最少变量的分区.树将输入空间分为区域,并预测每个区域的常数 (平均值).
+选择使方差下降最多的分裂。树会把输入空间划分成多个区域，并在每个区域内预测一个常数，也就是均值。
 
-### 随机森林:集团的力量
+### 随机森林：ensemble 的力量
 
-单个决策树具有很大的差异性.数据中的小变化可以产生完全不同的树木.随机森林通过平均计算许多树木来解决这一问题.
+单棵决策树方差很高，数据中的微小变化就可能产生完全不同的树。随机森林通过对许多树取平均解决这一问题。
 
 ```mermaid
 graph TD
@@ -151,53 +151,53 @@ graph TD
     TN --> V
 ```
 
-两种随机性来源使树木多样化:
+两类随机性让不同树保持多样：
 
-**Bagging (bootstrap aggregating):**每棵树都采用一个引导链样本,一个随机样本,从训练数据中取代.大约63%的原始样本出现在每个引导链中 (其余的样本是可以用于验证的包装样本).
+**Bagging（bootstrap aggregating）：**每棵树都使用 bootstrap 样本训练，也就是从训练数据中有放回地随机抽样。每份 bootstrap 样本大约包含原始样本的 63%，其余 out-of-bag 样本可以用于验证。
 
-**Feature randomization:**在每一个分区时,只考虑一个随机的特征子集.用于分类,默认是 sqrt(n_特征).对于回归,n_特征/3. 这阻止所有树木在同一主导特征上分区.
+**特征随机化：**每次分裂只考虑随机选取的一部分特征。分类任务默认选 sqrt(n_features)，回归默认选 n_features/3。这能避免所有树都使用同一个主导特征进行分裂。
 
-基本的见解:平均数量多个不合并的树木可以减少差异性,而不会增加偏见.
+关键洞见是：对许多低相关树取平均，可以降低方差而不增加偏差。单棵树可能表现一般，ensemble 却很强。
 
-### 功能重要性
+### 特征重要性
 
-随机森林自然提供特征重要性分数.
+随机森林天然会给出特征重要性分数。最常见的方法是：
 
-**Mean Decrease in Impurity (MDI):**对于每个特征,总结所有树木和使用该特征的所有节点的污染总减少.在早期的分离中产生更大的污染减少的特征更重要.
+**Mean Decrease in Impurity（MDI）：**对每个特征，把所有树中使用该特征的节点带来的不纯度下降量求和。越早分裂、带来越大不纯度下降的特征越重要。
 
 ```
 importance(feature_j) = sum over all nodes where feature_j is used:
     (n_samples_at_node / n_total_samples) * impurity_decrease
 ```
 
-这种方法是快速的 (训练期间计算),但偏向于高卡丁度的特征和功能,有很多可能的分区点.
+MDI 计算很快，因为训练期间就会得到；但它偏向基数高的特征，以及可选分裂点很多的特征。
 
-**Permutation importance**换个方式:将一个特征的值混为一谈,测量模型的精度有多下降.
+**Permutation importance** 是另一种方法：随机打乱某个特征的值，测量模型准确率下降多少。它更可靠，但速度更慢。
 
-### 当树木击败神经网络时
+### 树何时优于神经网络
 
-树木和森林在表格数据上占据了神经网络的主导地位.
+在表格数据上，树和森林通常优于神经网络，原因包括：
 
-| Factor | Trees | Neural networks |
+| 因素 | 树模型 | 神经网络 |
 |--------|-------|----------------|
-| Mixed types (numeric + categorical) | Native support | Need encoding |
-| Small datasets (< 10k rows) | Work well | Overfit |
-| Feature interactions | Found by splitting | Need architecture design |
-| Interpretability | Full transparency | Black box |
-| Training time | Minutes | Hours |
-| Hyperparameter sensitivity | Low | High |
+| 混合类型（数值 + 类别） | 原生支持 | 需要编码 |
+| 小型数据集（< 10k 行） | 表现良好 | 容易过拟合 |
+| 特征交互 | 通过分裂自动发现 | 需要架构设计 |
+| 可解释性 | 完全透明 | 黑盒 |
+| 训练时间 | 分钟级 | 小时级 |
+| 超参数敏感度 | 低 | 高 |
 
-网络在数据具有空间或序列结构 (图像,文本,音频) 时获胜.
+当数据具有空间或序列结构，例如图像、文本和音频时，神经网络更有优势；对于扁平特征表格，树模型是默认选择。
 
 ```figure
 decision-tree-depth
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:基尼杂质和缩
+### 第 1 步：Gini impurity 与 entropy
 
-建立两个分离标准从零开始,并验证他们同意哪些分离是好的.
+从零构建两种分裂准则，并验证它们对优质分裂的判断一致。
 
 ```python
 import math
@@ -223,9 +223,9 @@ def entropy(labels):
     )
 ```
 
-### 步骤 2: 找到最好的分区
+### 第 2 步：寻找最佳分裂
 
-试试每一个特征和门,返回最多信息的门.
+尝试每个特征和阈值，返回 information gain 最高的组合。
 
 ```python
 def information_gain(parent_labels, left_labels, right_labels, criterion="gini"):
@@ -243,9 +243,9 @@ def information_gain(parent_labels, left_labels, right_labels, criterion="gini")
     return parent_impurity - child_impurity
 ```
 
-### 步骤3:建立决策树类
+### 第 3 步：构建 DecisionTree 类
 
-复发分区,预测,以及特征重点跟踪. `_build`树的核心:它停止当一个节点是纯洁的或达到切割前的限制,否则它采取最好的分开,重复到两个孩子.
+实现递归分裂、预测和特征重要性跟踪。`_build` 是树的核心：节点纯净或达到预剪枝限制时停止，否则采用最佳分裂，再递归构建两个子节点。
 
 ```python
 import random
@@ -371,9 +371,9 @@ class DecisionTree:
         return self._predict_one(x, node["right"])
 ```
 
-### 步骤4: 建立一个随机森林课程
+### 第 4 步：构建 RandomForest 类
 
-启动抽样,随机定位,以及多数投票.
+结合 bootstrap 采样、特征随机化和多数投票。
 
 ```python
 class RandomForest:
@@ -414,11 +414,11 @@ class RandomForest:
         return predictions
 ```
 
-看到`code/trees.py`对于所有辅助方法的全面实施.
+完整实现及辅助方法见 `code/trees.py`。
 
-## 用它
+## 实际使用
 
-通过学习,训练一个随机的森林是三个线条:
+使用 scikit-learn，只需三行就能训练随机森林：
 
 ```python
 from sklearn.ensemble import RandomForestClassifier
@@ -434,44 +434,44 @@ print(f"Accuracy: {rf.score(X_test, y_test):.4f}")
 print(f"Feature importances: {rf.feature_importances_}")
 ```
 
-实际上,梯度增强的树木 (XGBoost, LightGBM, CatBoost) 通常比随机树木强得多,因为它们连续构建树木,每个树都纠正了前一个的错误.
+实践中，梯度提升树（XGBoost、LightGBM、CatBoost）通常比随机森林更强，因为它们顺序构建树，让每棵树修正前一棵树的错误。但随机森林更不容易配置错误，而且几乎不需要调整超参数。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/prompt-tree-interpreter.md`-- 一个提示,可以解释决策树分类的企业利益相关者. 给它提供训练有素的树结构 (深度,特征,分区门,准确性) 并将模型转化为简单的语言规则,排名特征的重要性,标志过度填充或泄漏,并建议下一步步骤. 随时使用它,你需要向一个不读代码的人解释树基模型.
+本课会产出 `outputs/prompt-tree-interpreter.md`——用于向业务人员解释决策树分裂的提示词。输入训练后树的结构（深度、特征、分裂阈值、准确率），它会把模型翻译成自然语言规则，排列特征重要性，标记过拟合或数据泄漏，并建议后续步骤。需要向不阅读代码的人解释树模型时，可以使用它。
 
-## 运动
+## 练习
 
-1. 训练一个单个决策树在3类的2D数据集上.手动追踪分区和绘制矩形决策边界.在max_depth=2 vsmax_depth=10上比较边界.
+1. 在一个包含 3 类的二维数据集上训练单棵决策树，手工追踪分裂并画出矩形决策边界。比较 max_depth=2 与 max_depth=10 时的边界。
 
-2. 实现回归树的变量减小分化.生成y = sin(x) +噪音为200点,并将回归树匹配. 绘制树的零件定位预测与真曲线相比.
+2. 为回归树实现 variance reduction 分裂。生成 200 个 y = sin(x) + noise 数据点并拟合回归树，把树的分段常数预测与真实曲线画在一起。
 
-3. 构建一个随机森林,包括1,5,10,50和200棵树. 测试地图训练精度和测试精度与树数.观察测试精度高原但不会减少 (森林抵抗过度适应).
+3. 分别用 1、5、10、50 和 200 棵树构建随机森林，绘制训练准确率和测试准确率随树数量变化的曲线。观察测试准确率会进入平台期，却不会下降，因为森林抗过拟合。
 
-4. 根据5个不同的数据集进行基尼杂质与化比较.测量准确性和树深度.在大多数情况下,它们产生几乎相同的结果.解释原因.
+4. 在 5 个不同数据集上比较 Gini impurity 和 entropy 分裂准则，测量准确率与树深度。多数情况下二者会得到近乎相同的结果，解释原因。
 
-5. 实现变量重要性.在数据集中,一个特征是随机噪音,但具有高的特点.MDI将高分别的噪音特征.变量重要性不会.
+5. 实现 permutation importance。在一个随机噪声特征基数很高的数据集上，与 MDI importance 比较。MDI 会把噪声特征排得很高，permutation importance 则不会。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Decision tree | "A flowchart for predictions" | A model that partitions feature space into rectangular regions by learning a sequence of if/else splits |
-| Gini impurity | "How mixed the node is" | Probability of misclassifying a random sample at a node. 0 = pure, 0.5 = maximum impurity for binary |
-| Entropy | "The disorder in a node" | Information content at a node. 0 = pure, 1.0 = maximum uncertainty for binary. From information theory |
-| Information gain | "How good a split is" | Reduction in impurity after a split. The greedy criterion for choosing splits |
-| Pre-pruning | "Stop the tree early" | Stopping tree growth early by setting max depth, min samples, or min gain thresholds |
-| Post-pruning | "Trim the tree after" | Growing the full tree, then removing subtrees that do not improve validation performance |
-| Bagging | "Train on random subsets" | Bootstrap aggregating. Train each model on a different random sample with replacement |
-| Random forest | "A bunch of trees" | Ensemble of decision trees, each trained on a bootstrap sample with random feature subsets at each split |
-| Feature importance (MDI) | "Which features matter" | Total impurity decrease contributed by each feature, summed across all trees and nodes |
-| Permutation importance | "Shuffle and check" | Accuracy drop when a feature's values are randomly shuffled. More reliable than MDI for noisy features |
-| Variance reduction | "The regression version of info gain" | The regression tree analogue of information gain. Picks the split that reduces target variance the most |
-| Bootstrap sample | "Random sample with repeats" | A random sample drawn with replacement from the original dataset. Same size, but with duplicates |
+| Decision tree | “用于预测的流程图” | 通过学习一连串 if/else 分裂，把特征空间划分成矩形区域的模型 |
+| Gini impurity | “节点有多混杂” | 在节点中随机选择样本并按类别分布贴标签时的误分类概率；0 表示纯净，二分类 0.5 表示最大不纯度 |
+| Entropy | “节点中的混乱程度” | 节点的信息量；0 表示纯净，二分类 1.0 表示最大不确定性，来源于信息论 |
+| Information gain | “分裂有多好” | 分裂后不纯度的下降量，是贪心选择分裂的准则 |
+| Pre-pruning | “提前停止树” | 通过最大深度、最小样本数或最小增益阈值提前停止树生长 |
+| Post-pruning | “树长成后再修剪” | 先让树完整生长，再移除无法改善验证性能的子树 |
+| Bagging | “在随机子集上训练” | Bootstrap aggregating；让每个模型在一份有放回抽取的随机样本上训练 |
+| Random forest | “许多树” | 决策树 ensemble，每棵树使用 bootstrap 样本训练，并在每次分裂时使用随机特征子集 |
+| Feature importance (MDI) | “哪些特征重要” | 每个特征在所有树与节点中贡献的不纯度下降总量 |
+| Permutation importance | “打乱后观察” | 随机打乱某个特征后模型准确率下降多少；对噪声特征而言比 MDI 更可靠 |
+| Variance reduction | “回归版 information gain” | 回归树中与 information gain 对应的准则，选择使目标方差下降最多的分裂 |
+| Bootstrap sample | “包含重复项的随机样本” | 从原始数据中有放回抽取的随机样本，大小相同但包含重复项 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Breiman: Random Forests (2001)](https://link.springer.com/article/10.1023/A:1010933404324)- 原始的随机森林纸
-- [Grinsztajn et al.: Why do tree-based models still outperform deep learning on tabular data? (2022)](https://arxiv.org/abs/2207.08815)- 树木与神经网络的严格比较
-- [scikit-learn Decision Trees documentation](https://scikit-learn.org/stable/modules/tree.html)- 实用指南,可用可视化工具
-- [XGBoost: A Scalable Tree Boosting System (Chen & Guestrin, 2016)](https://arxiv.org/abs/1603.02754)- 升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升升
+- [Breiman：Random Forests（2001）](https://link.springer.com/article/10.1023/A:1010933404324)——随机森林原始论文
+- [Grinsztajn 等：为什么树模型在表格数据上仍然优于深度学习？（2022）](https://arxiv.org/abs/2207.08815)——严谨比较树模型与神经网络在表格任务上的表现
+- [scikit-learn 决策树文档](https://scikit-learn.org/stable/modules/tree.html)——包含可视化工具的实践指南
+- [XGBoost：可扩展树提升系统（Chen 与 Guestrin，2016）](https://arxiv.org/abs/1603.02754)——主导 Kaggle 的梯度提升论文
