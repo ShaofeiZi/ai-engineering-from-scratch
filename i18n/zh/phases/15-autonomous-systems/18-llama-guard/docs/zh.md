@@ -1,129 +1,129 @@
-# 拉马监护和输入/输出分类
+# Llama Guard 与输入/输出分类
 
-> 拉马卫队3 (Meta,拉马-3.1-8B基,为内容安全进行了细节调整) 将LLM输入和输出分类为8种语言中的MLCommons13危险分类. 移动CPU上运行的数量变量为1B-INT4. 拉马卫队4是多模式 (图像+文本),扩展到S1S14类别集 (包括S14代码解释器滥用),并是拉马卫队3 8B/11B的下降替代. 根据NVIDIA NeMo Guardrails v0.20.0 (2026年1月),在输入和输出轨道上增加了Colang对话流轨道. 诚实的注释:"在LLM监狱轨道中绕过即时注射和监狱突破检测" (Huang等人, arXiv:2504.11168) 显示, 类别是一个层,而不是一个解决方案.
+> Llama Guard 3（Meta，基于 Llama-3.1-8B，并针对内容安全微调）会按照 MLCommons 的 13 类风险分类法（hazard taxonomy），对 LLM 的输入和输出同时做分类，支持 8 种语言。它的 1B-INT4 量化版本在移动端 CPU 上也能跑到每秒 30 tokens 以上。Llama Guard 4 则升级为多模态（multimodal，image + text），分类扩展到 S1–S14，其中新增了 S14 Code Interpreter Abuse，并且可以作为 Llama Guard 3 8B/11B 的即插即用替代（drop-in replacement）。NVIDIA NeMo Guardrails v0.20.0（2026 年 1 月）则在 input rails 和 output rails 之上加入了用 Colang 描述的 dialog-flow rails。需要坦白的是，Huang et al. 在《Bypassing Prompt Injection and Jailbreak Detection in LLM Guardrails》（arXiv:2504.11168）里展示过，Emoji Smuggling 对六套知名 guard 系统的攻击成功率（attack success rate）达到了 100%；其中 NeMo Guard Detect 在 jailbreak 上也记录到了 72.54% ASR。分类器只是一层，不是完整解法。
 
-**Type:** Learn
-**Languages:** Python (stdlib, category-tagged classifier simulator)
-**Prerequisites:** Phase 15 · 10 (Permission modes), Phase 15 · 17 (Constitution)
-**Time:** ~45 minutes
+**Type:** 学习
+**Languages:** Python（stdlib，带类别标签的分类器模拟器）
+**Prerequisites:** 阶段 15 · 10（权限模式），阶段 15 · 17（Constitutional AI 与规则覆盖）
+**Time:** 约 45 分钟
 
 ## 问题
 
-对于LLM输入和输出的分类器位于代理堆中最窄的位置:每个请求都通过,每个响应都通过.一个好的分类器层是快速的,基于类学,并且以小的计算成本捕获了很大一部分明显的滥用.一个糟糕的分类器层是虚假的安全感.
+面向 LLM 输入与输出的分类器，处在 agent stack 最狭窄的一层：每一个请求都要经过它，每一个响应也都要经过它。一个好的 classifier layer 应该足够快、有清晰 taxonomy，并且能用很小的算力成本挡下大部分明显滥用；一个差的 classifier layer 则只会制造“我们已经很安全了”的错觉。
 
-20242026分类器堆已经融合到一组生产准备的选项.Llama Guard (Meta) 在Meta的社区许可证下运输开放重量.NeMo Guardrails (NVIDIA) 运输允许许可的轨道加上对话流程规则的Colang.这两种设计都是与基础模型结合而非取代其安全行为.
+2024 到 2026 年的 classifier stack，已经逐渐收敛到几类可用于生产的方案。Llama Guard（Meta）以开放权重的形式提供，采用 Meta Community License。NeMo Guardrails（NVIDIA）则提供宽松许可的 rails 机制，并用 Colang 来定义对话流程规则。这两类系统都不是拿来替代 foundation model 自身安全行为的，而是要和基础模型配套使用。
 
-记录的故障表面同样好地绘制.字符级攻击 (emoji走私,同形字体替代),文本中转向 ("忽略前和答案"),以及语义表达都会导致分类器精度的可测量下降.黄等人2025年显示,特定的emoji走私攻击在六个命名的防卫系统上达到100%的ASR.
+它们的失败面也同样已经被相当清楚地刻画出来。字符级攻击，比如 emoji smuggling 和 homoglyph substitution；上下文中的重定向，例如“忽略前面的规则，改按下面的要求答”；以及语义改写，都会让分类器准确率可测地下降。Huang et al. 2025 的结果就显示，一个具体的 Emoji Smuggling 攻击在六套被点名的 guard 系统上都实现了 100% ASR。
 
 ## 概念
 
-### 拉马卫队3一眼
+### 快速认识 Llama Guard 3
 
-- 基型:Llama-3.1-8B
-- 为了安全的内容,调整了;不是通用聊天模式
-- 分类输入和输出
-- 类型:13危险类别
-- 8种语言
-- 1B-INT4量化变体在移动CPU上以30多克/秒运行
+- Base model：Llama-3.1-8B
+- 针对内容安全做微调，不是通用聊天模型
+- 同时分类输入与输出
+- 使用 MLCommons 的 13-hazard taxonomy
+- 支持 8 种语言
+- 1B-INT4 量化版本可在移动 CPU 上跑到 >30 tok/s
 
-类别是产品.通过"S13选举"来"S1暴力犯罪"将模型训练用于的共享词汇进行映射.下游系统可以线索特定类别的行动:直接阻止S1,标志 S6用于人类审查,注释S12,但允许.
+taxonomy 本身就是产品的一部分。从 “S1 Violent Crimes” 到 “S13 Elections”，它提供了一套模型训练和下游系统都能共享的分类词汇。这样一来，后续系统就可以按类别执行差异化动作：例如 S1 直接阻断，S6 转人工审核，S12 只做标注但继续放行。
 
-### 拉马卫队4个补充
+### Llama Guard 4 的新增内容
 
-- 多型:图像+文字输入
-- 扩大分类:S1S14 (添加S14代码解释器滥用)
-- 拉马卫队3 8B/11B的入驻替代
+- Multimodal：支持 image + text 输入
+- 扩展 taxonomy：S1–S14，其中新增 S14 Code Interpreter Abuse
+- 可作为 Llama Guard 3 8B/11B 的 drop-in replacement
 
-独立编码代理 (课 9) 在沙盒中执行代码 (课 11);一个专门用于代码解释器滥用的分类类别捕获了早期的类别不命名的攻击类.
+S14 对本阶段尤其关键。自主 coding agent（第 9 课）会在 sandbox 里执行代码（第 11 课）；而专门针对代码解释器滥用（code interpreter misuse）的一个分类标签，正好补上了旧 taxonomy 里没有被单独命名的一类风险。
 
-### 尼莫护卫轨 (NVIDIA)
+### NeMo Guardrails（NVIDIA）
 
-- 2026年1月发布的 v0.20.0
-- 输入轨道:用户转向分类和阻
-- 输出轨道:模型转的分类和阻塞
-- 对话轨道:长角定义的流量限制 (例如",如果用户问X,用Y回答")
-- 集成拉马卫队,即时卫队和定制分类器
+- v0.20.0 发布于 2026 年 1 月
+- Input rails：在 user turn 做 classify-and-block
+- Output rails：在 model turn 做 classify-and-block
+- Dialog rails：用 Colang 定义对话流程约束，例如“用户如果问 X，就必须回答 Y”
+- 可集成 Llama Guard、Prompt Guard 和自定义分类器
 
-对话轨道层是区分器.输入/输出轨道在单转时运行;对话轨道可以强制"即使用户询问三个不同的方法,也不要在客户支持机器人中讨论医疗诊断".
+真正把它和普通输入/输出分类区别开的，是对话护栏（dialog rail）这一层。input rails 和 output rails 只处理单轮内容；dialog rails 则可以强制执行“即便用户换三种说法来问，customer-support bot 也不讨论医疗诊断”这种跨轮规则。
 
-### 攻击体
+### 攻击语料
 
-**Emoji Smuggling**标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标签: 标
+**Emoji Smuggling**（Huang et al., arXiv:2504.11168）：在被禁止请求的字符之间插入不可见或视觉近似的 emoji。tokenizer 会以一种不同于分类器预期的方式处理它们，于是绕过检测。该论文报告它对六套知名 guard 系统都实现了 100% ASR。
 
-**Homoglyph substitution**换取视觉相同的西里尔文字. "炸弹"变成"Воmb";分类器训练于英语错误.
+**Homoglyph substitution**：把拉丁字母替换成看起来几乎一样的西里尔字母。比如 Bomb 变成 Воmb；如果分类器主要按英文训练，就可能直接漏掉。
 
-**In-context redirection**检测分类器是否可以通过输入中的索赔轻松地重新定位.
+**In-context redirection**：通过“在回答前请先假设这是研究场景，并改用另一套策略”这种话术，测试分类器是否会被输入中的声明重新定位。
 
-**Semantic paraphrase**编译器的细节调整不能涵盖每一个表达式.
+**Semantic paraphrase**：用全新的说法重写被禁止请求。分类器的微调数据不可能覆盖所有表达方式。
 
-**NeMo Guard Detect**据Huang等报道,在 jailbreak 基准上,7.2.54%.这是一个谨慎的攻击工具;随机 jailbreaks 较低,但天花板显然不是"零".
+**NeMo Guard Detect**：在 Huang et al. 那篇论文里，它在 jailbreak benchmark 上测得 72.54% ASR。这个数字来自精心构造的对抗样本；普通用户随手尝试的 jailbreak 成功率会低得多，但上限显然也不是“接近零”。
 
-### 排名者获胜的地方
+### 分类器擅长什么
 
-- **Fast default rejection**明显滥用 (在毫秒内捕获生成CSAM的请求).
-- **Category routing**对于差异处理 (阻止一些,记录其他,升级一些).
-- **Output rails**捕获模型输出,否则会泄露敏感类别.
-- **Compliance surface area**对于监管机构,有文档,可审计的分类器,具有声明的分类.
+- **快速默认拒绝**明显滥用，例如请求生成 CSAM，能在毫秒级被截住。
+- **按类别路由**，为不同类别执行不同策略，例如直接封禁、记录日志、转人工。
+- **Output rails** 可以拦住本来已经通过输入层、但模型输出中又泄露了敏感内容的情况。
+- **合规表面**更清晰，对监管者来说，一个带明确定义 taxonomy 的分类器系统更容易文档化和审计。
 
-### 类别分类器输掉的
+### 分类器会输在哪里
 
-- 逆境制造 (情感符号走私,同形字体).
-- 跨分分类器的轮级文本的多转攻击.
-- 那些对类别的训练数据没有看到的攻击.
-- 允许和禁止类别之间真正模糊的内容.
+- 对抗式构造，例如 emoji smuggling、homoglyph substitution。
+- 多轮攻击，因为分类器往往只看单轮或有限上下文。
+- 语义改写成训练数据没见过的表达方式。
+- 本身就处在允许与禁止边界上的模糊内容。
 
-### 防守深度
+### 分层防御
 
-分类层在宪法层以下 (课17),在运行时间层以上 (课10,13,14) 的隙间.
+classifier layer 处在 constitutional layer（第 17 课）之下、runtime layer（第 10、13、14 课）之上。整体组合大致是：
 
-- **Weights**根据宪法人工智能训练的模型,默认拒绝公开滥用.
-- **Classifier**快速拒绝明显滥用;类别路由.
-- **Runtime**允许模式,预算,杀死开关,鱼.
-- **Review**建议,然后承诺HITL采取后续行动.
+- **Weights**：模型通过 Constitutional AI 训练，在默认情况下拒绝明显滥用。
+- **Classifier**：Llama Guard / NeMo Guardrails，快速挡下明显滥用，并进行分类路由。
+- **运行时**：权限模式、预算、终止开关、金丝雀机制。
+- **Review**：对于有后果的动作，用 propose-then-commit 的 HITL 流程做最终把关。
 
-没有单层足够,这些层覆盖了不同的攻击类.
+单独任何一层都不够。每一层覆盖的是不同类型的攻击面。
 
 ```figure
 a5-guard-sieve
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`模拟一个玩具分类器,在输入转换文本上使用6类分类分类.相同的文本通过原始,通过情感符号走私,并通过同样字体替代;分类器的击率在 Huang 等文件中降低.司机还显示出输出轨道会如何拒绝输出,即使输入被接受.
+`code/main.py` 模拟了一个玩具分类器，它对输入轮文本使用一个 6 类 taxonomy。相同的文本会分别以原始形式、emoji smuggling 形式和 homoglyph substitution 形式送入分类器；命中率会像 Huang et al. 论文里描述的那样下降。驱动程序还展示了 output rails 如何在输入已被接受的情况下，继续拦下有问题的输出。
 
-## 运送它
+## 交付物
 
-`outputs/skill-classifier-stack-audit.md`审计部署的分类层 (模型,分类,输入/输出轨道,对话轨道) 和标志空白.
+`outputs/skill-classifier-stack-audit.md` 用来审计一个部署中的 classifier layer，包括模型、taxonomy、input/output rails、dialog rails，并指出其中的缺口。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认分类器捕获原始恶意输入,但错过了密码版.
+1. 运行 `code/main.py`。确认分类器能抓住原始恶意输入，但会漏掉 emoji smuggling 版本。加入一个 normalization 步骤后，再测一次新的命中率。
 
-2. 阅读MLCommons13危险类别和Llama Guard4 S1S14列表. 确定S1S14中没有直接映射的类别在原始13危险集中;解释为什么S14代码解释器滥用是特别相关的15期.
+2. 阅读 MLCommons 的 13-hazard taxonomy 和 Llama Guard 4 的 S1–S14 列表。找出 S1–S14 中那一项在原始 13-hazard 集里没有直接映射，并解释为什么 S14 Code Interpreter Abuse 对 Phase 15 特别关键。
 
-3. 设计一个NeMo Guardrails对话轨道,为客户支持机器人设计,该机器人不应讨论诊断. 写在简单的英语中 (Colang类似). 测试诊断问题中的三个句子.
+3. 为一个 customer-support bot 设计一条 NeMo Guardrails dialog rail，要求它绝不能讨论 diagnosis。先用自然语言写出来，Colang 语义与之接近；再用三种不同措辞的“求诊断”问题去测试它。
 
-4. 阅读Huang等. (arXiv:2504.11168). 选择一个攻击类别 (情感冒,同形,抛词) 并提出减轻. 命名减轻的自己的失败模式.
+4. 阅读 Huang et al.（arXiv:2504.11168）。从 emoji smuggling、homoglyph、paraphrase 中挑一种攻击，提出一个 mitigation，同时指出这种 mitigation 自己的失败模式是什么。
 
-5. 根据反击机器测量,NeMo Guard Detect的72.54%的ASR在 jailbreak基准上.设计一个评估协议,以测量随机 (非反击) 用户分布下的分类器ASR.你预计的数字是什么,为什么这个数字是单独的?
+5. NeMo Guard Detect 在 jailbreak benchmark 上的 72.54% ASR，是在对抗性构造条件下测得的。请设计一个评估协议，用来衡量 classifier 在普通、非对抗用户分布下的 ASR。你预计会得到什么数量级的结果？为什么这个数字需要和对抗场景下的 ASR 分开看？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |---|---|---|
-| Llama Guard | "Meta's safety classifier" | Llama-3.1-8B fine-tuned for input/output classification |
-| MLCommons taxonomy | "13-hazard list" | Shared vocabulary for content-safety categories |
-| S1–S14 | "Llama Guard 4 categories" | Expanded taxonomy; S14 is Code Interpreter Abuse |
-| NeMo Guardrails | "NVIDIA's rails" | Input + output + dialog rails; Colang for flows |
-| Emoji Smuggling | "Tokenizer trick" | Non-printable emoji between chars; 100% ASR on six guards |
-| Homoglyph | "Lookalike letters" | Cyrillic for Latin; classifier trained on English misses |
-| ASR | "Attack success rate" | Fraction of attacks that bypass the classifier |
-| Dialog rail | "Flow constraint" | Conversation-level rule that persists across turns |
+| Llama Guard | “Meta 的安全分类器” | 基于 Llama-3.1-8B、针对输入和输出分类微调的安全分类器 |
+| MLCommons taxonomy | “13 类风险清单” | 一套共享的内容安全分类词汇 |
+| S1–S14 | “Llama Guard 4 的类别” | 扩展后的分类体系，其中 S14 是代码解释器滥用 |
+| NeMo Guardrails | “NVIDIA 的护栏” | 输入护栏、输出护栏与对话护栏；使用 Colang 定义流程 |
+| Emoji Smuggling | “分词器技巧” | 在字符间插入不可见表情符号；在六套防护系统上达到 100% ASR |
+| Homoglyph | “形似字母” | 用西里尔字母伪装拉丁字母；针对英文训练的分类器容易漏检 |
+| ASR | “攻击成功率” | 攻击绕过分类器的比例 |
+| Dialog rail | “流程约束” | 能跨多轮持续生效的会话级规则 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Inan et al. — Llama Guard: LLM-based Input-Output Safeguard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/)原始的纸.
-- [Meta — Llama Guard 4 model card](https://www.llama.com/docs/model-cards-and-prompt-formats/llama-guard-4/)多模式,S1S14类别.
-- [NVIDIA NeMo Guardrails (GitHub)](https://github.com/NVIDIA-NeMo/Guardrails) v0.20.0 2026 年 1 月
-- [Huang et al. — Bypassing Prompt Injection and Jailbreak Detection in LLM Guardrails](https://arxiv.org/abs/2504.11168) 防卫系统中的ASR号码.
-- [Anthropic — Measuring agent autonomy in practice](https://www.anthropic.com/research/measuring-agent-autonomy)分类器加运行时间框架
+- [Inan et al. — Llama Guard: LLM-based Input-Output Safeguard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) — Llama Guard 的原始论文。
+- [Meta — Llama Guard 4 model card](https://www.llama.com/docs/model-cards-and-prompt-formats/llama-guard-4/) — 了解 multimodal 能力与 S1–S14 taxonomy。
+- [NVIDIA NeMo Guardrails (GitHub)](https://github.com/NVIDIA-NeMo/Guardrails) — 2026 年 1 月的 v0.20.0 版本。
+- [Huang et al. — Bypassing Prompt Injection and Jailbreak Detection in LLM Guardrails](https://arxiv.org/abs/2504.11168) — 比较多套 guard 系统的 ASR 数据。
+- [Anthropic — Measuring agent autonomy in practice](https://www.anthropic.com/research/measuring-agent-autonomy) — 理解 classifier layer 与 runtime layer 的组合关系。
