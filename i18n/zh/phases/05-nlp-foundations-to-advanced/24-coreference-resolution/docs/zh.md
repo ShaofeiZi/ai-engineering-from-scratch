@@ -1,62 +1,62 @@
-# 核心提议
+# 共指消解
 
-> "她打电话给他,他没有回答.医生在午餐上".三次提到两个人,没有人被命名.
+> “她给他打了电话。他没有接。那位医生当时在吃午饭。”三处指称涉及两个人，却没有出现任何姓名。共指消解负责判断谁是谁。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python
-**Prerequisites:** Phase 5 · 06 (NER), Phase 5 · 07 (POS & Parsing)
-**Time:** ~60 minutes
+**Prerequisites:** 阶段 5 · 06（NER）、阶段 5 · 07（词性标注与句法分析）
+**Time:** 约 60 分钟
 
 ## 问题
 
-简单地说"果".很难说"公司","他们","库珀蒂诺的科技巨头",或"就业公司".没有把这些提及解决给同一实体,你的NER管道会错过60-80%.
+从一篇 300 词的文章中提取所有对 Apple Inc. 的提及。文章直接写“Apple”时很简单，写成“这家公司”“他们”“来自库比蒂诺的科技巨头”或“乔布斯的公司”时却很难。如果不能把这些提及解析到同一个实体，你的 NER 流水线就会漏掉 60%～80% 的提及。
 
-核心解析度将指同一实体的每个表达式连接到一个集群中. 它是表面级NLP (NER,解析) 和下游语义 (IE,QA,总结,KG) 之间的粘合物.
+共指消解把所有指向同一现实世界实体的表达链接成一个簇。它是连接表层自然语言处理（NER、句法分析）与下游语义任务（信息抽取、问答、摘要、知识图谱）的黏合剂。
 
-2026年为什么这很重要:
+它在 2026 年仍然重要，原因包括：
 
-- 总结:"首席执行官宣布... "vs"蒂姆·库克宣布... " 总结应该命名首席执行官.
-- 回答"她叫谁?"的问题需要解决"她".
-- 信息提取:一个知识图表,其中"PER1创立了果"和"Jobs创立了果"作为单独的条目是错误的.
-- 多文档IE:将有关同一事件的文章中的提到合并是跨文档核心参考.
+- 摘要：“CEO 宣布了……”与“Tim Cook 宣布了……”——摘要应该说出这位 CEO 的姓名。
+- 问答：“她给谁打了电话？”需要解析“她”指谁。
+- 信息抽取：如果知识图谱把“PER1 创办了 Apple”和“Jobs 创办了 Apple”记录为两个不同事实，它就是错的。
+- 多文档信息抽取：合并不同文章中对同一事件的提及，就是跨文档共指消解。
 
 ## 概念
 
-![Coreference clustering: mentions → entities](../assets/coref.svg)
+![共指聚类：提及 → 实体](../assets/coref.svg)
 
-**The task.**输入:一个文件.输出:一个指名 (范围) 的集群,其中每个集群指的是一个实体.
+**任务。** 输入一篇文档，输出一组提及（文本跨度）的聚类，每个簇都指向一个实体。
 
-**Mention types.**
+**提及类型。**
 
-- **Named entity.**"蒂姆·库克"
-- **Nominal.**"CEO", "公司"
-- **Pronominal.**"他", "她", "他们", "它"
-- **Appositive.**"果公司首席执行官蒂姆·库克,
+- **命名实体。** “Tim Cook”
+- **名词性提及。** “the CEO”“the company”
+- **代词性提及。** “he”“she”“they”“it”
+- **同位语。** “Tim Cook, Apple's CEO,”
 
-**Architectures.**
+**架构。**
 
-1. **Rule-based (Hobbs, 1978).**语法规则的语法定量,基本线程很好,在代名词上难以击败.
-2. **Mention-pair classifier.**对于每一对提及 (m_i,m_j),预测它们是否更核心. 按过渡式关闭进行集群. 2016 年前标准.
-3. **Mention-ranking.**对于每一个提及,排名候选人的前例 (包括"没有前例").
-4. **Span-based end-to-end (Lee et al., 2017).**变压器编码器. 列出所有候选人跨度到长度限制. 预测提及分数. 预测每个跨度的前例概率. 贪地集群. 现代默认.
-5. **Generative (2024+).**简单的案例,长文档和罕见的参考文件.
+1. **基于规则（Hobbs，1978）。** 利用语法规则，在句法树上进行代词消解。它是很好的基线，在代词问题上出人意料地难以击败。
+2. **提及对分类器。** 对每一对提及（m_i, m_j），预测它们是否共指，再通过传递闭包聚类。这是 2016 年前的标准方法。
+3. **提及排序。** 对每个提及，为候选先行词（包括“无先行词”）排序，并选择排名最高者。
+4. **基于跨度的端到端方法（Lee 等，2017）。** 使用 Transformer 编码器，枚举不超过长度上限的所有候选跨度，预测提及分数，再为每个跨度预测先行词概率，最后贪心聚类。这是现代默认方案。
+5. **生成式方法（2024+）。** 提示大语言模型：“List every pronoun in this text and its antecedent.”它在简单情况中表现良好，但不擅长长文档和罕见指称对象。
 
-**The evaluation metrics.**报告前三项的平均值为CoNLL F1.2026年最新情况:CONLL-2012: ~83F1.
+**评估指标。** 标准指标共有五种（MUC、B³、CEAF、BLANC、LEA），因为没有任何单一指标可以完整衡量聚类质量。将前三种指标的平均值报告为 CoNLL F1。2026 年在 CoNLL-2012 上的顶尖水平约为 83 F1。
 
-**Known hard cases.**
+**已知难例。**
 
-- 关于之前引入的页面的实体的确定的描述.
-- 桥梁"轮子" →之前提到的汽车.
-- 在中国和日本等语言中,无法.
-- 形 (引用者之前的代名词):**she**走进来,玛丽笑了.
+- 指向数页前所引入实体的限定描述。
+- 桥接照应（“the wheels”→此前提到的一辆车）。
+- 中文、日语等语言中的零照应。
+- 后指（代词位于指称对象之前）：“When **she** walked in, Mary smiled.”
 
 ```figure
 coref-links
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:预训练的神经核心 (AllenNLP / spaCy-实验)
+### 第 1 步：预训练神经共指消解（AllenNLP / spaCy-experimental）
 
 ```python
 import spacy
@@ -66,24 +66,24 @@ for cluster in doc._.coref_clusters:
     print(cluster, "->", [m.text for m in cluster])
 ```
 
-在更长的文件上,你得到了这样的东西:
-- 集团1: [果,公司,他们]
-- 集团2: [新产品]
+对于较长文档，你会得到类似下面的结果：
+- 簇 1：[Apple, The company, they]
+- 簇 2：[new products]
 
-### 步骤2:基于规则的代名词解决器 (教学)
+### 第 2 步：基于规则的代词消解器（教学用）
 
-看到`code/main.py`仅用于执行:
+`code/main.py` 中有一个仅使用标准库的实现：
 
-1. 提取提及:命名实体 (大写范围),代名词 (直观搜索),明确描述 ("X").
-2. 对于每个代词,看看前面的K提及,并以:
-   - 性别/数量协议 (理性)
-   - 收获 (收获)
-   - 语法作用 (优先专题)
-3. 连接最高分的前例.
+1. 提取提及：命名实体（首字母大写的文本跨度）、代词（字典查找）、限定描述（“the X”）。
+2. 对于每个代词，查看前 K 个提及，并根据以下因素评分：
+   - 性别/数一致（启发式）
+   - 新近程度（越近越优先）
+   - 句法角色（优先选择主语）
+3. 链接得分最高的先行词。
 
-但它显示了搜索空间和一个端到端模型必须做出的决定.
+它无法与神经模型竞争，却展示了端到端模型必须面对的搜索空间与决策。
 
-### 步骤3:使用LLM为核心参考
+### 第 3 步：使用大语言模型进行共指消解
 
 ```python
 prompt = f"""Text: {text}
@@ -94,36 +94,36 @@ Cluster them by what they refer to. Output JSON:
 """
 ```
 
-两个失败模式可以观看.第一,LLM过度合并 ("他"和"她"指两个不同的人).第二,LLM默默地放弃长文档中的提及.总是通过跨度抵消检查验证.
+需要注意两种失败模式。第一，大语言模型会过度合并（把分别指向两个人的“him”和“her”并入一组）。第二，大语言模型会在长文档中悄然漏掉提及。始终使用跨度偏移检查进行验证。
 
-### 步骤4:评估
+### 第 4 步：评估
 
-标准 conll-2012 脚本计算MUC,B3,CEAF-φ4并报告平均值.为了进行内部评估,首先使用跨度级别精度,然后回忆出注释测试集,然后添加引用链接F1.
+标准 conll-2012 脚本会计算 MUC、B³、CEAF-φ4，并报告三者的平均值。对于内部评估，可以先在标注测试集上计算跨度级精确率与召回率，再加入提及链接 F1。
 
-## 陷
+## 陷阱
 
-- **Singleton explosion.**某些系统将每一个提到的数据都视为自己的集群.B3是宽松的.MUC惩罚了这件事.
-- **Pronouns in long context.**在2000个代币以上的文件上,性能下降了15 F1.
-- **Gender assumptions.**硬编码的性别规则违反了非二进制指标,组织,动物.
-- **LLM drift on long docs.**单个API调用不能可靠地集群在50+段落中提到.使用滑动窗口+合并.
+- **单例膨胀。** 某些系统会把每个提及都作为独立簇报告。B³ 对此较宽容，MUC 会予以惩罚，因此必须同时检查三项指标。
+- **长上下文中的代词。** 文档超过 2000 个词元后，性能会下降约 15 个 F1 点。需要谨慎分块。
+- **性别假设。** 硬编码的性别规则会在非二元指称、组织和动物上失效。应使用学习式模型或中性评分。
+- **大语言模型在长文档中的漂移。** 单次 API 调用无法可靠地对 50 多个段落中的提及进行聚类。应使用滑动窗口再合并。
 
-## 用它
+## 学以致用
 
-现在,我们要做什么?
+2026 年的技术栈：
 
-| Situation | Pick |
+| 场景 | 选择 |
 |-----------|------|
-| English, single document | `en_coreference_web_trf` (spaCy-experimental) or AllenNLP neural coref |
-| Multilingual | SpanBERT / XLM-R trained on OntoNotes or Multilingual CoNLL |
-| Cross-document event coref | Specialized end-to-end models (2025–26 SOTA) |
-| Quick LLM baseline | GPT-4o / Claude with structured-output coref prompt |
-| Production dialog systems | Rule-based fallback + neural primary + manual review for critical slots |
+| 英语、单篇文档 | `en_coreference_web_trf`（spaCy-experimental）或 AllenNLP 神经共指消解 |
+| 多语言 | 在 OntoNotes 或 Multilingual CoNLL 上训练的 SpanBERT / XLM-R |
+| 跨文档事件共指 | 专用端到端模型（2025～2026 年顶尖方案） |
+| 快速建立大语言模型基线 | GPT-4o / Claude + 结构化输出共指提示 |
+| 生产对话系统 | 规则式后备 + 神经主模型 + 关键槽位人工复核 |
 
-2026年将出现的集成模式:首先运行NER,运行coref,将coref集群合并到NER实体. 下游任务每集群都会看到一个实体,而不是每一个实体.
+2026 年投入生产的集成模式是：先运行 NER，再运行共指消解，最后把共指簇合并进 NER 实体。下游任务看到的是每个簇对应的一个实体，而不是每次提及各自成为一个实体。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/skill-coref-picker.md`其他:
+保存为 `outputs/skill-coref-picker.md`：
 
 ```markdown
 ---
@@ -145,28 +145,28 @@ Given a use case (single-doc / multi-doc, domain, language), output:
 Refuse LLM-only coref for documents over 2,000 tokens without sliding-window merge. Refuse any pipeline that runs coref without a mention-level precision-recall report. Flag gender-heuristic systems deployed in demographically diverse text.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**运行基于规则的解决器`code/main.py`根据5个手工制成的段落, 根据基础的真相衡量引用链接的准确性.
-2. **Medium.**根据你自己的手动注释,它失败了哪里?
-3. **Hard.**建立一个核心增强的NER管道:首先是NER,然后是通过核心集群合并.
+1. **简单。** 在 5 个手工编写的段落上运行 `code/main.py` 中的规则式消解器，对照真实答案测量提及链接准确率。
+2. **中等。** 在一篇新闻文章上使用预训练神经共指消解模型，将得到的簇与你的人工标注比较。它在哪里失败了？
+3. **困难。** 构建共指增强的 NER 流水线：先运行 NER，再通过共指簇合并结果。在 100 篇文章上测量相对于仅 NER 方案的实体覆盖率提升。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Mention | A reference | A span of text that refers to an entity (name, pronoun, noun phrase). |
-| Antecedent | What "it" refers to | The earlier mention a later one corefers with. |
-| Cluster | The entity's mentions | Set of mentions that all refer to the same real-world entity. |
-| Anaphora | Backward reference | Later mention refers to earlier ("he" → "John"). |
-| Cataphora | Forward reference | Earlier mention refers to later ("When he arrived, John..."). |
-| Bridging | Implicit reference | "I bought a car. The wheels were bad." (wheels of THAT car.) |
-| CoNLL F1 | The number on leaderboards | Average of MUC, B³, CEAF-φ4 F1 scores. |
+| 提及 | 一次指称 | 指向某个实体的一段文本（名称、代词、名词短语）。 |
+| 先行词 | “it”指向什么 | 后续提及与之共指的较早提及。 |
+| 簇 | 一个实体的全部提及 | 指向同一现实世界实体的一组提及。 |
+| 回指 | 向后指称 | 后续提及指向前文（“he”→“John”）。 |
+| 后指 | 向前指称 | 前面的提及指向后文（“When he arrived, John...”）。 |
+| 桥接 | 隐式指称 | “I bought a car. The wheels were bad.”（这辆车的车轮。） |
+| CoNLL F1 | 排行榜上的数字 | MUC、B³、CEAF-φ4 三项 F1 的平均值。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Jurafsky & Martin, SLP3 Ch. 26 — Coreference Resolution and Entity Linking](https://web.stanford.edu/~jurafsky/slp3/26.pdf)经典教科书章节.
-- [Lee et al. (2017). End-to-end Neural Coreference Resolution](https://arxiv.org/abs/1707.07045)基于跨度的端到端.
-- [Joshi et al. (2020). SpanBERT](https://arxiv.org/abs/1907.10529)预训练,以改善核心.
-- [Pradhan et al. (2012). CoNLL-2012 Shared Task](https://aclanthology.org/W12-4501/)基准指数
-- [Hobbs (1978). Resolving Pronoun References](https://www.sciencedirect.com/science/article/pii/0024384178900064)基于规则的经典.
+- [Jurafsky 与 Martin，《语音与语言处理》第 3 版第 26 章——共指消解与实体链接](https://web.stanford.edu/~jurafsky/slp3/26.pdf)——权威教材章节。
+- [Lee 等（2017），端到端神经共指消解](https://arxiv.org/abs/1707.07045)——基于跨度的端到端方法。
+- [Joshi 等（2020），SpanBERT](https://arxiv.org/abs/1907.10529)——改善共指消解的预训练方法。
+- [Pradhan 等（2012），CoNLL-2012 共享任务](https://aclanthology.org/W12-4501/)——基准。
+- [Hobbs（1978），代词指称消解](https://www.sciencedirect.com/science/article/pii/0024384178900064)——经典规则方法。
