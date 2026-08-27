@@ -1,30 +1,30 @@
-# 单一值分解
+# 奇异值分解
 
-> 瑞士军队的线性代数刀,每个矩阵都有一个.每个数据科学家都需要一个.
+> SVD 是线性代数中的瑞士军刀。每个矩阵都有 SVD，每位数据科学家都需要掌握它。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python, Julia
-**Prerequisites:** Phase 1, Lessons 01 (Linear Algebra Intuition), 02 (Vectors & Matrices Operations), 03 (Matrix Transformations)
-**Time:** ~120 minutes
+**Prerequisites:** 第 1 阶段，第 01 课（Linear Algebra Intuition）、第 02 课（Vectors & Matrices Operations）和第 03 课（Matrix Transformations）
+**Time:** 约 2 小时
 
 ## 学习目标
 
-- 通过功率代实现SVD并解释U,Sigma和V^T的几何意义
-- 应用缩短的SVD用于图像压缩,并测量压缩比与重建错误
-- 通过SVD计算摩尔-罗斯伪逆转,以解决过度确定最小平方的系统
-- 连接SVD与PCA,推系统 (隐藏因素) 和 NLP中的隐藏语义分析
+- 通过幂迭代实现 SVD，并解释 U、Sigma 和 V^T 的几何含义
+- 使用截断 SVD 压缩图像，衡量压缩率与重建误差之间的取舍
+- 通过 SVD 计算 Moore-Penrose 伪逆，求解超定最小二乘系统
+- 将 SVD 与 PCA、推荐系统（潜在因子）以及 NLP 中的潜在语义分析联系起来
 
 ## 问题
 
-你有一个1000x2000矩阵.也许是用户电影评级.也许是文档术语频率表.也许是图像的像素值.你需要压缩它,消化它,找到隐藏的结构,或用它解决最小平方的系统. 固体复合只能在矩阵上工作.即使如此,它也需要矩阵拥有完整的线性独立的固体直径.
+你有一个 1000x2000 的矩阵。它可能是用户—电影评分矩阵、文档—词频表，也可能是一张图像的像素值。你需要压缩它、去除噪声、发现其中隐藏的结构，或者用它求解最小二乘系统。特征分解只能用于方阵；即便矩阵是方阵，也必须拥有完整的一组线性无关特征向量。
 
-任何矩阵,任何形状,任何级别,没有条件,它分解矩阵成三个因素,这些因素揭示了矩阵对空间的几何学.这是线性代数中最普遍和最有用的因素化.
+SVD 可以作用于任何矩阵，无论形状和秩如何，都不需要额外条件。它把矩阵分解成三个因子，揭示该矩阵作用于空间时的几何结构。SVD 是整个线性代数中适用范围最广、用途最多的矩阵分解方法。
 
-## 概念
+## 核心概念
 
-### 几何学上SVD所做的
+### SVD 在几何上做了什么
 
-每个矩阵,不管形状,都在连续执行三个操作:旋转,规模,旋转.
+任何矩阵，无论形状如何，都按顺序执行三项操作：旋转、缩放、再旋转。SVD 会把这组操作明确地分解出来。
 
 ```
 A = U * Sigma * V^T
@@ -33,10 +33,10 @@ A = U * Sigma * V^T
      (any)    (rotate)  (scale)  (rotate)
 ```
 
-根据任何矩阵A,SVD将其计算为:
-- 输入空间中的向量 (n维)
-- 沿每个轴的西格马尺度 (延伸或压缩)
-- 转换成输出空间 (m维)
+给定任意矩阵 A，SVD 会将其分解为：
+- V^T 在输入空间（n 维）中旋转向量
+- Sigma 沿每条轴进行缩放（拉伸或压缩）
+- U 把结果旋转到输出空间（m 维）
 
 ```mermaid
 graph LR
@@ -44,11 +44,11 @@ graph LR
     B -->|"U\n(rotate)"| C["Output space (m-dim)\nRotated to output\norientation"]
 ```
 
-现在,我们可以用这个方法来看看.我们给SVD一个矩阵.它告诉你:"这个矩阵取一个输入球,首先用V^T旋转它,然后用Sigma拉伸它到一个圆,然后用U旋转圆.
+可以这样理解：你把一个矩阵交给 SVD，它会告诉你：“这个矩阵先通过 V^T 旋转输入球体，再通过 Sigma 将它拉伸成椭球体，最后通过 U 旋转这个椭球体。”奇异值就是椭球各条轴的长度。
 
-### 完全的分解
+### 完整分解
 
-对于形状m x n的矩阵A:
+对于形状为 m x n 的矩阵 A：
 
 ```
 A = U * Sigma * V^T
@@ -62,19 +62,19 @@ The singular values sigma_1 >= sigma_2 >= ... >= sigma_r > 0
 where r = rank(A)
 ```
 
-号的列称为左单向量.V的列称为右单向量.Sigma的角角输入称为单向值.它们总是非负的,通常以降低顺序排序.
+U 的各列称为左奇异向量，V 的各列称为右奇异向量，Sigma 的对角元素称为奇异值。奇异值始终非负，并且按惯例从大到小排列。
 
-### 左单向量,单向值,右单向量
+### 左奇异向量、奇异值与右奇异向量
 
-任何SVD的组件都有不同的几何意义.
+SVD 的每个组成部分都有不同的几何含义。
 
-**Right singular vectors (columns of V):**这些构成输入空间 (R^n) 的正规基础.它们是矩阵在输入空间中的方向,它们将输出空间中的正方形方向映射到正方形方向.
+**右奇异向量（V 的各列）：**它们构成输入空间（R^n）的一组标准正交基。这些方向经过矩阵映射后，会变成输出空间中的正交方向。可以把它们看作定义域最自然的坐标系。
 
-**Singular values (diagonal of Sigma):**它们是扩展因子.第1单数值告诉你矩阵在第1右单数向量上延伸多少向量.
+**奇异值（Sigma 的对角元素）：**它们是缩放因子。第 i 个奇异值表示矩阵沿第 i 个右奇异向量方向拉伸多少倍。奇异值为零，表示该方向被矩阵完全压扁。
 
-**Left singular vectors (columns of U):**这些构成输出空间 (R^m) 的正规基础.第1左单向量是输出空间中的方向,其中第1右单向量落地 (扩展后).
+**左奇异向量（U 的各列）：**它们构成输出空间（R^m）的一组标准正交基。第 i 个左奇异向量，是第 i 个右奇异向量经过缩放后落入输出空间的方向。
 
-它们之间的关系:
+三者之间的关系为：
 
 ```
 A * v_i = sigma_i * u_i
@@ -83,11 +83,11 @@ The matrix A takes the i-th right singular vector v_i,
 scales it by sigma_i, and maps it to the i-th left singular vector u_i.
 ```
 
-这给了你一个坐标对坐标的图像,任何矩阵的作用.
+这个关系逐坐标说明了任意矩阵究竟对空间做了什么。
 
-### 外型产品形式
+### 外积形式
 
-标准的SVD可以写成一级矩阵的总和:
+SVD 还可以写成若干秩为 1 的矩阵之和：
 
 ```
 A = sigma_1 * u_1 * v_1^T + sigma_2 * u_2 * v_2^T + ... + sigma_r * u_r * v_r^T
@@ -96,7 +96,7 @@ Each term sigma_i * u_i * v_i^T is a rank-1 matrix (an outer product).
 The full matrix is the sum of r such matrices, where r is the rank.
 ```
 
-这种形式是低级近似的基础.每个术语增加一个结构层.第一术语捕捉到单个最重要的模式.第二个捕捉到下一个最重要的模式.
+这种形式是低秩近似的基础。每一项都添加一层结构：第一项捕获最重要的单一模式，第二项捕获次重要模式，依此类推。截断这个和，就能得到任意给定秩下最优的近似。
 
 ```
 Rank-1 approx:    A_1 = sigma_1 * u_1 * v_1^T
@@ -109,9 +109,9 @@ Rank-k approx:    A_k = sum of top k terms
                   (optimal by the Eckart-Young theorem)
 ```
 
-### 关于自己的组成的关系
+### 与特征分解的关系
 
- A 的单一值和向量直接来自 A^T A 和 A^T 的 eigen值和 eigenvectors.
+SVD 与特征分解密切相关。A 的奇异值和奇异向量，可以直接由 A^T A 和 A A^T 的特征值与特征向量得到。
 
 ```
 A^T A = V * Sigma^T * U^T * U * Sigma * V^T
@@ -133,14 +133,14 @@ So:
 - The eigenvalues of A A^T are also sigma_i^2
 ```
 
-这种联系告诉你三个东西:
-1. 单独值总是真实且非负 (它们是正半定义矩阵的自值的平方根).
-2. 您可以通过A^T A的自定义组合计算SVD,但这将条件数乘以平方,从而失去数值精度.
-3. 当A是正方形和对称正半确时,SVD和自体组合是相同的.
+这一联系告诉我们三件事：
+1. 奇异值始终是实数且非负，因为它们是半正定矩阵特征值的平方根。
+2. 可以通过对 A^T A 做特征分解来计算 SVD，但这会把条件数平方，损失数值精度。专用 SVD 算法可以避免这个问题。
+3. 当 A 是方形的对称半正定矩阵时，SVD 与特征分解完全相同。
 
-### 缩短的SVD:低级近似
+### 截断 SVD：低秩近似
 
-埃卡特-年轻-米尔斯基定理指出,最好的A级 k近似 (在弗罗贝尼斯和光谱规范中) 通过保持只有顶级k单数值及其相应的向量来获得:
+Eckart-Young-Mirsky 定理指出，在 Frobenius 范数和谱范数下，A 的最佳秩 k 近似，都是保留前 k 个奇异值及对应向量得到的：
 
 ```
 A_k = U_k * Sigma_k * V_k^T
@@ -154,26 +154,26 @@ Approximation error = sigma_{k+1}  (in spectral norm)
                     = sqrt(sigma_{k+1}^2 + ... + sigma_r^2)  (in Frobenius norm)
 ```
 
-这不仅仅是"一个好的"近似. 它可能是最好的可能的接近级 k. 没有其他级 k矩阵接近A.
+这不只是“一种不错的”近似，而是可以证明的最佳秩 k 近似。任何其他秩 k 矩阵与 A 的距离都不会更小。
 
-| Component | Relative magnitude | Kept in rank-3 approx? |
+| 分量 | 相对大小 | 秩为 3 的近似中保留？ |
 |-----------|-------------------|------------------------|
-| sigma_1 | Largest | Yes |
-| sigma_2 | Large | Yes |
-| sigma_3 | Medium-large | Yes |
-| sigma_4 | Medium | No (error) |
-| sigma_5 | Medium-small | No (error) |
-| sigma_6 | Small | No (error) |
-| sigma_7 | Very small | No (error) |
-| sigma_8 | Tiny | No (error) |
+| sigma_1 | 最大 | 是 |
+| sigma_2 | 大 | 是 |
+| sigma_3 | 中等偏大 | 是 |
+| sigma_4 | 中等 | 否（误差） |
+| sigma_5 | 中等偏小 | 否（误差） |
+| sigma_6 | 小 | 否（误差） |
+| sigma_7 | 很小 | 否（误差） |
+| sigma_8 | 极小 | 否（误差） |
 
-保持上方3:A_3捕获了最大的三个单一值.错误 =剩余值 (sigma_4到 sigma_8).
+保留前三项时，A_3 会捕获三个最大的奇异值，误差则来自剩余的 sigma_4 到 sigma_8。
 
-如果单数值快速衰退,一个小的 k 捕捉到矩阵的大部分.如果它们慢慢衰退,矩阵没有低级结构.
+如果奇异值衰减很快，较小的 k 就能捕获矩阵的大部分信息；如果衰减很慢，矩阵就没有明显的低秩结构。
 
-### 使用SVD压缩图像
+### 使用 SVD 压缩图像
 
-灰色图像是一个像素强度矩阵.一个800x600图像有480,000个值.SVD允许你用更少的方法接近它.
+灰度图像是像素强度组成的矩阵。一张 800x600 图像包含 480,000 个数值，SVD 可以用少得多的数据近似它。
 
 ```
 Original image: 800 x 600 = 480,000 values
@@ -192,11 +192,11 @@ SVD with rank k:
   but visual quality degrades.
 ```
 
-基本的见解:自然图像具有快速衰退的单一值.第一几个单一值捕捉到广泛的结构 (形状,梯度).后来的捕捉细节和噪音.在50级的缩小通常产生一个图像看起来几乎相同的原始,同时使用85%少的存储.
+关键在于，自然图像的奇异值通常衰减得很快。前几个奇异值捕获宽泛结构，例如形状和渐变；后面的奇异值则捕获细节与噪声。截断到秩 50 时，图像通常看起来几乎与原图相同，却能减少 85% 的存储空间。
 
-### 推系统的SVD
+### 推荐系统中的 SVD
 
-利斯奖让这成为了名人. 你有一个用户电影评级矩阵,
+Netflix Prize 让这种方法广为人知。设想一个用户—电影评分矩阵，其中大多数元素都是缺失的。
 
 ```
              Movie1  Movie2  Movie3  Movie4  Movie5
@@ -208,20 +208,20 @@ SVD with rank k:
   ? = unknown rating
 ```
 
-观念:这个评级矩阵的排名低.用户没有完全独立的品味.有几种隐藏因素 (行动与戏剧,旧与新,脑与内心) 解释了大多数偏好.
+核心思想是：这个评分矩阵具有低秩结构。用户的品味并非完全相互独立，少数潜在因子就能解释大多数偏好，例如动作片与剧情片、老电影与新电影、理性风格与感官刺激。
 
-对于 (填充) 评级矩阵的SVD,将其分解为:
-- U:隐藏因素空间中的用户配置文件
-- 值:每个隐形因素的重要性
-- :潜伏因素空间中的电影配置文件
+对填补后的评分矩阵执行 SVD，会得到：
+- U：潜在因子空间中的用户画像
+- Sigma：每个潜在因子的重要程度
+- V^T：潜在因子空间中的电影画像
 
-用户预测电影的评级是用户个人资料的点数量和电影的个人资料 (按单数值权重).低级近似填写缺失的条目.
+一个用户对一部电影的预测评分，等于其用户画像与电影画像的点积，再按奇异值加权。低秩近似会填补矩阵中的缺失元素。
 
-实际上,你使用了Simon Funk的增量SVD或ALS (替代最小方体) 等变体,直接处理缺失的数据.
+实践中通常使用 Simon Funk 的增量 SVD 或 ALS（交替最小二乘）等能够直接处理缺失数据的变体，但核心思想相同：通过 SVD 分解潜在因子。
 
-### 无线性研究中的SVD:隐形语义分析
+### NLP 中的 SVD：潜在语义分析
 
-隐形语义分析 (LSA),也称为隐形语义指数 (LSI),将SVD应用于术语文档矩阵.
+潜在语义分析（LSA，也称潜在语义索引 LSI）会对词项—文档矩阵应用 SVD。
 
 ```
              Doc1   Doc2   Doc3   Doc4
@@ -243,33 +243,33 @@ After SVD with rank k=2:
   Doc1 and Doc3 cluster if they share similar topics.
 ```
 
-基于原始文本的语义相似性,LSA是首个成功的方法之一.它是因为同义词往往出现在类似文档中,因此SVD将它们分为相同的隐藏维度.现代词嵌入 (Word2Vec, GloVe) 可以被视为这一想法的后代.
+LSA 是最早成功从原始文本中捕获语义相似度的方法之一。它之所以有效，是因为同义词往往出现在相似文档中，SVD 因而会把它们归入相同的潜在维度。现代词嵌入（Word2Vec、GloVe）可以看作这一思想的后继方法。
 
-### 降低噪音的SVD
+### 使用 SVD 去噪
 
-噪音数据的信号集中在最高单数值,噪音分布在所有单数值.
+在含噪数据中，信号集中于最大的几个奇异值，噪声则分散在所有奇异值上。截断 SVD 可以移除噪声底。
 
-**Clean signal singular values:**
+**干净信号的奇异值：**
 
-| Component | Magnitude | Type |
+| 分量 | 大小 | 类型 |
 |-----------|-----------|------|
-| sigma_1 | Very large | Signal |
-| sigma_2 | Large | Signal |
-| sigma_3 | Medium | Signal |
-| sigma_4 | Near zero | Negligible |
-| sigma_5 | Near zero | Negligible |
+| sigma_1 | 非常大 | 信号 |
+| sigma_2 | 大 | 信号 |
+| sigma_3 | 中等 | 信号 |
+| sigma_4 | 接近零 | 可忽略 |
+| sigma_5 | 接近零 | 可忽略 |
 
-**Noisy signal singular values (noise adds to all):**
+**含噪信号的奇异值（噪声会影响全部分量）：**
 
-| Component | Magnitude | Type |
+| 分量 | 大小 | 类型 |
 |-----------|-----------|------|
-| sigma_1 | Very large | Signal |
-| sigma_2 | Large | Signal |
-| sigma_3 | Medium | Signal |
-| sigma_4 | Small | Noise |
-| sigma_5 | Small | Noise |
-| sigma_6 | Small | Noise |
-| sigma_7 | Small | Noise |
+| sigma_1 | 非常大 | 信号 |
+| sigma_2 | 大 | 信号 |
+| sigma_3 | 中等 | 信号 |
+| sigma_4 | 小 | 噪声 |
+| sigma_5 | 小 | 噪声 |
+| sigma_6 | 小 | 噪声 |
+| sigma_7 | 小 | 噪声 |
 
 ```mermaid
 graph TD
@@ -279,11 +279,11 @@ graph TD
     C --> E["Reconstruct with A_k to get denoised version"]
 ```
 
-任何一个因添加噪音而损坏的矩阵,短缩的SVD是分离信号和噪音的原则性方法.
+这种方法用于信号处理、科学测量和数据清洗。只要矩阵受到加性噪声污染，截断 SVD 都是一种有理论依据的信号—噪声分离方法。
 
-### 通过SVD进行伪逆转
+### 通过 SVD 计算伪逆
 
-摩尔-罗斯伪逆向A+将矩阵逆向将用于非正方形和单一矩阵.SVD使得计算很简单.
+Moore-Penrose 伪逆 A+ 把矩阵求逆推广到了非方阵和奇异矩阵，而 SVD 使它的计算非常简单。
 
 ```
 If A = U * Sigma * V^T, then:
@@ -299,7 +299,7 @@ For A (m x n):      A+ is (n x m)
 For Sigma (m x n):  Sigma+ is (n x m)
 ```
 
-如果 Ax = b 没有准确的解决方案 (过于确定系统),那么x = A+ b 是最小的正方形解决方案 (最小化了不x - b 时时).
+伪逆可以求解最小二乘问题。如果 Ax = b 没有精确解（超定系统），那么 x = A+ b 就是最小二乘解，即使 ||Ax - b|| 最小的解。
 
 ```
 Overdetermined system (more equations than unknowns):
@@ -315,9 +315,9 @@ Overdetermined system (more equations than unknowns):
   but numerically more stable.
 ```
 
-### 数字稳定性优势
+### 数值稳定性优势
 
-计算A^T A的自成组合,方乘以单数值 (A^T A的自成值是sigma_i^2).
+对 A^T A 做特征分解会将奇异值平方，因为 A^T A 的特征值是 sigma_i^2。这也会把条件数平方，放大数值误差。
 
 ```
 Example:
@@ -332,11 +332,11 @@ Example:
                            (6 extra digits of precision lost)
 ```
 
-现代SVD算法 (Golub-Kahan双诊断) 直接在A上工作,从来没有形成A^TA.`np.linalg.svd(A)`现在`np.linalg.eig(A.T @ A)`现在,我们要去.
+现代 SVD 算法（Golub-Kahan 双对角化）直接作用于 A，从不显式构造 A^T A。因此应始终优先使用 `np.linalg.svd(A)`，而不是 `np.linalg.eig(A.T @ A)`。
 
-### 连接到PCA
+### 与 PCA 的联系
 
-基于数据的PCA是SVD. 这不是一个比喻. 这实际上是相同的计算.
+PCA 就是对中心化数据执行 SVD。这并非类比，而是完全相同的计算。
 
 ```
 Given data matrix X (n_samples x n_features), centered (mean subtracted):
@@ -358,17 +358,17 @@ In sklearn, PCA is implemented using SVD, not eigendecomposition.
 It is faster and more numerically stable.
 ```
 
-这意味着10课时你学到的关于减小维度的一切都是SVD在帽子下.
+这意味着，第 10 课关于降维的所有内容，底层实现都是 SVD。PCA 是 SVD 在机器学习中最常见的应用。
 
 ```figure
 svd-rank-reconstruction
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:使用功率代使用从零开始的SVD
+### 第 1 步：使用幂迭代从零实现 SVD
 
-想法:要找到最大的单数值及其向量,使用A^T A (或A A^T) 的功率反复.然后,将矩阵减值,并重复下一个单数值.
+思路是：通过对 A^T A（或 A A^T）执行幂迭代，找到最大的奇异值及其向量；然后对矩阵进行降秩，再重复这一过程，求下一个奇异值。
 
 ```python
 import numpy as np
@@ -419,7 +419,7 @@ def svd_from_scratch(A, k=None):
     return U, S, V
 ```
 
-### 步骤2:与NumPy进行测试和比较
+### 第 2 步：测试并与 NumPy 比较
 
 ```python
 np.random.seed(42)
@@ -435,7 +435,7 @@ A_reconstructed = U_ours @ np.diag(S_ours) @ V_ours.T
 print(f"Reconstruction error: {np.linalg.norm(A - A_reconstructed):.8f}")
 ```
 
-### 步骤3:图像压缩演示
+### 第 3 步：图像压缩演示
 
 ```python
 def compress_image_svd(image_matrix, k):
@@ -456,7 +456,7 @@ for k in [1, 5, 10, 20, 50]:
     print(f"k={k:>3d}  error={error:.4f}  storage={ratio:.1%}")
 ```
 
-### 步骤4:减少噪音
+### 第 4 步：去除噪声
 
 ```python
 np.random.seed(42)
@@ -473,7 +473,7 @@ print(f"Denoised error: {np.linalg.norm(denoised - clean):.4f}")
 print(f"Improvement:    {(1 - np.linalg.norm(denoised - clean) / np.linalg.norm(noisy - clean)):.1%}")
 ```
 
-### 步骤5:伪逆
+### 第 5 步：伪逆
 
 ```python
 A = np.array([[1, 1], [2, 1], [3, 1]], dtype=float)
@@ -492,59 +492,59 @@ print(f"np.linalg.lstsq solution:   {x_lstsq}")
 print(f"np.linalg.pinv solution:    {x_pinv}")
 ```
 
-## 用它
+## 实际使用
 
-现在有完整的演示.`code/svd.py`运行它,以看到SVD用于图像压缩,推系统,隐藏语义分析和噪音降低.
+完整演示位于 `code/svd.py`，运行它可以查看 SVD 如何应用于图像压缩、推荐系统、潜在语义分析和去噪。
 
 ```bash
 python svd.py
 ```
 
-朱莉亚版本在`code/svd.jl`通过朱莉亚的母语来证明相同的概念`svd()`功能和`LinearAlgebra`包装.
+`code/svd.jl` 中的 Julia 版本，使用 Julia 原生 `svd()` 函数和 `LinearAlgebra` 包演示相同概念。
 
 ```bash
 julia svd.jl
 ```
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/skill-svd.md`- 知道如何在实际项目中应用SVD的技能
+本课会产出：
+- `outputs/skill-svd.md`——帮助你判断何时以及如何在真实项目中应用 SVD 的技能
 
-## 运动
+## 练习
 
-1. 执行从零开始的全SVD,而不使用功率代. 相反,计算A^T A的自成组合,以获得V和单一值,然后计算U =A V Sigma^{-1}.与你的功率代版本和NumPy进行数值准确度比较.
+1. 不使用幂迭代，实现完整 SVD。改为对 A^T A 做特征分解，得到 V 和奇异值，再计算 U = A V Sigma^{-1}。将数值精度与幂迭代版本及 NumPy 进行比较。
 
-2. 输入一个真实的灰度图像 (或将其转换为灰度图像).将其压缩在排列1,5,10,25和50等.
+2. 加载一张真实灰度图像（或将一张图像转换为灰度），分别以秩 1、5、10、25、50、100 压缩。计算每个秩对应的压缩率和相对误差，并找出图像达到可接受视觉质量时的秩。
 
-3. 建立一个小的推系统.创建一个10×8用户电影评级矩阵,包含一些已知条目.用行方法填写缺失的条目.计算SVD并重建3级近似.使用重建矩阵预测缺失的评级.验证预测是合理的.
+3. 构建一个微型推荐系统。创建一个含部分已知元素的 10x8 用户—电影评分矩阵，用每行均值填补缺失项，计算 SVD 并重建秩为 3 的近似矩阵。使用重建矩阵预测缺失评分，并验证预测是否合理。
 
-4. 创建一个100x50的文档术语矩阵,包含3个合成主题.每个主题都有5个相关的术语.添加噪音.应用SVD并验证前3个单一值比其余值大得多.将文档项目进入3D隐形空间,并检查来自同一主题集群的文档.
+4. 创建一个包含 3 个合成主题的 100x50 文档—词项矩阵，每个主题关联 5 个词项，再添加噪声。应用 SVD，验证最大的 3 个奇异值明显高于其余值。把文档投影到三维潜在空间，检查同一主题的文档是否聚集在一起。
 
-5. 生成一个清洁的低级矩阵 (排名3,大小50x40) 并在不同水平上添加高斯噪音 (sigma = 0.1, 0.5, 1.0, 2.0).对于每个噪音水平,通过扫描k从1到40来找到最佳的切割级别,并测量清洁矩阵的重建错误.绘制最佳k如何随噪音水平变化.
+5. 生成一个干净的低秩矩阵（秩为 3，大小为 50x40），并添加不同强度的 Gaussian 噪声（sigma = 0.1、0.5、1.0、2.0）。对每种噪声强度扫描 k=1 到 40，并根据相对于干净矩阵的重建误差，找出最佳截断秩。绘制最佳 k 如何随噪声强度变化。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| SVD | "Factor any matrix" | Decompose A into U Sigma V^T where U and V are orthogonal and Sigma is diagonal with non-negative entries. Works for any matrix of any shape. |
-| Singular value | "How important this component is" | The i-th diagonal entry of Sigma. Measures how much the matrix stretches along the i-th principal direction. Always non-negative, sorted in decreasing order. |
-| Left singular vector | "Output direction" | A column of U. The direction in output space that the i-th right singular vector maps to (after scaling by sigma_i). |
-| Right singular vector | "Input direction" | A column of V. The direction in input space that the matrix maps to the i-th left singular vector (after scaling by sigma_i). |
-| Truncated SVD | "Low-rank approximation" | Keep only the top k singular values and their vectors. Produces the provably best rank-k approximation to the original matrix (Eckart-Young theorem). |
-| Rank | "True dimensionality" | The number of non-zero singular values. Tells you how many independent directions the matrix actually uses. |
-| Pseudoinverse | "Generalized inverse" | V Sigma+ U^T. Inverts non-zero singular values, leaves zeros as zeros. Solves least-squares problems for non-square or singular matrices. |
-| Condition number | "How sensitive to errors" | sigma_max / sigma_min. A large condition number means small input changes cause large output changes. SVD reveals this directly. |
-| Latent factor | "Hidden variable" | A dimension in the low-rank space discovered by SVD. In recommendations, a latent factor might correspond to genre preference. In NLP, it might correspond to a topic. |
-| Frobenius norm | "Total matrix size" | Square root of the sum of squared entries. Equals the square root of the sum of squared singular values. Used to measure approximation error. |
-| Eckart-Young theorem | "SVD gives the best compression" | For any target rank k, the truncated SVD minimizes the approximation error over all possible rank-k matrices. |
-| Power iteration | "Find the biggest eigenvector" | Repeatedly multiply a random vector by the matrix and normalize. Converges to the eigenvector with the largest eigenvalue. The building block of many SVD algorithms. |
+| SVD | “分解任意矩阵” | 把 A 分解为 U Sigma V^T，其中 U 与 V 为正交矩阵，Sigma 是对角元素非负的对角矩阵；适用于任意形状的矩阵 |
+| Singular value | “这个分量有多重要” | Sigma 的第 i 个对角元素，衡量矩阵沿第 i 个主方向拉伸多少；始终非负并按降序排列 |
+| Left singular vector | “输出方向” | U 的一列；第 i 个右奇异向量按 sigma_i 缩放后映射到输出空间中的方向 |
+| Right singular vector | “输入方向” | V 的一列；矩阵把输入空间中的这个方向按 sigma_i 缩放后映射到第 i 个左奇异向量 |
+| Truncated SVD | “低秩近似” | 只保留最大的 k 个奇异值及对应向量，得到原矩阵可证明的最佳秩 k 近似（Eckart-Young 定理） |
+| Rank | “真实维度” | 非零奇异值的数量，表示矩阵实际使用了多少个独立方向 |
+| Pseudoinverse | “广义逆” | V Sigma+ U^T；对非零奇异值取倒数，零值保持不变，用于求解非方阵或奇异矩阵的最小二乘问题 |
+| Condition number | “对误差有多敏感” | sigma_max / sigma_min；条件数很大，表示输入的微小变化会造成输出的大幅变化，SVD 可以直接揭示它 |
+| Latent factor | “隐藏变量” | SVD 发现的低秩空间中的一个维度；推荐系统中可能代表类型偏好，NLP 中可能代表某个主题 |
+| Frobenius norm | “矩阵的总体大小” | 所有元素平方和的平方根，也等于所有奇异值平方和的平方根，用于衡量近似误差 |
+| Eckart-Young theorem | “SVD 给出最佳压缩” | 对任意目标秩 k，截断 SVD 在所有秩 k 矩阵中使近似误差最小 |
+| Power iteration | “寻找最大特征向量” | 反复让矩阵乘以一个随机向量并归一化，最终收敛到最大特征值对应的特征向量；是许多 SVD 算法的基础 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Gilbert Strang: Linear Algebra and Its Applications, Chapter 7](https://math.mit.edu/~gs/linearalgebra/)- 通过应用进行了SVD的彻底治疗
-- [3Blue1Brown: But what is the SVD?](https://www.youtube.com/watch?v=vSczTbgc8Rc)- 对于SVD的几何直觉
-- [We Recommend a Singular Value Decomposition](https://www.ams.org/publicoutreach/feature-column/fcarc-svd)- 美国数学学会的可访问概述
-- [Netflix Prize and Matrix Factorization](https://sifter.org/~simon/journal/20061211.html)- 关于SVD的Simon Funk的原始博客文章
-- [Latent Semantic Analysis](https://en.wikipedia.org/wiki/Latent_semantic_analysis)- 苏维埃的原始NLP应用
-- [Numerical Linear Algebra by Trefethen and Bau](https://people.maths.ox.ac.uk/trefethen/text.html)- 了解SVD算法及其数值特性的黄金标准
+- [Gilbert Strang：《线性代数及其应用》第 7 章](https://math.mit.edu/~gs/linearalgebra/)——结合应用深入讲解 SVD
+- [3Blue1Brown：SVD 究竟是什么？](https://www.youtube.com/watch?v=vSczTbgc8Rc)——SVD 的几何直觉
+- [我们推荐奇异值分解](https://www.ams.org/publicoutreach/feature-column/fcarc-svd)——美国数学学会提供的易懂概览
+- [Netflix Prize 与矩阵分解](https://sifter.org/~simon/journal/20061211.html)——Simon Funk 关于推荐系统 SVD 的原始博客文章
+- [潜在语义分析](https://en.wikipedia.org/wiki/Latent_semantic_analysis)——SVD 最早的 NLP 应用
+- [Trefethen 与 Bau：《数值线性代数》](https://people.maths.ox.ac.uk/trefethen/text.html)——理解 SVD 算法及数值性质的经典教材
