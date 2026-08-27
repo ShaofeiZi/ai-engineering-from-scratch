@@ -1,84 +1,86 @@
-# 杀死开关,断路和加拿大海代币
+# Kill Switch、Circuit Breaker 与 Canary Token
 
-> 杀死开关是在代理编辑表面之外的布鲁尔字符,  Redis 键,功能标志,签署的配置, 完全禁用代理. 断路器更精细:它会在特定模式上脚 (连续五次相同的工具调用),停止违规的路径,并升级到人类. 卡纳里代币是传统欺骗的遗产:一个假的凭证或蜂蜜记录, 基于eBPF的数据路径 (例如: 基里姆) 可以重新写入被隔离的到内核层的法医蜂蜜; 发表的基里姆基准报告在加载下的子毫秒 P99 数据路延迟 (您的传播预算取决于政策更新如何达到节点,而不是数据路本身). 适应移动基线的统计检测器将默默地接受漂移,将它们以不折曲的严格宪法限制层.
+> Kill switch 是一个保存在代理可编辑表面之外的布尔开关，例如 Redis key、feature flag 或签名配置，它能彻底关闭代理。Circuit breaker 更细粒度：它会在某个特定模式上跳闸，例如连续五次完全相同的工具调用，暂停出问题的路径，并升级给人工。Canary token 则继承自经典欺骗防御（deception）：放一个代理根本没有正当理由去碰的假凭证或蜜罐（honeypot）记录，只要它被访问，就立刻报警。基于 eBPF 的数据路径，例如 Cilium，可以在内核层把被隔离 pod 的出口重写到一个法证蜜罐；Cilium 公开基准显示，在负载下数据路径（datapath）的 P99 延迟仍低于 1 毫秒。真正决定传播预算的，不是数据路径本身，而是策略更新如何传播到节点。会适应移动基线的统计探测器，例如 EWMA 和 CUSUM，会悄悄接受漂移，所以必须再叠一层不会弯曲的硬性宪法式限制（constitutional limit）。
 
-**Type:** Learn
-**Languages:** Python (stdlib, three-detector simulator: kill switch, circuit breaker, canary)
-**Prerequisites:** Phase 15 · 13 (Cost governors), Phase 15 · 10 (Permission modes)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（stdlib，三类探测器模拟器：kill switch、circuit breaker、canary）
+**Prerequisites:** 阶段 15 · 13（成本治理器），阶段 15 · 10（权限模式）
+**Time:** 约 60 分钟
 
 ## 问题
 
-成本管理者 (课 13) 限制了代理人可以花费多少钱.他们不限制代理人可以在预算内做什么.一个50美元的速度限制的代理人仍然可以泄露秘密,发布错误的帖子,或删除资源.
+成本治理器（第 13 课）限制的是代理能花多少钱，但它并不限制代理能在预算内做什么。一个带有 $50 速度上限（velocity limit）的代理，仍然可以泄露机密、发出错误帖子，或删除某个资源。很多真正危险的动作，在 token 成本上反而很便宜。
 
-这一课涵盖了成本层旁边的三个探测器:
+本课讲的是贴着成本层运行的三种探测器：
 
-1. **Kill switch**尔式除按,保持在代理人无法达到的范围内.
-2. **Circuit breaker**动作模式检测器,停止特定的路径.
-3. **Canary token**没有正当理由触摸的代理人会通过触摸来发现自己.
+1. **Kill switch**：一个保存在代理触达范围之外的布尔关停按钮。
+2. **Circuit breaker**：检测特定动作模式并暂停某条路径的探测器。
+3. **Canary token**：代理本不该碰，一碰就会暴露自己的诱饵。
 
-它们都是LLM前工程.经典的欺骗,速度限制破坏者和功能旗杀死之前的自主代理.新的是攻击表面:代理阅读不值得信赖的内容 (课11),编辑自己的记忆,并可以将许多安全看似的操作组合成不安全的.这里所指的探测器工作是因为他们不相信代理的自我报告.
+这三种东西都早于 LLM 工程。经典欺骗技术、速率限制跳闸器和特性开关式关停，在自主代理出现之前就存在。新变化在于攻击面：代理会读取不受信任内容（第 11 课）、会修改自己的记忆，还可能把一连串“看起来安全”的动作组合成一个真正危险的结果。这里提到的探测器之所以有用，就在于它们不相信代理的自我报告。
 
 ## 概念
 
-### 关闭开关
+### Kill switch
 
-杀死开关是代理读取但不能写的布鲁式.
+Kill switch 是一个代理能读取、但不能写入的布尔开关。常见实现方式包括：
 
-- **Feature flag in a managed service.**发射暗,,释放,更新在几秒钟内传播.
-- **Redis key the agent polls.**简单,需要代理程序检查每一个转折.
-- **Signed config in object storage.**代理检查了开启的签名;拒绝未签名的状态.
-- **OS-level signal or container-lifecycle kill.**达克`kill`伯尼特斯`kubectl delete pod`系统停止.
+- **托管服务里的 feature flag。** 例如 LaunchDarkly、Statsig、Unleash。更新一般以秒级传播。
+- **代理轮询的 Redis key。** 实现简单，但要求代理在每一轮都去检查。
+- **对象存储里的签名配置。** 代理在启动时验证签名；对未签名状态一律拒绝。
+- **操作系统级信号或容器生命周期操作。** 例如 Docker `kill`、Kubernetes `kubectl delete pod`、systemd stop。
 
-合适的杀伤开关的属性:
+一个正确的 kill switch 应该具备这些性质：
 
-- 代理人不能设置它.`off`(生活在一个系统中,代理人的身份证不写.
-- 它们在每一个后果行动上都会被检查,
-- 当它关闭时,代理人没有做任何外部可观察的东西,包括登录到代理人可以达到的系统.
-- 恢复功能是人类的明确行动,而不是自动的休息时间.
+- 代理不能把它重新写成 `off`。它必须保存在代理凭证没有写权限的系统里。
+- 它必须在每一个有后果的动作前都检查，而不是只在启动时检查一次。
+- 一旦它处于关闭状态，代理就不应再做任何外部可观察的事，包括向它仍可访问的系统写日志。
+- 重新启用必须是显式的人类动作，而不是一个自动超时恢复。
 
-### 电路断电器
+### Circuit breaker
 
-电路断裂器暂停了特定的模式,而不是整个代理.经典的形状 (从2007年尼加德书中,仍然是当前):
+Circuit breaker 暂停的是某个特定模式，而不是整个代理。经典三态模型来自 2007 年 Nygard 的书，到今天仍然成立：
 
-- **Closed**行动是允许的.
-- **Open**行动已被阻止.
-- **Half-open**试验试验:在冷却后,允许试验试验13次 (默认1);成功关闭断路器,任何剩余故障都会重新打开.
+- **Closed**：允许动作执行。
+- **Open**：阻止动作执行。
+- **Half-open**：冷却之后，只放行 1 到 3 次探测请求，默认通常是 1 次；如果成功则闭合，否则再次打开。
 
-相关的触发剂:
+在代理场景里，常见触发条件包括：
 
-- 连续五次相同的工具调用 (重复循环).
-- 五次连续故障,相同的工具具有不同的输入 (系统故障).
-- 工具调用速度超过门 (课13速度).
-- 具体的工具 (例如:`file.delete`) 经过不值得信任的内容阅读后 (课11).
+- 连续五次完全相同的工具调用，说明可能卡进了重复循环。
+- 同一个工具连续五次失败，但输入不同，说明更像系统性故障。
+- 工具调用速率高于阈值，对应第 13 课的速度异常。
+- 某个特定工具，例如 `file.delete`，发生在一次 out-of-trust 内容读取之后。
 
-### 卡纳利代币
+### Canary token
 
-卡纳里代币 (也称为蜂蜜代币) 是代理人不应该触摸的输入.
+Canary token，也叫 honeytoken，是代理根本不应该去碰的输入。一旦被访问，就是报警。
 
-代理人的例子:
+针对代理系统的例子包括：
 
-- 一个假的`AWS_SECRET_ACCESS_KEY`透试图即时归因于
-- 假数据库记录标记着已知哨兵值.
-- 工作场所中的一个假文件.
-- 如果在后期输出中出现,则已被泄露.
+- 一个假的 `AWS_SECRET_ACCESS_KEY`，它没有真实权限，但一旦被尝试外泄，就能立即归因。
+- 一条带已知哨兵值（sentinel value）的假数据库记录。任何读写都应触发告警。
+- 工作区里的一个假文件。读取或修改它都值得怀疑。
+- 在会话开始时注入的一条假记忆。如果它出现在后续输出里，就说明记忆被泄露了。
 
-鱼设计是工作流程的具体特点. 鱼代理有合法理由触摸是噪音.
+Canary 的设计高度依赖工作流。一个代理本来就有正当理由去碰的 canary，只会制造噪声。
 
-### 为什么层统计和硬界限
+### 为什么统计探测器必须叠加硬限制
 
-统计探测器 (EWMA,CUSUM,工具调用率的z-score) 适应移动基线.这是合法漂移的特征和对抗漂移的错误.一个患者攻击者可以缓慢地移动基线,以免警报发射.
+统计探测器，例如 EWMA、CUSUM 或工具调用率上的 z-score，会适应一个不断变化的基线。这对于合法漂移是优点，对于对抗性漂移则是缺点。一个足够耐心的攻击者，可以把基线以足够慢的速度往危险方向推移，直到没有任何告警触发。
 
-严格的宪法限制 (17课) 不会曲折.`secrets@`根据宪法规则,它更简单,可审核,并且不能通过缓慢的漂移进行游戏.
+硬性的宪法式限制（constitutional limit，第 17 课）不会弯。像“永远不要给 `secrets@` 发邮件”这样的规则更简单、更可审计，也不可能通过慢漂移来规避。真正的分层方式是：用统计探测器抓大多数噪声，用硬限制拦住那些已经绕过统计模型的攻击。
 
-### 通过eBPF数据路由转移进行隔离
+### 通过 eBPF 数据路径重定向做隔离
 
-基利姆的基于eBPF的网络政策可以重新编写隔离的出口到内核层的法医蜂蜜. 基利姆的公共基准显示TCP_RR上的数据路径延迟为1毫秒以下; 块中隔离的*触发*墙钟预算主要由政策更新如何从控制层传播到节点 (在Kubernetes上,运营商预装的几百毫秒是现实的;尾声延迟取决于块大小和调整序列). 这给你两个东西:代理人不会泄露任何真实的东西, 象征者通过它所试图做的事情来显示意图.
+Cilium 基于 eBPF 的网络策略可以在内核层把被隔离 pod 的出口重写到一个法证 honeypot。Cilium 的公开基准表明，在 TCP_RR 场景下，数据路径的 P99 延迟仍低于 1 毫秒。你在集群里真正要为“触发隔离”买单的实际时间，主要取决于策略更新从控制平面传播到节点的速度。在一个预热过 operator 的 Kubernetes 集群里，几百毫秒是现实数字；尾延迟则取决于集群规模和 reconcile cadence。
 
-### 什么没有探测器可以捕获
+这样做能带来两件事：第一，代理不会把任何真实内容泄露出去；第二，代理在蜜罐里的每个动作都能被完整观察。它和 canary token 的思路是同一个模式，只是发生在更底层：代理会用自己的行为暴露自己的意图。
 
-- **Semantic attacks that compose from allowed primitives.**每个单独的操作都通过每一个探测器; 组合是问题. 这是自动模式组合失败从10课.
-- **Attacks that include the detector as part of the payload.**如果一个代理阅读一个页面说"在你行动之前,禁用鱼",并且该代理有能力,检测器会受到损害.
+### 哪些东西任何探测器都抓不住
+
+- **由允许原语组合出来的语义攻击。** 每个单独动作都通过了所有探测器，问题出在组合本身。这正是第 10 课里的 Auto Mode 复合失效（composite failure）。
+- **把探测器本身写进恶意载荷（payload）的攻击。** 如果代理读到的页面写着“在执行前先禁用 canary”，而代理又真的具备这个能力，那探测器本身就被污染了。因此 canary token 必须放在代理无权修改的系统中。
 
 ```figure
 circuit-breaker
@@ -86,41 +88,41 @@ circuit-breaker
 
 ## 用它
 
-`code/main.py`通过三种探测器模拟一个短的代理轨迹.一个在外部指示中保持的杀伤开关;一个在五个相同的工具调用时发生故障的断路;一个读取引发警报的可纳文件. 通过合成轨迹提供:合法行动,重复循环,可纳探测器,以及一个被杀伤开关引发的场景,该代理的行动被停止.
+`code/main.py` 会模拟一个短代理轨迹，并让它穿过三种探测器：一个保存在外部字典中的 kill switch，一个会在五次相同工具调用后跳闸的 circuit breaker，以及一个一旦被读取就报警的 canary file。输入的合成轨迹包括：合法动作、重复循环、canary 探测，以及一个被 kill switch 截断的场景。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-tripwire-design.md`检查一个用于部署代理的探测器堆,并标记漏洞 (缺失杀伤开关,缺失能,断路门过于松散).
+`outputs/skill-tripwire-design.md` 用来审查一个拟议代理部署的探测器栈（detector stack），并标出缺口，例如缺失 kill switch、缺失 canary，或 circuit breaker 阈值设得过松。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认第五 (第五) 电路断路器火灾和第九 (假钥匙读取)
+1. 运行 `code/main.py`。确认 circuit breaker 会在第 5 轮触发，第 9 轮的 fake-key read 会触发 canary。
 
-2. 添加统计探测器:EWMA 电话通话率的z分数. 输入一个慢漂移的轨道,显示探测器从来没有开火. 现在添加一个硬极限 (在10分钟内不超过50个工具通话),并显示相同的轨道上的硬极火.
+2. 增加一个统计探测器：用 EWMA z-score 监控工具调用速率。喂给它一条缓慢漂移的轨迹，展示探测器始终不触发。然后再加一条硬限制，例如“10 分钟内不允许超过 50 次工具调用”，并展示同一条轨迹会触发硬限制。
 
-3. 设计一个浏览器代理的加拿大标 (教训11) 列出至少三个加拿大标,并列出每个标会发现什么.
+3. 为浏览器代理（第 11 课）设计一组 canary token。至少列出三个 canary，并说明每个 canary 能检测到什么。
 
-4. 阅读Cilium网络政策文件.具体描述出境转向隔离流程:哪个政策选择器,哪个模块,哪个出境重写,哪个警报. 什么控制墙钟延迟从"决定到隔离"到"第一转向包"?
+4. 阅读 Cilium 的 network-policy 文档。具体描述一个出口重定向隔离流程：使用哪个 policy selector、作用到哪个 pod、做什么 egress rewrite、触发什么 alert。再说明“决定隔离”到“第一包被重定向”之间的实际延迟由什么因素决定。
 
-5. 定义一个重新启动程序,谁可以重新启动,什么必须记录,什么必须改变在代理之前重新启动?
+5. 为被 kill-switched 的代理定义一个重新启用流程。谁有权重新启用？必须记录什么？在重新启用前，代理本身必须发生什么变化？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |---|---|---|
-| Kill switch | "Off button" | Boolean outside the agent's edit surface; checked on every consequential action |
-| Circuit breaker | "Pattern pause" | Action-specific trip on repetition, failure rate, or rate-limit |
-| Canary token | "Honeytoken" | Bait the agent has no legitimate reason to touch; access fires an alert |
-| Honeypot | "Forensic sandbox" | Redirected traffic / workspace where a quarantined agent is observed |
-| EWMA | "Moving average" | Exponentially weighted; adapts to drift (feature + bug) |
-| CUSUM | "Cumulative sum" | Detects sustained shift from baseline |
-| Hard limit | "Constitutional rule" | Does not adapt; constant regardless of history |
-| Constitutional limit | "Always-true rule" | Tied to Lesson 17's constitution; cannot be edited by the agent |
+| Kill switch | “关闭按钮” | 保存在代理编辑表面之外的布尔开关；每个有后果的动作前都检查 |
+| Circuit breaker | “模式暂停器” | 针对重复、失败率或速率上限的动作级跳闸 |
+| Canary token | “Honeytoken” | 代理没有正当理由去碰的诱饵；一旦访问就报警 |
+| Honeypot | “法证沙箱” | 被重定向后的流量或工作区，专门用于观察隔离代理 |
+| EWMA | “移动平均” | 指数加权平均；既能适应漂移，也可能因此放过漂移 |
+| CUSUM | “累计和” | 用来检测相对基线的持续偏移 |
+| Hard limit | “宪法规则” | 不会适应历史；始终保持不变 |
+| Constitutional limit | “永真规则” | 与第 17 课的 constitution 绑定；代理不能编辑 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Anthropic — Measuring agent autonomy in practice](https://www.anthropic.com/research/measuring-agent-autonomy)自动操作人员的杀式开关和断路器框.
-- [Microsoft Agent Framework — HITL and oversight](https://learn.microsoft.com/en-us/agent-framework/workflows/human-in-the-loop)生产治理模式.
-- [OWASP LLM / Agentic Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/)检测和响应要求.
-- [Cilium — Network policy and eBPF](https://docs.cilium.io/en/stable/security/network/)层次出口转向和法医蜂蜜模式.
-- [Anthropic — Claude's Constitution (January 2026)](https://www.anthropic.com/news/claudes-constitution)硬码的禁令作为"宪法限制".
+- [Anthropic — Measuring agent autonomy in practice](https://www.anthropic.com/research/measuring-agent-autonomy) — autonomous agent 的 kill-switch 与 circuit-breaker 框架。
+- [Microsoft Agent Framework — HITL and oversight](https://learn.microsoft.com/en-us/agent-framework/workflows/human-in-the-loop) — 生产治理模式。
+- [OWASP LLM / Agentic Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — 检测与响应要求。
+- [Cilium — Network policy and eBPF](https://docs.cilium.io/en/stable/security/network/) — pod 级出口重定向与法证 honeypot 模式。
+- [Anthropic — Claude's Constitution (January 2026)](https://www.anthropic.com/news/claudes-constitution) — 把硬编码禁令视作 constitutional limit。
