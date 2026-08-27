@@ -1,38 +1,38 @@
-# 投票,自主一致性和辩论拓
+# 投票、自洽性与辩论拓扑
 
-> 最便宜的集成:样本N独立代理,多数投票.王等. 2022自律性这样做了,一个模型采样N次.多代理扩展它**heterogeneous**为了逃脱单种植的代理人 不同的模型,不同的提示,不同的温度,不同的背景.除了多数投票之外,辩论的拓学问题:多代理银行 (arXiv:2503.01935,ACL 2025) 评估了星/链/树/图表协调并发现**graph best for research**根据"合作税"的规定,在过去的4个代理人中,有"协调税". AgentVerse (ICLR 2024) 记录了两个新兴模式:志愿者行为和合规行为,合规既是一种特征 (寻找共识),也是一个风险 (团体思维,24课).本课程将拓空间映射,构建每个变体,并测量协调税.
+> 最便宜的聚合方式，是采样 N 个独立 agents 然后做多数投票。Wang et al. 2022 的 self-consistency 就是在一个模型上采样 N 次完成这件事。多代理把它扩展成 **heterogeneous** agents，以摆脱 monoculture：不同模型、不同 prompts、不同 temperatures、不同上下文。超过多数投票之后，debate topology 本身也会决定结果。MultiAgentBench（arXiv:2503.01935, ACL 2025）比较了 star / chain / tree / graph 这些协调结构，发现 **graph 最适合 research**，但当 agent 数量超过大约 4 个后会出现明显的 “coordination tax”。AgentVerse（ICLR 2024）则记录了两类涌现行为：volunteer behaviors 与 conformity behaviors。后者既可能帮助形成共识，也可能把系统带进 groupthink。本课会把拓扑空间完整铺开，分别实现这些变体，并测量 coordination tax。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 16 · 07 (Society of Mind and Debate), Phase 16 · 14 (Consensus and BFT)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 16 · 07（心智社会与辩论），阶段 16 · 14（共识与 BFT）
+**Time:** 约 75 分钟
 
 ## 问题
 
-辩论可以提高准确性 (Du et al., arXiv:2305.14325).
+Debate 可能提高准确率（Du et al., arXiv:2305.14325），也可能把它拉低。决定 debate 是否有效的，通常不是一句“多搞几个 agent”就够了，而是四个结构性选择：
 
-1. 谁和谁谈话 (拓学).
-2. 几次弹 (Du 2023:弹和代理都独立重要).
-3. 药物是否异质 (不同基模型可以破坏单种植).
-4. 存在否对抗声音 (钢管对草管).
+1. 谁和谁说话，也就是 topology。
+2. 进行多少轮，也就是 rounds；Du 2023 的结论是轮数和 agent 数量是彼此独立的重要变量。
+3. agents 是否异质，也就是是否使用不同 base models。
+4. 是否存在 adversarial voice，例如是真正做 steel-manning，还是只是 straw-manning。
 
-团队"运行5个代理和投票"在一个任务上经常退缩而对待一个代理.失败不是随机的.他们跟踪拓和异性.这个课程是拓地图.
+很多团队会在任务上直接“跑 5 个 agent 然后投票”，结果反而不如一个单 agent。失败并不是随机的，它通常能稳定追溯到 topology 与 heterogeneity。本课就是这张 topology 地图。
 
 ## 概念
 
-### 单个模型的基线
+### 自洽性：单模型基线
 
-张及其他研究人员在2022年 (自律改善思想推理链) 采样了相同的模型N次在温度>0和多数投票在推理路答案.GSM8K的结果:在单个贪解码中获得N=40样本的实质性收益.自律是单代理投票的前身.
+Wang et al. 2022 在 “Self-Consistency Improves Chain of Thought Reasoning” 中，做的是：对同一个模型，在 temperature > 0 的情况下采样 N 次，然后对推理路径对应的答案做多数投票。GSM8K 的结果表明，N=40 的 self-consistency 相比单次 greedy decode 有明显提升。它可以视为多代理投票出现之前的单 agent 前身。
 
-极限:自相一致性使用一个基模型.错误是通过构建相关的.如果模型有系统偏见,所有N样本都会分享它.
+但它的限制也很明确：self-consistency 使用的是同一个 base model，因此错误天然相关。如果这个模型存在系统性偏差，那么所有 N 个样本都会共享这类偏差。
 
-### 多代理投票,异质扩展
+### 多智能体投票：异质扩展
 
-取代N样本用N *不同的*代理.不同的基模型 (Claude,GPT,Llama),不同的提示,不同的工具访问. 优势:无关错误.成本:不同的代理成本不同;协调它们增加了总费用.
+把 N 个样本换成 N 个 *不同的* agents。它们可以来自不同的 base models（Claude、GPT、Llama），也可以使用不同 prompts、不同工具权限、不同上下文来源。这样做的收益是不相关错误更多，代价则是不同 agent 的调用成本不同，协调它们本身也会带来开销。
 
-异质辩论的2026年法典名称是**A-HMAD** 异质多代理辩论. 并不是普遍采用的,但论文使用这个术语来表示"不同模式辩论,这减少了单种植崩的相关错误".
+到了 2026 年，异质辩论常见的一个名称是 **A-HMAD**，即 Adversarial Heterogeneous Multi-Agent Debate。它不是完全统一的正式术语，但很多论文会用它来表示“不同模型之间进行辩论，以降低 monoculture collapse 带来的相关错误”。
 
-### 它们的四个拓
+### 四种典型拓扑
 
 ```
 star                chain               tree                graph
@@ -44,123 +44,123 @@ star                chain               tree                graph
     D   E                         D   E F   G           (fully connected)
 ```
 
-星座:一个枢纽,其他所有人都只与枢纽交谈.相当于没有后通道的监督员工.
-链:线性,每个代理都能看到前一个输出.
-树:层次,由层次代理系统使用 (课程 06).
-图:任何一个. 包括完全连接的小伙子和任意的DAG.
+Star：一个 hub，其他节点都只和 hub 对话。它相当于没有 back-channel 的 supervisor-worker。
+Chain：线性结构，每个 agent 只看到前一个 agent 的输出，更像 pipeline。
+Tree：层级结构，常见于 hierarchical agent systems（Lesson 06）。
+Graph：任意节点可互连，既可以是 fully connected clique，也可以是一般 DAG。
 
-### 协调税 (多代理银行)
+### 协调成本（MultiAgentBench）
 
-多代理位 (MARBLE, ACL 2025, arXiv:2503.01935) 在包括研究,编码和规划在内的任务套件上标记了恒星,链,树,图表.主要测量结果:
+MultiAgentBench（MARBLE, ACL 2025, arXiv:2503.01935）在 research、coding、planning 等任务上比较了 star、chain、tree、graph。关键经验结果是：
 
-- **Graph**信息流向任何人,代理人可以互相批评.
-- **Star**快速答复的实际任务中获胜.
-- **Chain**逐步管道的胜利 (逐步精炼).
-- **Coordination tax**图表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表表
+- **Graph** 在 research tasks 上最好，因为信息可以 any-to-any 流动，agents 可以彼此交叉批评。
+- **Star** 在快速事实问答上最好，因为 hub 能承担过滤与整合。
+- **Chain** 在 stepwise pipeline 上最好，因为它天然匹配 staged refinement。
+- **Coordination tax** 会在 graph topology 超过大约 4 个 agents 后出现，wall-clock 与 token 成本增长速度会快于质量提升。
 
-对于4个代理的限额来说,这是一种经验性而不是基本的限额.它反映了2026年LLM环境能力:每个代理的环境都充满了同行产品,并且当每个人都能看到每个人的后,添加代理N+1的边际值会下降.
+这个 4-agent ceiling 不是理论极限，而是一个 2026 经验现象：随着大家互相可见，每个 agent 的上下文会迅速被 peers 的输出填满，而新增 agent N+1 的边际收益会很快下降。
 
-### 许多代理商的辩论策略 ("我们应该疯狂吗?")
+### “Should we be going MAD?”
 
-arXiv:2311.17371是2023年MAD战略调查.其他研究人员复制的关键发现:MAD变体 (结构性类似于自相一致性 (独立采样+集) 在使用相同的预算时通常表现得不一致.MAD在代理人真正异质性和辩论有对立结构时最有帮助 (一个代理人反对).
+arXiv:2311.17371 是 2023 年对 MAD（Multi-Agent Debate）策略的代表性综述。后来很多工作都重复验证了它的一个关键发现：如果 MAD 结构上只是“自洽性 + 更贵”，也就是 independent sampling 加 aggregation，但预算相同，那么它经常还不如 self-consistency。MAD 真正开始有优势，是在 agents 具备真实 heterogeneity，且 debate 具有某种 adversarial structure 的情况下，例如明确安排某个 agent 负责反对意见。
 
-### 代理 变化模式
+### AgentVerse 的涌现行为
 
-经验人员:https://proceedings.iclr.cc/paper_files/paper/2024/file/578e65cdee35d00c708d4c64bce32971-Paper-Conference.pdf) 文件文件指出,即使没有明确的设计,也存在两种行为,这些行为来自多代理辩论:
+AgentVerse（ICLR 2024, https://proceedings.iclr.cc/paper_files/paper/2024/file/578e65cdee35d00c708d4c64bce32971-Paper-Conference.pdf）指出，即便没有显式设计，多代理辩论也会自然长出两类行为：
 
-- **Volunteer.**代理人提供帮助 ("我可以采取下一步") 没有提醒.有用:它将工作分配给最有能力的代理人进行子任务.
-- **Conformity.**经纪人调整自己的立场,使其与批评者相匹配,即使批评者是错误的.
+- **Volunteer。** 某个 agent 主动提出“我可以接下一步”。这类行为通常有利，因为它会把子任务分配给最有能力处理的人。
+- **Conformity。** 某个 agent 会主动调整立场去贴近批评者，即便批评者本身是错的。
 
-合规性是为什么辩论到达协议奖励欺凌者.
+Conformity 正是为什么“辩到一致为止”很容易奖励 bullies。限制轮数并引入独立 judge，通常是更稳妥的做法。
 
-### 异质性:实际的按移动精度
+### 异质性：真正能推动准确率的调节因素
 
-实际文献中的2024-2026年模式:将N代理中的一个换成不同的基模型,比增加N1的精度增加更大.直觉是单种,每个新的独立错误源价值超过额外的相关样本.
+2024-2026 年实践文献里很稳定的一个模式是：把 N 个 agents 中的一个换成不同 base model，带来的准确率提升，常常比在原模型上再额外加 1 个 agent 更大。直觉很简单：每增加一个真正独立的错误源，比增加一个高度相关的样本更有价值。
 
-在极限中,异质性比多数性更大.三种不同的模型在大多数具有清洁的基础真相的任务上,
+在极限情况下，heterogeneity 比 numerosity 更重要。对大多数有清晰 ground truth 的任务来说，三个不同模型往往优于五个同模型副本。
 
-### 评审团的方法
+### 陪审团方法
 
-根据"西比尔框架" (引用于明斯基-LLM文献) 正式化了"陪审团" (Jury) ,是一个小组专业代理人通过投票在每个阶段来精细化答案.与普通多数投票不同,陪审团的角色是:一个代理人进行反审,一个提供文本,一个评审团的可靠性.陪审团方法是平凡投票 (廉价,单独文化倾向) 和完整的MAD (昂贵,符合性倾向) 之间的中点.
+Sibyl 框架在 Minsky-LLM 相关文献里形式化了“jury”方法：不是单纯多数投票，而是一个带角色分工的小型 panel。比如一个 agent 负责 cross-examine，一个负责补充 context，一个负责给 plausibility 打分。Jury methods 可以看作介于 plain vote 与 full MAD 之间的折中方案：比纯投票更强，也比完整多轮辩论更便宜、更不容易陷入 conformity。
 
-### 投票与辩论主导
+### 何时值得结合投票与辩论
 
-- 投票相近是有意义的.
-- 代理人可以访问不同的来源或工具 (异性可用).
-- 轮子是有限的 (2-3典型) 有一个独立的法官或验证者.
-- 预算允许3-5个代理人. 在图表拓学上,协调税占主导地位.
+- 问题存在 ground truth，例如事实、数学或代码行为。
+- agents 能访问不同来源或不同 tools，异质性是真实存在的。
+- rounds 被明确限制在 2-3 轮，并且存在独立 judge 或 verifier。
+- 预算允许 3-5 个 agents；超过 5-7 个 graph 节点后，coordination tax 往往开始主导。
 
-### 投票与辩论伤害时
+### 何时结合投票与辩论反而有害
 
-- 调查人员会一致地回答最自信的答案,而不是最正确的答案.
-- 单种文化使得共识毫无意义.
-- 轮子无限,每次都会有符合性.
-- 只有一个具有N=5的自律性的代理,更便宜,更准确.
+- 问题本质上是意见型，而不是事实型。大家最后会收敛到“最像正确答案的说法”，而不是最正确答案。
+- 所有 agents 共享同一个 base model，monoculture 会让共识失去意义。
+- rounds 无界，最后 conformity 一定会压过真实分歧。
+- 任务本身很简单。一个 single agent 配合 N=5 的 self-consistency 通常更便宜，也一样准。
 
 ```figure
 sw-debate-topology
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `run_star(agents, hub, question)`各工人中心调查,总计.
-- `run_chain(agents, question)` 顺序精炼
-- `run_tree(root, children, question)`层次性,深度-2集成.
-- `run_graph(agents, question, rounds)`全面辩论,有限的轮回.
-- 编写异性数:每个代理都有一个`error_bias`表明其系统性错误.
-- 测量带,每个拓在N=3,5,7运行,并报告 (准确性,总_代码,壁表_模拟).
+- `run_star(agents, hub, question)`：hub 轮询所有 worker 并聚合结果。
+- `run_chain(agents, question)`：串行精炼。
+- `run_tree(root, children, question)`：深度为 2 的层次聚合。
+- `run_graph(agents, question, rounds)`：bounded rounds 的 all-to-all debate。
+- 一个脚本化 heterogeneity dial：每个 agent 都带一个 `error_bias`，表示它系统性出错的方向。
+- 一个 measurement harness：对每种 topology，在 N=3、5、7 下运行，并报告 accuracy、total_tokens 与 wallclock_simulated。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-预期输出:顶级表 × N → (精度,代币,延迟). 在研究类型任务上,图表在 N=3-5 时获胜;在快速事实任务上,星星获胜;在 N=7 的图表显示协调税 (延迟比精度更快膨胀).
+预期输出是一张 topology × N → (accuracy, tokens, latency) 表。Graph 在 N=3-5 的 research-style tasks 上通常最好；star 在 fast-factual tasks 上更有优势；而 N=7 的 graph 会明显暴露 coordination tax，也就是延迟膨胀快于准确率增长。
 
-## 用它
+## 实际使用
 
-`outputs/skill-topology-picker.md`是一个阅读任务描述的技能,并建议一个拓学 (星/链/树/图),一个N (代理人数),一个异质性配置文件 (使用的基模型) 和一个圆的界限.
+`outputs/skill-topology-picker.md` 是一个根据任务描述来推荐 topology 的技能：它会给出 star / chain / tree / graph 中的选择、推荐 N（agent 数量）、建议的 heterogeneity profile（选哪些 base models），以及 round bound。
 
-## 运送它
+## 交付上线
 
-对于任何组件:
+对于任意 ensemble：
 
-- 开始**self-consistency at N=5**根据一个强大的基调模型.
-- 升级到**heterogeneous voting at N=3**如果准确性重要, 测量三角洲.
-- 只有升级到**debate topology**如果任务有结构 (研究,多步骤) 和有限的轮子是可行的.
-- 总是记录少数群体. 当少数群体持久地对时,你会得到多样性信号.
-- 通过"十倍成本更好的准确性"是商业决定.
+- 先从 **self-consistency at N=5** 开始，用一个强 base model 做最低成本基线。
+- 如果准确率真的关键，再升级到 **heterogeneous voting at N=3**，并测量增量收益。
+- 只有当任务确实具备结构性，例如 research 或 multi-step workflow，且 bounded rounds 可行时，才值得升级到 **debate topology**。
+- 一定要记录 minority cluster。一个长期“少数但经常正确”的 minority，本质上就是 diversity signal。
+- 评估时别只看 accuracy，也要一起看 wall-clock 与 tokens。“10 倍成本换一点点准确率”是否值得，是业务决策。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`图表表顶级的协调税曲线:准确度与N,代币与N.曲线在哪个N上曲折?
-2. 如何将完全相同的偏见基线与14课单种植攻击的A-HMAD相比?
-3. 增加一个"评判"角色,它不会投票,只能获得最终共识.
-4. 您可以通过快速改变,引发相反的行为吗?
-5. 阅读多代理位 (arXiv:2503.01935) 第4节 (拓学实验).使用你的带,从纸上复制一个任务的"图表-获胜-研究"结果.
+1. 运行 `code/main.py`，画出 graph topology 的 coordination-tax 曲线：accuracy vs N、tokens vs N。曲线在哪个 N 开始拐弯？
+2. 实现 A-HMAD：三个 agents 带有刻意不同的 biases。它与 Lesson 14 里的 monoculture attack 基线相比表现如何？
+3. 给 graph topology 增加一个不投票、只对最终 consensus 打分的 “judge” 角色。它会改变 emergent conformity 吗？
+4. 阅读 AgentVerse 论文。判断你的实现更强地表现出哪一种 emergent behavior。能否通过 prompt 改动诱发相反行为？
+5. 阅读 MultiAgentBench（arXiv:2503.01935）第 4 节的 topology experiments。用你的 harness 在论文任务之一上复现 “graph-wins-research” 结论。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| Self-consistency | "Sample N times, vote" | Wang 2022. Single model, N temperature>0 samples, majority vote on reasoning paths. |
-| Heterogeneity | "Different models" | Ensemble of different base models or prompt families. Breaks monoculture. |
-| MAD | "Multi-agent debate" | Generic term for agents exchanging critiques over rounds. See Du 2023. |
-| A-HMAD | "Adversarial Heterogeneous MAD" | MAD variant emphasizing different models + adversarial structure. |
-| Topology | "Who talks to whom" | Star, chain, tree, graph. Determines information flow. |
-| Coordination tax | "Diminishing returns" | Above ~4 agents on graph, cost grows faster than quality. |
-| Volunteer behavior | "Unprompted help" | AgentVerse emergent pattern: an agent offers to take a step. |
-| Conformity behavior | "Agreement under pressure" | AgentVerse emergent pattern: an agent aligns with a critic. |
-| Jury | "Small specialized panel" | Sibyl-style ensemble with roles (examiner, context, scorer). |
+| 自洽性 | “采样 N 次，再投票” | Wang 2022：单个模型在 temperature > 0 时采样 N 次，再对推理路径的答案做多数投票。 |
+| 异质性 | “不同模型” | 由不同基座模型或提示家族组成的集成，用来打破单一文化。 |
+| MAD | “多智能体辩论” | 多个智能体在若干轮中交换批评意见的统称。 |
+| A-HMAD | “对抗式异质多智能体辩论” | 强调不同模型与对抗式结构的 MAD 变体。 |
+| 拓扑 | “谁与谁交流” | 星形、链形、树形和图形结构，决定信息如何流动。 |
+| 协调成本 | “收益递减” | 图形拓扑上的智能体超过约 4 个后，成本增长快于质量提升。 |
+| 主动协助行为 | “未经提示便提供帮助” | AgentVerse 描述的涌现模式：智能体主动承担下一步。 |
+| 从众行为 | “在压力下趋同” | AgentVerse 描述的涌现模式：智能体向批评者的观点靠拢。 |
+| 陪审团 | “小型专家小组” | Sibyl 风格的小型角色化团队，例如质询者、上下文提供者和评分者。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Wang et al. — Self-Consistency Improves Chain of Thought Reasoning](https://arxiv.org/abs/2203.11171)单个模型的基准
-- [Du et al. — Improving Factuality and Reasoning via Multiagent Debate](https://arxiv.org/abs/2305.14325) 两种代理和轮子都独立重要
-- [MultiAgentBench / MARBLE](https://arxiv.org/abs/2503.01935)标题表表图最适合研究,管道链
-- [Should we be going MAD?](https://arxiv.org/abs/2311.17371) MAD战略调查;发现MAD经常因同等预算而失败于自律性
-- [AgentVerse (ICLR 2024)](https://proceedings.iclr.cc/paper_files/paper/2024/file/578e65cdee35d00c708d4c64bce32971-Paper-Conference.pdf)志愿者和合规性新出现模式
-- [MARBLE repo](https://github.com/ulab-uiuc/MARBLE) 参考基准实施
+- [Wang et al. — Self-Consistency Improves Chain of Thought Reasoning](https://arxiv.org/abs/2203.11171) — 单模型基线
+- [Du et al. — Improving Factuality and Reasoning via Multiagent Debate](https://arxiv.org/abs/2305.14325) — agents 与 rounds 都是独立重要变量
+- [MultiAgentBench / MARBLE](https://arxiv.org/abs/2503.01935) — topology benchmark，graph 适合 research，chain 适合 pipelines
+- [Should we be going MAD?](https://arxiv.org/abs/2311.17371) — MAD 策略综述；等预算下 MAD 往往不如 self-consistency
+- [AgentVerse (ICLR 2024)](https://proceedings.iclr.cc/paper_files/paper/2024/file/578e65cdee35d00c708d4c64bce32971-Paper-Conference.pdf) — volunteer 与 conformity 两类涌现行为
+- [MARBLE repo](https://github.com/ulab-uiuc/MARBLE) — 基准实现参考
