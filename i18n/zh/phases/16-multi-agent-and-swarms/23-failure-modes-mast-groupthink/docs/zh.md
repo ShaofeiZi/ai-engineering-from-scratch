@@ -1,74 +1,79 @@
-# 失败模式  MAST,团体思维,单元文化,局错误
+# 失败模式：MAST、群体思维、单一文化与级联错误
 
-> 2026年的参考分类是**MAST**根据7个最新的开源MAS显示的1642个执行痕迹,**41–86.7% failure rate**三个根类别:**Specification Problems**角色模糊性,任务定义不清楚;**Coordination Failures**通信故障,状态失调;**Verification Gaps**缺失验证,缺失质量检查.**Groupthink**们的们在们的们中,都会发现,们的们在们的们中, 级例子:一次试机暴风雨,支付失败会触发一次订单试机,从而触发一次库存试机,从而压倒库存服务 (10次负载在秒钟中需要断路). 记忆中毒:一个人幻觉进入共享记忆,下游的 agents treat it as fact;准确性逐渐衰退,使根源诊断痛苦.**STRATUS**通过专业检测/诊断/验证代理报告了1.5倍的缓解成功.本课程将失败模式视为一流的工程目标.
+> 到 2026 年，最有代表性的参考分类法是 **MAST**（Cemri et al., NeurIPS 2025, arXiv:2503.13657）。它基于 7 个最先进开源 MAS 的 1642 条执行轨迹，总结出 **41–86.7% 的失败率**。三类根因分别是：**Specification Problems**（41.77%），也就是角色含糊、任务定义不清；**Coordination Failures**（36.94%），也就是通信失效、状态不同步；以及 **Verification Gaps**（21.30%），也就是缺少验证、质量检查缺位。**Groupthink** 这一组问题（arXiv:2508.05687）则进一步补充了：单一文化崩溃、从众偏差、心智理论不足、混合动机动态，以及级联可靠性故障。典型级联例子是重试风暴：一次支付失败触发订单重试，订单重试又触发库存重试，最终在几秒内把库存服务打到 10 倍负载，因此需要 circuit breaker。另一个问题是 memory poisoning：一个代理的幻觉进入共享记忆后，下游代理把它当成事实继续推理；准确率不是瞬间崩掉，而是缓慢衰减，因此根因诊断会尤其痛苦。**STRATUS**（NeurIPS 2025）报告称，依靠专门的 detection、diagnosis 与 validation agent，缓解成功率可提升 1.5 倍。本课会把失败模式当作一等工程对象来处理。
 
-**Type:** Learn
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 16 · 13 (Shared Memory), Phase 16 · 14 (Consensus and BFT), Phase 16 · 15 (Voting and Debate Topology)
-**Time:** ~75 minutes
+**Type:** 学习
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 16 · 13（共享记忆），阶段 16 · 14（共识与 BFT），阶段 16 · 15（投票与辩论拓扑）
+**Time:** 约 75 分钟
 
 ## 问题
 
-多代理系统在实际任务上失败的时间为41.86.7% (Cemri等人2025测量了这在7个开源MAS中).这不能通过"只添加更多代理"来调试.失败有结构性原因.MAST分类学给你提供了类别.本课程将每个类别映射到一个具体的检测,诊断和缓解模式,因此数字不再看起来任意.
+多智能体系统在真实任务上的失败率高达 41–86.7%（Cemri et al. 2025 在 7 个开源 MAS 上测得）。这类问题不可能靠“再多加几个 agent”就调通。失败背后有结构性原因，而 MAST 正是用来给这些原因分门别类的。本课会把每个类别映射到具体的检测、诊断和缓解模式，让这些数字不再像一团随机噪声。
 
-您的架构是"不够好的"直到您可以指向每个MAST类别并命名您部署的减轻.
+到 2026 年，生产实践的共识是：失败模式必须作为设计输入。只有当你能指着每个 MAST 类别，说清自己部署了什么缓解手段时，你的架构才算“足够好”。
 
 ## 概念
 
-### 类
+### MAST 分类
 
-**Specification Problems (41.77% of failures).**代理人的任务没有被充分定义.
+**规格问题（占失败的 41.77%）。** 智能体的任务定义不够严格。典型例子：
 
-- 角色模糊:两个代理人都认为自己是评论员.
-- 任务被说明了以下: "总结这个"当用户想要一个特定的角度时.
-- 结果是不明确的:代理人不能说它是否成功.
+- 角色含糊：两个智能体都以为自己是审查者。
+- 任务定义不足：用户只说“总结一下”，但实际需要特定视角。
+- 成功标准隐含：智能体无法判断任务是否完成。
 
-减轻:
-- 写出明确的角色合同.每个代理的提示说明了它做什么,以及它不做什么.
-- 在代理开始之前,定义"完成看起来像X".
-- 飞行前规格检查:在发送前,一个独立的代理检查任务定义.
+缓解方式：
 
-**Coordination Failures (36.94%).**通信或状态故障.
+- 写明角色契约。每个智能体的提示既要说明它做什么，也要说明它**不做什么**。
+- 为每项任务编写验收测试。智能体开始前，先定义“完成应是什么样子”。
+- 做执行前规格检查：由另一个智能体在真正派发任务前审查任务定义。
 
-举个例子:
-- 两个代理更新没有同步的共享状态.
-- 代理之间丢失的消息 (排队失败,时间过关).
-- 状态漂移:Agent A认为任务完成;B agent仍然执行.
+**协调失败（36.94%）。** 这是通信或状态层面的失效。
 
-减轻:
-- 版本共享状态与乐观的同时.
-- 显而易见的批评信息确认 (再试到被检查).
-- 定期进行状态同步检查点; 早期检测漂移.
+例子：
 
-**Verification Gaps (21.30%).**没有独立检查输出.
+- 两个 agent 在没有同步机制的情况下同时更新共享状态。
+- agent 之间消息丢失（队列故障、超时）。
+- 状态漂移：agent A 认为任务已完成，agent B 仍在执行。
 
-举个例子:
-- 一个代理声称成功,没有人验证.
-- 连锁代理人每个信任先前的输出.
-- 测试覆盖率缺少了新兴复合行为.
+缓解方式：
 
-减轻:
-- 独立验证代理 (课13). 仅可阅读,独立的源码访问.
-- 显而易见的交付合同: "A的输出必须在B开始之前通过检查器C".
-- 后期分析的结果记录.
+- 用带版本号的共享状态，并配合乐观并发控制。
+- 对关键消息采用显式 acknowledgment（没 ack 就持续重试）。
+- 定期做 state-sync checkpoint，尽早检测漂移。
 
-### 集团思维家族 (arXiv:2508.05687)
+**验证缺口（21.30%）。** 输出缺少独立校验。
 
-五种相关的失败,当代理人同质化或模仿彼此:
+例子：
 
-**Monoculture collapse.**只有三位经理在 LLM 课程中,他们都会分享幻觉.
+- 一个 agent 宣称成功，但没有任何人验证。
+- 一串 agent 流水线层层信任前一个 agent 的输出。
+- 测试覆盖没有覆盖到涌现出来的组合行为。
 
-**Conformity bias.**代理人适应最声或最自信的同龄人,即使是错误的.
+缓解方式：
 
-**Deficient ToM.**代理人无法模拟彼此的信仰;协调失败 (课 18).
+- 引入独立 verifier agent（见 Lesson 13）。它应只读，并拥有独立信息来源。
+- 写明确的 handoff contract，例如：“A 的输出必须先通过 checker C，B 才能开始。”
+- 对结果做 outcome logging，便于事后分析。
 
-**Mixed-motive dynamics.**那些有部分优势的代理人, 倾向于妥协,
+### 群体思维家族（arXiv:2508.05687）
 
-**Cascading reliability failures.**一个组件的错误模式会触发依赖组件的错误模式.
+当 agent 开始同质化、彼此模仿时，常见的五类相关失败是：
 
-###        
+**Monoculture collapse。** 相同的基础模型或训练数据会带来相关性错误。三个 agent 如果共用同一个 LLM，它们也会共享那套幻觉。
 
-经典的2026事件模式:
+**Conformity bias。** agent 会向最响亮、最自信的同伴靠拢，即便对方是错的。
+
+**Deficient ToM。** agent 无法正确建模彼此的信念，因此协调会瓦解（见 Lesson 18）。
+
+**Mixed-motive dynamics。** 当 agent 的激励只是部分对齐时，它们会滑向折中但谁都不满意的中间解。
+
+**Cascading reliability failures。** 一个组件的错误模式会触发下游依赖组件的错误模式。
+
+### 级联案例：重试风暴
+
+一个典型的 2026 事故模式如下：
 
 ```
 payment service fails 10% of requests
@@ -88,120 +93,122 @@ inventory service sees 10x normal load
 cluster goes down
 ```
 
-解决方案是经典的:**circuit breakers**随着下游错误率超过门,将缓存或默认结果进行短路处理.
+修复方式很传统：**circuit breaker**。当下游错误率超过阈值时，直接短路，返回缓存结果或默认结果。同时还要给每个请求设置有上限的 retry budget。
 
-断路器是少数几个多代理故障减轻措施之一,
+Circuit breaker 是少数几种几乎可以原封不动从分布式系统领域借到多智能体系统里的缓解手段。
 
-### 记忆中毒 (复习)
+### 记忆污染（复习）
 
-从第13课开始,一个代理的幻觉变成共享记忆的事实;下游代理人对毒害的事实进行推理.
+呼应 Lesson 13：一个 agent 的幻觉会被写入共享记忆，随后下游 agent 把这条被污染的内容当作事实继续推理。从 MAST 的角度看，这属于共享记忆层上的 verification gap。
 
-渐渐的准确性衰退是症状.你不会碰撞,你会慢慢漂移,难以根源原因.
+它的症状是准确率缓慢衰退。你不会看到一次明确的 crash，而是会看到系统慢慢漂移，这也是它最难做根因定位的地方。
 
-减轻:仅添加日志,来源,不可编写的验证器.
+缓解方式：append-only log、provenance、不可写 verifier。这些在 Lesson 13 已经覆盖过。
 
-### 斯特拉图斯  专业的故障检测剂
+### STRATUS：专门负责故障检测的智能体
 
- STRATUS (NeurIPS 2025) 报告了在部署时的缓解成功改善1.5倍:
+STRATUS（NeurIPS 2025）报告称，当你部署以下三类 agent 时，缓解成功率可以提升 1.5 倍：
 
-- **Detection agent.**观察症状模式 (高分歧,重试,精度漂移).
-- **Diagnosis agent.**鉴于症状,可能是MAST类别的根源.
-- **Validation agent.**缓解症状后,检查症状是否清晰.
+- **Detection agent。** 监控症状模式，例如高分歧、重试激增、准确率漂移。
+- **Diagnosis agent。** 基于症状推断最可能的 MAST 根因类别。
+- **Validation agent。** 在缓解动作执行后，确认症状是否真正清除。
 
-这种应对事件的方法是SRE,应用于代理系统.
+这本质上就是把 SRE 风格的 incident response 套进 agent system。三个角色都可以是带专门 prompt 的 LLM agent。
 
 ### 失败模式审计
 
-根据2026年最佳实践,每年 (或每次主要发布) 失败模式审计:
+到 2026 年，一个常见最佳实践是按年或按大版本做一次 failure-mode audit：
 
-1. **Trace sample.**收集1000个真正的执行痕迹.
-2. **Categorize.**对于每个痕迹的失败,将其映射到 MAST+集团思考类别.
-3. **Compute failure-by-category rate.**你的系统中占据哪些类别?
-4. **Rank mitigations.**哪个解决方案可以消除最多的失败?
-5. **Pick 2-3 mitigations.**实施;下季度进行再审计.
+1. **抽样轨迹。** 收集大约 1000 条真实执行轨迹。
+2. **归类。** 把每条轨迹中的失败映射到 MAST 与 Groupthink 类别。
+3. **计算分类型失败率。** 看哪些类别在你的系统中占主导。
+4. **缓解手段排序。** 哪种修复方式能消灭最多失败？
+5. **挑选 2 到 3 项缓解手段。** 实施它们，并在下一季度重新审计。
 
-没有审计,失败会融入噪音,
+真正重要的不是某次具体选择，而是这套纪律本身。没有审计，失败就会混进噪声里，永远得不到系统性治理。
 
-### 当系统默默失败时
+### 当系统悄悄失败
 
-最危险的故障类别是默认正确性故障.一个系统大声失败 (崩,例外,警报) 可以监控.一个系统产生可信但错误的输出不能通过例外日志检测.这就是为什么验证差距是每次故障的最昂贵类别,尽管它们仅为21.30%的数量.
+最危险的失败类型是静默正确性失败。一个系统如果是显性失败，也就是崩溃、异常或告警，至少还能被监控到；一个系统如果持续生成“看起来合理但其实错误”的输出，异常日志根本抓不住它。这也是为什么 verification gap 虽然只占 21.30%，但单次失败成本往往最高。
 
-投资:
-- 基于样本的人类评估.
-- 黄金数据集回归测试.
-- 经纪人对重要输出进行检查.
+你需要投入在：
 
-### 失败与缓慢失败
+- 抽样人工复核。
+- golden dataset 回归测试。
+- 对关键输出做 cross-agent cross-check。
 
-一些失败是立即的;有些是缓慢的.立即失败 (时间过期,方案不匹配,作者错误) 便宜的检测.缓慢失败 (记忆中毒,单种植漂移,角色模糊性) 昂贵的检测和预防.
+### 快失败与慢失败
 
-2026 年的工程动作:仪器缓慢故障代理,以便在它成为可见错误之前捕获漂移.协议速度,重试速度,输出长度分布和连续代理版本之间的编辑距离都是有用的代理.
+有些失败是立刻出现的，有些则是慢慢积累出来的。立刻出现的失败，例如超时、schema mismatch、auth error，检测成本低；慢失败，例如 memory poisoning、monoculture drift、role ambiguity，检测和预防都更贵。
+
+2026 年的工程动作是：为慢失败布置代理指标，在它变成显性错误之前先抓到漂移。agreement rate、retry rate、output-length distribution，以及连续 agent 版本之间的 edit-distance，都是有价值的 proxy。
 
 ```figure
 a5-retry-cascade
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `FailureTaxonomy`将模拟事件分为MAST+集团思维类别.
-- `CircuitBreaker`经典模式; 误差率超过门时开放.
-- `RetryStormSimulator`显示断断;切换断路器开关/关闭.
-- `DetectionAgent`编写的STRATUS类型的症状匹配器.
+- `FailureTaxonomy`：把模拟 incident 归类到 MAST 与 Groupthink 类别。
+- `CircuitBreaker`：经典模式；当错误率超过阈值就打开。
+- `RetryStormSimulator`：演示级联失败，并支持切换 circuit breaker 的开与关。
+- `DetectionAgent`：一个脚本化的 STRATUS 风格症状匹配器。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-预期产量:
-- 没有断路器的再试风暴:库存错误爆炸 (模拟).
-- 电路断电器:门;降低模式响应.
-- 检测剂标记了模式并命名了MAST类别.
+预期输出：
 
-## 用它
+- 不启用 circuit breaker 时，retry storm 会让 inventory error 爆炸增长（模拟）。
+- 启用 circuit breaker 时，错误会被限制在阈值附近，并进入 degraded mode。
+- detection agent 会识别该模式，并给出对应的 MAST 类别。
 
-`outputs/skill-mast-auditor.md`在多代理系统上进行MAST类型的故障模式审计.
+## 实际使用
 
-## 运送它
+`outputs/skill-mast-auditor.md` 用来对多智能体系统执行一次 MAST 风格的 failure-mode audit：从 trace 出发，完成归类，再输出缓解手段排序。
 
-生产中故障模式的纪律:
+## 交付成果
 
-- **MAST audit per quarter.**随着系统的发展,类别会变化.
-- **Circuit breakers everywhere.**每次出口通话到任何依赖服务. 默认开放门率为5-10%.
-- **Golden datasets.**它们每周都会进行反检查.
-- **STRATUS trio.**检测+诊断+验证剂监测产量. 开始只使用检测剂; 添加诊断当症状有噪音时.
-- **Failure budget.**按类别的失败率,明确的SLO. 超过预算会引发停运对话.
+生产环境中的失败模式纪律：
 
-## 运动
+- **每季度做一次 MAST 审计。** 不是每年一次。系统长大后，主导类别会变化。
+- **到处都要有 circuit breaker。** 每个对下游依赖服务的外呼都应有；默认开启阈值可从 5–10% 错误率开始。
+- **维护 golden dataset。** 数据量可以小，但必须高质量、人工审核过，并按周做回归测试。
+- **部署 STRATUS 三件套。** Detection、Diagnosis、Validation agent 负责盯生产；最开始可以只上 detection，等症状噪声大了再补 diagnosis。
+- **设 failure budget。** 按失败类别定义明确 SLO；一旦超预算，就要触发 stop-shipping 讨论。
 
-1. 跑步`code/main.py`确认断路封闭,重新尝试风暴,改变故障门,并观察交易.
-2. 实施一个**slow-failure proxy**随着3个平行物体的相应率. 当它急剧下降时,激起警报. 通过逐步相关化物体输出来模拟单种产物漂移.
-3. 阅读Jemri等 (arXiv:2503.13657). 选择他们7个MAS系统中的一个,并绘制其前3个失败类别.
-4. 阅读集团思维论文 (arXiv:2508.05687). 确定五种模式中哪种最难在生产中检测. 提出代理测量.
-5. 设计一个STRATUS类型的检测-诊断-验证三组,用于特定的多代理系统.检测监视哪些症状?诊断建议哪些减轻措施?验证如何确认它们有效?
+## 练习
 
-## 关键词
+1. 运行 `code/main.py`。确认 circuit breaker 能压住 retry storm。调节 failure threshold，观察权衡关系。
+2. 实现一个 **slow-failure proxy**：统计 3 个并行 agent 之间的 agreement rate。当它突然下跌时触发告警。再通过逐步提高输出相关性来模拟 monoculture drift。
+3. 阅读 Cemri et al.（arXiv:2503.13657）。从他们的 7 个 MAS 中挑一个，映射出其前 3 大失败类别。它和 MAST 的预测是否一致？
+4. 阅读 Groupthink 论文（arXiv:2508.05687）。判断五类模式里哪一种最难在生产环境中检测，并提出一个 proxy metric。
+5. 为你熟悉的一个多智能体系统设计一套 STRATUS 风格的 detection-diagnosis-validation 三件套。detection 看哪些症状？diagnosis 推荐哪些缓解动作？validation 如何确认它们生效？
 
-| Term | What people say | What it actually means |
+## 关键术语
+
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| MAST | "The 2026 taxonomy" | Cemri 2025; 3 root categories + 14 sub-types of failures. |
-| Specification Problem | "Role ambiguity" | Task or role under-defined; agents do not know what to do. |
-| Coordination Failure | "State drift" | Communication or sync breakdown between agents. |
-| Verification Gap | "No one checked" | Outputs accepted without independent validation. |
-| Groupthink family | "Homogeneity failures" | Monoculture, conformity, deficient ToM, mixed-motive, cascading. |
-| Monoculture collapse | "Same model, same hallucinations" | Correlated errors from shared base model or training data. |
-| Retry storm | "Cascading error amplification" | One failure triggers retries which amplify load downstream. |
-| Circuit breaker | "Fail fast on error rate" | Open when error rate exceeds threshold; short-circuit with default. |
-| STRATUS | "Incident response trio" | Detection + diagnosis + validation agents. 1.5x mitigation success. |
-| Memory poisoning | "Hallucinations propagate" | Shared-memory fact tainted; downstream agents reason on poison. |
+| MAST | “2026 年的分类法” | Cemri 2025 提出的框架；含 3 大根类别与 14 个子类型。 |
+| 规格问题 | “角色含糊” | 任务或角色定义不足；智能体不知道自己该做什么。 |
+| 协调失败 | “状态漂移” | 智能体之间通信或同步失效。 |
+| 验证缺口 | “没人检查” | 输出未经独立验证便被接受。 |
+| 群体思维家族 | “同质化失败” | 单一文化、从众、ToM 缺失、混合动机与级联错误。 |
+| 单一文化崩溃 | “同一模型，同类幻觉” | 共享基础模型或训练数据造成的相关错误。 |
+| 重试风暴 | “级联式错误放大” | 一次失败触发重试，重试又进一步放大下游负载。 |
+| 熔断器 | “错误率过高时快速失败” | 错误率超过阈值时打开，改为短路或返回默认响应。 |
+| STRATUS | “事件响应三件套” | 检测、诊断和验证三类智能体；缓解成功率提高 1.5 倍。 |
+| 记忆污染 | “幻觉扩散” | 共享记忆被污染，下游智能体在错误事实之上继续推理。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Cemri et al. — Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/abs/2503.13657) MAST分类,NeurIPS 2025
-- [Groupthink failures in multi-agent LLMs](https://arxiv.org/abs/2508.05687)单种植,合规性和五家族分类
-- [STRATUS — specialized agents for MAS incident response](https://neurips.cc/) NeurIPS 2025 程序入口 (检测+诊断+验证)
-- [Release It! — stability patterns (Nygard)](https://pragprog.com/titles/mnee2/release-it-second-edition/)正规的断路切断器参考
-- [Anthropic — Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)生产故障模式的说明
+- [Cemri et al. — Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/abs/2503.13657) - MAST 分类法，NeurIPS 2025
+- [Groupthink failures in multi-agent LLMs](https://arxiv.org/abs/2508.05687) - 单一文化、从众，以及五大家族失败模式
+- [STRATUS — specialized agents for MAS incident response](https://neurips.cc/) - NeurIPS 2025 proceedings 条目（detection、diagnosis、validation）
+- [Release It! — stability patterns (Nygard)](https://pragprog.com/titles/mnee2/release-it-second-edition/) - circuit breaker 的经典参考
+- [Anthropic — Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system) - 生产环境失败模式相关经验
