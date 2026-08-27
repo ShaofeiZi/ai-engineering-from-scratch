@@ -1,44 +1,44 @@
-# 模型文本协议 (MCP)
+# 模型上下文协议（MCP）
 
-> 2026-07-28的修订使该协议无状态:功能和版本文本与每个请求都随着,而不是连接的握手.
+> MCP 为 AI 宿主提供一套统一协议，用于发现和调用工具、资源与提示词。2026-07-28 修订版使该协议变为无状态：能力与版本上下文随每个请求一同传递，而不是保存在与连接绑定的握手中。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 11 · 09 (Function Calling), Phase 11 · 03 (Structured Outputs)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 11 · 09（函数调用）、阶段 11 · 03（结构化输出）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 区分一个MCP主机,客户端,服务器,运输和服务器原始.
-- 建立一个JSON-RPC请求,使用MCP 2026-07-28所要求的元数据.
-- 使用`server/discover`检查版本,身份和功能.
-- 返回输入和缓存的结果来自工具,资源和提示.
-- 解释现代无国无国 MCP 与握手时代的服务器如何互动.
-- 选择安全状态,运输和许可限制.
+- 区分 MCP 宿主、客户端、服务器、传输机制与服务器原语。
+- 构建包含 MCP 2026-07-28 所需元数据的 JSON-RPC 请求。
+- 使用 `server/discover` 检查版本、身份与能力。
+- 从工具、资源和提示词返回类型明确、支持缓存的结果。
+- 解释现代无状态 MCP 如何与握手时代的服务器互操作。
+- 为服务器选择安全的状态、传输与审批边界。
 
 ## 问题
 
-没有共享协议,每个AI主机都需要自定义发现,调用,错误,运输和授权粘合剂,
+你的应用需要执行数据库查询、日历操作和文件读取。如果没有共享协议，每个 AI 宿主都要为这些相同能力分别编写发现、调用、错误处理、传输与授权的适配代码。
 
-服务器发布标准的JSON-RPC表面.一个符合要求的客户端可以发现表面,向模型或用户展示它,调用它,并没有服务器特定的适配器解释结果.
+MCP 缩小了这一集成矩阵。服务器发布标准 JSON-RPC 接口；合规客户端无须服务器专用适配器，就能发现该接口、将其呈现给模型或用户、执行调用，并解释结果。
 
-重要界限很容易被错过.MCP标准化通信.它不决定模型应该调用哪个工具,使不值得信赖的内容安全,或将无状态请求变成持久的应用状态.你的主机和服务器仍然拥有这些决定.
+这里有一个很容易忽视的重要边界：MCP 标准化的是通信。它并不决定模型应调用哪个工具，不会让不可信内容自动变得安全，也不会把无状态请求转化为持久应用状态。这些决策仍由宿主和服务器负责。
 
 ## 概念
 
-![MCP host, stateless request, and server primitives](../assets/mcp-architecture.svg)
+![MCP 宿主、无状态请求与服务器原语](../assets/mcp-architecture.svg)
 
-### 服务器的三个原始
+### 三种服务器原语
 
-1. **Tools**每个工具都有一个名称,描述,JSON Schema输入和处理器.
-2. **Resources**客户可以阅读的 URI 地址的内容.
-3. **Prompts**它们是主机可以向用户展示的可重复使用模板.
+1. **工具**是可调用的操作。每个工具都有名称、描述、JSON Schema 输入与处理器。
+2. **资源**是带名称、通过 URI 寻址且可供客户端读取的内容。
+3. **提示词**是宿主可向用户提供的可复用模板。
 
-机器人是AI应用程序.机器人内部的MCP客户端与一个服务器交谈.运输器在它们之间传输JSON-RPC消息.
+宿主就是 AI 应用。宿主内部的一个 MCP 客户端会与一台服务器通信；传输层负责在双方之间传递 JSON-RPC 消息。
 
-### 无国籍申请取代握手
+### 无状态请求取代握手
 
-移除MCP 2026-07-28 `initialize`其他`notifications/initialized`任何请求都包含需要解释的文本.`params._meta`其他:
+MCP 2026-07-28 移除了 `initialize` 与 `notifications/initialized`，同时移除了协议层会话。每个请求都在 `params._meta` 中携带解释该请求所需的上下文：
 
 ```json
 {
@@ -58,13 +58,13 @@
 }
 ```
 
-需要协议版本和客户端功能. 客户端身份是建议的. 缺失一个`_meta`错误类型的要求字段是错误的,返回不有效的参数 (`-32602`服务器不支持的完整版本字符串返回`UnsupportedProtocolVersionError`(`-32022`服务器可以处理有效的请求,而不需要恢复之前的谈判记录.
+协议版本和客户端能力是必需字段，建议提供客户端身份。缺少 `_meta`、缺少必需字段，或必需字段类型错误，都属于格式错误，服务器会返回 Invalid Params（`-32602`）。如果版本字符串格式正确，但服务器不支持该版本，则返回 `UnsupportedProtocolVersionError`（`-32022`）。服务器处理有效请求时，无须恢复之前的协商记录。
 
-无国籍并不意味着应用程序永远无法保持状态.`Mcp-Session-Id`如果工作流需要连续性,服务器会打造一个不透明的手柄,客户端将该手柄作为后来的调用工具的普通参数.
+无状态并不意味着应用永远不能维护状态，而是状态不会隐藏在 MCP 连接或 `Mcp-Session-Id` 背后。如果工作流需要连续性，服务器应签发一个不透明句柄，客户端在后续调用中把它作为普通工具参数传回。每个请求仍然必须进行授权检查。
 
-### 发现和版本选择
+### 发现与版本选择
 
-每个现代服务器都实现了`server/discover`结果宣传支持的版本,功能和服务器身份:
+每台现代服务器都实现 `server/discover`。结果会公布支持的版本、能力与服务器身份：
 
 ```json
 {
@@ -90,50 +90,50 @@
 }
 ```
 
-客户端可能直接调用另一种方法并处理版本错误,但发现使功能显示和版本选择明确.一个不支持的版本返回.`UnsupportedProtocolVersionError`具有代码`-32022`它的数据包含`supported`服务器修改的数组,`requested`拒绝的修订.
+客户端可以直接调用其他方法，再处理版本错误；但发现操作会让能力展示与版本选择变得明确。不受支持的版本会返回 `UnsupportedProtocolVersionError`，错误码为 `-32022`。其 data 包含 `supported`（服务器修订版数组）和 `requested`（被拒绝的修订版）。
 
-在工作室,一个双代客户探测`server/discover`发现结果或已认可的现代错误,例如`UnsupportedProtocolVersionError`任何错误或截止时间都不能被认为是现代的,`initialize`传统的行为是兼容性代码,而不是现代的默认代码.
+在 stdio 上，兼容新旧两个时代的客户端会先尝试 `server/discover`。收到发现结果，或 `UnsupportedProtocolVersionError` 等可识别的现代错误，都能确认对方是现代服务器。只有错误或超时无法识别为现代协议时，才允许回退到 2025-11-25 的 `initialize` 流程。旧版行为是兼容代码，而不是现代默认行为。
 
-### 结果是明确的
+### 结果具有明确状态
 
-每个核心2026-07-28的结果都有`resultType`其他:
+2026-07-28 的每个核心结果都有 `resultType`：
 
-- `complete`代表行动结束.
-- `input_required`服务器需要通过多次回路请求模式进行一次回复访问.`tools/call`现在`resources/read`其他`prompts/get`现在,我们要去.
+- `complete` 表示操作已经完成。
+- `input_required` 表示服务器需要通过多轮往返请求（Multi Round-Trip Requests）模式再进行一次交互。核心服务器只能从 `tools/call`、`resources/read` 或 `prompts/get` 返回该状态。
 
-客户必须处理遗留结果,`resultType`完全的.
+客户端必须把省略 `resultType` 的旧版结果视为已完成。
 
-服务器应包括`io.modelcontextprotocol/serverInfo`在每一个结果中`_meta`个人身份是自主报告的,用于显示,记录和调试,而不是用于安全决策.
+服务器应在每个结果中包含 `io.modelcontextprotocol/serverInfo`，并将其放在 `_meta` 内。这个身份由服务器自行声明，仅用于展示、日志与调试，不能用于安全决策。
 
-列表和阅读结果也包含`ttlMs`其他`cacheScope`确定性`tools/list`随着订单加上新鲜度提示,客户可以安全地缓存发现,并提高快速缓存稳定性. `cacheScope: public`允许共享缓存;`private`只有在调用环境下才能重复使用.
+列表与读取结果还会携带 `ttlMs` 和 `cacheScope`。确定性的 `tools/list` 顺序配合新鲜度提示，可以让客户端安全缓存发现结果，并提升提示缓存的稳定性。`cacheScope: public` 允许共享缓存，`private` 则把复用范围限制在当前调用上下文内。
 
-### 电线格式和运输
+### 报文格式与传输
 
-通过 stdio 或 Streamable HTTP,MCP 使用JSON-RPC 2.0.
+MCP 通过 stdio 或 Streamable HTTP 使用 JSON-RPC 2.0。
 
-- 要求有`jsonrpc`现在`id`现在`method`其他`params`现在,我们要去.
-- 答案是相匹配的`id`任何一个`result`或`error`现在,我们要去.
-- 没有通知`id`他没有预期任何回应.
+- 请求包含 `jsonrpc`、`id`、`method` 与 `params`。
+- 响应包含与请求一致的 `id`，以及 `result` 或 `error`。
+- 通知不含 `id`，也不期待响应。
 
-现代流向HTTP暴露一个接收 POST 的终端点.每个JSON-RPC消息都获得了自己的 POST.一个请求 POST 接收了一个 JSON 对象或一个请求范围的服务器发送事件流,最终的响应结束.一个接受的通知 POST 接收了 HTTP 202 没有响应体;本核心修订定义了没有客户端到服务器的通知.
+现代 Streamable HTTP 暴露一个接受 POST 的端点。每条 JSON-RPC 消息各自使用一次 POST。请求型 POST 会收到单个 JSON 对象，或一条以最终响应结束、仅属于该请求的服务器发送事件流。服务器接受通知型 POST 后返回 HTTP 202，不带响应正文；这个核心修订版没有定义 Streamable HTTP 上从客户端发送给服务器的通知。
 
-没有独立的MCP GET流, DELETE会议终点,`Mcp-Session-Id`其他`Last-Event-ID`长期变化通知使用一个`subscriptions/listen`作为一个SSE流的响应仍然是开放的.
+2026-07-28 中不存在独立的 MCP GET 流、DELETE 会话端点、`Mcp-Session-Id` 或 `Last-Event-ID` 重放。长期变更通知使用 `subscriptions/listen` POST，其响应会保持为开放的 SSE 流。
 
-### 客户端输入,没有服务器启动的请求
+### 不再依赖服务器发起请求的客户端输入
 
-旧版本允许服务器发送如 `sampling/createMessage`现在`roots/list`其他`elicitation/create`现在的协议使用多次回路请求.一个符合条件的工具调用,资源阅读或提示获取回报.`resultType: input_required`具有至少一个`inputRequests`或`requestState`客户端收集任何请求的输入,使用新的JSON-RPCID和相应的方法重新尝试.`inputResponses`它们是完全的.`requestState`如果没有,`inputRequests`没有人回来,再试.`inputResponses`现在,我们要去.
+旧版本允许服务器通过数据流发送 `sampling/createMessage`、`roots/list` 或 `elicitation/create` 等请求。当前协议改用多轮往返请求。符合条件的工具调用、资源读取或提示词获取会返回 `resultType: input_required`，并至少包含 `inputRequests` 或 `requestState` 之一。客户端收集所需输入后，使用新的 JSON-RPC ID 和对应的 `inputResponses` 重试原方法；若服务器提供了 `requestState`，客户端必须原样回传。如果结果中没有 `inputRequests`，重试时就省略 `inputResponses`。
 
-根,样本和登记仍然功能,但已经过时,因此新实现不应该采用它们.现有根或样本请求在MRTR内运行`inputRequests`服务器的配置,服务器配置和直接模型提供商集成. 对于工作室诊断使用 stderr 和生产远程测量使用 OpenTelemetry.
+Roots、Sampling 和 Logging 仍可使用，但已经弃用，因此新实现不应采用它们。现有的 Roots 或 Sampling 请求应放在 MRTR 的 `inputRequests` 中传递，绝不能作为独立的服务器到客户端 JSON-RPC 请求。应优先使用显式文件或目录参数、资源 URI、服务器配置，以及直接集成模型提供商。stdio 诊断写入 stderr，生产遥测使用 OpenTelemetry。
 
 ```figure
 mcp-nxm-collapse
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:注册服务器表面
+### 第 1 步：注册服务器接口
 
-尽管申请合同发生了变化,但仍保持简单的注册:
+尽管请求契约发生了变化，注册过程仍然简单：
 
 ```python
 server = MCPServer("demo-server")
@@ -154,9 +154,9 @@ def add(a: int, b: int) -> dict:
     return {"sum": a + b}
 ```
 
-运输的实施`code/main.py`它故意使用标准库,以便您可以看到每个封面,而不是将协议委托到SDK.
+`code/main.py` 中随课交付的实现还注册了一个资源和一个提示词。它特意只使用标准库，让你看清每个消息的封装结构，而不是把协议细节交给 SDK 隐藏起来。
 
-### 步骤2:将元数据添加到每个请求
+### 第 2 步：为每个请求附加元数据
 
 ```python
 def request(method, params=None):
@@ -177,17 +177,17 @@ def request(method, params=None):
     }
 ```
 
-只有在连接对象中,不要将此元数据存储在缓存中.服务器在每个请求上验证它.
+不要只把这些元数据缓存到连接对象中。服务器会在每个请求上验证它们。
 
-### 步骤3:在上市之前,选择发现
+### 第 3 步：列出能力前可先执行发现
 
-电话`server/discover`选择支持版本,然后打电话`tools/list`直接的`tools/list`您已经知道版本,并且可以处理`-32022`现在,我们要去.
+调用 `server/discover`，选择一个受支持版本，再调用 `tools/list`。如果已经知道版本，也可以直接调用 `tools/list` 并处理 `-32022`。
 
-演示显示工具列表以名称顺序返回,并附加`ttlMs`现在`cacheScope`现在`resultType`工具调用会返回一个完整的,不可缓存的结果,因为其输出可能取决于当前状态.
+演示会按名称顺序返回工具列表，并附带 `ttlMs`、`cacheScope`、`resultType` 和服务器身份。工具调用返回完整且不可缓存的结果，因为它的输出可能依赖当前状态。
 
-### 步骤4:将相同的请求映射到HTTP
+### 第 4 步：把同一请求映射到 HTTP
 
-一个遥控器`tools/call`POST包含反映JSON-RPC体的标题:
+远程 `tools/call` POST 包含与 JSON-RPC 正文相呼应的标头：
 
 ```http
 POST /mcp HTTP/1.1
@@ -198,20 +198,20 @@ Mcp-Method: tools/call
 Mcp-Name: add
 ```
 
-其他`MCP-Protocol-Version`标题必须与该版本相匹配`_meta`现在,我们要去.`Mcp-Method`需要在每个JSON-RPC请求中,必须匹配`method`现在,我们要去.`Mcp-Name`仅需要`tools/call`现在`resources/read`其他`prompts/get`需要一个缺失的标题或不匹配返回 HTTP 400 `HeaderMismatch`代码`-32020`现在,我们要去.
+`MCP-Protocol-Version` 标头必须与 `_meta` 中的版本一致。每个 JSON-RPC 请求都必须包含 `Mcp-Method`，而且它必须与 `method` 一致。`Mcp-Name` 只在调用 `tools/call`、`resources/read` 和 `prompts/get` 时为必需字段，并且必须与工具名称、资源 URI 或提示词名称一致。缺少必需标头或内容不一致时，服务器会返回 HTTP 400，错误为 `HeaderMismatch`，代码是 `-32020`。
 
-### 步骤5: 执行协议状态之外的安全
+### 第 5 步：在协议状态之外落实安全
 
-- 验证每个HTTP请求的授权和观众.
-- 将本地服务器与本地主机连接并验证`Origin`在流式HTTP上.
-- 标记突变工具`destructiveHint: true`需要主机批准.
-- 通过目录和文件范围,而不是依赖于过时的根.
-- 处理资源和工具输出数据是不可信的数据.
-- 保持在stdio下保留的 stdout为JSON-RPC;写诊断到stderr.
+- 对每个 HTTP 请求验证授权与受众。
+- 将本地服务器绑定到 localhost，并在 Streamable HTTP 上验证 `Origin`。
+- 为会改变状态的工具标注 `destructiveHint: true`，并要求宿主批准。
+- 显式传递目录与文件范围，不依赖已弃用的 Roots。
+- 把资源和工具输出视为不可信数据。
+- 使用 stdio 时将 stdout 专用于 JSON-RPC，把诊断信息写入 stderr。
 
-## 用它
+## 投入使用
 
-运行课程从它的目录:
+在课程目录中运行：
 
 ```bash
 python3 code/main.py
@@ -219,49 +219,49 @@ cd code
 python3 -m unittest discover tests -v
 ```
 
-首先,应该报告发现`demo-server`在协议中`2026-07-28`然后检查`MCPClient.request`它们重建了`_meta`删除一个请求的元数据,并观察服务器拒绝它.
+第一行应报告发现 `demo-server`，其协议版本为 `2026-07-28`。然后检查 `MCPClient.request`：它会为每次调用重新构造 `_meta`。从一个请求中移除元数据，观察服务器拒绝该请求。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-mcp-server-designer.md`域名将域名转化为无状态的MCP设计.其接受门需要一个发现结果,每次请求的元数据政策,确定性缓存意识列表,明确的状态处理,运输标题,授权和批准规则.
+`outputs/skill-mcp-server-designer.md` 会把一个领域转化为无状态 MCP 设计。它的验收门禁要求具备发现结果、逐请求元数据策略、确定且可缓存的列表、显式状态句柄、传输标头、授权与审批规则。
 
-## 继续MCP深度潜水
+## 继续深入学习 MCP
 
-阶段13将四个生产界限变成单独的构建和验证课程:
+本课为你建立协议模型。阶段 13 将四个生产边界拆成独立的“构建并验证”课程：
 
-1. [MCP Tool Contracts and Content](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)涵盖封闭输入方案,结构化内容,路由元数据,不透明的页面化,完成授权以及协议和工具域错误之间的区别.
-2. [MCP Reliability, Cancellation, and Flow Control](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)覆盖请求取消,持久任务取消,截止日期,无效,压力,代理缓冲和重新连接行为.
-3. [MCP Registry Supply Chain, Admission, Drift, and Rollback](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)包含名称空间证明,文物来源,不可变的,直播漂移,注册表状态,录取证据和反弹.
-4. [MCP Conformance Engineering](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)涵盖金色和负线转录,严格版本时代,SDK差异,代理证据,编辑,健康门和释放回放.
+1. [MCP 工具契约与内容](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/en.md)介绍封闭输入 Schema、结构化内容、路由元数据、不透明分页、补全授权，以及协议错误与工具领域错误之间的区别。
+2. [MCP 可靠性、取消与流量控制](../../../13-tools-and-protocols/29-mcp-reliability-cancellation-and-flow-control/docs/en.md)介绍请求取消、持久任务取消、截止时间、幂等性、背压、代理缓冲与重连行为。
+3. [MCP 注册表供应链、准入、漂移与回滚](../../../13-tools-and-protocols/30-mcp-registry-supply-chain-and-drift/docs/en.md)介绍命名空间证明、制品来源、不可变固定版本、实时漂移、注册表状态、准入证据与回滚。
+4. [MCP 一致性工程](../../../13-tools-and-protocols/31-mcp-conformance-versioning-and-operations/docs/en.md)介绍标准与反例报文记录、严格的版本阶段、SDK 差异测试、代理证据、脱敏、健康门禁与发布回滚。
 
-随着服务器将跨越团队或信任边界时,随着它们的顺序进行下载. 它们一起从方法工作到合同仍然安全,通过部署可诊断.
+当服务器将跨越团队或信任边界时，请按顺序学习这些课程。它们共同推动系统从“方法可以工作”走向“契约在部署过程中始终安全且可诊断”。
 
-## 运动
+## 练习
 
-1. 添加一个`subtract`工具和确认`tools/list`它们是字母顺序的.
-2. 删除协议版本键,并验证不有效参数 (`-32602`接着发送一个有形的,但没有支持的版本.`2025-11-25`检查`-32022`确认`requested`根据此次修订,`supported`现在,我们要去.
-3. 添加一个服务器编译`draftId`解释为什么这是应用状态而不是协议会议.
-4. 返回`input_required`通过一个新的ID,重新尝试原来的电话,`inputResponses`报名,以及`requestState`而不是发明一个服务器到客户端的JSON-RPC请求.
-5. 描绘一个双代工作室客户端. 处理结果或被承认的现代错误为现代,并允许倒退.`initialize`只有未知错误或截止日期.
+1. 添加一个 `subtract` 工具，并确认 `tools/list` 仍按字母顺序排列。
+2. 删除协议版本键，验证 Invalid Params（`-32602`）。然后发送格式正确但不受支持的版本 `2025-11-25`，验证 `-32022`，确认 `requested` 原样返回该修订版，再从 `supported` 中选择版本。
+3. 让服务器为创建操作签发一个 `draftId`，并要求更新操作把它作为参数传回。解释这为什么属于应用状态，而不是协议会话。
+4. 从需要用户确认的工具返回 `input_required`。用新的 ID、一个 `inputResponses` 条目，以及完全相同的 `requestState` 重试原调用，而不是自行发明服务器到客户端 JSON-RPC 请求。
+5. 勾勒一个兼容新旧两个时代的 stdio 客户端。把发现结果或可识别的现代错误视为现代协议，只有发生不可识别的错误或超时时，才允许回退到 `initialize`。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|-----------------|------------------------|
-| MCP | "Tool protocol for LLMs" | JSON-RPC protocol for server discovery, tools, resources, prompts, and extensions |
-| Host | "The AI app" | Owns the model and UI and mounts one or more MCP clients |
-| Client | "The connector" | Speaks MCP to one server on behalf of a host |
-| Stateless MCP | "No session" | Every request carries version and capabilities; no protocol state is keyed by a connection |
-| `server/discover` | "Capability probe" | Required server method advertising versions, capabilities, and identity |
-| `resultType` | "Result state" | Marks a result as `complete` or `input_required` |
-| State handle | "Workflow id" | Server-minted application identifier passed as an ordinary argument |
-| Streamable HTTP | "Remote transport" | One POST endpoint with JSON or request-scoped SSE responses |
-| MRTR | "Ask and retry" | Input request embedded in a result, followed by a retry of the original operation |
+| MCP | “大语言模型工具协议” | 用于服务器发现、工具、资源、提示词及扩展的 JSON-RPC 协议 |
+| 宿主 | “AI 应用” | 拥有模型与用户界面，并挂载一个或多个 MCP 客户端 |
+| 客户端 | “连接器” | 代表宿主与一台服务器进行 MCP 通信 |
+| 无状态 MCP | “没有会话” | 每个请求都携带版本与能力；协议状态不与连接绑定 |
+| `server/discover` | “能力探测” | 必需的服务器方法，用于公布版本、能力与身份 |
+| `resultType` | “结果状态” | 将结果标记为 `complete` 或 `input_required` |
+| 状态句柄 | “工作流 ID” | 由服务器签发、作为普通参数传递的应用标识符 |
+| Streamable HTTP | “远程传输” | 使用一个 POST 端点，返回 JSON 或请求级 SSE 响应 |
+| MRTR | “询问并重试” | 在结果中嵌入输入请求，然后重试原操作 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
-- [MCP server discovery](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
+- [MCP 2026-07-28 关键变更](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
+- [MCP 服务器发现](https://modelcontextprotocol.io/specification/2026-07-28/server/discover)
 - [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
-- [MCP Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
-- [MCP deprecated features](https://modelcontextprotocol.io/specification/2026-07-28/deprecated)
+- [MCP 多轮往返请求](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)
+- [MCP 已弃用功能](https://modelcontextprotocol.io/specification/2026-07-28/deprecated)
