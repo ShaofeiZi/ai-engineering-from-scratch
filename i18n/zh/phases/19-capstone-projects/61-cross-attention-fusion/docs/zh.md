@@ -1,24 +1,24 @@
 # 跨注意力融合
 
-> 投影层将一个图像向量与一个标题向量对齐. 实际的视觉语言解码器需要每个文本代码来关注每个补丁代码, 通过注意力来实现这种地定. 文本问答;视觉关键和价值 这一课建立了跨越注意力区块,因果性文本自我注意力,
+> projection layer 只能把一个图像向量和一个 caption 向量对齐。真正的视觉语言解码器需要让每个文本 token 都能 attend 到每个 patch token，这样模型才能把每个词落到具体区域上。cross-attention 就是这个 grounding 发生的地方。文本负责提问；视觉的 keys 和 values 负责回答。这一课会把 cross-attention block、causal text self-attention，以及保证两者都合法的 mask 形状一起搭起来。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 lessons 30-37 (Track B foundations)
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段第 30–37 课（Track B 基础课）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 实现多头交叉注意力,其中查询流是文本,键/值流是视觉.
-- 编写一个解码器块:因果自我注意+横向注意+传递.
-- 按正确的面具形状:因果性面具用于自我注意力,没有面具用于横向注意力.
-- 运行一个前进通行,包含批量文字代币和固定的图像代币池.
+- 实现 multi-head cross-attention，其中 query stream 来自文本，key/value stream 来自视觉。
+- 组合一个 decoder block：causal self-attention + cross-attention + feed-forward。
+- 把 mask 形状做对：self-attention 用 causal mask，cross-attention 不使用 mask。
+- 在 batched text tokens 和固定 image token pool 上跑通一次 forward pass。
 
 ## 问题
 
-结合图像代币和文本代币成一个序列是一个融合选项 (早期融合,Chameleon和Emu3走路).交叉注意力是另一种 (后期融合,Flamingo引入的路径,并且自此以来每个Flamingo形的解码器都复制了).在后期融合中,文本解码器仅使用文本代币运行,通过交叉注意力在每个层中进入图像流.
+把 image tokens 和 text tokens 直接拼成一个序列，是一种融合方式，也就是 early fusion，Chameleon 和 Emu3 走的是这条路。另一条路是 cross-attention，也就是 late fusion，Flamingo 最先把它系统化，此后几乎所有 Flamingo 形状的解码器都在复用这条思路。在 late fusion 中，文本解码器只在 text-only tokens 上运行，并在每一层通过 cross-attention 伸手去读取图像流。
 
-后期融合有两个优势.一是,文本流保持清洁,模型保留仅为文本的功能.二是,图像流每图像计算一次,每次解码步骤都会再使用,因此生成即使是长片标题便宜.成本是每块额外的注意次层.
+late fusion 有两个明显好处。第一，文本流保持干净，模型的 text-only 能力更容易保住。第二，图像流每张图只需要计算一次，之后每个 decode step 都可以反复复用，因此即使 caption 很长，生成开销也不高。代价则是：每个 block 都会多出一层 attention sub-layer。
 
 ## 概念
 
@@ -43,28 +43,28 @@ flowchart LR
   Soft --> Out[output B x H x Nt x d]
 ```
 
-### 面具的形状
+### Mask 形状
 
-解码器区内的两个注意力需要不同的面具:
+decoder block 里的两种 attention 需要不同的 masks：
 
-| Attention | Query length | Key length | Mask | Why |
+| 注意力类型 | 查询长度 | 键长度 | 掩码 | 原因 |
 |-----------|--------------|------------|------|-----|
-| Self-attention | `Nt` (text) | `Nt` (text) | Causal: lower-triangular `(Nt, Nt)` | Text tokens may not look ahead during autoregression |
-| Cross-attention | `Nt` (text) | `Nv` (vision) | No mask | The whole image is visible to every text position |
+| Self-attention | `Nt`（文本） | `Nt`（文本） | 因果掩码：下三角矩阵 `(Nt, Nt)` | 自回归生成时，文本 token 不能查看未来位置 |
+| Cross-attention | `Nt`（文本） | `Nv`（视觉） | 无掩码 | 每个文本位置都可以看到整张图像 |
 
-课程包括一个形状验证函数,所以混合它们的错误是`ValueError`而不是一个然破碎的损失曲线.
+本课还包含一个 shape-validation function，因此一旦把两种 mask 搞混，会直接抛出 `ValueError`，而不是悄悄得到一条已经损坏的 loss curve。
 
-### 为什么没有面具在跨注意力
+### 为什么 cross-attention 不需要 mask
 
-在生成任何文本之前,图像会被完全观察.`t`某些Flamingo变体在交织多个图像和文本段时添加一个样本按模式,但对于单个图像加上一个标题,交叉注意力可以看到一切.
+在生成任何文本之前，整张图像已经是完全可见的。caption 的第 `t` 个 token 可以 attend 到图像里的任意一个 patch；图像 patches 本身不存在时间顺序。某些 Flamingo 变体在交织多个图像与多个文本片段时，会加上按样本变化的 masking pattern；但对于“一张图像 + 一条 caption”这一最基本情况，cross-attention 应该看到全部视觉内容。
 
-### 密钥/值缓存
+### Key/value caching
 
-图像密钥和值在解码开始时计算一次,并存储在缓存中.每个新文本代币都使用缓存,而不需要重新计算.这就是导致标题快速推断的原因:重量 ViT一次运行;跨重视频每一步都会重新使用其密钥和值.课程暴露缓存并测试缓存击中的路径.
+图像的 keys 和 values 会在 decode 开始时计算一次，然后放进 cache。之后每来一个新的文本 token，都直接复用这个 cache，而不重新计算。这正是 captioning 在推理阶段足够快的原因：重的 ViT 只运行一次；cross-attention 在后续每一步都只重复利用现成的 keys 和 values。本课会显式暴露 cache，并测试 cache-hit 路径。
 
-### 组合
+### Block 组合方式
 
-解码器区块运行:LN前 ->自我注意 ->残留 ->LN前 ->横向注意 ->残留 ->LN前 ->向前 ->残留.三个子层,每个层都有自己的LayerNorm.Flamingo论文增加了学习的跨向注意的门,以便模型可以选择在训练时间稳定成本下退出图像路径;正规的基线 (在这里使用) 没有门.
+一个 decoder block 的顺序是：pre-LN -> self-attention -> residual -> pre-LN -> cross-attention -> residual -> pre-LN -> feed-forward -> residual。总共三个 sub-layers，每一个都有自己的 LayerNorm。Flamingo 论文曾在 cross-attention 上加了一个 learned gate，让模型可以在训练稳定性代价下选择退出图像路径；本课采用的是最标准的 baseline，不加 gate。
 
 ```python
 class DecoderBlock:
@@ -82,74 +82,74 @@ class DecoderBlock:
 ch-crossattn-fan
 ```
 
-## 建立它
+## 动手实现
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `CrossAttention(hidden, heads)`双头交叉注意力,`q`其他`kv`预测
-- `CausalSelfAttention(hidden, heads)`通过标准解码器来隐藏自我注意.
-- `DecoderBlock`组建三个子层,含有LN前残留物.
-- `VisionLanguageDecoder`通过假视觉编码器输出和一个小的文本嵌入表提供四层解码器.
-- `causal_mask(length)`返回一个`(length, length)`低三角形的布尔尔子.
-- 显示一个节目,以长度10的两个文本序列提供一个节目,具有长度197的图像内存,并打印出口形,自我注意力面具形状,每个位置的跨注意力输出标准.
+- `CrossAttention(hidden, heads)`，一个带独立 `q` 和 `kv` projections 的 multi-head cross-attention。
+- `CausalSelfAttention(hidden, heads)`，也就是标准 decoder 里的 masked self-attention。
+- `DecoderBlock`，把三个 sub-layers 按 pre-LN residual 方式组合起来。
+- `VisionLanguageDecoder`，一个四层 decoder，输入来自 mock vision encoder 输出和一个很小的文本 embedding table。
+- `causal_mask(length)`，返回一个 `(length, length)` 的 lower-triangular boolean tensor。
+- 一个 demo：给入 batch size 为 2、长度为 10 的文本序列，以及长度为 197 的 image memory，并打印输出形状、self-attention mask 形状，以及每个位置的 cross-attention 输出范数。
 
-运行它:
+运行它：
 
 ```bash
 python3 code/main.py
 ```
 
-输出:解码器产生一个`(2, 10, text_vocab)`子的形状是`(10, 10)`缓存和未缓存的路径之间的相同的登录.
+输出：decoder 会产生一个 `(2, 10, text_vocab)` 的 logits tensor。mask 形状是 `(10, 10)`。KV-cache 的复用检查会确认 cached 和 uncached 两条路径产出的 logits 完全一致。
 
-## 用它
+## 实际使用
 
-两种生产家庭中出现了交叉关注:
+cross-attention 主要出现在两大生产模型家族中：
 
-- **Flamingo and IDEFICS.**每个K语言模型块都插入一个跨注意次层,并使用一个结的LM.视觉语言适配器是跨注意区块加上它的门.
-- **BLIP-2.**图像功能中使用32个查询代币的固定集合的交叉注意力,然后将查询投射到LM嵌入空间中.
+- **Flamingo 和 IDEFICS。** 每隔 K 个 language model blocks 插入一个 cross-attention sub-layer，并保持 LM 冻结。视觉语言 adapter 就是这块 cross-attention 再加上它的 gate。
+- **BLIP-2。** Q-Former 会用一组固定的 32 个 query tokens 通过 cross-attention 去读取图像特征，然后再把这些 queries 投影到 LM embedding space。
 
-面具纪律 (因子自在,没有因子交叉) 是相同的.
+本课这个 block 的形状，能够直接映射到这两类实现上。mask 纪律也是一样的：self 上用 causal，cross 上不用。
 
 ## 测试
 
-`code/test_main.py`覆盖:
+`code/test_main.py` 覆盖：
 
-- 原因面膜是下方三角形,与预期的布尔形状相匹配
-- 交叉注意力输出形状是`(B, Nt, hidden)`无论钥匙长度如何
-- 基动机缓存路径与未缓存路径和浮动耐受性相匹配
-- 文字和图像流之间的形状不匹配,`ValueError`
-- 一个完整的解码器前传输产生了正确的批量和序列形状
+- causal mask 是否真的是 lower-triangular，并且匹配预期的 boolean 形状
+- cross-attention 输出形状是否始终等于 `(B, Nt, hidden)`，不受 key length 影响
+- KV-cache 路径是否在浮点容差内与 uncached 路径一致
+- text 和 image streams 之间发生 shape mismatch 时，是否会抛出清晰的 `ValueError`
+- 一个完整 decoder forward pass 是否产出正确的 batch 和 sequence 形状
 
-运行它们:
+运行它们：
 
 ```bash
 python3 -m unittest code/test_main.py
 ```
 
-## 运动
+## 练习
 
-1. 加入一个学习的门,并验证训练从接近零的初始门汇聚.门开始于0;模型在混合图像流之前恢复仅仅是文本的行为.
+1. 给 cross-attention residual 增加一个 learned tanh gate，也就是 Flamingo 的那套技巧，并验证从接近零的初始 gate 出发仍然可以收敛。gate 从 0 开始时，模型会先恢复 text-only 行为，再逐步把图像流混进来。
 
-2. 实现交叉关注,当同一解码器使用多个图像和多个文本段时. 构建每样本交叉关注面具,防止文本段 2 加入图像 1.
+2. 实现 interleaved attention，使同一个 decoder 能同时消费多张图像和多个文本片段。构造按样本变化的 cross-attention mask，确保文本片段 2 不会 attend 到图像 1。
 
-3. 介绍跨注意与自我注意层`Nt=64, Nv=576`跨重视成本是 `Nt * Nv`它们的图像分辨率很高.
+3. profile cross-attention 与 self-attention 在 `Nt=64, Nv=576`，也就是更高分辨率下 24x24 网格时的耗时。cross-attention 的复杂度是 `Nt * Nv`，在图像分辨率较高时会成为主导开销。
 
-4. 在交叉注意力地图上添加查询侧的置,并在演示中测量标题多样性 (随着交叉地图中置,标题样本差异增加).
+4. 给 cross-attention map 加一个 query-side dropout，并在 demo 上测量 caption diversity。随着 cross map 中 dropout 增强，caption 样本方差通常会上升。
 
-5. 交换跨注意层,以Q-Former式的注意区块,其中一个固定的32代币查询池每层一次关注图像功能.
+5. 把 cross-attention layer 换成一个 Q-Former 风格的 attention block，让固定的 32-token query pool 在每层只读取一次图像特征。
 
-## 关键词
+## 关键术语
 
-| Term | What it means |
+| 术语 | 含义 |
 |------|---------------|
-| Late fusion | Text and vision stay in separate streams; cross-attention bridges them at every block |
-| Cross-attention | Q comes from one stream, K and V from another |
-| Causal mask | Lower-triangular boolean mask that prevents looking ahead during autoregression |
-| KV cache | Image keys and values stored once and reused for every decode step |
-| Memory tokens | The frozen image tokens that the decoder reaches into |
+| Late fusion | 文本和视觉分别保留在独立的数据流中，由 cross-attention 在每个 block 连接两者 |
+| Cross-attention | Q 来自一条数据流，K 和 V 来自另一条数据流 |
+| Causal mask | 防止自回归生成时查看未来位置的下三角布尔掩码 |
+| KV cache | 图像的键和值只存储一次，并在每个解码步骤中复用 |
+| Memory tokens | 解码器反复读取的冻结图像 token |
 
-## 进一步阅读
+## 延伸阅读
 
-- 弗拉明戈 (2022) 用于加нони化后期融合设计,具有门口交叉注意力.
-- 对于Q-Former来说,BLIP-2 (2023) 是一个穿着学习查询池的跨注意区块.
-- 为了对"弗拉门戈"配方进行公重复制,IDEFICS (2023)
+- Flamingo (2022) 介绍了带 gated cross-attention 的标准 late-fusion 设计。
+- BLIP-2 (2023) 展示了 Q-Former，它本质上是披着 learned query pool 外衣的 cross-attention block。
+- IDEFICS (2023) 是 Flamingo 配方的一份开源复现。
