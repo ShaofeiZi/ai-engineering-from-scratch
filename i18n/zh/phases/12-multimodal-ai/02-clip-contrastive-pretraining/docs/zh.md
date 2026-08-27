@@ -1,51 +1,51 @@
-# 语和视觉语言预训
+# CLIP 与视觉—语言对比预训练
 
-> 开放AI的CLIP (2021) 证明了一个足够大的想法,可以在未来五年内实现:将图像编码器和文本编码器在同一向量空间中, 没有监督标签. 两千万个. 结果的嵌入空间进行零射击分类,图像文本检索,并作为其视觉塔插入每一个2026 VLM. siglip 2 (2025) 取代软max 通过sigmoid,以更低的成本扩展到CLIP之后. 这一课将从InfoNCE到sigmoid对式损失的数学进行,并建立了在 stdlib Python 中的训练步骤.
+> OpenAI 的 CLIP（2021）证明了一个足以驱动此后五年发展的想法：只使用带噪声的 Web 图像—说明文字对和对比损失，把图像编码器与文本编码器对齐到同一个向量空间。不使用任何监督标签，只需要 4 亿个样本对。由此得到的嵌入空间能够执行零样本分类和图文检索，并作为视觉塔接入 2026 年的每种 VLM。SigLIP 2（2025）以 Sigmoid 取代 Softmax，用更低成本扩展到了 CLIP 之上。本课从 InfoNCE 一路推导到成对 Sigmoid 损失，并使用标准库 Python 构建训练步骤。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python (stdlib, InfoNCE + sigmoid loss implementations)
-**Prerequisites:** Phase 12 · 01 (ViT patches), Phase 7 (Transformers)
-**Time:** ~180 minutes
+**Prerequisites:** 第 12 阶段 · 第 01 课（ViT 图像块）、第 7 阶段（Transformer）
+**Time:** 约 180 分钟
 
 ## 学习目标
 
-- 通过互通信息来推导InfoNCE损失,并实现数量稳定的向量化版本.
-- 解释为什么sigmoid对式损失 (SigLIP) 达到32768+批量,而没有全集的上空软max要求.
-- 通过构建文本模板来运行零截图的 ImageNet 分类 (`a photo of a {class}`) 和使用 argmax 与 cosine 类似性相比.
-- 列出CLIP/SigLIP预训练给你提供的四个杆:批量大小,温度,提示模板,数据质量.
+- 从互信息推导 InfoNCE 损失，并实现数值稳定的向量化版本。
+- 解释 Sigmoid 成对损失（SigLIP）为何无须 Softmax 所要求的全收集开销，就能扩展到 32768 以上的批大小。
+- 通过构造文本模板（`a photo of a {class}`），并对余弦相似度取 argmax，执行 ImageNet 零样本分类。
+- 说出 CLIP / SigLIP 预训练提供的四个调节杆：批大小、温度、提示词模板与数据质量。
 
 ## 问题
 
-监督CLIP前的视觉.收集标记数据集 (ImageNet: 1.2M图像, 1000 类),训练一个CNN,运输它.标签昂贵,标签偏向标签商可以同意,标签不会转移到新的任务没有细节调整.
+CLIP 之前的视觉模型依赖监督学习：收集带标签的数据集（ImageNet：120 万幅图像、1000 个类别），训练 CNN，然后发布。标签成本高昂，会偏向标注人员能够达成共识的内容，而且若不微调，就无法迁移到新任务。
 
-图像标题网有超过10亿个宽松标签的双色球免费.一个带有"我的狗马克斯在公园"的黄金回归器的图片带有监督信号.
+图像—说明文字 Web 数据中免费存在超过十亿个松散标注的样本对。一张金毛寻回犬的照片配上替代文本“我的狗 Max 在公园里”，就携带了监督信号——文字描述了图像。问题是：怎样把这种信号转化为有效训练？
 
-根据Clip的答案:把图像标题对应当作匹配任务. 鉴于一批N图像和N标题,学会与N-1分散注意力的标题匹配. 监督是"这两件事相应,这些N-1不. "没有类标签.没有人注释.只是一个反驳的损失.
+CLIP 的答案是：把图像—说明文字对视为匹配任务。给定一批 N 幅图像和 N 条说明文字，学习让每幅图像匹配自己的说明文字，并与其余 N-1 个干扰项区分开。监督信号只有“这两个对象属于一对，另外 N-1 个不属于”。不需要类别标签，不需要人工标注，只需要对比损失。
 
-图像网的零射击效果是因为"一张猫的照片"嵌入了没有明确标记的猫的照片附近.这是每2026年VLM产生的一项投注.
+得到的嵌入空间能完成远超 CLIP 训练目标的任务。ImageNet 零样本分类之所以有效，是因为“a photo of a cat”的嵌入会靠近从未被显式标注为猫的猫照片。这项赌注催生了 2026 年的每一种 VLM。
 
 ## 概念
 
-### 双码码器
+### 双编码器
 
-克利普有两个塔楼:
+CLIP 有两个塔：
 
-- 图像编码器`f`视频或ResNet,输出每张图像的D-dim向量.
-- 文字编码器`g`转换器,每字幕输出一个D-dim向量.
+- 图像编码器 `f`：ViT 或 ResNet，为每幅图像输出一个 D 维向量。
+- 文本编码器 `g`：小型 Transformer，为每条说明文字输出一个 D 维向量。
 
-两座塔都将输出正常化到单位长度.`cos(f(x), g(y)) = f(x)^T g(y)`由于它们都是单位标准.
+两个塔都会把输出归一化为单位长度。由于二者都是单位范数，相似度为 `cos(f(x), g(y)) = f(x)^T g(y)`。
 
-对于一批N (图片,字幕) 对,构建类似性矩阵`S`形状`(N, N)`其他:
+对于一批 N 个（图像、说明文字）样本对，构造相似度矩阵 `S`，其形状为 `(N, N)`：
 
 ```
 S[i, j] = cos(f(x_i), g(y_j)) / tau
 ```
 
-在哪里`tau`是学习温度 (CLIP初始化为0.07;在日记空间中学习).
+其中，`tau` 是一个可学习温度参数（CLIP 初始化为 0.07，并在对数空间中学习）。
 
-### 信息NCE损失
+### InfoNCE 损失
 
-通过Clip,在行列和列中使用对称的交叉透:
+CLIP 对矩阵的行和列分别执行交叉熵，再取对称平均：
 
 ```
 loss_i2t = CE(S, labels=identity)     # each image's positive is its own caption
@@ -53,108 +53,109 @@ loss_t2i = CE(S^T, labels=identity)   # each caption's positive is its own image
 loss = (loss_i2t + loss_t2i) / 2
 ```
 
-这就是InfoNCE.CE中软max强迫每个图像比批次中的其他所有标题更符合其标题."负"是所有其他批次的项目.较大的批次 =更多负面 =更强的信号.Clip训练在批次32k;规模是重要的.
+这就是 InfoNCE。交叉熵中的 Softmax 会迫使每幅图像与自己的说明文字比同批次中的其他所有说明文字更匹配。“负样本”就是批次中的所有其他项目。批次越大，负样本越多，训练信号越强。CLIP 使用 32k 批大小训练；规模至关重要。
 
 ### 温度
 
-`tau`控制软max的敏度.低tau →敏分布,硬负矿效应.高tau →软,所有样本都贡献.CLIP学习 log(1/tau),切断以防止崩.SigLIP 2修复初始tau,并使用学习偏见.
+`tau` 控制 Softmax 分布的尖锐程度。tau 较低 → 分布尖锐，产生难负样本挖掘效果；tau 较高 → 分布平缓，所有样本都会产生贡献。CLIP 学习 log(1/tau)，并对其截断以防止坍缩。SigLIP 2 固定初始 tau，改为学习偏置。
 
-### 为什么sigmoid 尺度更好 (SigLIP)
+### Sigmoid 为何更容易扩展（SigLIP）
 
-在分布式训练中,你必须把每个嵌入到每个复制品中,然后做软max.这是世界尺寸的方形.
+Softmax 需要同步完整的相似度矩阵。在分布式训练中，你必须把每个嵌入全收集到每个副本，再执行 Softmax，其通信量会随全局规模呈二次方增长。
 
-siglip取代 softmax 用元素智能sigmoid:为每对 `(i, j)`输出是"这些是匹配的对吗?"正数类标签是对角,其他的一切都是负数.
+SigLIP 用逐元素 Sigmoid 替代 Softmax：对每个样本对 `(i, j)` 执行“二者是否匹配”的二元分类。对角线上的类别标签为正，其余均为负。损失为：
 
 ```
 L = -1/N sum over (i, j) [ y_ij log sigmoid(S[i,j]) + (1-y_ij) log sigmoid(-S[i,j]) ]
 ```
 
-`y_ij = 1`如果`i == j`任何 GPU 都需要一个全集. 每个 GPU 都计算出其本地块和数量. SigLIP 2 量化为 32k-512k 批量便宜, CLIP 需要比较多的通信.
+当 `y_ij = 1` 时，表示 `i == j`；否则为 0。每个样本对的损失相互独立，不需要全收集。每张 GPU 计算并求和自己的局部块。SigLIP 2 可以低成本扩展到 32k～512k 的批大小，而 CLIP 则需要成比例增加通信量。
 
-### 零射分类
+### 零样本分类
 
-给给N类名称,为每个类构建一个文本模板:
+给定 N 个类别名称，为每个类别构造文本模板：
 
 ```
 "a photo of a {class}"
 ```
 
-嵌入每个模板与文本编码器. 嵌入图像与图像编码器. Argmax cosine 类似性 = 预测类. 没有对目标类进行培训.
+使用文本编码器嵌入每个模板，使用图像编码器嵌入图像。余弦相似度的 argmax 就是预测类别，无须在目标类别上训练。
 
-快速模板是重要的.CLIP的原始论文每类使用80个模板 (平坦,艺术,照片,绘画等) 并平均嵌入. +3 图像网点.现代使用通常选择一个或两个模板.
+提示词模板会影响结果。CLIP 原始论文为每个类别使用了 80 个模板（普通照片、艺术作品、绘画等），再对嵌入取平均，使 ImageNet 分数提高了 3 个百分点。现代应用通常选择一两个模板。
 
-### 线性探测器和细调
+### 线性探针与微调
 
-零射线是基线.线性探测器 (为目标类的CIP功能加上一个线性层) 在域内任务中比零射线更好.完整的细节调整在域内探测器比线性探测器更好,但可以损害零射线转移.三个模式具有三个折扣.
+零样本只是基线。在目标类别上训练一个位于冻结 CLIP 特征之上的线性层，即线性探针；它在领域内任务上会优于零样本。全量微调在领域内又会胜过线性探针，但可能损害零样本迁移能力。三种训练范式对应三种不同取舍。
 
-### 标LIP 2: NaFlex 和密集的特征
+### SigLIP 2：NaFlex 与稠密特征
 
-siglip 2 (2025) 补充:
-- 纳弗莱克斯:单个模型处理可变的面积比和分辨率.
-- 较好的密度功能用于细分和深度估计, 针对于VLM中作为结的脊柱.
-- 多语言:在CIP仅使用英语的100多种语言上接受培训.
-- 升到400米的1B参数尺度.
+SigLIP 2（2025）增加了：
 
-在2026年开放的VLM中,SigLIP 2 SO400m/14是默认的视觉塔.Clip仍然是纯图像文本检索的默认,其中特定的LAION-2B训练分布与查询模式匹配.
+- NaFlex：一个模型可以处理不同宽高比与分辨率。
+- 更好的分割和深度估计稠密特征，目标是作为 VLM 中的冻结骨干使用。
+- 多语言能力：使用 100 多种语言训练，而 CLIP 只支持英语。
+- 10 亿参数规模，而 CLIP 最大为 4 亿参数。
 
-### 其他技术: 技术技术
+在 2026 年的开放 VLM 中，SigLIP 2 SO400m/14 是默认视觉塔。如果纯图文检索场景与特定的 LAION-2B 训练分布相匹配，CLIP 仍是默认选择。
 
-简单的数据量度:CLIP (Google, 2021):与CLIP相同的想法,1.8B双尺度,90%的噪音. 已证明的噪音数据量度.OpenCLIP (LAION):在LAION-400M/2B上CLIP的开放复制,多个尺度,开放检查点.EVA-CLIP:从面具图像建模开始;VLM的强大脊柱.BASIC:谷歌的CLIP+ALIGN混合动力.所有相同的家族,不同的数据和调整.
+### ALIGN、BASIC、OpenCLIP 与 EVA-CLIP
 
-### 零射击的天花板
+ALIGN（Google，2021）：思路与 CLIP 相同，使用 18 亿样本对，其中 90% 带有噪声，证明了带噪数据也能随规模扩展。OpenCLIP（LAION）：在 LAION-400M / 2B 上对 CLIP 的开源复现，提供多种规模，是首选开放检查点。EVA-CLIP：从掩码图像建模开始初始化，是 VLM 的强力骨干。BASIC：Google 的 CLIP + ALIGN 混合方案。它们都属于同一家族，只是数据与调优方式不同。
 
-CLIP类型的模型约占76%的ImageNet零射 (CLIP-G,OpenCLIP-G).此外需要更大的数据 (SigLIP 2获得80%+) 或结构变化 (监督头部,更多参数).基准值是和;实际值是下游VLM所消耗的嵌入空间.
+### 零样本上限
+
+CLIP 类模型在 ImageNet 零样本任务上的上限约为 76%（CLIP-G、OpenCLIP-G）。想进一步提升，就需要大得多的数据（SigLIP 2 达到 80% 以上）或架构变更（监督头、更多参数）。这个基准正趋于饱和；真正的价值在于供下游 VLM 使用的嵌入空间。
 
 ```figure
 multimodal-fusion
 ```
 
-## 用它
+## 投入使用
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-1. 玩具双码码器 (基于hash的图像功能,文字图表功能),以便您可以在无的情况下看到InfoNCE形状.
-2. 在纯Python中输入InfoNCE (通过 log-sum-exp进行数字稳定).
-3. 形双向损失比较.
-4. 零射分类例程:计算与一组文本提示相似的共数,预测的 argmax.
+1. 一个玩具双编码器（基于哈希的图像特征、文本字符特征），让你无需 numpy 就能看到 InfoNCE 的形状。
+2. 使用纯 Python 实现的 InfoNCE 损失（通过 log-sum-exp 保证数值稳定）。
+3. 用于对比的 Sigmoid 成对损失。
+4. 一套零样本分类流程：计算图像与一组文本提示词之间的余弦相似度，再以 argmax 得到预测结果。
 
-运行它,看输法曲线.绝对数字是玩具;形状与真正的Clip训练师的排放相匹配.
+运行它并观察损失曲线。绝对数值只是玩具示例，但形态与真实 CLIP 训练器的输出一致。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-clip-zero-shot.md`鉴于图像集 (通过路径) 和目标类的列表,它使用CLIP模板构建文本提示,并将两个侧面嵌入到指定检查点 (例如,`openai/clip-vit-large-patch14`),并返回与相似度分数的前1/前5预测.技能拒绝对未列入提示列表的类别提出索赔.
+本课会产出 `outputs/skill-clip-zero-shot.md`。给定一组图像（通过路径）和目标类别列表，它会使用 CLIP 模板构建文本提示词，通过指定检查点（例如 `openai/clip-vit-large-patch14`）嵌入两侧内容，并返回带相似度分数的 top-1 / top-5 预测。这项技能会拒绝对不在提示词列表中的类别作出判断。
 
-## 运动
+## 练习
 
-1. 通过手动实现4对的InfoNCE. 构建4x4相似度矩阵,运行软max,选择对角,计算交叉. 根据手动计算验证您的Python实现.
+1. 手工为一批 4 个样本对实现 InfoNCE。构造 4x4 相似度矩阵，执行 Softmax，取出对角线，再计算交叉熵。验证 Python 实现与手算结果一致。
 
-2. siglip使用偏差参数`b`除了温度: `S'[i,j] = S[i,j]/tau + b`什么角色?`b`对于一轮的负数比正数多得多,请参阅SigLIP第3节 (arXiv:2303.15343).
+2. 除温度外，SigLIP 还使用偏置参数 `b`：`S'[i,j] = S[i,j]/tau + b`。当批次存在很大的类别不平衡（每行的负样本远多于正样本）时，`b` 发挥什么作用？阅读 SigLIP 第 3 节（arXiv:2303.15343）。
 
-3. 建立一个零射击分类器, 试试两个提示模板:`a photo of a {class}`其他`a picture of a {class}`测量100个试图图的精度. 模板组单击吗?
+3. 构建猫与狗的零样本分类器。尝试两个提示词模板：`a photo of a {class}` 和 `a picture of a {class}`。在 100 幅测试图像上测量准确率。模板集成是否优于单个模板？
 
-4. 计算软max InfoNCE 与 sigmoid 的通信成本,对 512GPU 运行在批量 32k. 什么规模为 O(N),哪个为 O(N ^ 2)? 引用 SigLIP 部分 4.
+4. 计算在 512 张 GPU、批大小 32k 的运行中，Softmax InfoNCE 与 Sigmoid 成对损失的通信成本。哪一种按 O(N) 扩展，哪一种按 O(N^2) 扩展？引用 SigLIP 第 4 节。
 
-5. 根据数据量化结果,再现他们对数据量化的结论:在固定模型尺寸下,ImageNet零截图精度和训练数据尺寸之间的日志线性关系是什么?
+5. 阅读 OpenCLIP 缩放定律论文（arXiv:2212.07143，Cherti 等）。根据图表复现其数据缩放结论：模型大小固定时，ImageNet 零样本准确率与训练数据规模之间呈现什么样的对数线性关系？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| InfoNCE | "Contrastive loss" | Cross-entropy over a batch's similarity matrix; each item's positive is its paired item, negatives are everything else |
-| Sigmoid loss | "SigLIP loss" | Per-pair binary cross-entropy; no softmax, no all-gather, scales cheaply in distributed training |
-| Temperature | "tau" | Scalar that scales logits before softmax/sigmoid; controls sharpness of the distribution |
-| Zero-shot | "no-finetune classification" | Use text prompts to construct class embeddings and classify by cosine similarity; no training on target classes |
-| Prompt template | "a photo of a ..." | Text scaffold around a class name; affects zero-shot accuracy by 1-5 points |
-| Dual encoder | "Two-tower" | One image encoder + one text encoder, outputs in shared D-dim space |
-| Hard negative | "Tough distractor" | A negative similar enough to the positive that the model has to work to separate them |
-| Linear probe | "Frozen + one layer" | Train only a linear classifier on top of frozen features; measures feature quality |
-| NaFlex | "Native flexible resolution" | SigLIP 2 capability to ingest images at any aspect ratio and resolution without resizing |
-| Temperature scaling | "log-parametrized tau" | CLIP parametrizes `log(1/tau)` so gradients behave; clips to prevent collapse to near-zero tau |
+| 术语 | 人们常说 | 实际含义 |
+|------|-----------------|------------------------|
+| InfoNCE | “对比损失” | 对一个批次的相似度矩阵执行交叉熵；每个项目的正样本是其配对项目，其他所有项目都是负样本 |
+| Sigmoid 损失 | “SigLIP 损失” | 逐样本对的二元交叉熵；无 Softmax、无全收集，可在分布式训练中低成本扩展 |
+| 温度 | “tau” | 在执行 Softmax/Sigmoid 前缩放 Logit 的标量；控制分布的尖锐程度 |
+| 零样本 | “无需微调的分类” | 使用文本提示词构造类别嵌入，并按余弦相似度分类；无须在目标类别上训练 |
+| 提示词模板 | “a photo of a ...” | 包裹类别名的文本脚手架；会使零样本准确率变化 1～5 个百分点 |
+| 双编码器 | “双塔” | 一个图像编码器 + 一个文本编码器；输出位于共享的 D 维空间中 |
+| 难负样本 | “难以区分的干扰项” | 与正样本足够相似，迫使模型付出努力才能将其区分开的负样本 |
+| 线性探针 | “冻结模型 + 一层” | 只在冻结特征之上训练一个线性分类器；用于衡量特征质量 |
+| NaFlex | “原生灵活分辨率” | SigLIP 2 无须调整图像大小，即可接收任意宽高比与分辨率图像的能力 |
+| 温度缩放 | “对数参数化 tau” | CLIP 对 `log(1/tau)` 进行参数化，使梯度行为更稳定，并通过截断防止 tau 坍缩到接近零 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Radford et al. — Learning Transferable Visual Models From Natural Language Supervision (arXiv:2103.00020)](https://arxiv.org/abs/2103.00020)Clip文件.
-- [Zhai et al. — Sigmoid Loss for Language Image Pre-Training (arXiv:2303.15343)](https://arxiv.org/abs/2303.15343)   
-- [Tschannen et al. — SigLIP 2 (arXiv:2502.14786)](https://arxiv.org/abs/2502.14786)多语言 + NaFlex.
-- [Jia et al. — ALIGN (arXiv:2102.05918)](https://arxiv.org/abs/2102.05918)使用噪音的网页数据进行扩展.
-- [Cherti et al. — Reproducible scaling laws for contrastive language-image learning (arXiv:2212.07143)](https://arxiv.org/abs/2212.07143)开放CLIP扩展法
+- [Radford 等——Learning Transferable Visual Models From Natural Language Supervision（arXiv:2103.00020）](https://arxiv.org/abs/2103.00020)——CLIP 论文。
+- [Zhai 等——Sigmoid Loss for Language Image Pre-Training（arXiv:2303.15343）](https://arxiv.org/abs/2303.15343)——SigLIP。
+- [Tschannen 等——SigLIP 2（arXiv:2502.14786）](https://arxiv.org/abs/2502.14786)——多语言 + NaFlex。
+- [Jia 等——ALIGN（arXiv:2102.05918）](https://arxiv.org/abs/2102.05918)——使用带噪 Web 数据扩展规模。
+- [Cherti 等——Reproducible scaling laws for contrastive language-image learning（arXiv:2212.07143）](https://arxiv.org/abs/2212.07143)——OpenCLIP 缩放定律。
