@@ -1,24 +1,24 @@
-# 渐进积累
+# 梯度累积
 
-> 训练一个有效的批量,你不能负担,一个微批量.
+> 用你负担不起的有效 batch 做训练，但一次只喂一个 micro-batch。把 loss 缩放好，暂时不执行 optimizer step，让梯度一点点累起来。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 lessons 42 to 45
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段第 42 到 45 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 取出有效批量身份: `effective_batch = micro_batch * accum_steps`现在,我们要去.
-- 实现每微批量损失规模化,使累积的梯度与单个全批次回归相匹配.
-- 跳过优化器同步到最后一批微量 (同步最后一步).
-- 读取一个吞吐量与有效批量曲线相比,并解释降低回报率.
+- 推导 effective batch 的恒等式：`effective_batch = micro_batch * accum_steps`。
+- 实现按 micro-batch 缩放 loss，使累积后的梯度与一次完整 full-batch backward 相匹配。
+- 直到最后一个 micro-batch 才执行 optimizer synchronization，也就是 sync-on-last-step。
+- 读懂吞吐量相对 effective batch 的曲线，并解释为什么收益会递减。
 
 ## 问题
 
-由于损失曲线更平滑,而优化步骤在这个规模上更有意义. 在桌子上的加速器上,有32个例子, 两倍的批量不是一个选择. 减半模型不是一个选择. 现场在2017年实现的技巧是运行16次倒退传递,让梯度积累在参数缓冲器内,
+你想用 512 的 effective batch 做训练，因为这样 loss curve 更平滑，optimizer step 在这个尺度上也更合理。但桌上的加速器最多只能容纳 32 个样本，再大就会爆内存。把 batch 翻倍不是选项，把模型砍半也不是选项。这个领域从 2017 年开始就一直在用的技巧，就是连续跑 16 次 backward，让梯度在参数缓冲区里累加起来，直到次数达到目标后才真正执行 optimizer step。
 
-没有扩展,梯度方向是正确的,但大小是错误的,优化步骤是16倍的太大.修复是一个分数.修复也是容易忘记的.
+风险在于，此时 loss 已经不再是大 batch 时的那个数。16 个 mini-batch 的 cross entropy 如果直接相加，会变成一次 full batch loss 的 16 倍。不做缩放时，梯度方向虽然还是对的，但梯度大小会错掉，最终 optimizer step 会大出 16 倍。修复只需要一个除法，但也恰恰最容易被忘记。
 
 ## 概念
 
@@ -33,14 +33,14 @@ flowchart LR
   step --> next[next effective step]
 ```
 
-合同很短.
+这份约束其实很短：
 
-- 每个微批次的损失分为 `accum_steps`在之前`backward()`电器将梯度总算为`param.grad`按默认情况下, 分割将运行总额推回正确的规模.
-- 优化器步骤每次有效批次一次发射,最后一批微批次后退. 步骤中积累偏差每个参数,剩下的运行取决于.
-- 优化器状态 (momentum buffers,Adam moments) 每个有效步骤都会一次进步,而不是每一个微批次.
-- 在单个设备上,这是会计.在多级集群上,同样的模式将非最终的微批包裹在一个`no_sync`通过一个传输,最后一批微批减少了整个积累的梯度,而不是支付网络成本N倍.
+- 每个 micro-batch 的 loss 都要先除以 `accum_steps`，然后再调用 `backward()`。PyTorch 默认会把梯度累加到 `param.grad` 上，这个除法就是为了把累加总和拉回正确尺度。
+- optimizer step 只在每个 effective batch 结束时执行一次，也就是最后一个 micro-batch backward 之后。若在累积中途就 step，会把后续整个 run 依赖的参数都提前扰动掉。
+- optimizer 的内部状态，比如 momentum buffers 和 Adam moments，也应该每个 effective step 只推进一次，而不是每个 micro-batch 推进一次。否则指数滑动平均看到的时间尺度就错了，schedule 也会被提前烧掉。
+- 在单设备上，这只是记账问题；在多机多卡集群上，同样的模式会把非最终的 micro-batch 包进一个 `no_sync` context，跳过 gradient all-reduce。最后一个 micro-batch 再一次性同步完整累积梯度，而不是把网络通信成本付 N 次。
 
-### 代码中的等效证明
+### 代码中的等价性证明
 
 ```python
 loss = criterion(model(x_full), y_full)
@@ -48,7 +48,7 @@ loss.backward()
 opt.step()
 ```
 
-相当于
+等价于
 
 ```python
 for x, y in chunks(x_full, y_full, n):
@@ -57,11 +57,11 @@ for x, y in chunks(x_full, y_full, n):
 opt.step()
 ```
 
-循环末积累的梯度缓冲器是单个全批后退产生的度.课程代码通过1e-4以下的最大abs差异来证明这一点.`equivalence_check`现在,我们要去.
+循环结束时的累积梯度缓冲区，会与一次 full-batch backward 产生的梯度张量相同，区别只在浮点求和顺序。本课代码会在 `equivalence_check` 中断言这一点，要求 max-abs difference 小于 1e-4。
 
-### 价格上去哪里
+### 成本体现在何处
 
-每个微批量成本一个向前和一个向后. 随着积累,你会以时间换取内存.`outputs/accum-curve.json`显示有效批量在固定微批量上成长时发生什么:
+每个 micro-batch 都要付出一次 forward 和一次 backward。gradient accumulation 的本质，就是用时间换内存。`outputs/accum-curve.json` 会展示：在固定 micro-batch 下，当 effective batch 逐渐变大时，会发生什么：
 
 ```mermaid
 flowchart TD
@@ -73,79 +73,79 @@ flowchart TD
   sps2 --> note
 ```
 
-没有免费午餐.`accum_steps`通过测试,我们可以将每个优化器步骤的墙时间翻一番. 变化是梯度估计的差异性:在同一墙预算中,你做了更少的优化器步骤,但每个步骤都在更多样本中平均. 文献将大批量和小批量视为不同的优化问题;这里的教训是机械的,而不是统计的.
+没有免费午餐。把 `accum_steps` 翻倍，会让每次 optimizer step 的 wall time 也翻倍。真正改变的是梯度估计的方差：在同样的 wall-clock 预算里，你做的 optimizer step 变少了，但每一步都在更多样本上取了平均。文献里通常把大 batch 和小 batch 当作两类不同的优化问题；而本课讲的是它的机械实现，而不是统计性质。
 
 ```figure
 cc-grad-accumulation
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`它们可以执行三项操作.
+`code/main.py` 是本课的可运行制品，它做三件事。
 
-### 步骤1:等效检查
+### 第 1 步：等价性检查
 
-`equivalence_check()`函数比较优化器步骤前的梯度缓冲器和后的参数. 断言是`max_abs_diff < 1e-4`现在,我们要去.
+`equivalence_check()` 会构建两份参数完全一致、随机种子也一致的网络。一份一次性吃下 16 个样本；另一份把同一批数据拆成四个 4-sample chunk，并把 loss 先除以四。函数会比较 optimizer step 之前的 gradient buffer，以及 optimizer step 之后的参数。断言是 `max_abs_diff < 1e-4`。
 
-### 步骤2:最后步骤的同步模式
+### 第 2 步：仅最后一步同步模式
 
-`train_one_optimizer_step`走微批次,除了最后一次进入`no_sync_context(model)`在单一过程中,文本是无操作的;在DDP上,这是降低所有的梯度被跳过的地方.`sync_counter`记录了我们离开了no_sync范围的数次;对于N微批次,数量为每个有效步骤的1次,而不是N.
+`train_one_optimizer_step` 会遍历 micro-batch。除了最后一个之外，其余都会进入 `no_sync_context(model)`。在单进程里，这个 context 是 no-op；在 DDP 里，这正是跳过 gradient all-reduce 的地方。核心记账逻辑在两种环境里是一样的。`sync_counter` 会记录真正退出 no_sync 的次数；对 N 个 micro-batch 来说，每个 effective step 只应该发生 1 次同步，而不是 N 次。
 
-### 步骤3:输出曲线
+### 第 3 步：吞吐曲线
 
-`sweep_effective_batches`运行相同的模型,具有固定微批量和积累步骤列表.
+`sweep_effective_batches` 会在固定 micro-batch 下，用一组不同的 accumulation step 运行相同模型。
 
-- `samples_per_sec`: 通过墙时间分为所见的样本总数
-- `median_step_ms`:每一步有效的50个百分点
-- `sync_calls`: 集体点
-- `avg_loss`:扫描的优化步骤中平均
+- `samples_per_sec`：总样本数除以 wall time
+- `median_step_ms`：每个 effective step 的 50 分位耗时
+- `sync_calls`：实际触发的 collective 点数
+- `avg_loss`：这轮 sweep 中各 optimizer step 的平均 loss
 
-产量降落在`outputs/accum-curve.json`并且可从笔记本中重复使用.
+输出会落到 `outputs/accum-curve.json`，后续可以直接被 notebook 重用。
 
-运行它:
+运行它：
 
 ```bash
 python3 code/main.py
 ```
 
-脚本打印了等效差,然后扫描表,然后JSON路径.
+脚本会打印 equivalence diff、sweep 表格以及 JSON 输出路径，并以 0 退出。
 
-## 用它
+## 实际使用
 
-在生产训练中,梯度积累在一个后面.`accumulation_steps = effective_batch // (micro_batch * world_size)`您不允许使用的框架是相同的循环,但步骤是相同的:扩大损失,跳过非最终微信的同步,积累,步骤一次.
+在生产训练里，gradient accumulation 通常藏在一个参数后面。PyTorch 里的典型公式是 `accumulation_steps = effective_batch // (micro_batch * world_size)`。那些本课不允许使用的高层框架，本质上也只是把这段 loop 包装了一层而已；底层步骤完全相同：缩放 loss，在非最终 micro-batch 上跳过同步，累积梯度，然后每个 effective batch 才 step 一次。
 
-野生动物的三个模式:
+现实里常见的三条经验是：
 
-- 微批量是为了和设备内存的选择.任何更小的东西会浪费加速器周期.任何更大的东西会崩.
-- 有效批次是从学习率时间表中选择的.大型有效批次需要扩大学习率和加热;这是自2017年以来所讨论的线性扩展规则.
-- 积累数量是两个和唯一的按之间的桥梁, 在运行时, 您可以调节,
+- micro-batch size 通常选到刚好吃满设备内存。再小会浪费加速器周期，再大会直接 OOM。
+- effective batch 通常由学习率 schedule 反推出来。更大的 effective batch 往往要求配套更大的学习率与 warmup，这就是从 2017 年就一直在讲的 linear scaling rule。
+- accumulation count 就是连接两者的桥梁，也是运行时最容易调节、又不需要重写 dataloader 的那个 knob。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-gradient-accumulation.md`通过取食谱,一个同行可以将其放入一个新的 repo:`accum_steps`通过JSON,将优化器同步到非最终微信上,按有效批量进行一次优化器,将有效批量进行记录,以便交易可见.
+`outputs/skill-gradient-accumulation.md` 会把这套配方压缩成一个可复用说明，让同事可以直接搬进新 repo：loss 先除以 `accum_steps`，非最终 micro-batch 跳过 optimizer sync，每个 effective batch 只 step 一次，并把 throughput 相对 effective batch 的曲线写成 JSON，让这笔 tradeoff 变得可见。
 
-## 运动
+## 练习
 
-1. 再进行扫描`--num-steps 100`根据实际批量,每秒的图片样本.
-2. 添加错误的扩展变量 (没有分区),并在步骤1显示参数diff与参考.
-3. 换取ADMW的SGD,并确认优化状态的进步每一步一次,而不是每次微批次一次.
-4. 引入一个真正的`DistributedDataParallel`包装和路线`no_sync_context`确认同步调用每批量下降为N-1.
-5. 修改等效检查,将两个不同的微分区 (2 x 8 vs 4 x 4) 进行比较,并解释您需要放松的任何宽容.
+1. 用 `--num-steps 100` 重新跑 sweep，并把 samples per second 相对 effective batch 画出来。曲线在哪个位置开始变平？
+2. 增加一个错误缩放的变体，也就是故意不做除法，然后在 step 1 上展示它相对正确实现的 parameter diff。
+3. 把 SGD 换成 AdamW，并确认 optimizer state 只在每个 effective step 推进一次，而不是每个 micro-batch 都推进。
+4. 引入真正的 `DistributedDataParallel` 包装，并把 `no_sync_context` 接到它的方法上。验证 sync_calls 会在每个 effective batch 中减少 N-1 次。
+5. 修改 equivalence check，对比两种不同的微分方式，例如 2 by 8 与 4 by 4，并解释你是否需要放宽容忍误差。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|-----------------|------------------------|
-| Micro batch | The batch you forward | The slice that fits in memory in a single forward pass |
-| Accum steps | Backward passes per step | Number of backwards summed before one optimizer step |
-| Effective batch | The batch | Micro batch times accum steps times data parallel world size |
-| Loss scaling | Divide by N | Per-micro-batch division so summed gradients match full batch |
-| Sync on last | Skip the rest | Only run the gradient collective on the last backward in the window |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| Micro batch | The batch you forward | 一次 forward pass 中能够装进内存的那一小片 batch |
+| Accum steps | Backward passes per step | 在一次 optimizer step 之前连续累加的 backward 次数 |
+| Effective batch | The batch | Micro batch 乘以 accum steps，再乘以数据并行 world size |
+| Loss scaling | Divide by N | 对每个 micro-batch 先做除法，使累积梯度与 full batch 一致 |
+| Sync on last | Skip the rest | 在一个 accumulation window 里，只在最后一次 backward 才做梯度同步 |
 
-## 进一步阅读
+## 延伸阅读
 
-- 关于Pytorch的文件`DistributedDataParallel.no_sync`对于生产版本的最后步骤同步技巧.
-- 关于大型批次训练的线性扩展,
-- 火器对梯度积累相互作用的发射跟踪器,并进行混合精度的不扩展.
-- 第19阶段课程42至45课程涵盖了本课程所设的模型,数据加载器,优化器和培训者架构.
-- 第19阶段课程47涵盖检查点和恢复,
+- PyTorch 关于 `DistributedDataParallel.no_sync` 的文档，对应生产环境里的 sync-on-last-step 技巧。
+- Goyal 等人在 2017 年关于大 batch 训练线性缩放的论文，也就是为什么要认真对待 effective batch。
+- PyTorch issue tracker 上关于 gradient accumulation 与 mixed precision unscaling 交互的讨论。
+- 第 19 阶段第 42 到 45 课，涵盖本课默认已经具备的模型、dataloader、optimizer 和 trainer 脚手架。
+- 第 19 阶段第 47 课，会继续讲 checkpoint 与 resume，让长时间 accumulation run 能跨 wallclock 限制存活下来。
