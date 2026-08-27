@@ -1,23 +1,23 @@
-# 监督员/管弦乐员工作模式
+# 监督者 / 编排器—工作者模式
 
-> 一个主要代理人计划和代表;专业工作者在平行环境中执行并报告. 这就是安特罗皮克研究系统 (Claude Opus 4作为, Sonnet 4作为子基) 背后的模式,在内部研究评估中,测量为+90.2% 据Anthropic的工程文章报道,BrowseComp上的80%的差异仅仅是通过代币使用解释的. 这一课从原始人构建了监督模式,并涵盖了2026年的生产部署工程课程.
+> 一个主智能体负责规划与委派，专业工作者在彼此独立的上下文中并行执行，再汇报结果。这正是 Anthropic Research 系统背后的模式：Claude Opus 4 担任主导智能体，Sonnet 4 担任子智能体。内部研究评估显示，它比单智能体 Opus 4 高出 90.2%。Anthropic 的工程文章还指出，仅 token 用量就能解释 BrowseComp 结果差异的 80%。多智能体之所以取胜，很大程度上是因为每个子智能体都拥有全新的上下文窗口。本课从原语出发构建监督者模式，并介绍生产部署在 2026 年仍然适用的工程经验。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib, `threading`)
-**Prerequisites:** Phase 16 · 04 (Primitive Model)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库，`threading`）
+**Prerequisites:** 第 16 阶段 · 04（原语模型）
+**Time:** 约 75 分钟
 
 ## 问题
 
-研究是单代理系统失败的原型任务.你问"2023年至2026年间多代理系统发生了什么变化?" 一个单代理在连续阅读五篇论文,将其文本填写到一半,然后必须一起考虑它们.在达到第五篇时,它忘记了第一篇论文.它不能平行化.
+研究是单智能体系统最典型的失败任务。假设你问：“多智能体系统在 2023 到 2026 年间发生了哪些变化？”单个智能体依次阅读五篇论文，用论文文本占满一半上下文，随后还要把它们放在一起推理。读到第五篇时，它已经忘了第一篇，也无法并行处理。
 
-监督模式解决了这一问题:一个领导代理计划搜索,委托每个子问题给一个工人,并合成.每个工人获得了自己的200k代币窗口,以满足一个狭窄的问题.领导从来没有看到原材料 只有工人的摘要.
+监督者模式解决了这个问题：一个主导智能体负责规划搜索，把每个子问题委派给工作者，再综合结果。每个工作者都拥有自己的 20 万 token 窗口，并且只处理一个范围狭窄的问题。主导智能体从不读取论文原文，只接收工作者的摘要。
 
-报告显示,在内部研究评估和单个Opus4中,Anthropic的生产研究系统报告了90.2%的数据. 同一篇文章指出,80%的BrowseComp变化仅仅是通过使用代币来解释的.
+Anthropic 的生产级 Research 系统报告称，相比单个 Opus 4，其内部研究评估成绩提高了 90.2%。同一篇文章指出，BrowseComp 结果差异中的 80% 仅由 *token 用量*解释。每个子智能体都拥有全新的上下文，这是主要作用机制。
 
-## 概念
+## 核心概念
 
-### 模式
+### 模式结构
 
 ```
                  ┌──────────────┐
@@ -35,101 +35,101 @@
          context     context      context
 ```
 
-子从来没有读到原材料. 工人从来没有看到彼此的工作,直到子合成. 每个箭头都是一个狭窄的文物.
+主导智能体不读取原始材料，工作者在主导智能体综合之前也看不到彼此的工作。每一条箭头都代表一次只携带狭窄产物的交接。
 
-### 为什么它赢得
+### 为什么它能取胜
 
-三个机制:
+有三个机制：
 
-1. **Fresh context per subagent.**调查"FIPA-ACL遗产"的工人没有带上40万代币,
-2. **Specialization via prompt.**领导的提示是"分解和合成",而不是"研究".每个工作者的提示是狭窄的:"找到X变化的东西".
-3. **Parallelism.**工人同时运行.`max(worker_times) + plan + synthesis`没有`sum(worker_times)`现在,我们要去.
+1. **每个子智能体都有全新上下文。** 负责探索“FIPA-ACL 传承”的工作者不会携带主导智能体在规划阶段用掉的 4 万 token，而是拥有一个专门用于这个问题的 20 万 token 窗口。
+2. **通过提示实现专业化。** 主导智能体的提示词是“拆解并综合”，而不是“开展研究”。每个工作者的提示词都很聚焦：“找出 X 中发生了哪些变化。”聚焦的提示会产生聚焦的输出。
+3. **并行。** 工作者并发运行。挂钟时间大致为 `max(worker_times) + plan + synthesis`，而不是 `sum(worker_times)`。
 
-### 工程课程 (人类学2025年)
+### 工程经验（Anthropic，2025）
 
-对于2026年,这份"人类"文章列出了一些仍然与2026年相关的生产课程:
+Anthropic 的文章列出数项到 2026 年仍然适用的生产经验：
 
-- **Scale effort to query complexity.**简单的查询:一个代理,3-10个工具调用.复杂的查询:10个代理. 领先者必须估计这一点,而不是调用者.
-- **Broad then narrow.**首先将其分解成广泛的子问题,然后在答案要求深度时,每次子问题就会产生更多的工人.
-- **Rainbow deployments.**机器人是长期的,充满状态的.传统的蓝绿色不起作用.人类使用彩虹:新版本逐步推出,而旧版本会耗尽.
-- **Token usage dominates.**单代理的代币是15x. 只有任务值证明成本时运行.
+- **让投入与查询复杂度匹配。** 简单查询只用一个智能体、调用工具 3 到 10 次；复杂查询才使用 10 个以上智能体。应该由主导智能体负责估算，而不是由调用方指定。
+- **先广后深。** 先拆成宽泛的子问题；如果答案值得继续深入，再为每个子问题派生更多工作者。
+- **彩虹部署。** 智能体是长时间运行且有状态的，传统蓝绿部署并不适用。Anthropic 使用彩虹部署：逐步推出新版本，同时让旧版本自然排空。
+- **Token 用量占主导。** 多智能体消耗的 token 约为单智能体的 15 倍。只有任务价值足以证明成本合理时才使用它。
 
-### 图表原生转折
+### 转向图原生
 
-拉格格拉夫最初发送了一个`langgraph-supervisor`具有高水平的图书馆`create_supervisor`帮助人. 在2025年,兰格链将推转移到直接通过工具调用实现监督模式,因为工具调用对监督者看到的东西给予更多控制 (文本工程).图书馆仍然运行; 文档现在建议使用工具调用形式.
+LangGraph 最初提供 `langgraph-supervisor` 库及高层 `create_supervisor` 辅助函数。2025 年，LangChain 将建议改为通过工具调用直接实现监督者模式，因为工具调用能更细粒度地控制 *监督者究竟能看到什么*，这本质上属于上下文工程。该库依然可用，但当前文档更推荐工具调用的写法。
 
 ### 失败模式
 
-- **Lead hallucinates the plan.**如果引擎引发了不解解答真正的问题的子问题,
-- **Workers over-explore.**没有明确的范围限制,工人超越了分配给他们的子问题,
-- **Synthesis conflicts.**两个工人返回矛盾的事实. 领先者要么重新问 (添加一轮) 或明确指出分歧. 默默选择一边是最严重的失败:用户永远不知道分歧发生了.
+- **主导智能体对计划产生幻觉。** 如果主导智能体生成的子问题并没有真正拆解原问题，工作者就会围绕错误目标开展非常精确的研究。
+- **工作者过度探索。** 如果没有明确的范围边界，工作者就会偏离自己被分配的子问题，并污染综合步骤。
+- **综合冲突。** 两个工作者返回互相矛盾的事实。主导智能体必须重新提问一轮，或者明确指出分歧。最糟糕的做法是静默选择一方，因为用户根本不知道这里曾经出现过冲突。
 
-### 当监督员错误时
+### 何时不该使用监督者模式
 
-- **Sequential tasks.**如果步骤2实际上需要步骤1的输出,并行性就不会买到任何东西.使用管道 (CrewAI序列,LangGraph线形图).
-- **Simple queries.**单个代理人处理它们更快,更便宜.
-- **Strict determinism.**监督者使用LLM选定的代表. 静态图表在审计/重播更重要时比适应性更好.
+- **顺序任务。** 如果第 2 步确实依赖第 1 步的输出，并行不会带来收益。应使用流水线（CrewAI Sequential、LangGraph 线性图）。
+- **简单查询。** 单智能体处理起来更快、更便宜。在派生工作者之前，先做主导智能体的“缩放投入”检查。
+- **严格确定性。** 监督者模式依赖 LLM 决定如何委派。当审计与重放比适应性更重要时，静态图更合适。
 
 ```figure
 supervisor-hierarchy
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行一个由三个平行工人组成的监督员工,使用`threading`将查询分解成子问题,工人同时对每个子问题进行运行,合成.没有真正的LLM工人编写以模拟搜索和总结.
+`code/main.py` 使用 `threading` 实现一个包含三个并行工作者的监督者。主导智能体把查询拆分成子问题，工作者针对每个子问题并发运行，最后再由主导智能体综合结果。这里没有真实的 LLM；工作者只是用脚本模拟抓取与摘要流程。
 
-关键结构:
+关键结构：
 
-- `Lead.plan(query)`问题分为3个子问题.
-- `Worker.run(sub_q)`返回假摘要 (可能是生产中的任何使用工具的代理).
-- `Lead.run(query)`它们将工人分为线程,结合和合成.
+- `Lead.plan(query)` 将一个查询拆成 3 个子问题。
+- `Worker.run(sub_q)` 返回模拟摘要（在生产环境中，它可以是任何会使用工具的智能体）。
+- `Lead.run(query)` 在线程中启动工作者，等待它们结束，再进行综合。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-输出显示了计划,并行工作者跟踪了开始/结束时间标签,以及最终合成.你可以看到墙钟的胜利:三名0.3秒的工人在0.35秒内跑,而不是0.9.
+输出会显示计划、并行工作者的开始／结束时间戳以及最终综合结果。你可以直观看到挂钟时间上的优势：三个各自耗时 0.3 秒的工作者，总耗时约为 0.35 秒，而不是 0.9 秒。
 
-## 用它
+## 实际使用
 
-`outputs/skill-supervisor-designer.md`通过使用者查询,生成一个监督模式设计:导向系统提示,工作者角色,子问题分解规则和合成模板. 在构建新的研究式代理系统之前,使用此.
+`outputs/skill-supervisor-designer.md` 接收用户查询并生成监督者模式设计：主导智能体的系统提示、工作者角色、子问题拆解规则，以及综合模板。在构建新的研究型智能体系统之前，可以先用它做设计。
 
-## 运送它
+## 交付成果
 
-在部署监督模式之前,检查列表:
+部署监督者模式前，请检查：
 
-- **Model pairing.**在推理层模型上 (Opus类,`o3`工人在更快,更便宜的模型上 (Sonnet, `o4-mini`)
-- **Worker timeout.**任何超过2倍的平均运行时间的工人都会被杀害; 领先者要么以更窄的范围重新生长,要么没有它.
-- **Token cap per worker.**强制限制 (例如,预期的合成输入10倍) 阻止逃离工人
-- **Observability.**追踪领导的计划,每个员工的工具调用,以及合成. 这是任何后期调试的基础.
-- **Rainbow rollout.**长期经营的代理人需要逐步的版本转换,而不是热交换.
+- **模型搭配。** 主导智能体使用推理级模型（Opus 级、`o3` 级），工作者使用更快、更便宜的模型（Sonnet、`o4-mini`）。
+- **工作者超时。** 任何运行时间超过中位数 2 倍的工作者都应被终止；随后由主导智能体以更窄范围重新派生，或在缺少该结果的情况下继续。
+- **单个工作者的 token 上限。** 设置硬上限（例如预期综合输入的 10 倍）可以防止失控的工作者耗尽预算。
+- **可观测性。** 追踪主导智能体的计划、每个工作者的工具调用，以及综合过程。这是任何事后调试的基础。
+- **彩虹发布。** 长时间运行的有状态智能体需要逐步进行版本迁移，而不是热切换。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`现在,我们可以看到一个新的方法,然后修改引擎到5个工人而不是3.观察墙钟效果.在哪个工人数量上,在这个演示中,产生的总成本超过了平行节省?
-2. 执行员工时间限制:杀死超过0.5秒的员工,让领先者合成剩余的结果.
-3. 另外,如果两个工人回复矛盾的答案,领导者会注意到不同意见,而不是选择一个.
-4. 列出这款玩具演示需要采用的三种做法,才能在生产中运行.
-5. 比较兰格拉夫的情况`create_supervisor`什么让你更好地控制监督者看到的东西?为什么人类明确地将仅次答案而不是原始工人背景合成?
+1. 运行 `code/main.py`，再把主导智能体从派生 3 个工作者改成 5 个，观察挂钟时间的变化。在这个演示里，工作者数量达到多少时，派生开销会超过并行收益？
+2. 实现工作者超时：终止任何运行时间超过 0.5 秒的工作者，并让主导智能体综合其余结果。若要判断某个工作者是否被截断，需要哪些可观测信息？
+3. 在主导智能体的综合过程中加入冲突检测：若两个工作者返回相互矛盾的答案，主导智能体应指出分歧，而不是任选其一。在不调用 LLM 的情况下，如何检测矛盾？
+4. 阅读 Anthropic 关于 Research 系统的工程文章，列出这个玩具演示要进入生产环境必须采用的三项实践。
+5. 比较 LangGraph 的 `create_supervisor`（旧版）与新的工具调用建议。哪种方式能更好地控制监督者能看到的内容？为什么 Anthropic 明确规定综合阶段只传入子答案，而不传入工作者的原始上下文？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| Supervisor | "Lead agent" | An orchestrator agent that plans, delegates, and synthesizes. Does not do the work itself. |
-| Worker | "Subagent" | A focused agent invoked by the supervisor with narrow scope and its own context window. |
-| Orchestrator-worker | "Supervisor pattern" | Same thing, different name. The 2026 literature uses both. |
-| Fresh context | "Clean window" | A worker's context starts from its system prompt and assigned question, not the lead's history. |
-| Rainbow deployment | "Gradual rollout" | Long-running stateful agents need versioned drain-and-replace, not blue-green. |
-| Token dominance | "Context is the variable" | 80% of research-eval variance comes from total tokens used, not model choice, per Anthropic. |
-| Scale effort | "Match agent count to complexity" | Lead estimates query difficulty, spawns 1 vs 10+ workers accordingly. |
-| Synthesis conflict | "Workers disagree" | Two workers return contradictory facts; the lead must surface disagreement, not silently pick one. |
+| Supervisor | “主导智能体” | 负责规划、委派与综合的编排型智能体，本身不执行具体工作。 |
+| Worker | “子智能体” | 由监督者调用的聚焦型智能体，范围狭窄并拥有独立上下文窗口。 |
+| Orchestrator–Worker | “监督者模式” | 同一模式的不同名称；2026 年的文献两者都会使用。 |
+| 全新上下文 | “干净窗口” | 工作者的上下文从系统提示和分配的问题开始，不包含主导智能体的历史。 |
+| 彩虹部署 | “渐进式发布” | 长时间运行的有状态智能体需要带版本的排空与替换，而不是蓝绿部署。 |
+| Token 主导性 | “上下文才是变量” | 据 Anthropic 数据，研究评估结果差异的 80% 来自 token 总用量，而不是模型选择。 |
+| 缩放投入 | “让智能体数量匹配复杂度” | 主导智能体估算查询难度，并相应派生 1 个或 10 个以上工作者。 |
+| 综合冲突 | “工作者意见不一致” | 两个工作者返回矛盾事实；主导智能体必须公开分歧，不能静默选择一方。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Anthropic engineering — How we built our multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)监管模式的生产参考
-- [LangGraph workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents) 工具调用监督者现在是建议的形式
-- [LangGraph supervisor reference](https://reference.langchain.com/python/langgraph-supervisor)传统的辅助器,仍在2026年生产中使用
-- [OpenAI cookbook — Orchestrating Agents: Routines and Handoffs](https://developers.openai.com/cookbook/examples/orchestrating_agents)基于转让的监管变体
+- [Anthropic 工程文章——我们如何构建多智能体研究系统](https://www.anthropic.com/engineering/multi-agent-research-system)——监督者模式的生产参考
+- [LangGraph 工作流与智能体](https://docs.langchain.com/oss/python/langgraph/workflows-agents)——当前推荐工具调用式 Supervisor
+- [LangGraph Supervisor 参考](https://reference.langchain.com/python/langgraph-supervisor)——2026 年生产环境仍在使用的旧版辅助库
+- [OpenAI Cookbook——编排智能体：Routines 与 Handoffs](https://developers.openai.com/cookbook/examples/orchestrating_agents)——基于 Handoff 的 Supervisor 变体
