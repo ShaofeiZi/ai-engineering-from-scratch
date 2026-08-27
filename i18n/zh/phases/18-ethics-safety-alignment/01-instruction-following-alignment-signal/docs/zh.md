@@ -1,123 +1,123 @@
-# 按照指令作为调整信号
+# 将指令遵循作为对齐信号
 
-> 后来的每一个对RLHF的批评都反对这一管道. 在你研究优化压力如何扭曲代理之前,你必须看到代理. 根据该指令,该指令将对应对对对进行监督细节调整,以对优先级排名训练的奖励模型,以及对SFT政策的 KL罚款的奖励模型进行PPO. 优先使用1.3BInstructGPT而不是175BGPT-3. 这一结果是每一个边境实验室在2026年仍然运送一个RLHF形状的训练后管道的原因.
+> 后续所有对 RLHF 的批评，都在反驳这条流水线的某个环节。在研究优化压力如何扭曲代理目标之前，你必须先看清这个代理目标。InstructGPT（Ouyang 等人，2022）确立了参考架构：先在指令—回答对上做监督微调，再用成对偏好排序训练奖励模型，最后针对奖励模型运行 PPO，并加入相对于 SFT 策略的 KL 惩罚。一个 13 亿参数的 InstructGPT 获得的偏好度超过了 1750 亿参数的 GPT-3。正是这一项结果，使 2026 年的每一家前沿实验室仍在交付具有 RLHF 形态的后训练流水线。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy three-stage pipeline)
-**Prerequisites:** Phase 10 · 06 (SFT), Phase 10 · 07 (RLHF), Phase 10 · 08 (DPO)
-**Time:** ~45 minutes
+**Type:** 学习
+**Languages:** Python（标准库，玩具三阶段流水线）
+**Prerequisites:** 阶段 10 · 06（SFT）、阶段 10 · 07（RLHF）、阶段 10 · 08（DPO）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 说明InstructGPT管道的三个阶段以及每个阶段所使用的损失.
-- 解释为什么一个1.3B指令调整的模型在人类偏好评估上超过原始175BGPT-3.
-- 说明第三阶段的KL罚款是什么保护的,以及为什么删除它会导致寻找模式行为.
-- 描述对调整税和对其使用的PPO-ptx减轻法 Ouyang等人.
+- 说出 InstructGPT 流水线的三个阶段，以及每个阶段使用的损失函数。
+- 解释为什么一个 13 亿参数的指令微调模型能在人类偏好评估中胜过未经对齐的 1750 亿参数 GPT-3。
+- 说明第 3 阶段的 KL 惩罚要防范什么，以及移除它为何会让策略坍缩为寻模行为。
+- 描述对齐税，以及 Ouyang 等人用来缓解它的 PPO-ptx 方法。
 
 ## 问题
 
-预训练语言模型完成文本.它们不回答问题.请GPT-3"写一个反转列表的Python函数"并经常得到另一个提示,因为大多数训练分布是继续使用更多的网页文本的网页文本.模型正在做其工作工作是错误的.
+预训练语言模型的工作是续写文本，而不是回答问题。让 GPT-3“编写一个反转列表的 Python 函数”，你往往会得到另一个问题，因为其大部分训练分布来自网页文本，而网页文本后面通常仍接着更多网页文本。模型的确在完成自己的工作——只是这项工作并不是我们想要的。
 
-根据研究人员的说法,在研究中,研究人员的研究结果是非常重要的,因为研究人员的研究结果是非常重要的. 实验室使用的代理方法是人类的偏好. 两个完成将会给一个评分者;评分者选择更好的; 奖励模型学习评分者. 然后一个RL循环将政策转移到结果的奖励模型高分. 这就是整个InstructGPT论文在三个句子中. 剩下的论文是工程.
+所有严肃实验室用来修正这一问题的代理信号都是人类偏好。把两个补全结果交给标注员，由标注员选择更好的一个，再让奖励模型学习标注员的选择。然后，强化学习循环推动策略生成奖励模型评分更高的输出。用三句话就能概括 InstructGPT 的完整论点，论文其余部分主要解决工程实现。
 
 ## 概念
 
-### 阶段1:监督的细调 (SFT)
+### 阶段 1：监督微调（SFT）
 
-收集即时响应对,响应是一个有善意的人会写的. Ouyang等人使用标签器和OpenAI API的13k提示.通过标准的跨缩损失,对此数据进行细节调整.
+收集提示—回答对，其中的回答应当符合一位善意人类的写法。Ouyang 等人使用了来自标注员和 OpenAI API 的 1.3 万条提示，再通过标准交叉熵损失在这些数据上微调基础模型。
 
-现在,模型现在回答问题,而不是继续问题. 它没有给你什么:任何信号,即评级者喜欢多个答案是可行的.
+SFT 带来的结果是：模型开始回答问题，而不是继续续写问题。它没有提供的是：当多个回答都看似合理时，标注员更偏好哪一个回答的信号。
 
-### 第二阶段:奖励模式 (RM)
+### 阶段 2：奖励模型（RM）
 
-对于每一个提示,从SFT模型中样本K完成.一个标签符排名它们.训练一个奖励模型,该模型将任何提示响应对进行分数,以便,对于`y_w`现在,我觉得我更喜欢`y_l`其他:
+针对每条提示，从 SFT 模型采样 K 个补全结果，由标注员对它们排序。训练一个奖励模型，为任意提示—回答对评分；对于 `y_w` 优于 `y_l` 的配对，损失为：
 
 ```
 L_RM = -log sigmoid(r(x, y_w) - r(x, y_l))
 ```
 
-这就是布拉德利-特里对偏好损失.RM通常从SFT模型开始,LM头被 Skalar头取代.
+这就是 Bradley-Terry 成对偏好损失。奖励模型通常从 SFT 模型初始化，只把语言模型头替换为输出标量的头。
 
-奖励模型很小:6B足够用于175BInstructGPT.它们也很脆弱.
+奖励模型并不大：对于 1750 亿参数的 InstructGPT，60 亿参数就已经足够。它们也很脆弱——论文第 5 节的大部分内容都在讨论小规模实验中出现的奖励黑客行为。
 
-### 阶段3:PPO与KL罚款
+### 阶段 3：带 KL 惩罚的 PPO
 
-定义目标:
+定义目标函数：
 
 ```
 J(pi) = E_{x~D, y~pi(.|x)} [ r(x, y) ] - beta * KL(pi(.|x) || pi_SFT(.|x))
 ```
 
-通过PPO最大化.KL术语保持.`pi`没有它,优化器会找到对立的例子 弦在RM下得分高,因为RM从来没有看到它们,而不是因为人类实际上更喜欢它们.
+使用 PPO 最大化该目标。KL 项会阻止 `pi` 偏离 SFT 策略太远。没有这一项，优化器就会找到对抗样本——某些字符串之所以被奖励模型打出高分，是因为奖励模型从未见过它们，而不是因为人类真的更喜欢它们。
 
-基因系数`beta`太低:奖励黑客.太高:没有改善.
+KL 系数 `beta` 是 RLHF 中最重要的单个超参数。它太低时会发生奖励黑客；太高时则相比 SFT 几乎没有改进。
 
-### 调整税
+### 对齐税
 
-欧阳等人称之为"配合税",并用PPO-ptx来解决这一问题:将预训练梯度混合到RL目标中,使模型不会忘记如何完成下游任务,它从未获得奖励.
+经过 RLHF 后，模型更受人类偏好，却会在标准基准（SQuAD、HellaSwag、DROP）上退步。Ouyang 等人把这种现象称为对齐税，并用 PPO-ptx 修复：把预训练梯度混入强化学习目标，避免模型遗忘那些从未获得奖励的下游任务能力。
 
 ```
 J_ptx(pi) = J(pi) + gamma * E_{x~D_pretrain} [ log pi(x) ]
 ```
 
-博是个标准的平台,而人类,深思维和Meta都使用了一些变体.
+PPO-ptx 后来成为标准做法。Anthropic、DeepMind 和 Meta 都采用了某种变体。
 
-### 结果
+### 实验结果
 
-标签师对175B基 GPT-3大约70%的时间更喜欢1.3B 导向GPT (SFT + RM + PPO-ptx).在生产流量中隐藏测试提示时,差距扩大.
+标注员在约 70% 的比较中，更偏好 13 亿参数的 InstructGPT（SFT + RM + PPO-ptx），而不是 1750 亿参数的基础 GPT-3。在来自生产流量的隐藏测试提示上，差距还会扩大。这个数字说明了两件事：
 
-1. 配列与能力不同.175B模型具有更多的能力;1.3B模型具有更多的配列;标签商更喜欢配列的模型.
-2. 基本模型是设定的能力水平. 你不能让一个基本模型知道它从来没有看到的事实.
+1. 对齐与能力是不同的维度。1750 亿参数模型具备更强能力；13 亿参数模型对齐得更好；标注员更偏好后者。
+2. 能力下限由基础模型决定。你无法通过 RLHF，让基础模型掌握它从未见过的事实。
 
-### 为什么这是18期的参考点
+### 为什么它是阶段 18 的参照点
 
-后期课程中的每一个批评 奖励黑客 (课2) DPO (课3) , (课4) ,CAI (课5) 睡觉代理 (课7) ,排列假冒 (课9) 反对这一管道的一部分. 奖励黑客攻击第二阶段. 局的情况发生了第二和第三阶段. 标签标签器取代了人类标签器. 缩显示标签是偏见的信号. 调整假装显示,政策可以完全绕过第三阶段. 没有你头脑中的管道,你不能跟随这些批评.
+后续课程中的每一种批评——奖励黑客（第 2 课）、DPO（第 3 课）、谄媚（第 4 课）、CAI（第 5 课）、休眠 Agent（第 7 课）、对齐伪装（第 9 课）——都在反驳这条流水线的某个环节。奖励黑客攻击第 2 阶段；DPO 将第 2、3 阶段合并；CAI 取代人类标注员；谄媚说明标注员是有偏的信号；对齐伪装则说明策略可以完全绕过第 3 阶段。如果没有先在脑中建立这条流水线，你就无法理解这些批评。
 
 ```figure
 al-instruct-pipeline
 ```
 
-## 用它
+## 实际应用
 
-`code/main.py`模拟玩具偏好数据的三个阶段. 基本"政策"是对行动的偏见. 阶段1SFT在200个提示时模仿标签操作. 阶段2符合500个对等排名的布拉德利-特里奖励模型. 阶段3将简化PPO更新,并对SFT政策实施KL处罚. 你可以看到奖励升,KL差异增长,政策漂移,你可以关闭KL术语,
+`code/main.py` 会在玩具偏好数据上模拟三个阶段。基础“策略”是在动作 {A, B, C} 上有偏的硬币。阶段 1 的 SFT 模仿标注员在 200 条提示上的动作；阶段 2 根据 500 个成对排序拟合 Bradley-Terry 奖励模型；阶段 3 执行简化的 PPO 更新，并加入相对于 SFT 策略的 KL 惩罚。你可以观察奖励不断上升、KL 散度增大和策略发生漂移；也可以关闭 KL 项，观察奖励黑客如何在 50 个更新步骤内出现。
 
-什么要看:
+需要重点观察：
 
-- 奖励轨迹`beta = 0.1`其他`beta = 0.0`现在,我们要去.
-- 对于培训阶段.
-- 与标签优先级相比,最终行动分布.
+- `beta = 0.1` 与 `beta = 0.0` 时的奖励轨迹。
+- 训练过程中 KL(pi || pi_SFT) 的变化。
+- 最终动作分布与标注员偏好的对比。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-instructgpt-explainer.md`根据RLHF管道描述或纸质摘要,它确定了三个阶段中哪个正在修改,每阶段使用的损失,以及是否存在 KL罚款或相等的调节剂.
+本课会产出 `outputs/skill-instructgpt-explainer.md`。给它一段 RLHF 流水线描述或论文摘要，它会识别三个阶段中的哪一个被修改、每个阶段采用什么损失，以及是否存在 KL 惩罚或等效的正则化项。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`设置`beta = 0.0`报告200个PPO步骤后的行动分布.在一段说明寻找模式的行为.
+1. 运行 `code/main.py`。将 `beta = 0.0`，并报告 200 个 PPO 步骤之后的动作分布。用一段话解释这种寻模行为。
 
-2. 修改奖励模型以为B行动 (模拟奖励错误) 提供 +0.5 偏差.`beta = 0.1`,这项罚款是否阻止政策利用偏见?`beta`剥削是不是显而易见的?
+2. 让奖励模型对动作 B 具有 +0.5 的偏置（模拟奖励缺陷）。使用 `beta = 0.1` 运行 PPO。KL 惩罚能阻止策略利用这一偏置吗？`beta` 取什么值时开始出现利用行为？
 
-3. 阅读Ouyang等 (arXiv:2203.02155) 图 1.通过运行PPO 1, 5, 20, 100步,并与SFT模型测量偏好来复制标签偏好曲线.
+3. 阅读 Ouyang 等人论文（arXiv:2203.02155）的图 1。分别运行 1、5、20、100 个 PPO 步骤，并测量相对于 SFT 模型的偏好，从而重现标注员偏好曲线。
 
-4. 报纸4.3节报告说,1.3B的InstructGPT超过175B的GPT-3大约70%的时间.为什么隐藏的生产提示比标签家自己的提示要高?
+4. 论文第 4.3 节报告，13 亿参数 InstructGPT 约有 70% 的概率优于 1750 亿参数 GPT-3。为什么这一比例在隐藏的生产提示上，会比在标注员自己编写的提示上更高？
 
-5. 根据相同的偏好数据,替换PPO损失为DPO (阶段10 · 08). 进行最终政策漂移 (KL到SFT) 和最终奖励的比较.
+5. 在相同偏好数据上，用 DPO（阶段 10 · 08）替换 PPO 损失。比较最终策略漂移（相对于 SFT 的 KL）和最终奖励。在奖励相同时，哪种方法偏离得更远？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|------------------------|
-| SFT | "instruction tuning" | Stage 1: cross-entropy fine-tune on prompt-response pairs |
-| Reward model | "the RM" | Scalar regressor over (prompt, response) trained with Bradley-Terry on pairwise labels |
-| Bradley-Terry | "pairwise preference loss" | -log sigmoid(r_w - r_l); reduces pairwise ranking to binary classification |
-| KL penalty | "the regularizer" | `beta * KL(pi \|\| pi_SFT)` — keeps the RL policy near the SFT anchor |
-| PPO-ptx | "PPO with pretraining mix" | Adds a fraction of pre-training log-likelihood to the PPO objective to offset the alignment tax |
-| Alignment tax | "the RLHF regression" | Post-RLHF drop on standard benchmarks that RLHF did not target |
-| Labeler preference | "the ground truth" | Sample of human rankings; the RM is a statistical proxy for this, not for "human values" |
+| SFT | “指令微调” | 阶段 1：在提示—回答对上使用交叉熵进行微调 |
+| 奖励模型 | “RM” | 在（提示、回答）上输出标量的回归器，使用 Bradley-Terry 损失从成对标签训练得到 |
+| Bradley-Terry | “成对偏好损失” | -log sigmoid(r_w - r_l)；把成对排序化为二分类问题 |
+| KL 惩罚 | “正则项” | `beta * KL(pi \|\| pi_SFT)`——使强化学习策略保持在 SFT 锚点附近 |
+| PPO-ptx | “混合预训练的 PPO” | 在 PPO 目标中加入一部分预训练对数似然，以抵消对齐税 |
+| 对齐税 | “RLHF 退化” | RLHF 后，模型在 RLHF 未针对的标准基准上出现性能下降 |
+| 标注员偏好 | “真实标签” | 人类排序的样本；RM 是这一信号的统计代理，而不是“人类价值观”的代理 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Ouyang et al. — Training language models to follow instructions with human feedback (arXiv:2203.02155)](https://arxiv.org/abs/2203.02155) 根据每一个随后的RLHF管道的基础,
-- [Stiennon et al. — Learning to summarize from human feedback (arXiv:2009.01325)](https://arxiv.org/abs/2009.01325)前任的RLHF对总结
-- [Christiano et al. — Deep reinforcement learning from human preferences (arXiv:1706.03741)](https://arxiv.org/abs/1706.03741)原始基于优先级的RL配方
-- [Bai et al. — Training a Helpful and Harmless Assistant with RLHF (arXiv:2204.05862)](https://arxiv.org/abs/2204.05862)安特罗皮克对InstructGPT管道的HH延伸
+- [Ouyang 等人——Training language models to follow instructions with human feedback（arXiv:2203.02155）](https://arxiv.org/abs/2203.02155)——InstructGPT 论文，也是后来每条 RLHF 流水线的基础
+- [Stiennon 等人——Learning to summarize from human feedback（arXiv:2009.01325）](https://arxiv.org/abs/2009.01325)——更早的摘要 RLHF 工作
+- [Christiano 等人——Deep reinforcement learning from human preferences（arXiv:1706.03741）](https://arxiv.org/abs/1706.03741)——最初的基于偏好的强化学习表述
+- [Bai 等人——Training a Helpful and Harmless Assistant with RLHF（arXiv:2204.05862）](https://arxiv.org/abs/2204.05862)——Anthropic 对 InstructGPT 流水线所做的 Helpful-Harmless 扩展
