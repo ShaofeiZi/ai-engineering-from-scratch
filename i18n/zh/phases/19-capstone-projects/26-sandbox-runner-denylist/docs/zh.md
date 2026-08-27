@@ -1,33 +1,33 @@
-# 石头课26: 沙盒跑步者与丹尼尔斯和路径监狱
+# 综合项目第 26 课：带拒绝列表与路径牢笼的沙箱运行器
 
-> 验证门决定是否应运行工具调用. 沙盒决定什么会发生. 这一课将运行一个子进程运行器,拒绝危险的执行器,拒绝危险的Argv形状,将每个文件路径关在项目根, 它是模型和操作系统之间坐落的两个层中的第二层.
+> 验证门决定某次工具调用是否应该执行。沙箱决定它一旦执行会发生什么。本课会交付一个子进程运行器：它会拒绝危险可执行文件、拒绝危险的 argv 形状、把所有文件路径都关进项目根目录、截断过大的输出，并在墙钟超时后杀掉失控进程。它是模型与操作系统之间两层防线中的第二层。
 
-**Type:** Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 19 · 25 (verification gates and observation budget), Phase 14 · 33 (instructions as constraints), Phase 14 · 38 (verification gates)
-**Time:** ~90 minutes
+**Type:** 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 第 19 阶段 · 25（验证门与观察预算），第 14 阶段 · 33（将指令视为约束），第 14 阶段 · 38（验证门）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 建立一个`Sandbox`班级包装`subprocess.run`随着时间的延期,捕获,和短节.
-- 拒绝指令,以名义对抗一个丹尼尔斯特,而以结构对抗一个阿尔格维检查员.
-- 拒绝任何在声明的项目根之外解决的路径参数.
-- 当模式关闭时,拒绝子的元字符.
-- 返回一个结构化`SandboxResult`能吸收下游可观和评估带.
+- 构建一个 `Sandbox` 类，对 `subprocess.run` 提供 timeout、capture 和 truncation 封装。
+- 基于 denylist 按命令名拒绝调用，并通过 argv inspector 按结构拒绝调用。
+- 拒绝任何解析后落在声明项目根之外的路径参数。
+- 在 shell 模式关闭时拒绝 shell 元字符。
+- 返回结构化的 `SandboxResult`，供下游可观测性与评估框架摄取。
 
 ## 问题
 
-编码代理可以在一个转折中安装后门,除钥匙,造开发人员笔记本电脑,并起云账单.最不昂贵的防御是不给它.第二最不昂贵的是一个对一个精确的模式列表表示不愿意的沙盒.
+一个可以直接调用 shell 的编码智能体，完全可以在单轮里装后门、外泄密钥、把开发者笔记本搞坏，或者顺手刷出一笔云账单。成本最低的防御当然是根本不给它 shell。次低成本的防御，就是一个对精确危险模式说“不”的沙箱。
 
-经纪人痕迹中出现了三类失败.
+在真实的智能体 trace 里，反复出现的失败模式主要有三类。
 
-首先是危险的执行工具. 一个压力下的模型来解决路径问题将试图`sudo`现在`chmod -R 777`现在`rm -rf`现在`mkfs`现在`dd`丹尼尔人以姓名和名捕获他们.
+第一类是危险可执行文件。一个在修路径问题时被逼急的模型，往往会尝试 `sudo`、`chmod -R 777`、`rm -rf`、`mkfs`、`dd`。这些都不该出现在智能体运行里。denylist 既按名字，也按别名，把这些东西拦下来。
 
-没有子的模型会通过解释器进行攻击:`python3 -c "import os; os.system('rm -rf /')"`现在`bash -c '...'`现在`node -e '...'`现在`perl -e '...'`沙盒需要知道任何翻译都用一个`-c`- - 像旗只是一个号,还有额外的步骤.
+第二类是 argv 花招。模型如果被告知“不能用 shell”，就会试图把攻击塞进解释器里：`python3 -c "import os; os.system('rm -rf /')"`、`bash -c '...'`、`node -e '...'`、`perl -e '...'`。沙箱必须知道：任何带着 `-c` 这类旗标运行的解释器，本质上都只是多拐了一道弯的 shell 调用。
 
-第三个是逃走路.`./src/main.py`而是读到`../../etc/passwd`沙盒通过解决每一个路径争论,将其锁定在牢房里.`os.path.realpath`并且说出前.
+第三类是路径逃逸。模型被要求读取 `./src/main.py`，结果却去读 `../../etc/passwd`。沙箱会把每一个路径参数都通过 `os.path.realpath` 解析后关进项目根目录前缀之下。
 
-沙盒不是操作系统的安全界限. 具有代码执行的确定攻击者仍然可以爆发.沙盒是开发时间的防护轨道:它使常见故障模式响,并阻止代理因纯粹的不善行为而造成破坏.
+这个沙箱并不是操作系统意义上的安全边界。一个有任意代码执行能力的坚定攻击者，依然可能逃逸。它的定位是开发期护栏：让最常见的失误模式变得响亮可见，并阻止智能体仅仅因为笨拙就做出破坏性操作。
 
 ## 概念
 
@@ -42,15 +42,15 @@ flowchart TD
   S5 --> Result[SandboxResult<br/>exit_code, stdout, stderr,<br/>truncated, timed_out, denied, reason]
 ```
 
-沙盒有四个拒绝轴:名称, argv,路径,结构.每个轴是调用的纯函数,尚未出现子进程.每个轴经过后,子进程只会产生.
+沙箱有四条拒绝轴：名称、argv、路径、结构。每一条轴在子进程真正启动之前，都是对调用对象的纯函数判断。只有所有轴都通过之后，子进程才会被真正拉起。
 
-其他`SandboxResult`退出码是常规的: 0 成功,非零失败,加上3个拒绝 (-100),时间_out (-101) 和缩短的哨兵码 (退出码是真实的,有标志设置). 下游课程读取了这个结构化结果而不是解析 stderr.
+`SandboxResult` 的退出码采用约定俗成的形式：0 表示成功，非零表示失败，此外再额外保留三个哨兵语义：拒绝为 -100，超时为 -101，而截断则保留真实退出码并额外打一个标志。后续课程会直接读取这个结构化结果，而不是去解析 stderr。
 
 ```figure
 cg-path-jail
 ```
 
-## 建筑
+## 架构
 
 ```mermaid
 flowchart LR
@@ -59,30 +59,30 @@ flowchart LR
   Sandbox --> Result[SandboxResult]
 ```
 
-丹尼尔名单是可执行的基名列表.`/bin/rm`现在`/usr/bin/rm`) 所有的解析都以相同的基名. argv 检查员知道解释器的形状:任何 argv[0]是解释器的 argv,任何后来的 arg 始于 `-c`或`-e`子的特征 (`;`现在`|`现在`&`现在`>`现在`<`背部,`$()`) 要求拒绝,如果呼叫没有明确要求收购.
+denylist 是一个可执行文件 basename 的 frozenset。别名路径如 `/bin/rm` 与 `/usr/bin/rm` 最终都会解析为同一个 basename。argv inspector 识别解释器形状：只要 argv[0] 是解释器，并且后续任意参数以 `-c` 或 `-e` 开头，就直接拒绝。shell 元字符 `;`、`|`、`&`、`>`、`<`、反引号以及 `$()`，在调用没有显式要求 shell 时也会触发拒绝。
 
-路径监狱是最微妙的部分.`project_root`任何看起来像一个路径的论点 (包含`/`通过 标准化,`os.path.realpath`结果是通过查看真路,而不是字面路径,阻止了Symlink逃离尝试 (项目根中的一个向外指的符号链接).
+路径牢笼是最微妙的一块。沙箱在构造时接收一个 `project_root`。任何看起来像路径的参数，只要包含 `/` 或者匹配到现有文件，都会先经过 `os.path.realpath` 规范化，再与项目根的 realpath 做前缀比对。如果解析结果不在根目录下，就拒绝。通过检查 realpath 而不是字面路径，连“项目根里有一个指向外部的符号链接”这种逃逸也能被挡住。
 
-## 你会建造什么
+## 你将构建什么
 
-实施是`main.py`另外还有一次测试.
+实现由 `main.py` 和一个测试目录组成。
 
-1. `SandboxResult`数据类:出口_代码,stdout,stderr,缩短,时间_out,拒绝,理由,持续时间_ms.
-2. `SandboxConfig`数据类:项目_root, max_output_bytes,时间_秒,丹尼尔列表,解释器_区块.
-3. `Sandbox`类:`run(argv, *, shell=False, cwd=None)`返回一个`SandboxResult`现在,我们要去.
-4. 内部拒绝助手:`_check_executable_denylist`现在`_check_argv_interpreter`现在`_check_shell_metachars`现在`_check_path_jail`现在,我们要去.
-5. 通过清晰的输出切割`truncated`捕获的流域中的旗和标记线.
-6. 下面的演示:一系列合法和反抗的呼叫.
+1. `SandboxResult` 数据类：exit_code、stdout、stderr、truncated、timed_out、denied、reason、duration_ms。
+2. `SandboxConfig` 数据类：project_root、max_output_bytes、timeout_seconds、denylist、interpreter_block。
+3. `Sandbox` 类：`run(argv, *, shell=False, cwd=None)` 返回一个 `SandboxResult`。
+4. 内部拒绝辅助函数：`_check_executable_denylist`、`_check_argv_interpreter`、`_check_shell_metachars`、`_check_path_jail`。
+5. 输出截断逻辑：既设置清晰的 `truncated` 标志，也在捕获流中插入标记行。
+6. 底部 demo：混合一组合法调用与对抗性调用，并逐一展示其结果。
 
-沙盒使用`subprocess.run`随着`shell=False`默认的`capture_output=True`墙钟时间使用了`timeout`关于`TimeoutExpired`通过使用""的方法,
+沙箱默认使用 `subprocess.run`，并设置 `shell=False` 与 `capture_output=True`。墙钟超时依赖 `timeout` 参数；若抛出 `TimeoutExpired`，沙箱会杀掉进程组并合成一个 SandboxResult。
 
-## 为什么这不是一个真正的沙箱
+## 为什么这不是真正的沙箱
 
-课堂沙箱不使用名字空间,cgroups,seccomp,gVisor,Firecracker或任何核层次的隔离.任何子工艺可以做的事情,沙箱可以做.保护是结构性的:代理被拒绝最常见的危险调用,而响亮的拒绝进入可观察性而不是沉默运行.
+本课的沙箱不会用到 namespaces、cgroups、seccomp、gVisor、Firecracker 或任何内核级隔离。子进程能做的事，沙箱本身理论上也能做。它提供的是结构性保护：拒绝最常见的危险调用，并把这类高声量拒绝送进可观测性系统，而不是悄悄让它执行。
 
-对于生产代理,你将层次上层:运行在一个不受特权的Docker容器里,运行在一个microVM里,放下功能,安装项目根只读写和一个划痕写读写,设置内存和CPU的限制,将环境扫描到一个已知安全的白清单. 第29课可以做一些.操作系统隔离是这个课程的范围之外.
+生产级智能体还需要继续往上叠层：跑在无特权 Docker 容器里，或者放进 microVM；去掉 capabilities；把项目根挂成只读，把 scratch 目录挂成可写；对内存和 CPU 设定 ulimit；再把环境变量收缩成已知安全白名单。第 29 课会做其中一部分。操作系统级隔离不在本课范围内。
 
-## 运行它
+## 运行方法
 
 ```bash
 cd phases/19-capstone-projects/26-sandbox-runner-denylist
@@ -90,8 +90,8 @@ python3 code/main.py
 python3 -m pytest code/tests/ -v
 ```
 
-演示程序创建了一个临时目录,将一个清洁的文件放入其中,然后运行电话的电池. 合法通话成功. 拒绝通话返回 SandboxResult`denied=True`时间限制是回来的.`timed_out=True`切割套件`truncated=True`测试将打印一个JSON结果表,然后输出零.
+demo 会创建一个临时目录，往里放一份干净文件，然后执行一组调用。合法调用应成功；被拒绝的调用会返回 `denied=True` 的 SandboxResult 和原因；超时调用会返回 `timed_out=True`；输出被截断时会设置 `truncated=True`。demo 会打印一张 JSON 结果表，并以零退出。
 
-## 如何与A轨道的其他部分相结合
+## 如何与 Track A 的其他部分组合
 
-课25产生了门链.课26是门允许后运行的执行器.课27的评估利用比较了沙箱的结果与每个任务的预期出口代码.课28发出一个`gen_ai.tool.execution`跨度在每一个`Sandbox.run`课29的端到端演示线程通过两个层来传输一个真正的编码代理.
+第 25 课交付了 gate chain。第 26 课就是在 gate 返回 ALLOW 后真正执行调用的执行层。第 27 课的 eval harness 会把 sandbox 结果与每项任务预期的退出码进行对比。第 28 课会在每一次 `gen_ai.tool.execution` 调用外包裹一个 `Sandbox.run` span。第 29 课的端到端 demo 则会让一个真实编码智能体穿过这两层防线。
