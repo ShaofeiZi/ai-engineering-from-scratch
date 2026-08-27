@@ -1,6 +1,6 @@
 # 监管框架：EU、US、UK、Korea
 
-> 到了 2026 年，AI 治理格局主要由四套监管制度定义。EU AI Act 已于 2024 年 8 月 1 日生效，其中 prohibited practices 与 AI literacy 要求自 2025 年 2 月 2 日起适用；GPAI obligations 自 2025 年 8 月 2 日起适用；完整适用范围与 Article 50 transparency 自 2026 年 8 月 2 日起生效；legacy GPAI 与 embedded high-risk systems 则顺延到 2027 年 8 月 2 日。处罚最高可达 15M EUR 或全球营业额的 3%。GPAI Code of Practice 于 2025 年 7 月 10 日发布，共三章，分别是 Transparency、Copyright、Safety and Security，总计 12 项 commitments，正式执行从 2026 年 8 月开始。英国的 AISI 在 2025 年 2 月更名为 AI Security Institute，名称变化本身就反映出范围收缩。美国的 AISI 则在 2025 年 6 月改组为 NIST 旗下的 CAISI，也就是 Center for AI Standards and Innovation，整体姿态更偏向 pro-growth。韩国的 AI Framework Act 于 2024 年 12 月通过，2026 年 1 月正式生效；其第 12 条要求在 MSIT 下设立 AISI，并要求外国 AI 公司设立本地代表、进行风险评估，并为 high-impact 与 generative AI 采取安全措施。
+> 到了 2026 年，AI 治理格局主要由四套监管制度定义。EU AI Act 已于 2024 年 8 月 1 日生效，其中 prohibited practices 与 AI literacy 要求自 2025 年 2 月 2 日起适用；GPAI 义务自 2025 年 8 月 2 日起适用；完整适用范围与 Article 50 transparency 自 2026 年 8 月 2 日起生效；legacy GPAI 与 embedded high-risk systems 则顺延到 2027 年 8 月 2 日。处罚最高可达 15M EUR 或全球营业额的 3%。GPAI Code of Practice 于 2025 年 7 月 10 日发布，共三章，分别是 Transparency、Copyright、Safety and Security，总计 12 项承诺，正式执行从 2026 年 8 月开始。英国的 AISI 在 2025 年 2 月更名为 AI Security Institute，名称变化本身就反映出范围收缩。美国的 AISI 则在 2025 年 6 月改组为 NIST 旗下的 CAISI，也就是 Center for AI Standards and Innovation，整体姿态更偏向增长导向。韩国的 AI Framework Act 于 2024 年 12 月通过，2026 年 1 月正式生效；其第 12 条要求在 MSIT 下设立 AISI，并要求外国 AI 公司设立本地代表、进行风险评估，并为高影响与生成式 AI 采取安全措施。
 
 **Type:** 学习
 **Languages:** none
@@ -26,8 +26,8 @@
 
 - **Prohibited practices**（Article 5）。包括 social scoring、public 场景下的 real-time remote biometric identification（有 law-enforcement exceptions），以及对弱势群体的 exploitative manipulation。这部分自 2025 年 2 月 2 日起适用。
 - **High-risk systems**（Annex III）。包括 employment、education、credit、law enforcement、justice、migration 等场景。要求进行 conformity assessment、risk management、logging、transparency。
-- **General-Purpose AI (GPAI) models**。自 2025 年 8 月 2 日起适用。所有 GPAI providers 都有义务；其中 systemic-risk GPAI，也就是训练计算量超过 1e25 FLOP 的模型，还要承担额外义务。
-- **Limited-risk systems**。主要对应 Article 50 下的 transparency obligations，也就是 AI-generated content labelling，自 2026 年 8 月 2 日起适用。
+- **General-Purpose AI (GPAI) models**。自 2025 年 8 月 2 日起适用。所有 GPAI 提供方都有义务；其中 systemic-risk GPAI，也就是训练计算量超过 1e25 FLOP 的模型，还要承担额外义务。
+- **Limited-risk systems**。主要对应 Article 50 下的透明度义务，也就是 AI-generated content labelling，自 2026 年 8 月 2 日起适用。
 
 时间线是：
 - 2025 年 2 月 2 日：prohibited practices + AI literacy。
@@ -41,9 +41,9 @@
 
 该文件于 2025 年 7 月 10 日发布，共三章：
 
-- **Transparency。** 适用于所有 GPAI providers。
-- **Copyright。** 同样适用于所有 GPAI providers。
-- **Safety and Security。** 仅适用于 systemic-risk GPAI providers，估计受约束的公司数量约为 5 到 15 家。
+- **Transparency。** 适用于所有 GPAI 提供方。
+- **Copyright。** 同样适用于所有 GPAI 提供方。
+- **Safety and Security。** 仅适用于 systemic-risk GPAI 提供方，估计受约束的公司数量约为 5 到 15 家。
 
 总计 12 项 commitments。执行由 AI Office 领导下的 Signatory Taskforce 管理。正式 enforcement 从 2026 年 8 月 2 日开始；在此之前，good-faith compliance 仍会被接受。
 
@@ -57,18 +57,18 @@
 
 ### US CAISI（2025 年 6 月）
 
-特朗普政府把 NIST 的 AI Safety Institute 重组为 Center for AI Standards and Innovation。根据 VP Vance 在 Paris AI Action Summit 的表述，整体方向转向 “pro-growth AI policies”。这意味着对 pre-deployment evaluation 的强调减少，而对 standards 与 innovation support 的强调增强。它在政策姿态上，基本构成了 EU AI Act 式监管立场的美国国内对照面。
+特朗普政府把 NIST 的 AI Safety Institute 重组为 Center for AI Standards and Innovation。根据 VP Vance 在 Paris AI Action Summit 的表述，整体方向转向“更强调增长的 AI 政策”。这意味着对部署前评估的强调减少，而对标准制定与创新支持的强调增强。它在政策姿态上，基本构成了 EU AI Act 式监管立场的美国国内对照面。
 
 ### 韩国《人工智能框架法》
 
 该法案于 2024 年 12 月通过，2025 年 1 月颁布，2026 年 1 月正式生效，并整合了原本分散的 19 项 AI 相关法案。
 
 其 Article 12 要求在 Ministry of Science and ICT，也就是 MSIT，下设一个 AISI。主要义务包括：
-- 为在韩国运营的外国 AI 公司设置 local representatives。
-- 对 “high-impact” AI systems 进行风险评估。
-- 为 generative AI 和 high-impact AI 采取安全措施。
+- 为在韩国运营的外国 AI 公司设置本地代表。
+- 对“高影响”AI 系统进行风险评估。
+- 为生成式 AI 和高影响 AI 采取安全措施。
 
-这是亚洲第一个横向、综合性的 AI regulation jurisdiction。
+这是亚洲第一个横向、综合性的 AI 监管法域。
 
 ### 跨法域动态
 
@@ -89,23 +89,23 @@ an-eu-act-timeline
 
 ## 用它
 
-这课没有代码。直接去读 EU AI Act 的 primary sources，包括 regulation text、GPAI Code of Practice，以及 UK AISI 的 Inspect framework。然后把你自己的 deployment 映射到每个 jurisdiction 下对应的 obligations。
+这课没有代码。直接去读 EU AI Act 的一手资料，包括法规正文、GPAI Code of Practice，以及 UK AISI 的 Inspect framework。然后把你自己的部署映射到每个法域下对应的义务。
 
 ## 交付它
 
-这一课会产出 `outputs/skill-regulatory-map.md`。给定一个 deployment description，它会映射出适用的 jurisdictions、各自的 tier classifications、逐法域 obligations，以及对应的 deadline structure。
+这一课会产出 `outputs/skill-regulatory-map.md`。给定一段部署描述，它会映射出适用的法域、各自的分层分类、逐法域义务，以及对应的期限结构。
 
 ## 练习
 
-1. 阅读 EU AI Act（Regulation 2024/1689）与 GPAI Code of Practice（2025 年 7 月 10 日版）。找出三项适用于所有 GPAI providers 的 obligations，以及三项只适用于 systemic-risk GPAI 的 obligations。
+1. 阅读 EU AI Act（Regulation 2024/1689）与 GPAI Code of Practice（2025 年 7 月 10 日版）。找出三项适用于所有 GPAI 提供方的义务，以及三项只适用于系统性风险 GPAI 的义务。
 
-2. 某项部署由一家美国公司提供，跑在欧盟基础设施上，并向韩国用户提供服务。请判断哪三个 jurisdiction 的规则会适用，以及每一个实质性问题分别由哪一套规则约束。
+2. 某项部署由一家美国公司提供，跑在欧盟基础设施上，并向韩国用户提供服务。请判断哪三个法域的规则会适用，以及每一个实质性问题分别由哪一套规则约束。
 
-3. UK AI Security Institute 的更名意味着范围收缩。请分别论证支持与反对这一收缩框架的立场，并指出每种立场背后的 policy assumption。
+3. UK AI Security Institute 的更名意味着范围收缩。请分别论证支持与反对这一收缩框架的立场，并指出每种立场背后的政策前提。
 
-4. CAISI 的 “pro-growth” framing 明显偏离了 2022-2024 年 AI safety institute 模型。请指出在这种 framing 下，会出现哪两种可测量的 policy shift。
+4. CAISI 的“更强调增长”框架明显偏离了 2022-2024 年 AI safety institute 模型。请指出在这种框架下，会出现哪两种可测量的政策转向。
 
-5. Korea's AI Framework Act 要求外国 provider 设立 local representatives。请描述这对一家向韩国用户提供服务的 Bay Area 公司会产生哪些 operational implications。
+5. Korea's AI Framework Act 要求外国提供方设立本地代表。请描述这对一家向韩国用户提供服务的 Bay Area 公司会产生哪些运营层面的影响。
 
 ## 关键术语
 

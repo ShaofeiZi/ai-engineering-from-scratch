@@ -118,7 +118,7 @@ perceptron-boundary
 
 ## 动手构建
 
-### 第 1 步：Perceptron 类
+### 第 1 步：感知机类（Perceptron）
 
 ```python
 class Perceptron:
@@ -326,7 +326,7 @@ for inputs, expected in xor_data:
 
 ## 实际应用
 
-刚才从零构建的全部内容，在库中只需一次导入：
+刚才从零构建的内容，放到库里只需一次导入就能调用：
 
 ```python
 from sklearn.linear_model import Perceptron as SkPerceptron
@@ -359,7 +359,7 @@ print([clf.predict([x])[0] for x in X])
 ## 练习
 
 1. 在 NAND 门（通用门，任何逻辑电路都可以只用 NAND 构建）上训练感知机。验证它的权重和偏置能够形成有效的决策边界。
-2. 修改 Perceptron 类，在每个 epoch 记录决策边界 w1*x1 + w2*x2 + b = 0。打印它在 AND 门训练期间如何移动。
+2. 修改感知机类 Perceptron，在每个 epoch 记录决策边界 w1*x1 + w2*x2 + b = 0。打印它在 AND 门训练期间如何移动。
 3. 构建一个三输入感知机：只有当三个输入中至少两个为 1 时才输出 1，也就是多数投票函数。这个问题线性可分吗？为什么？
 
 ## 关键术语

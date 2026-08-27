@@ -140,7 +140,7 @@ python3 code/main.py
 - [Type-Checked Compliance: Deterministic Guardrails (arXiv 2604.01483)](https://arxiv.org/pdf/2604.01483) —— 用 Lean 4 展示确定性闸门的上界
 - [logi-cmd/agent-guardrails — merge gate spec](https://github.com/logi-cmd/agent-guardrails) —— scope + mutation-testing gates
 - [Guardrails AI x MLflow](https://guardrailsai.com/blog/guardrails-mlflow) —— 把确定性验证器做成 CI 评分器
-- [Akira, Real-Time Guardrails for Agentic Systems](https://www.akira.ai/blog/real-time-guardrails-agentic-systems) —— pre/post-tool gates
+- [Akira, Real-Time Guardrails for Agentic Systems](https://www.akira.ai/blog/real-time-guardrails-agentic-systems) —— 工具调用前后的闸门
 - Phase 14 · 27 —— 闸门的对抗配套：提示注入防御
 - Phase 14 · 36 —— 本闸门要执行的范围契约
 - Phase 14 · 37 —— 本闸门要评分的反馈日志

@@ -501,9 +501,9 @@ restored = checkpointer.restore('/tmp/model')
 
 ## 延伸阅读
 
-- JAX 文档：https://jax.readthedocs.io/——官方文档，提供关于 grad、jit 和 vmap 的优秀教程
+- JAX 文档：https://jax.readthedocs.io/ —— 官方文档，提供关于 grad、jit 和 vmap 的优秀教程
 - 《JAX: composable transformations of Python+NumPy programs》（Bradbury 等，2018）——解释设计理念的原始论文
-- Flax 文档：https://flax.readthedocs.io/——Google 为 JAX 开发的神经网络库
+- Flax 文档：https://flax.readthedocs.io/ —— Google 为 JAX 开发的神经网络库
 - Patrick Kidger，《Equinox: neural networks in JAX via callable PyTrees and filtered transformations》（2021）——比 Flax 更符合 Python 习惯的替代方案
 - DeepMind，“Optax: composable gradient transformation and optimisation”——标准优化器库
 - 《You Don't Know JAX》（Colin Raffel，2020）——由 T5 作者之一撰写的 JAX 陷阱与模式实用指南

@@ -62,32 +62,32 @@ framework 提供的是运行时，例如 LangGraph、AutoGen、Agents SDK。工�
 
 ### 从 primitives 推理，而不是从厂商 taxonomy 推理
 
-现在关于 “harness engineering” 的文章非常多。Addy Osmani、OpenAI、Anthropic、LangChain、Martin Fowler、MongoDB、HumanLayer、Augment Code、Thoughtworks、walkinglabs 的 awesome list，以及一连串 Medium 和 Hacker News 文章都在讨论它。它们对 harness 的边界、范围和词汇表并不一致。其实没必要选边。七个表面只是 UX 层；在每个工作台下面，真正支撑它的是同一组分布式系统 primitives。
+现在关于 “harness engineering” 的文章非常多。Addy Osmani、OpenAI、Anthropic、LangChain、Martin Fowler、MongoDB、HumanLayer、Augment Code、Thoughtworks、walkinglabs 的 awesome list，以及一连串 Medium 和 Hacker News 文章都在讨论它。它们对 harness 的边界、范围和词汇表并不一致。其实没必要选边。七个表面只是用户体验层；在每个工作台下面，真正支撑它的是同一组分布式系统基础原语（primitives）。
 
 把 agent 这个标签先摘掉。一次 agent 运行，本质上是一段跨越时间、进程和机器边界的计算。要让它可靠，你仍然需要任何生产系统都需要的那些 primitives。
 
 | Primitive | 它是什么 | 它为 agent 承载什么 |
 |-----------|------------|------------------------------|
-| Function | 有类型边界的 handler。能纯则纯，明确拥有输入与输出。 | tool call、规则检查、验证步骤、模型调用 |
-| Worker | 长生命周期进程，拥有一个或多个 function 以及生命周期 | builder、reviewer、verifier、一个 MCP server |
-| Trigger | 触发 function 的事件源 | agent loop tick、HTTP request、queue message、cron、file change、hook |
-| Runtime | 决定什么在哪运行、用什么超时和资源限制的边界 | Claude Code 的进程、LangGraph 的 runtime、一个 worker container |
+| Function | 有类型边界的处理器。能纯则纯，明确拥有输入与输出。 | 工具调用、规则检查、验证步骤、模型调用 |
+| Worker | 长生命周期进程，拥有一个或多个函数以及生命周期 | 构建者、审查者、验证者、一个 MCP server |
+| Trigger | 触发函数的事件源 | 智能体循环心跳、HTTP 请求、队列消息、定时任务、文件变更、hook |
+| Runtime | 决定什么在哪运行、用什么超时和资源限制的边界 | Claude Code 的进程、LangGraph 的运行时、一个 worker 容器 |
 | HTTP / RPC | caller 与 worker 之间的连线 | tool-call protocol、MCP request、model API |
-| Queue | trigger 与 worker 之间的持久缓冲层，提供 back-pressure、retry、idempotency | task board、feedback log、review inbox |
-| Session persistence | 跨崩溃、重启、模型切换仍然存在的状态 | `agent_state.json`、checkpoints、KV stores、repo 本身 |
-| Authorization policy | 谁能在什么 scope 下调用什么 function | allowed/forbidden files、approval boundaries、MCP capability lists |
+| Queue | trigger 与 worker 之间的持久缓冲层，提供背压、重试、幂等性 | task board、feedback log、review inbox |
+| Session persistence | 跨崩溃、重启、模型切换仍然存在的状态 | `agent_state.json`、检查点、键值存储、repo 本身 |
+| Authorization policy | 谁能在什么范围下调用什么函数 | allowed/forbidden files、审批边界、MCP capability lists |
 
 现在把七个工作台表面映射回这些 primitives：
 
-- **Instructions**：policy + function metadata。规则本质上就是 checks（functions）。像 `AGENTS.md` 这样的入口文件，就是 runtime 启动时附带的 policy。
-- **State**：session persistence。运行时在每一步都会读取的一块持久状态。可以存在 file、KV 或 DB 里；关键是持久语义，而不是具体后端。
-- **Scope**：每个任务级别的 authorization policy。allowed/forbidden globs 是 ACL。需要审批的边界构成一个权限格。
-- **Feedback**：写进 queue 的调用日志。每一次 shell call 都应该是一条可持久、可重放的记录。
-- **Verification**：一个 function。对输入来说是确定性的，在任务收口时被 trigger，默认 fail closed。
-- **Review**：另一个独立 worker，对 builder 产物通常只有只读权限，对 review report 才有写权限。
-- **Handoff**：由会话结束 trigger 发出的持久记录。下一次会话的启动 trigger 会再读回来。
+- **Instructions**：策略 + 函数元数据。规则本质上就是 checks（functions）。像 `AGENTS.md` 这样的入口文件，就是运行时启动时附带的策略。
+- **State**：会话持久化状态。运行时在每一步都会读取的一块持久状态。可以存在 file、KV 或 DB 里；关键是持久语义，而不是具体后端。
+- **Scope**：每个任务级别的授权策略。allowed/forbidden globs 是 ACL。需要审批的边界构成一个权限格。
+- **Feedback**：写进队列的调用日志。每一次 shell call 都应该是一条可持久、可重放的记录。
+- **Verification**：一个函数。对输入来说是确定性的，在任务收口时被触发，默认失败即关闭（fail closed）。
+- **Review**：另一个独立 worker，对构建者产物通常只有只读权限，对 review report 才有写权限。
+- **Handoff**：由会话结束触发器发出的持久记录。下一次会话的启动触发器会再读回来。
 
-agent loop 本身也是一个 worker：它消费事件（用户消息、工具结果、计时器 tick），调用 functions（模型，然后是模型选择的工具），写 records（state、feedback），再发出 triggers（verify、review、handoff）。这没有什么神秘成分，本质上就是一个作业处理器。
+agent loop 本身也是一个 worker：它消费事件（用户消息、工具结果、计时器 tick），调用函数（模型，然后是模型选择的工具），写记录（state、feedback），再发出触发器（verify、review、handoff）。这没有什么神秘成分，本质上就是一个作业处理器。
 
 ### 流行模式，翻回 primitives
 
@@ -95,18 +95,18 @@ agent loop 本身也是一个 worker：它消费事件（用户消息、工具�
 
 | 厂商或社区里的模式名 | 它本质上是什么 |
 |------------------------------|--------------------|
-| Ralph Loop（Claude Code、Codex、agentic_harness 一书）——当智能体试图过早停止时，把原始意图重新注入新的上下文窗口 | 一个 trigger 把任务重新入队到干净上下文；session persistence 负责把目标延续下去 |
+| Ralph Loop（Claude Code、Codex、agentic_harness 一书）——当智能体试图过早停止时，把原始意图重新注入新的上下文窗口 | 一个触发器把任务重新入队到干净上下文；会话持久化负责把目标延续下去 |
 | Plan / Execute / Verify（PEV） | 三个 worker，各负责一个角色，通过 state 和 queue 串联阶段 |
 | Harness-compute separation（OpenAI Agents SDK，2026 年 4 月）——把控制平面与执行平面拆开 | 只是把 control-plane / data-plane 的老概念重新表述了一遍；这个想法比 agent 标签早很多年 |
-| Open Agent Passport（OAP，2026 年 3 月）——在执行前按声明式策略对每次工具调用进行签名与审计 | 一个 pre-action worker 执行 authorization policy，并把签名审计写入队列 |
-| Guides and Sensors（Birgitta Böckeler / Thoughtworks）——前馈规则加反馈可观测性 | authorization policy + verification functions + observability traces |
-| 五阶段渐进式压缩（Claude Code 逆向观察，2026 年 4 月） | 一个定期在 session persistence 上运行的状态管理 worker，用来把上下文压进预算 |
-| Hooks / middleware（LangChain、Claude Code）——拦截模型调用与工具调用 | 包在 runtime 调用路径外层的 triggers + functions |
-| 以 Markdown 形式提供、并按渐进披露加载的 Skills（Anthropic、Flue） | 一个 function registry，只在需要时把 function metadata 加载进上下文 |
-| Sandbox agents（Codex、Sandcastle、Vercel Sandbox） | compute plane：具备隔离文件系统、网络和生命周期的 runtime |
-| MCP servers | 通过稳定 RPC 暴露 functions 的 worker，capability list 就是 authorization |
+| Open Agent Passport（OAP，2026 年 3 月）——在执行前按声明式策略对每次工具调用进行签名与审计 | 一个执行前 worker 负责执行授权策略，并把签名审计写入队列 |
+| Guides and Sensors（Birgitta Böckeler / Thoughtworks）——前馈规则加反馈可观测性 | 授权策略 + 验证函数 + 可观测性追踪 |
+| 五阶段渐进式压缩（Claude Code 逆向观察，2026 年 4 月） | 一个定期在会话持久化层上运行的状态管理 worker，用来把上下文压进预算 |
+| Hooks / middleware（LangChain、Claude Code）——拦截模型调用与工具调用 | 包在运行时调用路径外层的触发器 + 函数 |
+| 以 Markdown 形式提供、并按渐进披露加载的 Skills（Anthropic、Flue） | 一个函数注册表，只在需要时把函数元数据加载进上下文 |
+| Sandbox agents（Codex、Sandcastle、Vercel Sandbox） | 计算平面：具备隔离文件系统、网络和生命周期的运行时 |
+| MCP servers | 通过稳定 RPC 暴露函数的 worker，capability list 就是授权边界 |
 
-表中每一项，本质上都是 agent 社区重新发现了一个本就存在于 distributed systems 里的 primitive，并给它起了一个新名字。做营销很有帮助，做工程时却不够精确。
+表中每一项，本质上都是 agent 社区重新发现了一个本就存在于分布式系统里的基础原语，并给它起了一个新名字。做营销很有帮助，做工程时却不够精确。
 
 ### 这些“收据”真正说明了什么
 
@@ -115,24 +115,24 @@ agent loop 本身也是一个 worker：它消费事件（用户消息、工具�
 - Terminal Bench 2.0：同一个模型，只改 harness，就让一个 coding agent 从前 30 名之外升到第 5 名（LangChain, *Anatomy of an Agent Harness*）。
 - Vercel：删掉代理 80% 的工具后，成功率从 80% 提升到 100%（MongoDB）。
 - Harvey：法律代理只靠 harness 优化，准确率就提升了两倍以上（MongoDB）。
-- 企业 AI agent 项目里有 88% 最终没能进生产；失败主要聚集在 runtime，而不是 reasoning（preprints.org, *Harness Engineering for Language Agents*, March 2026）。
+- 企业 AI 智能体项目里有 88% 最终没能进生产；失败主要聚集在运行时，而不是推理能力（preprints.org, *Harness Engineering for Language Agents*, March 2026）。
 - 一项 2025 年针对三种流行开源框架的 benchmark 研究报告约 50% 的任务完成率；长上下文 WebAgent 在长上下文条件下会从 40-50% 掉到 10% 以下，主要原因是无限循环和目标丢失，这一点在 2026 年初的很多综述里都被反复提到。
 
-真正的结论不是 “harness 永远胜过模型”。模型确实会慢慢吸收 harness 技巧。真正的结论是：在今天，承重工程更多还在模型外，而不在模型内；而承载这些重量的 primitives，正是所有生产系统一直都需要的那些基础件。
+真正的结论不是 “harness 永远胜过模型”。模型确实会慢慢吸收 harness 技巧。真正的结论是：在今天，承重工程更多还在模型外，而不在模型内；而承载这些重量的基础原语，正是所有生产系统一直都需要的那些基础件。
 
 ### 厂商文章停下来的地方
 
 这一段没必要太客气。
 
-- LangChain 的 *Anatomy of an Agent Harness* 罗列了 11 个组件：prompts、tools、hooks、sandboxes、orchestration、memory、skills、subagents，以及一个 runtime “dumb loop”。但它没有点出 queues、作为部署单元的 workers、trigger semantics、独立的 session persistence，或者 authorization policy。它把 harness 当作你要配置的对象，而不是你要部署的系统。
+- LangChain 的 *Anatomy of an Agent Harness* 罗列了 11 个组件：prompts、tools、hooks、sandboxes、orchestration、memory、skills、subagents，以及一个 runtime “dumb loop”。但它没有点出队列、作为部署单元的 workers、触发语义、独立的会话持久化，或者授权策略。它把 harness 当作你要配置的对象，而不是你要部署的系统。
 - Addy Osmani 的 *Agent Harness Engineering* 把 `Agent = Model + Harness` 这个 framing 和 ratchet pattern 讲清楚了，但没有继续说 harness 具体由什么构成。它更像一种立场，而不是一份 spec。
-- Anthropic 和 OpenAI 在 surface 层面讲得最深入，但依旧主要停留在自家 runtime 里。2026 年 4 月 Agents SDK 提到的 “harness-compute separation”，是少数明确承认 control-plane / data-plane 分离的厂商表述。但这只是 primitive idea，并不是新东西。
-- agentic_harness 这本书把 harness 当成一个配置对象来写（Jaymin West 的 *Agentic Engineering* 第 6 章），其中最强的一句是 “the harness is the primary security boundary in an agentic system.” 换回 primitives 的语言，它其实说的就是 authorization policy。
-- Hacker News 的线程也在不断收敛到同一处。2026 年 4 月那条 *The agent harness belongs outside the sandbox* 认为 harness 应该更像一个“位于所有东西之外、按上下文和用户进行授权的 hypervisor”。这说的还是 authorization policy 作为独立平面存在。
+- Anthropic 和 OpenAI 在 surface 层面讲得最深入，但依旧主要停留在自家运行时里。2026 年 4 月 Agents SDK 提到的 “harness-compute separation”，是少数明确承认 control-plane / data-plane 分离的厂商表述。但这只是基础原语层面的想法，并不是新东西。
+- agentic_harness 这本书把 harness 当成一个配置对象来写（Jaymin West 的 *Agentic Engineering* 第 6 章），其中最强的一句是 “the harness is the primary security boundary in an agentic system.” 换回基础原语的语言，它其实说的就是授权策略。
+- Hacker News 的线程也在不断收敛到同一处。2026 年 4 月那条 *The agent harness belongs outside the sandbox* 认为 harness 应该更像一个“位于所有东西之外、按上下文和用户进行授权的 hypervisor”。这说的还是授权策略作为独立平面存在。
 
-这些文章并不是错。它们只是在用 UX 语言描述一个已经存在的系统。我们这里要写的是系统本身。当系统搭得对，七个 surface 会自然从 primitives 里长出来；当系统搭得不对，再怎么润色 `AGENTS.md` 也补不上缺失的 queue。
+这些文章并不是错。它们只是在用用户体验语言描述一个已经存在的系统。我们这里要写的是系统本身。当系统搭得对，七个 surface 会自然从基础原语里长出来；当系统搭得不对，再怎么润色 `AGENTS.md` 也补不上缺失的 queue。
 
-所以当你在别处听到 “harness engineering” 时，先把它翻回 primitives。prompts 和 rules 是 policy 与 functions。scaffolding 是 runtime。guardrails 是 authorization + verification。hooks 是 triggers。memory 是 session persistence。Ralph Loop 是 requeue。subagents 是 workers。sandboxes 是 compute planes。词汇会变，工程不会变。workbench 是面向 agent 的 UX；而那个能跨过下一次厂商重命名依然成立的 harness，本质上就是 functions、workers、triggers、runtimes、queues、persistence 和 policy 被正确接在一起。
+所以当你在别处听到 “harness engineering” 时，先把它翻回基础原语。prompts 和 rules 是 policy 与 functions。scaffolding 是 runtime。guardrails 是 authorization + verification。hooks 是 triggers。memory 是 session persistence。Ralph Loop 是 requeue。subagents 是 workers。sandboxes 是 compute planes。词汇会变，工程不会变。workbench 是面向 agent 的用户体验；而那个能跨过下一次厂商重命名依然成立的 harness，本质上就是 functions、workers、triggers、runtimes、queues、persistence 和 policy 被正确接在一起。
 
 ```figure
 wb-seven-surfaces
@@ -181,14 +181,14 @@ python3 code/main.py
 | 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
 | Workbench | “整体 setup” | 围绕模型搭建的工程表面，让工作变得可靠 |
-| Surface | “一份文档”或“一段脚本” | agent 每一轮都会读写的具名、机器可读输入 |
-| System of record | “那份记录” | 聊天历史消失后，agent 仍然当真的那份文件 |
-| 完成定义 | “验收标准” | agent 无法伪造的、以文件为依托的客观检查清单 |
+| Surface | “一份文档”或“一段脚本” | 智能体每一轮都会读写的具名、机器可读输入 |
+| System of record | “那份记录” | 聊天历史消失后，智能体仍然当真的那份文件 |
+| 完成定义 | “验收标准” | 智能体无法伪造的、以文件为依托的客观检查清单 |
 | Workbench audit | “repo 就绪性检查” | 在工作开始前检查七个表面是否齐备的过程 |
 
 ## 延伸阅读
 
-把这些材料当作数据点，不要把它们当绝对权威。每一篇都只是部分 taxonomy。在决定是否采纳前，先把概念翻回 primitives：function、worker、trigger、runtime、HTTP/RPC、queue、persistence、policy。
+把这些材料当作数据点，不要把它们当绝对权威。每一篇都只是部分 taxonomy。在决定是否采纳前，先把概念翻回基础原语：function、worker、trigger、runtime、HTTP/RPC、queue、persistence、policy。
 
 厂商表述：
 

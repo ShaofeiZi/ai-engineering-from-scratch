@@ -130,7 +130,7 @@ python3 code/main.py
 | k1 | "TF saturation" | 控制重复 term 多快停止继续增加分数 |
 | b | "Length penalty" | 0 表示忽略文档长度，1 表示完全归一化 |
 | Field weighting | "字段加权" | 在索引时重复某 field 中的 token，以抬高该 field 的命中 |
-| Rank-based vs score-based fusion | "为什么 RRF 胜过线性融合" | rank 在不同 modality 间可比较，而 raw score 不可比较 |
+| 基于排名与基于分数的融合 | "为什么 RRF 胜过线性融合" | rank 在不同 modality 间可比较，而 raw score 不可比较 |
 
 ## 进一步阅读
 

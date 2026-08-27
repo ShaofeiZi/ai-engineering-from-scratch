@@ -12,7 +12,7 @@
 - 使用 PyTorch 的 nn.Module、nn.Sequential 和自动微分构建并训练神经网络
 - 使用 PyTorch 张量、GPU 加速和标准训练循环（zero_grad、forward、loss、backward、step）
 - 把从零实现的迷你框架组件转换成对应的 PyTorch 组件
-- 分析并比较纯 Python 框架与 PyTorch 在同一任务上的训练速度
+- 对纯 Python 框架和 PyTorch 在同一任务上的训练过程做性能分析，并比较二者的速度
 
 ## 问题
 
@@ -22,7 +22,7 @@
 
 你的迷你框架使用嵌套的 Python 循环，每次处理一个样本。PyTorch 则把相同操作分派给经过优化的 C++/CUDA 内核，并在 GPU 上运行。在单张 NVIDIA A100 上，PyTorch 训练一个 ResNet-50（2560 万参数）处理 ImageNet（128 万张图像）大约需要 6 小时。你的框架完成同一任务大约需要 3000 小时——前提是它没有先耗尽内存。
 
-速度并不是唯一差距。你的框架不支持 GPU，没有自动微分，因为每个模块的 backward() 都由你亲手编写；也不支持序列化、分布式训练和混合精度，更无法在不使用打印语句的情况下调试梯度流。
+速度并不是唯一差距。你的框架不支持 GPU，也没有自动微分——每个模块的 backward() 都由你亲手编写。它不支持序列化、分布式训练或混合精度；如果不用打印语句，也无法调试梯度流。
 
 PyTorch 补上了所有这些缺口，同时保留了你已经构建的完全相同的思维模型：Module、forward()、parameters()、backward()、optimizer.step()。概念可以一一映射，语法也几乎相同。区别在于，PyTorch 把十年的系统工程成果封装在你从零设计出来的同一套接口背后。
 
@@ -32,11 +32,11 @@ PyTorch 补上了所有这些缺口，同时保留了你已经构建的完全相
 
 2015 年，TensorFlow 要求你在执行任何计算前先定义静态计算图。你先构建图、编译图，然后才把数据送入其中。调试意味着盯着计算图可视化寻找问题，修改架构则意味着从头重建计算图。
 
-PyTorch 在 2017 年以不同理念推出：即时执行。你编写 Python，代码立即运行。`y = model(x)` 会当场计算 y，而不是“向图中添加一个稍后计算 y 的节点”。因此，标准 Python 调试工具都能正常工作：print() 可用，pdb 可用，前向传播中的 if/else 也可用。
+PyTorch 在 2017 年以不同理念推出：即时执行。你编写 Python，代码立即运行。`y = model(x)` 会当场计算 y，而不是“向图中添加一个稍后才计算 y 的节点”。因此，标准 Python 调试工具都能正常工作：print() 可用，pdb 可用，前向传播中的 if/else 也可用。
 
-到 2020 年，市场已经作出选择。PyTorch 在机器学习研究论文中的占比从 2017 年的 7% 上升到 2022 年的 75% 以上。Meta、Google DeepMind、OpenAI、Anthropic 和 Hugging Face 都以 PyTorch 为主要框架。TensorFlow 2.x 随后也采用即时执行，这无异于默认 PyTorch 的设计方向是正确的。
+到 2020 年，市场已经作出选择。PyTorch 在机器学习研究论文中的占比从 2017 年的 7% 上升到 2022 年的 75% 以上。Meta、Google DeepMind、OpenAI、Anthropic 和 Hugging Face 都以 PyTorch 为主要框架。TensorFlow 2.x 随后也采用即时执行，等于含蓄地承认 PyTorch 的设计方向是正确的。
 
-这里的经验是：良好开发体验的优势会不断累积。一个运行速度慢 10%、但调试速度快 50% 的框架，每次都会胜出。
+这里的经验是：良好开发体验的优势会不断累积。一个运行速度慢 10%、但调试起来快 50% 的框架，每次都会胜出。
 
 ### 张量
 
@@ -70,7 +70,7 @@ x = x.to("cuda")
 x = x.cpu()
 ```
 
-每次操作都要求所有张量位于同一设备。这是初学者最常遇到的 PyTorch 错误：`RuntimeError: Expected all tensors to be on the same device`。解决方法是在计算前把所有对象移动到同一设备。
+每次操作都要求所有张量位于同一设备。这是初学者最常遇到的 PyTorch 错误：`RuntimeError: Expected all tensors to be on the same device`。解决方法是在计算前把所有张量移动到同一设备。
 
 **重塑形状**是常数时间操作——它只改变元数据，不会移动数据。
 
@@ -85,7 +85,7 @@ x.squeeze()        # remove size-1 dimensions
 
 ### 自动微分
 
-你的迷你框架要求每个模块都实现 backward()，PyTorch 则不需要。它会把对张量执行的每个操作记录到一张有向无环图，也就是计算图中，然后逆向遍历这张图，自动计算梯度。
+你的迷你框架要求每个模块都实现 backward()，PyTorch 则不需要。它会把对张量执行的每项操作记录在一张有向无环图（即计算图）中，然后反向遍历这张图，自动计算梯度。
 
 ```mermaid
 graph LR
@@ -100,7 +100,7 @@ graph LR
     mul --> |"grad"| w
 ```
 
-它与自建框架的关键区别在于：PyTorch 使用基于记录带的自动微分。前向传播期间，每项操作都会追加到一条“记录带”上；调用 `.backward()` 时，再反向重放这条记录带。
+它与自建框架的关键区别在于：PyTorch 使用基于记录带的自动微分。前向传播期间，每项操作的记录都会追加到一条“记录带”上；调用 `.backward()` 时，再反向重放这条记录带。
 
 ```python
 x = torch.randn(3, requires_grad=True)
@@ -118,7 +118,7 @@ print(x.grad)  # dz/dx = 2x + 3
 
 ### nn.Module
 
-`nn.Module` 是 PyTorch 中每个神经网络组件的基类。第 10 课已经构建过这一抽象。PyTorch 版本进一步提供参数自动注册、递归发现子模块、设备管理和 state dict 序列化。
+`nn.Module` 是 PyTorch 中每个神经网络组件的基类。第 10 课已经构建过这一抽象。PyTorch 版本进一步提供参数自动注册、递归发现子模块、设备管理和状态字典序列化。
 
 ```python
 import torch.nn as nn
@@ -137,7 +137,7 @@ class MLP(nn.Module):
         return x
 ```
 
-把 `nn.Module` 或 `nn.Parameter` 作为属性赋值到 `__init__` 中时，PyTorch 会自动注册它。`model.parameters()` 会递归收集每个已注册参数。因此，你不必像在迷你框架中那样手工汇总权重。
+把 `nn.Module` 或 `nn.Parameter` 赋给 `__init__` 中的某个属性时，PyTorch 会自动注册它。`model.parameters()` 会递归收集每个已注册参数。因此，你不必像在迷你框架中那样手工汇总权重。
 
 关键构建模块如下：
 
@@ -145,7 +145,7 @@ class MLP(nn.Module):
 |--------|-------------|------------|
 | nn.Linear(in, out) | Wx + b | in*out + out |
 | nn.Conv2d(in_ch, out_ch, k) | 二维卷积 | in_ch*out_ch*k*k + out_ch |
-| nn.BatchNorm1d(features) | 归一化激活 | 2 * features |
+| nn.BatchNorm1d(features) | 对激活值做归一化 | 2 * features |
 | nn.Dropout(p) | 随机置零 | 0 |
 | nn.ReLU() | max(0, x) | 0 |
 | nn.GELU() | 高斯误差线性单元 | 0 |
@@ -161,7 +161,7 @@ PyTorch 提供了你此前构建的所有组件的生产级实现。
 | 损失 | 任务 | 输入 |
 |------|------|-------|
 | nn.MSELoss() | 回归 | 任意形状 |
-| nn.CrossEntropyLoss() | 多分类 | Logits（不是 Softmax） |
+| nn.CrossEntropyLoss() | 多类别分类 | Logits（不是 Softmax） |
 | nn.BCEWithLogitsLoss() | 二分类 | Logits（不是 Sigmoid） |
 | nn.L1Loss() | 回归（稳健） | 任意形状 |
 | nn.CTCLoss() | 序列对齐 | 对数概率 |
@@ -170,7 +170,7 @@ PyTorch 提供了你此前构建的所有组件的生产级实现。
 
 **优化器**（来自 `torch.optim`）：
 
-| 优化器 | 适用场景 | 典型 LR |
+| 优化器 | 适用场景 | 典型学习率 |
 |-----------|-------------|-----------|
 | SGD(params, lr, momentum) | CNN、经过充分调优的流水线 | 0.01--0.1 |
 | Adam(params, lr) | 默认起点 | 1e-3 |
@@ -275,9 +275,9 @@ for inputs, targets in loader:
 | 自动微分 | 手工 backward() | 基于记录带的自动微分 | 函数式变换 |
 | 执行方式 | 即时执行（Python 循环） | 即时执行（C++ 内核） | 追踪 + JIT 编译 |
 | GPU 支持 | 不支持 | 支持（CUDA、ROCm、MPS） | 支持（CUDA、TPU） |
-| 速度（MNIST MLP） | 约 300 秒/epoch | 约 0.5 秒/epoch | 约 0.3 秒/epoch |
+| 速度（MNIST MLP） | 每轮约 300 秒 | 每轮约 0.5 秒 | 每轮约 0.3 秒 |
 | 模块系统 | 自定义 Module 类 | nn.Module | 无状态函数（Flax/Equinox） |
-| 调试 | print() | print()、pdb、breakpoint() | 更难（JIT 追踪会破坏 print） |
+| 调试 | print() | print()、pdb、breakpoint() | 更难（JIT 追踪会使 print 失效） |
 | 生态系统 | 无 | Hugging Face、Lightning、timm | Flax、Optax、Orbax |
 | 学习曲线 | 由你亲手构建 | 中等 | 陡峭（函数式范式） |
 | 生产用途 | 玩具问题 | Meta、OpenAI、Anthropic、HF | Google DeepMind、Midjourney |
@@ -288,7 +288,7 @@ dropout-mask
 
 ## 动手构建
 
-下面只使用 PyTorch 原语，在 MNIST 上训练一个三层 MLP。不使用高级包装器，也不使用 `torchvision.datasets`，而是自行下载并解析原始数据。
+下面只使用 PyTorch 原语，在 MNIST 上训练一个三层 MLP。不使用高层封装，也不使用 `torchvision.datasets`，而是自行下载并解析原始数据。
 
 ### 第 1 步：从原始文件加载 MNIST
 
@@ -451,7 +451,7 @@ def main():
     print(f"Final test accuracy: {test_acc:.4f}")
 ```
 
-训练 10 个 epoch 后，预期测试准确率约为 97.8%。CPU 训练约需 30 秒，GPU 约需 5 秒；使用相同架构的迷你框架则约需 45 分钟。
+训练 10 轮后，预期测试准确率约为 97.8%。CPU 训练约需 30 秒，GPU 约需 5 秒；使用相同架构的迷你框架则约需 45 分钟。
 
 ## 实际应用
 
@@ -465,9 +465,9 @@ def main():
 | `grad = criterion.backward()`，再执行 `model.backward(grad)` | `loss.backward()` |
 | `optimizer.step()` | `optimizer.step()` |
 | 不支持 GPU | `model.to("cuda")` |
-| 每个模块都手工实现 backward | 自动微分处理一切 |
+| 每个模块都手工实现 backward | 自动微分处理所有反向传播 |
 
-接口几乎完全相同，区别在于底层实现的一切。
+接口几乎完全相同，所有区别都藏在底层实现中。
 
 ### 保存和加载模型
 
@@ -479,7 +479,7 @@ model.load_state_dict(torch.load("model.pt", weights_only=True))
 model.eval()
 ```
 
-应始终保存 `state_dict()`，也就是参数字典，而不是模型对象。保存整个模型对象会使用 pickle，代码重构后很容易失效；state dict 更便携。
+应始终保存 `state_dict()`，也就是参数字典，而不是模型对象。保存整个模型对象会使用 pickle，代码重构后很容易失效；状态字典则便于移植。
 
 ### 学习率调度
 
@@ -503,27 +503,27 @@ PyTorch 提供 15 种以上的调度器，包括 StepLR、ExponentialLR、Cosine
 
 ## 练习
 
-1. **加入批归一化。** 在每个线性层之后、激活函数之前插入 `nn.BatchNorm1d`。将测试准确率和训练速度与仅使用 Dropout 的版本比较。批归一化应该能用更少 epoch 达到 98% 以上。
+1. **加入批归一化。** 在每个线性层之后、激活函数之前插入 `nn.BatchNorm1d`。将测试准确率和训练速度与仅使用 Dropout 的版本比较。批归一化应该能用更少的训练轮次达到 98% 以上。
 
-2. **实现学习率查找器。** 训练一个 epoch，同时让学习率从 1e-7 指数增长到 1.0。绘制损失随 LR 变化的曲线。最佳 LR 位于损失开始上升之前。使用该结果为 MNIST 模型选择更好的 LR。
+2. **实现学习率查找器。** 训练一轮，同时让学习率从 1e-7 指数增长到 1.0。绘制损失随学习率变化的曲线。最佳学习率位于损失开始上升之前。使用该结果为 MNIST 模型选择更好的学习率。
 
 3. **迁移到 GPU 并使用混合精度。** 在训练循环中加入 `torch.amp.autocast` 和 `GradScaler`。测量 GPU 上采用与不采用混合精度时的吞吐量，也就是每秒样本数。在 A100 上，预计能提速约 2 倍。
 
 4. **构建自定义 Dataset。** 下载 Fashion-MNIST，它与 MNIST 格式相同，但内容是服饰。实现一个 `FashionMNISTDataset(Dataset)` 类，并为它提供 `__getitem__` 和 `__len__`。训练同一个 MLP 并比较准确率。Fashion-MNIST 更难，预期约为 88%，而 MNIST 约为 98%。
 
-5. **用带动量的 SGD 替换 Adam。** 使用 `SGD(params, lr=0.01, momentum=0.9)` 训练，并比较收敛曲线。然后加入 `CosineAnnealingLR` 调度器，观察到第 10 个 epoch 时，SGD 能否追上 Adam。
+5. **用带动量的 SGD 替换 Adam。** 使用 `SGD(params, lr=0.01, momentum=0.9)` 训练，并比较收敛曲线。然后加入 `CosineAnnealingLR` 调度器，观察到第 10 轮时，SGD 能否追上 Adam。
 
 ## 关键术语
 
 | 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Tensor | “多维数组” | 具有类型与设备信息的数组，每项操作都内置自动微分支持 |
-| Autograd | “自动反向传播” | 前向传播时记录操作，再逆向重放以计算精确梯度的记录带式系统 |
-| nn.Module | “一个层” | 任意可微计算模块的基类；负责注册参数、支持嵌套并处理训练/评估模式 |
+| Tensor | “多维数组” | 具有明确数据类型、能感知所在设备的数组，其每项操作都内置自动微分支持 |
+| Autograd | “自动反向传播” | 在前向传播时记录操作、再反向重放记录以计算精确梯度的记录带式系统 |
+| nn.Module | “一个层” | 任意可微计算模块的基类；它会注册参数、支持嵌套，并处理训练与评估模式 |
 | state_dict | “模型权重” | 把参数名称映射到张量的 OrderedDict，是已训练模型可移植、可序列化的表示 |
 | .backward() | “计算梯度” | 逆向遍历计算图，为每个设置 requires_grad=True 的叶张量计算并累积梯度 |
 | .to(device) | “移动到 GPU” | 把所有参数和缓冲区递归传输到指定设备，例如 CPU、CUDA 或 MPS |
-| DataLoader | “数据流水线” | 从 Dataset 中分批、打乱并可选地并行加载数据的迭代器 |
+| DataLoader | “数据流水线” | 从 Dataset 加载数据并进行分批、打乱，还可选择并行加载的迭代器 |
 | 混合精度 | “使用 float16” | 使用 float16 执行前向/反向传播以提高速度，同时保留 float32 主权重以维持数值稳定性 |
 | 即时执行 | “立即运行” | 操作在调用时立即执行，而不是推迟到后续编译阶段；这是 PyTorch 区别于 TensorFlow 1.x 的核心设计 |
 | zero_grad | “重置梯度” | 由于 PyTorch 默认累积梯度，因此在下一次反向传播前把所有参数梯度清零 |
@@ -531,6 +531,6 @@ PyTorch 提供 15 种以上的调度器，包括 StepLR、ExponentialLR、Cosine
 ## 延伸阅读
 
 - Paszke 等，《PyTorch: An Imperative Style, High-Performance Deep Learning Library》（2019）——解释 PyTorch 设计权衡的原始论文
-- PyTorch 教程“Learning PyTorch with Examples”（https://pytorch.org/tutorials/beginner/pytorch_with_examples.html）——从张量到 nn.Module 的官方学习路径
-- PyTorch 性能调优指南（https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html）——混合精度、DataLoader workers、锁页内存和其他生产优化
-- Horace He，“Making Deep Learning Go Brrrr”（https://horace.io/brrr_intro.html）——解释 GPU 训练为何快速，并介绍 PyTorch 特定的优化策略
+- PyTorch 教程“Learning PyTorch with Examples”（https://pytorch.org/tutorials/beginner/pytorch_with_examples.html） ——从张量到 nn.Module 的官方学习路径
+- PyTorch 性能调优指南（https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html） ——混合精度、DataLoader 工作进程、锁页内存和其他生产优化
+- Horace He，“Making Deep Learning Go Brrrr”（https://horace.io/brrr_intro.html） ——解释 GPU 训练为何快速，并介绍 PyTorch 特定的优化策略

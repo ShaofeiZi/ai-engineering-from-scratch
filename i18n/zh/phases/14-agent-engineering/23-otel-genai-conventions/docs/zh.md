@@ -129,4 +129,4 @@ python3 code/main.py
 - [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) — 官方规范
 - [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) — 默认就会发出 GenAI spans
 - [AutoGen v0.4 (Microsoft Research)](https://www.microsoft.com/en-us/research/articles/autogen-v0-4-reimagining-the-foundation-of-agentic-ai-for-scale-extensibility-and-robustness/) — 内建 OTel spans
-- [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) — 支持 W3C trace context propagation
+- [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) — 支持 W3C 跟踪上下文传播

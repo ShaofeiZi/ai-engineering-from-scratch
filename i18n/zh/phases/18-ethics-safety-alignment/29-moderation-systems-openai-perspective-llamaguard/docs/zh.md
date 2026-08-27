@@ -25,12 +25,12 @@
 `omni-moderation-latest`（2024）基于 GPT-4o，可在一次调用中同时分类文本和图像。大多数开发者可以免费使用。
 
 类别（响应模式中的 13 个布尔值）包括：
-- 骚扰、带威胁的骚扰
-- 仇恨、带威胁的仇恨
-- 自残、自残意图、自残指导
-- 性内容、未成年人性内容
-- 暴力、图形化暴力
-- 非法行为、暴力非法行为
+- harassment, harassment/threatening
+- hate, hate/threatening
+- self-harm, self-harm/intent, self-harm/instructions
+- sexual, sexual/minors
+- violence, violence/graphic
+- illicit, illicit/violent
 
 多模态支持覆盖 `violence`、`self-harm` 和 `sexual`，但不包括 `sexual/minors`；其余类别仅支持文本。
 

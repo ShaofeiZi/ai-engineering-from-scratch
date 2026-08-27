@@ -53,7 +53,7 @@
 
 在 propose-then-commit（第 15 课）里，每个有后果的动作都必须自带回滚方案（rollback plan）。常见类型有：
 
-- **In-band rollback（带内回滚）**：直接逆转副作用，例如 `DELETE` 之后做 `INSERT`，或邮件发错后补发 `Send-correction-email`。
+- **In-band rollback（带内回滚）**：直接逆转副作用，例如 `INSERT` 之后执行 `DELETE`，或邮件发错后补发 `Send-correction-email`。
 - **Compensating transaction（补偿事务）**：发起一个新的动作去抵消原动作，这是标准的 SAGA 模式。
 - **Out-of-band rollback（带外回滚）**：告警给人工，暂停工作流，把异常状态留给调查处理。
 
