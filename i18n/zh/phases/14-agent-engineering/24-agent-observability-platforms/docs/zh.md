@@ -1,123 +1,123 @@
-# 监测人员:兰格斯,城,奥皮克
+# Agent 可观测平台：Langfuse、Phoenix、Opik
 
-> 长 (MIT)  6M+安装/月,追踪+提示管理+评估+会议重播. Arize Phoenix (Elastic 2.0)  深度特异性代理评估,RAG相关性,OpenInference自动仪器化.彗星Opik (Apache 2.0) 自动提示优化,护,LLM法官幻觉检测.
+> 到了 2026 年，三大开源 agent observability 平台已经形成主流格局。Langfuse（MIT）每月 SDK 安装量超过 600 万，提供 tracing、prompt management、evals 与 session replay。Arize Phoenix（Elastic 2.0）更强调 agent 专属评估、RAG relevancy 与 OpenInference 自动埋点。Comet Opik（Apache 2.0）则主打自动 prompt optimization、guardrails 与基于 LLM-judge 的幻觉检测。
 
-**Type:** Learn
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 14 · 23 (OTel GenAI)
-**Time:** ~45 minutes
+**Type:** 学习
+**Languages:** Python（标准库）
+**Prerequisites:** 第 14 阶段 · 23（OTel GenAI）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 举个例子说明三个顶级的开源代理可观测平台及其许可证.
-- 区分每个人都最强大的:Langfuse (即时mgmt + 会议),Phoenix (RAG + 自动仪器),Opik (优化 + 护).
-- 解释为什么89%的组织报告到2026年将有代理可观察性.
-- 实施一个由线路到仪表板的线路,包括法师评审.
+- 说出三大主流开源 agent observability 平台及其许可证。
+- 区分它们各自最擅长的方向：Langfuse（prompt management + sessions）、Phoenix（RAG + auto-instrumentation）、Opik（optimization + guardrails）。
+- 解释为什么到 2026 年有 89% 的组织已经部署 agent observability。
+- 实现一个从 trace 到 dashboard 的 stdlib 管线，并加入 LLM-judge evaluation。
 
 ## 问题
 
-您仍然需要一个平台,可以吸收跨度,运行评估,存储提示版本和表面回归.
+OTel GenAI（Lesson 23）只解决了 schema 问题。你依然需要一个平台来 ingest spans、运行评估、保存 prompt 版本，并把回归问题可视化出来。当前这三家开源平台，实际上分别押注在 agent 生命周期里的不同环节。
 
 ## 概念
 
-### 拉恩福斯 (MIT)
+### Langfuse（MIT）
 
-- 个月安装6M+SDK,GitHub星星为19k+
-- 功能:追踪,即时管理,版本化+游乐场,评估 (LLM作为评审,用户反,定制),会议重复.
-- 2025年6月:以前的商业模块 (LLM-as-a-judge,注释队列,即时实验,游乐场) 在MIT下开源.
-- 最强的:端到端可观测性,紧密的快速管理循环.
+- 每月 6M+ SDK installs，GitHub 19k+ stars。
+- 主要能力：tracing、带版本管理与 playground 的 prompt management、evaluations（LLM-as-judge、用户反馈、自定义评估）、session replay。
+- 到 2025 年 6 月，原先商业化的模块，如 LLM-as-a-judge、annotation queues、prompt experiments、Playground，已经以 MIT 许可证开源。
+- 最强项：从 tracing 到 prompt iteration 的端到端闭环。
 
-### 鱼 (弹性许可证 2.0)
+### Arize Phoenix（Elastic License 2.0）
 
-- 具体的特征评估:痕迹集群,异常检测,RAG检索相关性.
-- 基于原生开放式传输的自动仪器.
-- 配对管理的Arize AX生产.
-- 没有即时版本 作为一个漂移/行为回归工具与更广泛的平台一起定位.
-- 最强的:RAG相关性,行为漂移,异常检测.
+- 更强调 agent-specific evaluation：trace clustering、anomaly detection、面向 RAG 的 retrieval relevancy。
+- 原生支持 OpenInference auto-instrumentation。
+- 可以与托管版 Arize AX 配合，用于生产环境。
+- 不负责 prompt versioning，更像是与其他平台并行使用的 drift / behavioral regression 分析工具。
+- 最强项：RAG relevancy、行为漂移、异常检测。
 
-### 彗星奥皮克 (Apache 2.0)
+### Comet Opik（Apache 2.0）
 
-- 通过A/B实验进行自动化快速优化.
-- 防护护 (PII编辑,现场限制).
-- 士的幻觉检测.
-- 根据彗星自身的测量标准:在 23.44s 与 Langfuse 327.15s 的Opik 记录 + 评估 (~ 14x 差距)  取出供应商的标准作为方向性.
-- 最强用于:优化循环,自动化实验,防护.
+- 支持通过 A/B experiments 自动做 prompt optimization。
+- 提供 guardrails，例如 PII redaction、topic constraints。
+- 支持 LLM-judge hallucination detection。
+- 按照 Comet 自己公布的测量结果，Opik 的 logs + evals 用时 23.44s，而 Langfuse 为 327.15s，大约有 14 倍差距。不过这类 vendor benchmark 更适合作为方向参考，而不是绝对结论。
+- 最强项：优化闭环、自动化实验、guardrail enforcement。
 
-### 产业数据
+### 行业数据
 
-根据马克思 (2026年实地分析):89%的组织有代理可观察性;质量问题是生产的最大障碍 (32%的受访者引用它们).
+根据 Maxim 在 2026 年的 field analysis，89% 的组织已经具备 agent observability；同时，质量问题仍然是生产落地的头号阻碍，有 32% 的受访者明确提到这一点。
 
-### 选择一个
+### 如何选择
 
-| Need | Pick |
+| 需求 | 选择 |
 |------|------|
-| All-in-one with prompt management | Langfuse |
-| Deep RAG evaluation + drift | Phoenix |
-| Automated optimization + guardrails | Opik |
-| Open licensing, no ELv2 | Langfuse (MIT) or Opik (Apache 2.0) |
-| Datadog / New Relic integration | Any — they all export OTel |
+| 提供提示词管理的一体化方案 | Langfuse |
+| 深度 RAG 评估与漂移检测 | Phoenix |
+| 自动优化与护栏 | Opik |
+| 开放许可证，不采用 ELv2 | Langfuse（MIT）或 Opik（Apache 2.0） |
+| 集成 Datadog / New Relic | 任意一个——它们都能导出 OTel 数据 |
 
-### 在这个模式出现错误的地方
+### 这种模式常见的失败点
 
-- **No eval strategy.**没有评估的追踪只是昂贵的伐木.
-- **Self-rolled LLM-judge without grounding.**法官需要外部工具来验证事实.
-- **Prompt versions not tied to traces.**当子退后,你不能分离到导致的提示.
+- **没有 eval strategy。** 只有 tracing 没有 evaluation，本质上只是更昂贵的日志系统。
+- **自己手搓 LLM-judge，但没有 grounding。** Lesson 05 里的 CRITIC 模式在这里仍然适用，judge 需要外部工具做事实核验。
+- **prompt version 没和 traces 绑定。** 一旦生产环境出现回归，你就没法追溯到底是哪版 prompt 引入了问题。
 
 ```figure
 wb-trace-ingest
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行一个STDlib追踪收集器+LLM评审员:
+`code/main.py` 实现了一个 stdlib trace collector + LLM-judge evaluator，包含：
 
-- 摄入基因AI形状的.
-- 按会议组,标签失败运行 (防护轨道旅行,低信心评估).
-- 写作的法师法官,在一个类别上评分代理的反应.
-- 像仪表板这样的总结:失败率,最大的失败原因,评估分数分布.
+- ingest GenAI 风格的 spans。
+- 按 session 聚合，并标记失败运行，例如 guardrail trips、low-confidence evals。
+- 一个脚本化的 LLM-judge，会按 rubric 给 agent response 打分。
+- 一个类似 dashboard 的摘要视图：failure rate、top failure reasons、eval score distribution。
 
-运行它:
+运行方式：
 
 ```
 python3 code/main.py
 ```
 
-输出:每次会议的评分和失败分类,与兰格斯/尼克斯/奥皮克所显示的相匹配.
+输出会给出每个 session 的 eval 分数和失败分类，大致对应 Langfuse、Phoenix、Opik 这类平台实际会展示的信息。
 
-## 用它
+## 如何使用
 
-- **Langfuse**通过 OTel 或其 SDK 进行自主托管或云端;
-- **Arize Phoenix**自主托管;自动工具OpenInference.
-- **Comet Opik**自主托管或云;自动化优化循环.
-- **Datadog LLM Observability**对于已经运行Datadog的混合运营+ML团队.
+- **Langfuse**：可 self-hosted，也可用 cloud；通过 OTel 或官方 SDK 接入。
+- **Arize Phoenix**：支持 self-hosted；适合直接利用 OpenInference 自动埋点。
+- **Comet Opik**：可 self-hosted，也可用 cloud；适合做自动优化闭环。
+- **Datadog LLM Observability**：适合已经大量使用 Datadog 的混合 ops + ML 团队。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-obs-platform-wiring.md`选择一个平台,将其追踪+评估+提示版本传输到现有代理中.
+`outputs/skill-obs-platform-wiring.md` 用来帮助你在现有 agent 中选定一个平台，并接入 traces、evals 与 prompt versions。
 
-## 运动
+## 练习
 
-1. 导出一周的OTel痕迹到Langfuse云.哪些会议失败了?为什么?
-2. 写一个法师法官的专业 (事实正确性,语调,范围遵守).测试50个线索.
-3. 让我们比较Langfuse的快速版本与尼克斯的追踪集群.
-4. 读一读奥皮克的护文件,向你的代理人之一运行一个 PII编辑护.
-5. 忽略出售商发布的数字, 测量自己的数字.
+1. 把一周的 OTel traces 导出到 Langfuse cloud（free tier）。哪些 sessions 失败了？原因是什么？
+2. 针对你的业务领域写一个 LLM-judge rubric，例如 factual correctness、tone、scope adherence，并在 50 条 traces 上测试。
+3. 对比 Langfuse 的 prompt versioning 与 Phoenix 的 trace clustering。哪一个能更快告诉你到底哪里坏了？
+4. 阅读 Opik 的 guardrail 文档，给你的一个 agent run 接入 PII redaction guardrail。
+5. 在你自己的语料上 benchmark 这三者。忽略厂商公开数字，测你自己的结果。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Tracing | "Spans collector" | Ingest OTel / SDK spans; index by session |
-| Prompt management | "Prompt CMS" | Versioned prompts tied to traces |
-| LLM-as-judge | "Automated eval" | Separate LLM scores agent output against a rubric |
-| Session replay | "Trace playback" | Step through past runs for debugging |
-| RAG relevancy | "Retrieval quality" | Does the retrieved context match the query |
-| Trace clustering | "Behavioral grouping" | Cluster similar runs for drift detection |
-| Guardrail enforcement | "Policy at log time" | PII/toxicity/scope checks on logged content |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| Tracing | "Spans collector" | 接收 OTel / SDK spans，并按 session 建索引 |
+| Prompt management | "Prompt CMS" | 与 traces 绑定的版本化 prompts |
+| LLM-as-judge | "Automated eval" | 用独立 LLM 按 rubric 评估 agent output |
+| Session replay | "Trace playback" | 为了调试，逐步回放过去的运行过程 |
+| RAG relevancy | "Retrieval quality" | 检索出来的上下文是否真的匹配查询 |
+| Trace clustering | "Behavioral grouping" | 对相似运行聚类，用于检测漂移 |
+| Guardrail enforcement | "Policy at log time" | 对日志内容做 PII / toxicity / scope 检查 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Langfuse docs](https://langfuse.com/)追踪,评估,提示
-- [Arize Phoenix docs](https://docs.arize.com/phoenix)自动仪器,漂移
-- [Comet Opik](https://www.comet.com/site/products/opik/)优化+防护
-- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)三种方案都消耗
+- [Langfuse docs](https://langfuse.com/) — tracing、evals、prompt management
+- [Arize Phoenix docs](https://docs.arize.com/phoenix) — auto-instrumentation、drift
+- [Comet Opik](https://www.comet.com/site/products/opik/) — optimization + guardrails
+- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) — 三个平台共同消费的 schema
