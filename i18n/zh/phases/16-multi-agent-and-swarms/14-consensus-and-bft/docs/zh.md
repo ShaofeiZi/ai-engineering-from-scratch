@@ -1,63 +1,63 @@
-# 让人同意和拜占庭人对代理人的宽容
+# 面向 Agent 的共识与拜占庭容错
 
-> 传统分布式系统BFT与 Stochastic LLM相遇.在2025-2026年,出现了三个研究方向: **CP-WBFT**根据信任调查,每一个投票都被权衡.**DecentLLMs**随着同步的工人提案和几何中位数聚合, **WBFT**通过"重量投票"和"层次结构集群"来分开核心和边缘节点. 根据"人工智能代理商是否可以同意?" (arXiv:2603.01213) 的实验结果,即使是规模协议也很脆弱. 利率是必要的,但不足的. 这一课构建了最小的BFT协议,注入了三个特征特定攻击 (拜占庭谎言,同情性合规性,相关错误单文化),并测量了每个共识变体如何应对.
+> 经典分布式系统里的 BFT 正在和带随机性的 LLM 节点相遇。2025-2026 年出现了三条代表性研究路线：**CP-WBFT**（arXiv:2511.10400）会根据 confidence probe 给每张票赋权；**DecentLLMs**（arXiv:2507.14928）采用无 leader 设计，让 worker 并行提案，再用 geometric median 聚合；**WBFT**（arXiv:2505.05103）把 weighted voting 与 Hierarchical Structure Clustering 结合起来，划分 Core 与 Edge 节点。而 “Can AI Agents Agree?”（arXiv:2603.01213）给出的经验事实很直接：即便只是让 agent 对一个标量达成一致，今天都很脆弱，一个欺骗性 agent 就足以破坏 Mixture-of-Agents。BFT 是必要的，但远远不够。本课会实现一个最小 BFT 协议，注入三类 agent 特有攻击（byzantine lie、sycophantic conformity、correlated-error monoculture），并测量不同 consensus 变体各自如何应对。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 16 · 07 (Society of Mind and Debate), Phase 16 · 13 (Shared Memory)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 16 · 07（心智社会与辩论），阶段 16 · 13（共享记忆）
+**Time:** 约 75 分钟
 
 ## 问题
 
-许多人认为,这两种方法是错误的,因为两种方法是相对的 (相同的基础模型,相同的训练数据,相同的失败模式).第三个方法是错误的,所以大多数是错误的多数.
+假设你有 N 个 LLM agents，每个都给出一个答案。它们彼此不一致。多数投票挑出的那个答案却是错的，因为其中两个 agent 共享同一基础模型、相近训练数据和相同失败模式，所以它们的错误高度相关。再加上第三个 agent 恰好以另一种新方式出错，最后多数就变成了“假多数”。
 
-现在再加一个欺骗剂:它是故意的.或者一个伪幻剂:它同意谁说最后.在经典的BFT,假设是拜占庭节点是个小部分.`f < n/3`实际上,在2026年,LLM节点是固的,即使是诚实的,相对于模型,并且受到彼此的输出的影响.
+现在再引入一个欺骗性 agent：它故意撒谎。或者一个讨好型 agent：它总是附和最后一个发言的人。经典 BFT 假设拜占庭节点占比满足 `f < n/3`，并且它们的行为可以是任意的。但 2026 年的现实是：LLM 节点即使诚实，也仍然带随机性；不同节点之间往往高度相关；它们还会被彼此的输出影响。你不能再把这些节点视作彼此独立的伯努利投票器。
 
-经典BFT (PBFT, 1999) 没有错误.它不完整.它处理任意的点翻.它不处理"三位诚实代理人分享幻觉,因为他们分享训练数据".这个课程是基于PBFT的基础和3个2025-2026年适应层.
+所以，经典 BFT（PBFT，1999）并没有错，但它不完整。它可以处理任意比特翻转，却无法处理“三个诚实 agent 因为共享训练数据而一起幻觉出同一个错误”。本课就是在 PBFT 的地基上，再往上叠加 2025-2026 年出现的三类适配思路。
 
 ## 概念
 
-### 经典的BFT给你什么?
+### 经典 BFT 能给你什么
 
-实际的拜占庭错误宽容 (卡斯特罗和里斯科夫,OSDI 1999) 宽容`f < n/3`协议有三个阶段 (预备,准备,承诺) 和两个原始阶段 (签署的消息,定制证书).`n >= 3f + 1`诚实或恶意的节点.
+Practical Byzantine Fault Tolerance（Castro & Liskov, OSDI 1999）可以容忍 `f < n/3` 的 Byzantine 节点。协议包含三个阶段（pre-prepare、prepare、commit）和两个关键原语（signed messages、quorum certificates），目标是在 `n >= 3f + 1` 的诚实或恶意节点之间，就单一值达成一致。
 
-保障是强大的,但假设:
+它的保证很强，但默认有几个前提：
 
-1. **Independent faults.**拜占庭人没有协调.
-2. **Honest nodes are truly honest.**诚实输出的正确性是无关的;
-3. **The question has a ground-truth answer.**关于错误的事实的共识仍然是共识.
+1. **故障彼此独立。** Byzantine 节点之间不会系统性协同。
+2. **诚实节点真的正确。** 经典协议只负责把分歧对齐，不负责质疑诚实节点输出本身的正确性。
+3. **问题存在 ground truth。** 就算大家一致同意一个错误事实，那在协议层面仍然算“共识成功”。
 
-两位经理使用相同的基本模型都会犯错误. 一个"诚实"的经理仍然会幻觉. 在模糊的问题上",真相"是经理决定的.
+LLM agents 会同时打破这三条。两个共享同一 base model 的 agent 会共享故障；一个“诚实”的 LLM 也依然可能 hallucinate；而对于含糊问题，“真相”很多时候就是 agent 集体决定出来的，并没有外部 oracle。
 
-### 针对三大法定学专业攻击
+### 三类 LLM 特有攻击
 
-**Byzantine lie.**一个代理出了故意错误的答案.`f < n/3`现在,我们要去.
+**Byzantine lie。** 某个 agent 故意给出错误答案。只要 `f < n/3`，经典 BFT 理论上能处理这一类问题。
 
-**Sycophantic conformity.**一个代理人在投票前读取别人的答案,并与最后一位发言者一致. 不是恶意,但与最响亮的声音相关.经典的BFT不会阻止这一点,因为代理通过了每一个签名检查.
+**Sycophantic conformity。** 某个 agent 在投票前先观察别人的答案，然后选择附和最后一个发言者。它未必恶意，但会系统性偏向最响亮的声音。经典 BFT 无法阻止这一点，因为它在签名和消息格式层面完全合法。
 
-**Correlated-error monoculture.**现在,我们在这个问题上,我们需要一个问题,我们需要一个问题,我们需要一个问题,我们需要一个问题.
+**Correlated-error monoculture。** 三个 agent 共用一个基础模型，于是一起 hallucinate 出相同的错误答案。多数错了，但它们又都是“诚实”地错。经典 BFT 在这里帮不上忙，因为它只能识别恶意异常，不能识别相关性故障。
 
-### 未来的2025-2026年
+### 2025-2026 年的三种应对路线
 
-**CP-WBFT** 信心证明权重BFT.每个选民将信心探测器附加到答案 (自报告的概率或单独校准模型的预测).投票权重量以信心量度.报告的BFT在完整图表上增长了85.71% .减轻:同效性 (符合的代理人往往对他们的志愿者立场有较低的信心).
+**CP-WBFT**（arXiv:2511.10400）即 Confidence-Probed Weighted BFT。每个 voter 都会附带一个 confidence probe，可以是自报概率，也可以是单独校准模型给出的置信度预测。投票权重随 confidence 变化。论文报告在 complete graph 上带来 +85.71% 的 BFT 提升。它对 sycophantic conformity 有一定缓解作用，因为这类附和型 agent 往往对自己跟风得来的立场并没有真正高置信度。
 
-**DecentLLMs**工人代理商并行提出,评估员代理商评分提案,最终答案是评分的位置的几何中位数. 强当`f < n/2`减轻:拜占庭谎言和相关错误 (几何中位数是强到异常值,并向密集集团拉,而不是模型偏差的平均值).
+**DecentLLMs**（arXiv:2507.14928）采用无 leader 设计。多个 worker agent 并行提出候选答案，由 evaluator agents 评分，最终答案通过 geometric median 聚合得到。它在 `f < n/2` 时仍具备较强鲁棒性。它对 byzantine lie 和 correlated errors 都有缓解作用，因为 geometric median 对 outliers 更稳健，聚合结果会更接近密集簇，而不是被偏移均值带跑。
 
-**WBFT** 按响应质量加上从历史中学到的信任分数来分配投票权.集群代理将核心和边缘分为核心;核心代理必须先达成共识,边缘代理必须遵循.减轻:可扩展性 (核心共识小而快) 和部分单种 (核心可选择多样性).
+**WBFT**（arXiv:2505.05103）即 Weighted BFT with Hierarchical Structure Clustering。投票权重由 response quality 和历史学到的 trust score 决定，再把 agents 聚成 Core 与 Edge 两层：Core 先达成共识，Edge 再跟进。它主要缓解扩展性问题，也能在一定程度上缓解 monoculture，因为 Core 可以按多样性优先进行选择。
 
-### 经验性:人工智能代理人是否可以同意?
+### 经验事实：“Can AI Agents Agree?”
 
-纸质测量跨多边界模型的规模协议 (LLM代理商一致同意单个数值).
+这篇论文研究的是 scalar agreement，也就是多个 frontier models 在单一数值问题上能否达成一致。结论不太舒服：
 
-- 即使没有对手,LLM代理人在许多基准上不同意比例的问题,
-- 一个采用欺骗性角色的代理人可以将混合代理的共识从诚实基线中提升40多个百分点.
-- 异质组比同质组不同意 (好:不相关错误),但也偏向较慢 (坏:更长的协议时间).
+- 即便没有对手，LLM agents 在许多 benchmark 上对标量问题的分歧率仍高于 30%。
+- 只要有一个 agent 采用 deceptive persona，就能把 Mixture-of-Agents 的共识结果从诚实基线拉偏 40 多个百分点。
+- 模型越异质，分歧率越高（好处是错误不相关），但也越难快速收敛（坏处是 time-to-agreement 变长）。
 
-结合验证 (16期·08角色专业化),多样性 (16期·15辩论变体) 和评估代理 (16期·24基准).
+因此真正的结论是：BFT 只能给你“把输出对齐”的机制，却不能告诉你“对齐后的输出是否正确”。它必须和 verification（Phase 16 · 08 角色专业化）、diversity（Phase 16 · 15 辩论变体）以及 evaluator agents（Phase 16 · 24 benchmarks）联用。
 
-### 核心协议被剥夺
+### 剥离到最核心的协议
 
-对于法定士代理人来说,最低BFT轮:
+一个最小化的 LLM-agent BFT 轮次大致是这样：
 
 ```
 1. task arrives; each agent i produces answer a_i
@@ -71,85 +71,85 @@
 7. minority clusters logged with provenance for post-hoc audit
 ```
 
-语义集群步骤是LLM特定的转折.两个答案"研究报告4.2%"和"4.2%改善"是相同的集群.一个天真的字符串等式检查会错过这一点.在生产中,使用廉价的嵌入模型或明确的加нони化.
+这里最关键的 LLM 特有步骤是 semantic clustering。比如“the study reports 4.2%”和“4.2% improvement”应该视为同一簇。若只做朴素字符串相等比较，就会错过这类等价答案。生产环境里通常会用廉价 embedding model 或显式 canonicalization 来解决。
 
-### 值调整
+### 阈值调优
 
-其他`threshold`太低:你接受弱多数.太高:你永远不会接受任何东西. 经验范围:0.5-0.67为`n=5-7`其他类型的代理人,较高的代理人`n`在门以下,升级到人类或其他代理团队.
+`threshold` 参数决定了什么时候接受结果，什么时候重试或升级。太低会接受弱多数，太高则什么都无法接受。经验上，当 agent 数量在 `n=5-7` 时，阈值常落在 0.5-0.67；如果 `n` 更小，阈值通常要更高。低于阈值时，系统应该升级到人工或另一个 agent ensemble。
 
-### 达成一致的意见没有帮助
+### 共识也有帮不上忙的时候
 
-- **Ambiguous questions.**如果这个问题没有基本的真理, 达成一致就是一个观点.
-- **Compound questions.**两个答案,分别投票.
-- **Adversarial multi-round.**如果代理人能够观察之前的轮子并模仿 (Du 2023 辩论),他们开始不管真相如何,相互同意.
+- **Ambiguous questions。** 如果问题没有明确 ground truth，那共识本质上只是意见集合。应该明确把它当意见处理。
+- **Compound questions。** 像“写代码并解释代码”这种复合问题，其实包含两个答案，应拆开投票。
+- **Adversarial multi-round。** 如果 agent 能看到前几轮并持续模仿（类似 Du 2023 式辩论），它们最终会越来越趋同于彼此，而不一定趋同于真相。因此轮数必须有上界，通常是 2-3 轮。
 
 ```figure
 swarm-consensus-wave
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `AgentVoter`一个编写的政策 (答案,信心).
-- `MajorityVote`经典多元化.
-- `CPWBFT`以信任权衡的投票,并进行语义分组.
-- `DecentLLMs`评分的提案的几何中位数聚合.
-- `Scenario`每一个集成器都以三个攻击模式运行.
+- `AgentVoter`：一个脚本化投票策略，输出 answer 与 confidence。
+- `MajorityVote`：经典 plurality。
+- `CPWBFT`：带 semantic clustering 的 confidence-weighted voting。
+- `DecentLLMs`：基于评分提案的 geometric-median aggregation。
+- `Scenario`：在三类攻击模式下分别运行不同 aggregator。
 
-实施的攻击模式:
+内置攻击模式包括：
 
-1. `byzantine`据了解,一名特工在撒谎时,
-2. `sycophancy`一个代理人复制了看到的第一回复,
-3. `monoculture`经理们对此有所不同,但他们对此有所不同.
+1. `byzantine`：一个 agent 高置信度撒谎。
+2. `sycophancy`：一个 agent 复制它看到的第一个答案，并继承相应 confidence。
+3. `monoculture`：三个 agent 以中等置信度共享同一个错误答案，构成 correlated error。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-预期产量:一个表 (攻击,聚合器) ->最终答案,正确答案突出.多元化失败了单种类案例.CPWBFT的信心权重减轻了缩.单种类人口不到一半时,DecentLLMs的几何中位拉向诚实集群.
+预期输出是一张表：形如 (attack, aggregator) -> final answer，其中正确答案会被高亮。Plurality 会在 monoculture 案例下失效；CPWBFT 的 confidence weighting 对 sycophancy 有缓解；当 monoculture 不超过半数人群时，DecentLLMs 的 geometric median 会把结果拉回诚实簇附近。
 
-## 用它
+## 实际使用
 
-`outputs/skill-consensus-designer.md`设计多代理集团共识协议:集群方法,权重,门和次门轮升政策.
+`outputs/skill-consensus-designer.md` 用于为多代理 ensemble 设计共识协议：cluster 方法、weighting 规则、threshold，以及低于阈值时的 escalation policy。
 
-## 运送它
+## 交付上线
 
-在运输之前,任何共识机制:
+在任何 consensus mechanism 上线前：
 
-- **Attack-test with at least the three patterns**你的协议应该是预测的失败,而不是默默的失败.
-- **Log every minority cluster**少数群体是您的早期警告系统,
-- **Enforce bounded rounds.**没有"一直争论直到达成协议",
-- **Separate agreement from correctness.**认可输出向验证器;验证器独立于组合.
-- **Monitor the agreement rate.**剧烈上升意味着符合性偏见;剧烈下降意味着模型漂移.
+- **至少用上面三种攻击模式做攻击测试。** 你的协议应当可预测地失败，而不是悄悄失败。
+- **记录所有 minority clusters。** 少数簇是 correlated error 的早期预警信号。
+- **强制 bounded rounds。** 不要“辩到一致为止”，那只会奖励 sycophancy。
+- **把 agreement 和 correctness 分开。** 共识输出应该交给 verifier；而 verifier 必须独立于这个 ensemble。
+- **持续监控 agreement rate。** 突然升高常意味着 conformity bias，突然下降则常意味着 model drift。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认多数率会失败单种植攻击,但当单种植信心低于0.7时,CPWBFT会部分缓解这一攻击.
-2. 添加第四次攻击模式:**silent abstention**一个代理拒绝回答 ("我不知道").每个集体应如何处理弃权?
-3. 转换语义集群从字符串定律化到嵌入式 (使用任何开源嵌入式模型).
-4. 阅读CP-WBFT (arXiv:2511.10400). 实施信任探测校准步骤 (单独的校准模型检查每个代理的自报告信任). 测量单种植场景的准确度增长.
-5. 阅读"人工智能代理商是否同意?" (arXiv:2603.01213). 复制一个简单的规模协议实验:三个代理商,一个规模问题,欺骗人提示.CPWBFT或DecentLLMs是否抓住它?
+1. 运行 `code/main.py`，确认 plurality 会在 monoculture attack 下失败，但当 monoculture confidence 低于 0.7 时，CPWBFT 能部分缓解。
+2. 增加第四种攻击：**silent abstention**，即某个 agent 拒绝作答（“I don't know”）。不同 aggregator 应如何处理 abstentions？实现你的选择。
+3. 把 semantic clustering 从字符串 canonicalization 换成 embedding similarity（用任意开源 embedding model）。sycophancy attack 的表现会发生什么变化？
+4. 阅读 CP-WBFT（arXiv:2511.10400）。补上 confidence-probe calibration 步骤，也就是用单独校准模型检查每个 agent 的自报信心。测量 monoculture 场景下的准确率变化。
+5. 阅读 “Can AI Agents Agree?”（arXiv:2603.01213）。复现一个简化版 scalar-agreement 实验：三个 agents、一个标量问题、一个 deceptive-persona prompt。CPWBFT 或 DecentLLMs 能抓住它吗？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| BFT | "Byzantine fault tolerance" | Castro-Liskov 1999 protocol for consensus with `f < n/3` arbitrary faults. |
-| Byzantine | "Any bad behavior" | A node that can lie, drop messages, fail silently — anything but crash safely. |
-| Confidence probe | "How sure are you?" | Self-reported or calibrator-predicted probability attached to a vote. |
-| Semantic clustering | "Same answer, different words" | Grouping equivalent answers before counting votes. |
-| Geometric median | "Robust center" | The point minimizing sum of distances to sample points. Robust to outliers, unlike the mean. |
-| Monoculture | "Same model, same failures" | Correlated errors when agents share training data or base model. |
-| Sycophantic conformity | "Agreeing with the loud voice" | An agent's vote biases toward whoever spoke first/loudest. |
-| Core/Edge | "Hierarchical BFT" | WBFT split: small Core consensus first, Edge nodes follow. Bounds latency. |
+| BFT | “拜占庭容错” | Castro-Liskov 1999 年提出的共识协议，可处理 `f < n/3` 的任意故障。 |
+| 拜占庭节点 | “任意恶意行为” | 节点可以撒谎、丢弃消息或静默失败，只要不是安全崩溃，都属于此类。 |
+| 置信度探针 | “你有多确定？” | 附加在投票上的自报概率或校准器预测概率。 |
+| 语义聚类 | “同一答案，不同说法” | 在计票前把语义等价的答案分到同一组。 |
+| 几何中位数 | “稳健中心” | 使所有样本到该点的距离之和最小的点；与均值相比，对离群值更稳健。 |
+| 单一文化 | “同一模型，同类失败” | 多个智能体因共享训练数据或基座模型而发生相关错误。 |
+| 谄媚式从众 | “附和最响亮的声音” | 智能体的投票偏向最先或最强势的发言者。 |
+| Core/Edge | “分层 BFT” | WBFT 的两层结构：先由小型 Core 达成共识，再让 Edge 跟随。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Castro & Liskov — Practical Byzantine Fault Tolerance (OSDI 1999)](https://pmg.csail.mit.edu/papers/osdi99.pdf)基础
-- [CP-WBFT — Confidence-Probe Weighted BFT](https://arxiv.org/abs/2511.10400)投票权重依靠信心
-- [DecentLLMs — leaderless multi-agent consensus](https://arxiv.org/abs/2507.14928)几何中位数聚合
-- [WBFT — Weighted BFT with Hierarchical Structure Clustering](https://arxiv.org/abs/2505.05103) 限度延迟的核心/边缘分区
-- [Can AI Agents Agree?](https://arxiv.org/abs/2603.01213)规模协议脆弱性和欺骗性攻击
+- [Castro & Liskov — Practical Byzantine Fault Tolerance (OSDI 1999)](https://pmg.csail.mit.edu/papers/osdi99.pdf) — 基础协议
+- [CP-WBFT — Confidence-Probe Weighted BFT](https://arxiv.org/abs/2511.10400) — 按置信度对投票赋权
+- [DecentLLMs — leaderless multi-agent consensus](https://arxiv.org/abs/2507.14928) — 使用几何中位数聚合
+- [WBFT — Weighted BFT with Hierarchical Structure Clustering](https://arxiv.org/abs/2505.05103) — 通过核心层/边缘层拆分控制延迟
+- [Can AI Agents Agree?](https://arxiv.org/abs/2603.01213) — 标量一致性的脆弱性与欺骗性角色提示攻击
