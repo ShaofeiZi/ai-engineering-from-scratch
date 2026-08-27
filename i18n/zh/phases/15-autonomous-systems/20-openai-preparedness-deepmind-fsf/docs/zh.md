@@ -1,108 +1,108 @@
-# 开放AI准备框架和深思维度边界安全框架
+# OpenAI 备战框架与 DeepMind 前沿安全框架
 
-> 开放AI准备框架v2 (2025年4月) 引入了与跟踪类别不同的研究类别:长距离自治,沙包,自主复制和适应,破坏保障. 追踪类别引发能力报告以及安全咨询小组审查的保障报告. 深思维的FSF v3 (9月2025年,随着追踪能力水平的增加2026年4月17日) 将自主性折叠成ML研发和网络领域 (ML研发自主性级别1 =以竞争成本对抗人工+AI工具完全自动化AI研发管道). 通过自动监测仪器推理滥用,FSF v3明确解决欺骗性调整. 诚实的注意: PF v2 (包括长距离自主) 中的研究类别不会自动触发减轻;政策语言是"潜在的".
+> OpenAI Preparedness Framework v2（2025 年 4 月）把 Research Categories 与 Tracked Categories 分开。Research Categories 包括 Long-range Autonomy、Sandbagging、Autonomous Replication and Adaptation、Undermining Safeguards。Tracked Categories 会触发 Capabilities Reports 与 Safeguards Reports，并由 Safety Advisory Group 审查。DeepMind 的 FSF v3（2025 年 9 月发布，2026 年 4 月 17 日加入 Tracked Capability Levels）则把自主性折叠进 ML R&D 和 Cyber 两个领域，例如 ML R&D autonomy level 1 被定义为：在与“人类 + AI 工具”协作相当的成本下，完整自动化 AI R&D 流程。FSF v3 还明确提出，要通过自动化监测来发现工具性推理的滥用，从而应对欺骗性对齐。这里最需要诚实指出的一点是：PF v2 里的 Research Categories，即便包括 Long-range Autonomy，也不会自动触发缓解措施；政策中使用的是“potential”这一表述。DeepMind 自己也承认，如果工具性推理继续增强，单靠自动化监测，长期来看并不够。
 
-**Type:** Learn
-**Languages:** Python (stdlib, three-framework decision-table diff tool)
-**Prerequisites:** Phase 15 · 19 (Anthropic RSP)
-**Time:** ~45 minutes
+**Type:** 学习
+**Languages:** Python（标准库，三框架决策表对比工具）
+**Prerequisites:** 阶段 15 · 19（Anthropic Responsible Scaling Policy v3.0）
+**Time:** 约 45 分钟
 
 ## 问题
 
-第19课仔细阅读人类学的扩展政策. 这一课通过阅读OpenAI和DeepMind的图像来完成了图像.这三个文件是表兄弟文物,解决了相同的问题.
+第 19 课已经细读了 Anthropic 的扩展政策。这一课把视角补全到 OpenAI 和 DeepMind。三份文件是在回答同一个核心问题：当前沿模型能力上升时，实验室应该在什么位置暂停、加门槛或增加缓解措施。它们彼此相似，但关键差别也很实质。
 
-融合:三者都将长距离自主权作为值得追踪的能力类. 它们都承认欺骗行为 (伪造配合,鱼) 是特定的风险类别. 它们都拥有内部审查机构. 差异:OpenAI将类别分为"追踪" (强制减轻) 和"研究" (无自动触发). 心把自主权折叠成两个领域,而不是单独命名. 实验室称之为Tracked vs Research,或Critical vs Moderate,或Tier-1 vs Tier-2; 运营后果在哪个桶里一个能力生活在实验室之间不同.
+相似点在于：三家都把长程自主性视为值得持续追踪的能力类别；三家都承认欺骗性行为，例如对齐伪装或 sandbagging，是一类独立风险；三家都有内部审查机构。不同点在于：OpenAI 把类别拆成“Tracked”与“Research”，其中只有前者会自动触发缓解；DeepMind 则不单独设“Autonomy”顶层桶，而是把它嵌入 ML R&D 与 Cyber 两个风险域。不同实验室会使用不同标签，例如 Tracked vs Research、Critical vs Moderate、Tier-1 vs Tier-2，但真正重要的是：某项能力被放进哪个桶里，会直接改变它在运营层面的后果。
 
-阅读它们在一起是有用的练习.同样的能力可以是"强制减轻"在人类,"监控但不触发"在OpenAI,和"追踪在特定领域"在深思维.政策姿势重要.
+把三份政策并排阅读才有价值。同一种能力，在 Anthropic 那里可能是“必须缓解”的门槛，在 OpenAI 那里只是“需要监测但不会自动触发”的研究类能力，在 DeepMind 那里则可能被放进某个具体领域里持续追踪。政策姿态不同，实际治理含义也不同。
 
 ## 概念
 
-### 开放AI准备框架v2 (2025年4月)
+### OpenAI Preparedness Framework v2（2025 年 4 月）
 
-结构:
+结构如下：
 
-- **Tracked Categories**引发能力报告 (模型能做什么) 以及保障报告 (有哪些减轻措施).
-- **Research Categories**实验室正在跟踪但尚未承诺具体减轻的模型能力. 包括长距离自主化,沙包,自主复制和适应,破坏保障措施.
+- **Tracked Categories**：会触发 Capabilities Reports（模型能做什么）与 Safeguards Reports（已部署了哪些缓解措施），并在部署前接受 Safety Advisory Group 审查。
+- **Research Categories**：实验室正在跟踪、但尚未承诺针对其自动触发具体缓解的能力类别。其中包括 Long-range Autonomy、Sandbagging、Autonomous Replication and Adaptation、Undermining Safeguards。
 
-关键框架在v2:研究类别不会自动触发减缓.政策语言是"潜在"减缓.这是观察的具体的三角形:在Tracked vs Research中,一个类别的位置是"关门"和"观察"之间的链.
+v2 最关键的表述是：Research Categories 不会自动触发缓解。政策原文里说的是“potential” mitigations。这里的关键差异必须抓住：一个类别被放在 Tracked 还是 Research，决定了它究竟是“有门槛、会拦截”，还是“先观察、不自动触发”。
 
-### 深思边界安全框架 v3 (2025年9月;2026年4月17日增加了跟踪能力水平)
+### DeepMind Frontier Safety Framework v3（2025 年 9 月；2026 年 4 月 17 日加入 Tracked Capability Levels）
 
-结构:
+结构如下：
 
-- **Critical Capability Levels (CCLs)**网络,生物,ML研发,CBRN,自主化 (分为ML研发和网络).
-- **Tracked Capability Levels**具体例子:ML研发自主化级别1 = 完全自动化人工智能研发管道以竞争性成本对比的人工+人工智能工具.
-- **Deceptive alignment monitoring**:明确承诺对仪器推理滥用的自动监测.
+- **Critical Capability Levels (CCLs)**：跨五个领域设置的能力阈值，包括 Cyber、Bio、ML R&D、CBRN，以及将自主性风险折叠后的相关域。
+- **Tracked Capability Levels**：2026 年 4 月新增的更细粒度分层。例如，ML R&D autonomy level 1 指的是：以与人类 + AI 工具协作相当的成本，完整自动化 AI R&D 流程。
+- **Deceptive alignment monitoring**：明确承诺使用自动化监测手段，发现工具性推理被用于规避约束或实施滥用。
 
-独立框架与OpenAI不同.DeepMind不把"自治"作为顶级域名;它被折叠成自主权可能造成伤害的域名 (ML R&D和网络).论点是,没有域名的自主权是没有风险的能力;反论点是,跨域域的自主权是框架应该命名的超级风险.
+DeepMind 对自主性的处理方式与 OpenAI 不同。它不把“Autonomy”保留为一个独立顶层域，而是把它并入真正会承载危害的领域，例如 ML R&D 和 Cyber。支持这一做法的人会说：脱离具体领域谈自主性，本质上只是在谈能力，不是在谈风险。反对者则会说：跨领域自主性本身就是一种元风险，框架应该把它单独点出来。
 
-### 三个东西都相结合
+### 三者的共同点
 
-- 内部安全咨询小组 (名为人类SAG,OpenAISAG,深思维的内部委员会).
-- 明确提到欺骗性配合/配合假装作为风险类别.
-- 现存的文物,按声明的序列 (人类:边境安全路线图,风险报告;OpenAI:能力和保障报告;DeepMind:FSF更新周期).
-- 承认仅仅监控的防御系统有限. 深思明确说:"自动监控将不会长期保持足够的状态.
+- 都有内部安全审查机构，例如 Anthropic SAG、OpenAI SAG、DeepMind 的内部委员会。
+- 都明确提到 deceptive alignment 或对齐伪装这一风险类别。
+- 都有按既定节奏持续发布的文档产物：Anthropic 的 Frontier Safety Roadmap 与 Risk Report，OpenAI 的 Capabilities Reports 与 Safeguards Reports，DeepMind 的 FSF 更新周期。
+- 都在不同程度上承认：仅靠监测的防线有上限。DeepMind 的表述最直接：“自动化监测从长期看终将不再充分。”
 
-### 在它们的分歧
+### 三者的分歧点
 
-- **Anthropic**关闭关闭:在v3.0中删除暂停承诺;AI研发-4门是下一个名字的门口.
-- **OpenAI**: 追踪与研究分区;研究类别 (包括长距离自主权) 没有自动关门.
-- **DeepMind**随着其它领域的自主化; 随访能力水平在2026年4月增加了细分性.
+- **Anthropic**：在 v3.0 中移除了暂停承诺，并把 AI R&D-4 作为下一个明确点名的关键阈值。
+- **OpenAI**：采用 Tracked 与 Research 的双分结构；Research Categories 即使包括 Long-range Autonomy，也不会自动触发门槛措施。
+- **DeepMind**：把自主性折叠进其他领域，并在 2026 年 4 月通过 Tracked Capability Levels 提高了粒度。
 
-### 沙:一个特殊的能力,
+### Sandbagging：一个让三家框架都变得棘手的能力
 
-沙 (一个在评估上战略性上表现不佳的模型) 在OpenAI的研究类别中.安тропо克的RSP v3.0通过评估-文本差距 (课 1) 来解决.DeepMind通过FSF v3中的欺骗性对齐监测来解决.
+Sandbagging，也就是模型在评估中策略性压低表现，被列入 OpenAI 的 Research Categories。Anthropic 的 RSP v3.0 则通过评估语境差距问题来间接触及它，这正对应第 1 课。DeepMind 则在 FSF v3 中通过 deceptive alignment monitoring 去覆盖这类风险。
 
-如果模型不适用于评估,每个框架的能力门值就会被低估. 框架只能有效,只要测量有效. 这就是为什么除了实验室自我评估外,还需要外部测量 (课时21:METR) 和对抗评估.
+如果模型会在评估里故意藏能力，那么任何框架里的能力阈值都会被系统性低估。框架只有在测量可靠时才成立。这也是为什么，除了实验室自己的自评之外，还必须有外部测量（第 21 课，METR）以及对抗性评估。
 
-### 阅读政策的技能
+### 读这类政策时要练的技能
 
-- 您需要在保险中找到所有功能,如果不可以找到,保险不包括.
-- 类别:它是追踪 (触发缓解) 或研究 (追踪但没有触发)?OpenAI称之为此;人类和深思有自己的相当.
-- 率:政策是否在声明的时间表上更新,还是仅在特定事件之后?
-- 独立:外部审查是强制性的还是可选的?人类与阿波罗和美国人工智能安全研究所合作伙伴;OpenAI与METR;深思与内部SAG主要合作伙伴.
+- **定位**：你关心的能力类别，必须能在政策文本中被明确找到。找不到，就意味着这份政策根本没有覆盖它。
+- **分类**：它究竟属于 Tracked（会触发缓解）还是 Research（被追踪但不自动触发）？OpenAI 是直接这样命名的；Anthropic 和 DeepMind 则有各自的等价结构。
+- **更新节奏**：政策是按照明示节奏持续更新，还是只在发生特定事件后才更新？有公开节奏的政策更强。
+- **独立性**：外部审查是强制性的还是可选的？Anthropic 会提到 Apollo 与 US AI Safety Institute，OpenAI 会提到 METR，DeepMind 则更多依赖内部 SAG。
 
 ```figure
 a5-tracked-vs-research
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`根据一个功能 (自主化,欺骗性调整,研发自动化,网络升级等),它输出了三个政策中的每个政策如何分类能力,以及什么缓解触发. 它是一个阅读辅助,而不是政策工具.
+`code/main.py` 实现了一个小型决策表对比工具。输入某项能力，例如 autonomy、deceptive alignment、R&D automation、cyber uplift，它会输出三份政策各自如何分类这项能力，以及会触发哪些缓解措施。它是一个帮助阅读政策的工具，而不是政策本身。
 
-## 运送它
+## 交付物
 
-`outputs/skill-cross-policy-diff.md`通过使用三个框架作为参考,为特定能力进行跨政策比较.
+`outputs/skill-cross-policy-diff.md` 提供了一个跨政策比较模板，用这三个框架作为参照，对某一具体能力进行横向对照。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认不同工具的输出符合至少两个功能的政策,你可以与源文件进行验证.
+1. 运行 `code/main.py`。确认这个 diff 工具对至少两项你能在原文中核实的能力，输出都与政策文本一致。
 
-2. 阅读全文OpenAI准备框架 v2. 识别每个研究类别.为每一个,写一句话说明为什么它在研究而不是追踪.
+2. 通读 OpenAI Preparedness Framework v2。找出每一个 Research Category，并分别写一句话说明：为什么它被放在 Research，而不是 Tracked。
 
-3. 阅读深思维护FSF v3完整,加上2026年4月的追踪能力水平更新. 确定ML研发自主级别1的具体评估标准.你将如何外部测量它?
+3. 通读 DeepMind FSF v3 以及 2026 年 4 月的 Tracked Capability Levels 更新。找出 ML R&D autonomy level 1 的具体评估标准，并说明如果由你来做外部测量，会怎么设计。
 
-4. 沙包装在OpenAI的研究类别中.设计一个评估,使沙包装模型强迫其实际能力.参考课程1的评估环境游戏讨论.
+4. Sandbagging 被列入 OpenAI 的 Research Categories。设计一个评估，使会 sandbagging 的模型被迫暴露真实能力，并结合第 1 课关于 eval-context gaming 的讨论说明理由。
 
-5. 根据您的选择,对特定功能进行三项政策进行比较. 指定您认为哪些政策的分类是最严格的,哪些是最少的. 用源文本证明理由.
+5. 任选一项能力，对三份政策进行对比。指出哪一份政策的分类最严格，哪一份最宽松，并用原文支持你的判断。
 
 ## 关键词
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |---|---|---|
-| Preparedness Framework | "OpenAI's scaling policy" | PF v2 (April 2025); Tracked vs Research categories |
-| Tracked Category | "Mandatory mitigation" | Triggers Capabilities + Safeguards Reports; SAG review |
-| Research Category | "Monitored only" | Tracked but no automatic mitigation; includes Long-range Autonomy |
-| Frontier Safety Framework | "DeepMind's scaling policy" | FSF v3 (Sept 2025) + Tracked Capability Levels (Apr 2026) |
-| CCL | "Critical Capability Level" | DeepMind threshold per domain (Cyber, Bio, ML R&D, CBRN) |
-| ML R&D autonomy level 1 | "R&D automation" | Fully automate AI R&D pipeline at competitive cost |
-| Sandbagging | "Strategic underperformance" | Model underperforms on evals; in OpenAI Research Categories |
-| Instrumental reasoning | "Means-ends reasoning" | Reasoning about how to achieve goals; target of DeepMind monitoring |
+| Preparedness Framework | “OpenAI 的备战框架” | PF v2（2025 年 4 月）；采用 Tracked 与 Research 双分结构 |
+| Tracked Category | “必须触发缓解的类别” | 会触发 Capabilities + Safeguards Reports，并接受 SAG 审查 |
+| Research Category | “只监测、不自动触发” | 被追踪但不会自动触发缓解；包括 Long-range Autonomy |
+| Frontier Safety Framework | “DeepMind 的前沿安全框架” | FSF v3（2025 年 9 月）以及 2026 年 4 月加入的 Tracked Capability Levels |
+| CCL | “Critical Capability Level” | DeepMind 在不同领域下设置的关键能力阈值 |
+| ML R&D autonomy level 1 | “研发自动化” | 以有竞争力的成本完整自动化 AI R&D 流程 |
+| Sandbagging | “策略性压低表现” | 模型在评估中故意表现较差；位于 OpenAI Research Categories |
+| Instrumental reasoning | “工具性推理” | 为实现目标而推演手段的能力；是 DeepMind 监测关注点之一 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [OpenAI — Updating our Preparedness Framework](https://openai.com/index/updating-our-preparedness-framework/) v2 公告.
-- [OpenAI — Preparedness Framework v2 PDF](https://cdn.openai.com/pdf/18a02b5d-6b67-4cec-ab64-68cdfbddebcd/preparedness-framework-v2.pdf)完整的文件.
-- [DeepMind — Strengthening our Frontier Safety Framework](https://deepmind.google/blog/strengthening-our-frontier-safety-framework/)FSF v3公告.
-- [DeepMind — Updating the Frontier Safety Framework (April 2026)](https://deepmind.google/blog/updating-the-frontier-safety-framework/) 追踪能力水平增加.
-- [Gemini 3 Pro FSF Report](https://storage.googleapis.com/deepmind-media/gemini/gemini_3_pro_fsf_report.pdf)FSF格式风险报告的例子.
+- [OpenAI — Updating our Preparedness Framework](https://openai.com/index/updating-our-preparedness-framework/) — v2 公告。
+- [OpenAI — Preparedness Framework v2 PDF](https://cdn.openai.com/pdf/18a02b5d-6b67-4cec-ab64-68cdfbddebcd/preparedness-framework-v2.pdf) — 完整文档。
+- [DeepMind — Strengthening our Frontier Safety Framework](https://deepmind.google/blog/strengthening-our-frontier-safety-framework/) — FSF v3 公告。
+- [DeepMind — Updating the Frontier Safety Framework (April 2026)](https://deepmind.google/blog/updating-the-frontier-safety-framework/) — Tracked Capability Levels 的新增说明。
+- [Gemini 3 Pro FSF Report](https://storage.googleapis.com/deepmind-media/gemini/gemini_3_pro_fsf_report.pdf) — 一份 FSF 格式风险报告的示例。
