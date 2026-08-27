@@ -1,38 +1,40 @@
-#  NVIDIA 动机和 llm-d
+# 解耦式 Prefill/Decode：NVIDIA Dynamo 与 llm-d
 
-> 预填是计算的,解码是记忆的. 运行两个在同一GPU浪费一个资源. 分类将它们分为单独的池,并通过NIXL (RDMA/InfiniBand或TCP fallback) 传输它们之间的KV缓存. 据NVIDIA Dynamo (GTC 2025宣布, 1.0 GA) 位于vLLM/SGLang/TRT-LLM 以上,其规划器预示器+SLA规划器自动率匹配预填:解码比率以满足SLO. 据NVIDIA发布,在这个球场的吞吐量增长  developer.nvidia.com (2025-06) 显示了 GB200 NVL72 + Dynamo 中度延迟模式上的DeepSeek-R1 MoE的 ~6倍改善,而 Dynamo 产品页面 (developer.nvidia.com,未有日期) 则在 GB300 NVL72 + Dynamo vs Hopper 上宣传到50倍的吞吐量. 对于"30x"的数字,这是全集黑+迪纳摩+深度搜索R1报告的社区总数;我们没有找到一个准确的30x的原始来源, 作为独立服务,每个角色的HPA. 增加了层次性KV脱载,缓存意识的LoRA路由,UCCL网络,规模到零. 经济:多个客户披露的内部推广表明3040%的节省$2M-class inference spend (i.e., $转换从定位分类到与Dynamo分类的定位分类分类的服务时,$2M→$600-800K 图是一个内部复合图,没有单个发表的案例研究使用它作为一个大小顺序的,不是一个参考引用.短提示 (<512代币,短输出) 不证明转移成本.
+> Prefill 是计算受限型工作，decode 是显存与带宽受限型工作。把两者放在同一张 GPU 上，会天然浪费其中一种资源。解耦式服务把它们拆到不同资源池，并通过 NIXL 在两池之间传输 KV cache，底层可走 RDMA/InfiniBand，也可回退到 TCP。NVIDIA Dynamo 在 GTC 2025 宣布、1.0 GA 后，位于 vLLM/SGLang/TRT-LLM 之上，利用 Planner Profiler 与 SLA Planner 自动匹配 prefill:decode 的容量比例来满足 SLO。NVIDIA 公布过这一区间内的吞吐提升：developer.nvidia.com（2025-06）展示 DeepSeek-R1 MoE 在 GB200 NVL72 + Dynamo、medium-latency 区间下约有 6x 提升；Dynamo 产品页（developer.nvidia.com，无日期）则宣传 GB300 NVL72 + Dynamo 相对 Hopper 可达最高 50x MoE 吞吐。至于“30x”这个数字，更像社区对 Blackwell + Dynamo + DeepSeek-R1 整栈结果的汇总说法；我们没有找到单一一手来源明确写出 30x，因此只能把它当作方向性信号。llm-d（Red Hat + AWS）走的是 Kubernetes 原生路线：把 prefill、decode、router 拆成独立 Service，并按角色各自使用 HPA。llm-d 0.5 又加入了分层 KV offloading、cache-aware LoRA routing、UCCL networking、scale-to-zero。经济性方面：内部汇总多个客户披露后，推断当年推理成本在 $2M 量级时，从 colocated serving 切到基于 Dynamo 的 disaggregated serving，在 SLA 不变的前提下，常见节省区间约为 30–40%（即 $600K–$800K/年）。这里的 $2M→$600-800K 是内部复合估算，不是公开案例研究，适合当数量级锚点，不适合当正式引文。对于短提示词（<512 tokens）和短输出，KV 传输成本通常不值得。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy disaggregated-vs-colocated simulator)
-**Prerequisites:** Phase 17 · 04 (Serving Engine Internals), Phase 17 · 08 (Inference Metrics)
-**Time:** ~75 minutes
+**Type:** 学习
+**Languages:** Python（标准库，玩具级解耦式与共置式服务模拟器）
+**Prerequisites:** 阶段 17 · 04（服务引擎内部原理）、阶段 17 · 08（推理指标）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 解释为什么预填和解码具有不同的最佳GPU配置,并量化在配合下的废物.
-- 图表分类结构:预填池,解码池,通过NIXL转移KV,路由器.
-- 描述分类没有效果的条件 (短提示,短输出).
-- 区分NVIDIA Dynamo (上方堆) 和 llm-d (Kubernetes-原生) 并将每个设备与运营环境相匹配.
+- 解释为什么 prefill 和 decode 对 GPU 的最优配置不同，并量化 colocated serving 下的浪费。
+- 画出解耦式架构图：prefill pool、decode pool、通过 NIXL 传输的 KV cache，以及 router。
+- 说清楚在什么条件下 disaggregation 不划算，例如短提示词、短输出。
+- 区分 NVIDIA Dynamo 这种“位于推理引擎之上的编排层”和 llm-d 这种“Kubernetes 原生方案”，并能将其对应到合适的运维场景。
 
 ## 问题
 
-在 8 H100 上运行Llama 3.3 70B. 在混合工作负载 (长提示+短输出) 下,GPU 在解码过程中停滞不前,因为大部分计算都花在预填充上.在不同的工作负载下 (短提示+长输出),相反发生.
+假设你在 8 张 H100 上运行 Llama 3.3 70B。面对混合工作负载时，如果提示词很长、输出很短，GPU 在 decode 阶段会出现空闲，因为大部分计算已经在 prefill 阶段完成。反过来，如果提示词很短、输出很长，那么 prefill 很快结束，瓶颈就转移到 decode。
 
-预算影响:GPU时间的20-40%浪费在错误的资源上.你购买H100计算器运行内存绑定解码,或者购买H100HBM带宽运行计算绑定预填.这两者都是昂贵的浪费.
+colocated prefill + decode 的问题在于：你必须同时为两种瓶颈过度配置资源。
 
-分类分开预填和解码,分开为每个瓶尺寸的单独池.KV缓存通过高带宽互联网从预填池转移到解码池.
+预算上的直接影响是，20–40% 的 GPU 时间会浪费在“不匹配的资源类型”上。你可能正在买 H100 的计算能力来跑内存受限的 decode，也可能正在买 H100 的 HBM 带宽来跑计算受限的 prefill。两种情况都很昂贵，而且都不是高效利用。
 
-## 概念
+disaggregation 的做法是，把 prefill 和 decode 拆到不同资源池，让每个池按照自己的瓶颈单独定容。KV cache 再通过高带宽互联，从 prefill pool 传给 decode pool。
 
-### 瓶的原因
+## 核心概念
 
-**Prefill**运行变压器在一个前进中完成输入提示.矩阵乘法占主导地位;计算.H100 FP8提供了2000 TFLOPS的有用吞吐量.批量效率很好.
+### 为什么瓶颈不同
 
-**Decode**一次生成一个代币,每次重量都会读取. 记忆带宽限制. HBM3 给出3 TB/s. 批量效率只有在高同步时才好.
+**Prefill**：在一次 forward 中把整段输入 prompt 跑完。主导成本是矩阵乘法，因此更偏计算受限。H100 FP8 能提供大约 2000 TFLOPS 的有效吞吐。批处理效率也比较高，一次 forward 可以覆盖很多 token。
 
-设置它们:您购买了针对两者都优化的GPU.H100对两者都很好,但成本都是一样的.在规模上,您希望在H100/计算重量上预填池;在H200/内存重量上解码池,或具有积极的量化.
+**Decode**：一次只生成一个 token，但每一步都要重新读取整套权重，因此更偏显存带宽受限。HBM3 大约提供 3 TB/s 带宽。只有在高并发下，decode 的 batch 效率才会明显提升，因为权重读取成本才能被摊薄。
 
-### 建筑
+把两者 colocate 在一起，等于要求同一批 GPU 同时兼顾两类优化目标。H100 两边都能做，但无论做哪边成本都一样。到了更大规模时，更合理的思路通常是：把 prefill pool 放在 H100 这类偏计算型设备上，把 decode pool 放在 H200 这类偏显存与带宽型设备上，或者叠加强量化策略。
+
+### 架构图
 
 ```
             ┌──────────────┐
@@ -49,97 +51,97 @@
                                                  Client
 ```
 
-尼克斯是NVIDIA的节点间运输. 使用RDMA/InfiniBand,如果可用,TCP倒退.传输延迟是真实的通常20-80ms为KV缓存的4K-代币提示70B FP8.这就是为什么短提示不合理分类:转移税超过节约.
+NIXL 是 NVIDIA 的跨节点传输机制。优先走 RDMA/InfiniBand，拿不到时再走 TCP。KV 传输延迟是现实存在的：对于 70B FP8 模型、4K-token prompt 的 KV cache，常见延迟大约在 20–80 ms。这也是为什么短 prompt 不适合做 disaggregation：传输税往往比节省下来的资源更贵。
 
-### 迪纳摩vsIIM-D
+### Dynamo 与 llm-d 的区别
 
-**NVIDIA Dynamo**总体的数据:
-- 作为乐团主持人,他坐在vLLM,SGLang,TRT-LLM上.
-- 规划器 预定器测量工作负载,SLA规划器自动配置预填:解码比例.
-- 芯,Python可扩展性.
-- 通过性增长:NVIDIA报告 GB200 NVL72 + Dynamo 中等延迟模式中的DeepSeek-R1 MoE的6x (developer.nvidia.com, 2025-06);社区报告的"高达30x"在全黑+dynamo+DeepSeek-R1堆缺乏单一的首要来源,应该被视为方向性.
-- GB300 NVL72 + Dynamo:每一个 Dynamo 产品页面 (developer.nvidia.com,未有日期) 均可达到50倍 MoE 吞吐量与 Hopper.
+**NVIDIA Dynamo**（GTC 2025 发布，1.0 GA）：
+- 作为编排层，位于 vLLM、SGLang、TRT-LLM 之上。
+- Planner Profiler 用来测量工作负载，SLA Planner 自动配置 prefill:decode 的容量比例。
+- 核心实现用 Rust，扩展能力用 Python。
+- 吞吐增益方面：NVIDIA 报告 DeepSeek-R1 MoE 在 GB200 NVL72 + Dynamo、medium-latency 区间可达到 6x（developer.nvidia.com, 2025-06）；社区常见的“up to 30x”更像全 Blackwell + Dynamo + DeepSeek-R1 方案的方向性汇总，没有单一一手来源支撑。
+- GB300 NVL72 + Dynamo：根据 Dynamo 产品页（developer.nvidia.com，无日期），MoE 吞吐相对 Hopper 最高可达 50x。
 
-**llm-d**其他类型:
-- 预填/解码/路由器作为独立的Kubernetes服务.
-- 按角色 HPA 配备队列深度 (预填) /KV利用 (解码) 信号.
-- `topologyConstraint packDomain: rack`包装预填+解码单击在同一架上用于高带宽KV传输.
-- 实现0.5 (2026):级别KV脱载,缓存意识的LoRA路由,UCCL网络,规模到零.
+**llm-d**（Red Hat + AWS，Kubernetes 原生）：
+- prefill、decode、router 都是独立的 Kubernetes Service。
+- 每个角色都能单独配 HPA，信号来源分别可以是 queue depth（prefill）和 KV utilization（decode）。
+- `topologyConstraint packDomain: rack` 用来把 prefill+decode clique 尽量打包在同一个机架内，以保证 KV 传输有足够带宽。
+- llm-d 0.5（2026）加入了 hierarchical KV offloading、cache-aware LoRA routing、UCCL networking、scale-to-zero。
 
-如果想要一个管理的堆上方管弦仪,使用IIM-d,如果你想要古伯尼特斯原始人,
+如果你想要一个“位于推理引擎之上的托管编排层”，就偏向 Dynamo；如果你想要 Kubernetes 原语优先、并且团队本身已经深度投入 CNCF 生态，那就偏向 llm-d。
 
-### 经济学
+### 经济性
 
-内部复合物 (没有发表的单个案例研究大度顺序):
+内部复合估算（不是单一公开案例研究，只能作为数量级锚点）：
 
-- 根据每年200万美元的推断,
-- 转换为与迪纳摩分类.
-- 要求量相同,延迟SLA相同.
-- 报告的节省: $600K–$平均年产量:800K (减少3040%).
-- 没有新的硬件.
+- colocated serving 的年推理开销约为 $2M。
+- 切换到基于 Dynamo 的 disaggregated serving。
+- 请求量不变，P99 latency SLA 也不变。
+- 常见节省区间约为 $600K–$800K/年，也就是 30–40%。
+- 不需要新增硬件。
 
-我们从多个客户披露而不是单个可引用的案例研究中合成这一数字;最近发布的数据点是Baseten的2倍更快的TTFT / 通过Dynamo KV路由的61%更高的吞吐量 (baseten.co, 2025-10), 节省的原因是每个池的尺寸都适合;预填重工作负载 (RAG含8K+预写) 比平衡的更有利.
+这个数字来自多个客户披露的综合推断，而不是某一篇可直接引用的案例研究。公开材料里，最接近的参考点包括：Baseten 在 2025-10 披露通过 Dynamo KV routing 获得 2x 更快的 TTFT 和 61% 更高吞吐；VAST + CoreWeave 在 2025-12 预测，当 KV hit rate 在 40–60% 时，tokens/$ 可提升 60–130%。节省的本质来自按角色正确配池；如果你的业务是 prefill 很重的工作负载，例如带 8K+ 前缀的 RAG，收益通常会比负载更均衡的系统更明显。
 
-### 什么时候 NOT 分类
+### 什么时候不该解耦
 
-- 提示 < 512 代币和输出 < 200 代币:转让税占据利.
-- 小集群 (<4GPU):池多样性不足.
-- 团队不能使用两个GPU池,每个角色的扩展:
-- 没有 RDMA 结构:TCP转让税更高.
+- prompts < 512 tokens 且 outputs < 200 tokens：KV 传输税大于收益。
+- 小集群（< 4 GPUs）：池化弹性不足，分拆意义不大。
+- 团队没有能力同时运维两个独立 GPU 资源池并按角色扩缩容：即便 Dynamo 能降低复杂度，也并不等于“没有复杂度”。
+- 没有 RDMA 网络：如果只能走 TCP，传输税会更重。
 
-### 路由器与第17期 · 11期集成
+### Router 会与 Phase 17 · 11 形成联动
 
-分类路由器是KV缓存意识 (阶段17 · 11). 请求落在一个装配前的解码池上,如果没有匹配,它流动预填 →解码.击率和分类组合,缓存意识的路由器决定是否需要新的预填.
+解耦式 router 本质上也是 KV-cache-aware 的，这一点和 Phase 17 · 11 是连起来的。请求应尽量落到已经持有对应 prefix 的 decode pool 上；如果没有命中，才走 prefill → decode。也就是说，cache hit rate 与 disaggregation 的收益是叠加关系，而 cache-aware router 决定了你是否还需要重新做一次 prefill。
 
-### 黑尔的MoE是真正的数字所在的地方
+### 真正夸张的数字通常出现在 Blackwell 上的 MoE
 
-GB300 NVL72 + Dynamo显示Hopper基线上MoE吞吐量50倍.MoE专家路由在预填充时计算重,但在解码时内存重 (专家缓存),因此分类是双赢.2026年边界模型是MoE主导 (DeepSeek-V3,未来的GPT-5变体).
+GB300 NVL72 + Dynamo 给出的 50x MoE 吞吐，对比基线是 Hopper。MoE expert routing 在 prefill 阶段偏计算重，在 decode 阶段又偏显存与缓存重，因此 disaggregation 会同时在两边受益。到 2026 年，前沿模型服务已经明显往 MoE 主导方向移动，例如 DeepSeek-V3，以及未来一些 GPT-5 变体。
 
-### 你应该记住的数字
+### 你需要记住的数字
 
-根据"NVIDIA"和"推断堆"的数据,每季度都会更新结果.
+基准会漂移。NVIDIA 和推理栈供应商几乎每个季度都会刷新结果，正式引用前应重新核对。
 
-- 在GB200 NVL72 + Dynamo上 DeepSeek-R1: ~6x吞吐量与中等延迟模式的基线 (developer.nvidia.com, 2025-06);在全集的Blackwell + Dynamo堆上,社区"高达30x"的索赔是没有单个主要来源的方向聚合物.
-- GB300 NVL72 + Dynamo:最大的MoE吞吐量为50倍对Hopper (开发者.nvidia.com,未有日期).
-- 储蓄 (内部复合,不包括单个案例研究): $600-800K/year off a $总计每年支出2万美元,
-- 分类门:提示>512个令牌 +输出>200个令牌.
-- 通过NIXL进行KV传输:为70B FP8的4K提示KV,20-80ms.
+- DeepSeek-R1 on GB200 NVL72 + Dynamo：在 medium-latency 区间下，相对基线约 6x 吞吐（developer.nvidia.com, 2025-06）；社区里“up to 30x”的说法没有单一一手来源，适合当方向性信息，不适合当精确事实。
+- GB300 NVL72 + Dynamo：相对 Hopper，MoE 吞吐最高 50x（developer.nvidia.com，无日期）。
+- 节省锚点：在年成本 $2M、SLA 不变前提下，内部复合估算显示可节省 $600K–$800K/年。
+- 经验阈值：prompts > 512 tokens 且 outputs > 200 tokens，disaggregation 才更容易成立。
+- NIXL 的 KV 传输延迟：70B FP8、4K prompt 的 KV 大约需要 20–80 ms。
 
 ```figure
 prefill-decode-split
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`报告产量,每次请求成本和快速长度交叉.
+`code/main.py` 会模拟 colocated serving 与 disaggregated serving，输出吞吐、单请求成本，以及 prompt 长度的盈亏交叉点。
 
-## 运送它
+## 交付物
 
-这一课产生了`outputs/skill-disaggregation-decider.md`鉴于工作量和集群,决定是否分类.
+本课产出 `outputs/skill-disaggregation-decider.md`。它会根据工作负载形态和集群条件，判断你是否应该采用 disaggregation。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`分离比定位更长?
-2. 设计预填池和解码池,为RAG服务设计P99预写长度8K,输出300
-3. 迪纳莫vsIIM-D:选择一个纯库伯内特斯店,没有Python运行时间的偏好.
-4. 在RDMA100GB/s时,转移 = 5ms.在TCP10GB/s时 = 50ms.对于你的SLA有什么关系?
-5. 如何分类对每个代币激活不同的专家进行行为?
+1. 运行 `code/main.py`。在哪个 prompt 长度之后，disaggregation 开始优于 colocation？
+2. 为一个 RAG 服务设计 prefill pool 和 decode pool：P99 prefix length 为 8K，输出长度为 300。
+3. Dynamo vs llm-d：如果团队是纯 Kubernetes shop，而且对 Python runtime 没有偏好，你会选哪个？
+4. 计算 KV 传输成本：70B FP8 模型上，4K prefill 大约对应 500 MB KV。若 RDMA 为 100 GB/s，则传输约 5 ms；若 TCP 为 10 GB/s，则约 50 ms。你的 SLA 更在意哪一个？
+5. MoE expert routing 会改变 KV 的访问模式。当每个 token 激活的专家都不同，disaggregation 会呈现怎样的行为特征？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| Disaggregated serving | "split prefill/decode" | Separate GPU pools for each phase |
-| NIXL | "NVIDIA transport" | Dynamo's inter-node KV transfer (RDMA/TCP) |
-| NVIDIA Dynamo | "the orchestrator" | Stack-above coordinator for vLLM/SGLang/TRT-LLM |
-| llm-d | "Kubernetes native" | Red Hat + AWS K8s disaggregated stack |
-| Planner Profiler | "Dynamo auto-config" | Measures workload, configures pool ratios |
-| SLA Planner | "Dynamo policy" | Auto-rate-matches prefill:decode to meet SLOs |
-| `packDomain: rack` | "llm-d topology" | Pack prefill+decode on same rack for fast KV |
-| UCCL | "unified collective" | llm-d 0.5 networking layer for scale-to-zero |
-| MoE expert routing | "expert per token" | DeepSeek-V3 pattern; disaggregation helps |
+| Disaggregated serving | “拆分 prefill/decode” | 把两个阶段拆到不同 GPU 资源池中 |
+| NIXL | “NVIDIA 传输层” | Dynamo 使用的跨节点 KV 传输层（RDMA/TCP） |
+| NVIDIA Dynamo | “编排器” | 位于 vLLM/SGLang/TRT-LLM 之上的协调编排层 |
+| llm-d | “Kubernetes 原生” | Red Hat + AWS 提供的 K8s 解耦式推理栈 |
+| Planner Profiler | “Dynamo 自动配置” | 负责测量工作负载并给出池比例配置 |
+| SLA Planner | “Dynamo 策略” | 自动匹配 prefill:decode 比例以满足 SLO |
+| `packDomain: rack` | “llm-d 拓扑约束” | 把 prefill+decode 尽量放在同一机架内以加速 KV |
+| UCCL | “统一集合通信” | llm-d 0.5 中面向 scale-to-zero 的网络层 |
+| MoE expert routing | “每 token 选择专家” | 类似 DeepSeek-V3 的专家路由模式，解耦更受益 |
 
-## 进一步阅读
+## 延伸阅读
 
 - [NVIDIA — Introducing Dynamo](https://developer.nvidia.com/blog/introducing-nvidia-dynamo-a-low-latency-distributed-inference-framework-for-scaling-reasoning-ai-models/)
 - [NVIDIA — Disaggregated LLM Inference on Kubernetes](https://developer.nvidia.com/blog/deploying-disaggregated-llm-inference-workloads-on-kubernetes/)
