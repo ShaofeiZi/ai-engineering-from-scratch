@@ -1,141 +1,141 @@
-# 技能等级,包装和可携带性
+# 技能评估、打包与可移植性
 
-> 一个技能是完成的,当它的包裹存活,路由在正确的请求,改善一个测量任务,保持在政策,
+> 当一个技能包能通过静态检查、在正确请求上触发、改善可测量任务、始终遵守策略，并能在另一种宿主上如实降级时，这个技能才算完成。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python (stdlib)
-**Prerequisites:** Phase 13 · 22, 24, 25, and 26
-**Time:** ~150 minutes
+**Prerequisites:** 第 13 阶段 · 第 22、24、25、26 课
+**Time:** 约 150 分钟
 
 ## 学习目标
 
-- 通过分离判断,定制计算,参考和输出合同,将专家的工作流程变成一种技能.
-- 测试包结构,触发路由,任务行为,脚本正确性,安全性和可移植性作为单独的层次.
-- 测量引发精确和回忆,使用正面,清晰的负面,
-- 通过重复跑步进行表现的比较,
-- 建立和执行跨运行时间能力矩阵和完整技能捆绑的释放门.
+- 通过拆分判断、确定性计算、参考资料与输出契约，把专家工作流转化为技能。
+- 将软件包结构、触发路由、任务行为、脚本正确性、安全性和可移植性作为彼此独立的层级测试。
+- 使用正例、明显负例和近似但不匹配用例测量触发精确率与召回率。
+- 通过重复运行，比较提供技能与不提供技能时的表现。
+- 构建并强制执行跨运行时能力矩阵，以及完整技能包的发布门禁。
 
 ## 问题
 
-技能在一个演示中工作.用户询问了描述中使用的句子,作者知道哪个引用要打开,脚本看到清洁输入,预期的主机识别了每个自定义字段.
+一个技能在一次演示中运行成功。用户问的恰好是描述中使用的短语，作者知道该打开哪份参考资料，脚本收到干净输入，而预期宿主也识别每个自定义字段。
 
-然后真正的使用开始.
+接着，真实使用开始了。
 
-- 模型要求它执行一个相近但不同的任务.
-- 有效的请求使用陌生的措辞,
-- 身体告诉代理人该做什么,但不是什么文物证明完成.
-- 脚本在空格,重复执行或部分状态上失败.
-- 包装安装器复制`SKILL.md`但它留下了它的引用.
-- 另一个运行时间忽略了调用标志和工具权限.
-- 一个成功的跑步,三个相等的跑步,
+- 模型为一个相近但不同的任务调用了它。
+- 合法请求采用了陌生措辞，模型因而漏掉它。
+- 正文告诉智能体应该做什么，却没说明哪项产物能够证明完成。
+- 脚本遇到空格、重复执行或部分状态时失败。
+- 软件包安装器复制了 `SKILL.md`，却漏掉了配套参考资料。
+- 另一个运行时忽略调用标志与工具许可。
+- 一次运行成功，另外三次等价运行却走入了不同分支。
 
-技能是具有概率路由和执行层的小软件包.它们需要与任何其他生产界面一样分离问题.
+“Markdown 看起来不错”发现不了这些故障。技能是小型软件包，外加概率性的路由与执行层，因此需要像任何生产接口一样分离关注点。
 
 ## 概念
 
-### 开始从一个真正的工作流程,而不是一个主题
+### 从真实工作流出发，而不是从主题出发
 
-库伯内特斯不用用,它包含数百项任务,其工具,风险和输出不同.
+“创建一个 Kubernetes 技能”并不是可用的范围。Kubernetes 包含数百种任务，各自需要不同工具、风险控制与输出。
 
-"诊断一个部署为什么没有达到可用,收集证据而不改变集群,并制作排名事件报告"是技能候选人.它有:
+“诊断为什么某个部署没有达到 Available，在不改变集群的前提下收集证据，并生成按优先级排序的事故报告”才是一个技能候选项。它具备：
 
-- 触发器边界;
-- 稳定的收集证据步骤序列;
-- 需要判断的决定点;
-- 命令可以成为狭窄的脚本或工具;
-- 定义的文物;
-- 安全限制:仅可阅读诊断.
+- 触发边界；
+- 稳定的证据收集步骤序列；
+- 需要判断的决策点；
+- 可以变成狭窄脚本或工具的命令；
+- 明确定义的产物；
+- 安全边界：只读诊断。
 
-通过这个采访:
+使用以下提取式访谈：
 
-1. 什么事件使专家开始这个工作流程?
-2. 什么类似的请求不应该开始?
-3. 专家首先收集什么证据?
-4. 根据这些证据,我们能做出哪些决定?
-5. 哪些步骤足够确定性来编写?
-6. 哪些域规则值得引用?
-7. 什么行动需要批准或必须不适用?
-8. 什么文物证明工作流程完成?
-9. 独立的评论员如何检查?
-10. 哪些步骤取决于一个运行时间?
+1. 什么具体事件会让专家启动这套工作流？
+2. 哪些相似请求不应启动它？
+3. 专家首先收集什么证据？
+4. 哪些决策取决于这些证据？
+5. 哪些步骤具备足够确定性，适合编写脚本？
+6. 哪些领域规则值得放入参考资料？
+7. 哪项操作需要审批，或必须排除在范围之外？
+8. 哪项产物能够证明工作流已经完成？
+9. 独立审阅者如何检查它？
+10. 哪些步骤依赖某一种运行时？
 
-答案将成为包装架构和评估集.
+这些答案将形成软件包架构与评估集。
 
-### 独立判断与确定性工作
+### 将判断与确定性工作分开
 
 ```figure
 skill-workflow-extraction
 ```
 
-使用模型判断来进行分类,优先级,合成和模糊性.使用脚本或工具来分析,计算,验证,转换,查询类型的API和执行变量.
+使用模型判断完成分类、排优先级、综合与消歧。使用脚本或工具完成解析、计数、验证、转换、查询类型化 API 和强制执行不变量。
 
-设置一个模拟手动解析的80行技能,是脆弱的.试图做出主观的建筑决定的脚本是不透明的.
+在技能正文中用 80 行文字手工模拟解析，既脆弱又难维护；让脚本代替人作主观架构决策，则会让判断过程变得不透明。应把每种行为放到最容易测试的位置。
 
-### 包裹的作者依赖顺序
+### 按依赖顺序编写软件包
 
-首先不要抛光散文,而是从内在的合同中建立起.
+不要从润色文字开始，而应从可观察契约逐步向内构建。
 
-1. **Artifact contract:**定义所需的文件,字段或决定.
-2. **Verification:**确定每个要求的检查方式.
-3. **Evidence tools:**实现确定性收集器和验证器.
-4. **Decision map:**连接证据状态到分支.
-5. **References:**提供域名详细信息需要的分支机构.
-6. **Entry body:**解释工作流程,界限,故障和输出.
-7. **Description:**状态能力和触发界限.
-8. **Runtime adapters:**单独添加调用或文本扩展.
-9. **Evals:**运行结构,路由,行为,安全性和可移植性层.
-10. **Package:**装备完整目录并从目的地测试.
+1. **产物契约：** 定义必需的文件、字段或决策。
+2. **验证：** 定义每项要求的检查方法。
+3. **证据工具：** 实现确定性的收集器与验证器。
+4. **决策图：** 将证据状态连接到各个分支。
+5. **参考资料：** 在需要它的分支提供领域细节。
+6. **入口正文：** 解释工作流、边界、失败方式与输出。
+7. **描述：** 说明能力与触发边界。
+8. **运行时适配器：** 单独添加调用或上下文扩展。
+9. **评估：** 运行结构、路由、行为、安全与可移植性层。
+10. **打包：** 安装完整目录，并从目标位置进行测试。
 
-这种命令使散文成为一个可测试的系统,而不是在演示工作后发明成功标准.
+这种顺序让文字服务于一个可测试系统，而不是等演示成功后才临时发明成功标准。
 
-### 六层评估
+### 六个评估层
 
 ```figure
 skill-eval-layers
 ```
 
-每层都回答不同的问题.
+每个层级回答不同问题。通过其中一层不能代替另一层。
 
-## 层1:包装结构
+## 第 1 层：软件包结构
 
-静态接应验证不需要模型的事实:
+静态检查应验证不需要模型就能确认的事实：
 
-- `SKILL.md`在包根上存在;
-- 安全分析前面材料;
-- `name`并且与父母目录相匹配;
-- 要求的字段存在,并且在限制范围内;
-- 任何非核心前材料字段都出现在释放政策的运行时间延长权限列表中;
-- 每个直接引用都在包装内解决;
-- 引用,脚本,资产和评估设置使用发布政策允许的后尾,保持其字节限制或以下;
-- 没有禁止的符号链接或特殊文件;
-- 机构保持在释放政策的性格预算范围内;
-- 故意狭窄的秘密模式扫描发现没有明显的凭证分配或私钥标题;
-- 没有空`## Output contract`其他`## Failure behavior`部分部分已经出现.
+- 软件包根目录存在 `SKILL.md`；
+- frontmatter 能被安全解析；
+- `name` 与父目录名称一致；
+- 必需字段存在且未超过限制；
+- 每个非核心 frontmatter 字段都出现在发布策略的运行时扩展白名单中；
+- 每个直接引用都能解析到软件包内部；
+- 参考资料、脚本、资产与评估夹具使用发布策略允许的后缀，并且大小不超过其字节限制；
+- 不存在禁止的符号链接或特殊文件；
+- 正文未超过发布策略的字符预算；
+- 有意保持狭窄的秘密模式扫描没有发现明显的凭证赋值或私钥头；
+- 存在非空的 `## Output contract` 与 `## Failure behavior` 章节。
 
-在分析之前,执行物理树预飞行.`SKILL.md`分析数据,证据,主机设置或表格. 拒绝一个连接的根,连接的母或输入,在任何内容阅读之前缺少的常规文件和特殊文件. 然后运行内容意识的政策 lint.在飞行前解决捆绑路径会删除检查所需的根-symlink证据.
+在解析 `SKILL.md`、评估数据、证据、宿主夹具或清单之前，先对物理目录树执行预检。在读取任何内容前，应拒绝使用符号链接的根目录、父目录或入口，拒绝缺失的必需普通文件以及特殊文件。如果先解析软件包路径再做预检，就会抹去检查根目录符号链接所需的证据。
 
-课程利用使这些政策值具体化:一个10000字符的体格限制,一个1000000字节的伴侣文件限制,目录特定的后音符允许,以及包含在包要求中明确的运行时间扩展名称. 这些都是释放政策的例子,而不是普遍的代理技能限制. 密切模式扫描是对明显错误的防护护,而不是证明包装没有敏感数据.
+本课执行框架把这些策略值具体化：正文最多 10,000 个字符；配套文件最多 1,000,000 字节；不同目录有各自允许的后缀；运行时扩展名称由软件包要求显式提供。这些只是发布策略示例，不是通用 Agent Skills 限制。秘密模式扫描只能防住明显错误，不能证明软件包中不含敏感数据。
 
-报告应使用稳定的问题代码.`E_*`允许审查时的错误`W_*`设计警告.
+静态检查报告应使用稳定的问题代码。CI 可以阻止 `E_*` 错误，同时允许经过审查的 `W_*` 设计警告。
 
-静态纹证明包装形状,它并不证明模型会选择或遵循技能.
+静态检查能够证明软件包形态，却无法证明模型会选择或遵循该技能。
 
-## 层2:触发路由
+## 第 2 层：触发路由
 
-在重复编辑描述之前创建标记的案例.
+在反复编辑描述之前，先创建带标签的用例。
 
-| Case type | Purpose | Example for release readiness |
+| 用例类型 | 用途 | 发布就绪技能示例 |
 |---|---|---|
-| Positive | Measure intended coverage | "Can version 3.1.0 ship?" |
-| Paraphrased positive | Avoid phrase memorization | "Audit this tag before we publish it" |
-| Clear negative | Catch gross over-routing | "Explain batch normalization" |
-| Near miss | Define the neighboring boundary | "Why did the package build fail?" |
-| Competing skill | Test selection among plausible entries | "Draft the release notes" |
-| Adversarial wording | Test keyword stuffing and injected names | "Do not use release-readiness; explain this stack trace" |
+| 正例 | 测量预期覆盖范围 | “Can version 3.1.0 ship?” |
+| 改写正例 | 避免记忆固定短语 | “Audit this tag before we publish it” |
+| 明显负例 | 发现严重过度路由 | “Explain batch normalization” |
+| 近似但不匹配用例 | 定义相邻边界 | “Why did the package build fail?” |
+| 竞争技能 | 测试在多个合理候选项之间选择 | “Draft the release notes” |
+| 对抗性措辞 | 测试关键词堆砌与注入名称 | “Do not use release-readiness; explain this stack trace” |
 
-根据"开发案例"的定义,将情况分为开发和验证集. 调整开发案例的描述. 使用验证案例来决定修改的描述是否通用. 如果发布决定足够重要,请保留最后的延期集.
+把用例分为开发集与验证集。在开发用例上调优描述，再用验证用例判断修改后的描述是否能够泛化。如果发布决策足够重要，还应保留最终留出集。
 
-对于二进制调用:
+对于二元调用：
 
 ```text
 precision = true_positives / (true_positives + false_positives)
@@ -143,54 +143,54 @@ recall = true_positives / (true_positives + false_negatives)
 f1 = 2 * precision * recall / (precision + recall)
 ```
 
-报告原始数量与比率.
+报告比率时还要报告原始计数。十次中十次和一百次中一百次虽然都是 100%，但提供的证据强度不同。
 
-对于目录,也可以测量最准确的技能,排斥能力和邻居技能之间的混.只在选择三个错误技能后才调用正确的路由器是不健康的.
+对于技能目录，还要测量 top-one 技能准确率、弃权质量，以及相邻技能间的混淆。路由器如果先后错误选择三个技能后才调用正确技能，就不能算健康。
 
-### 路由评估必须使用目标运行时间
+### 路由评估必须使用目标运行时
 
-词汇模拟器是解释指标和捕捉明显的重叠的有用.它不能证明模型驱动的生产路由器如何行为.在声称运行时间质量之前,运行标记的集合通过实际主机,模型,目录序列化和政策配置.
+词法模拟器有助于解释指标并发现明显重叠，却无法证明模型驱动的生产路由器会如何运行。在声称运行时质量之前，必须用实际宿主、模型、目录序列化方式和策略配置运行带标签的数据集。
 
-## 层3:指令和工件行为
+## 第 3 层：指令与产物行为
 
-动正确的方法只是入门.
+正确触发只是入口，技能还必须改善任务表现。
 
-使用:
+创建包含以下内容的夹具任务：
 
-- 输入文件和环境假设;
-- 允许的工具和边界;
-- 预期的文物路径;
-- 确定性检查;
-- 需要裁定的条款;
-- 限时,通话或成本;
-- 失败情况和预期停止行为.
+- 输入文件与环境假设；
+- 允许的工具与边界；
+- 预期产物路径；
+- 确定性检查；
+- 需要判断的评分项；
+- 最大时间、调用次数或成本；
+- 失败用例与预期停止行为。
 
-运行对条件:
+运行成对条件：
 
 ```text
 baseline: same model + same tools + same task, no skill
 treatment: same model + same tools + same task, skill available
 ```
 
-保持模型,温度或样本取决政策,工具集,任务装置和预算不变.
+模型、temperature 或采样策略、工具集、任务夹具和预算都应保持不变，否则无法把差异归因于技能。
 
-有用的结果尺寸包括:
+有用的结果维度包括：
 
-| Dimension | Example measure |
+| 维度 | 测量示例 |
 |---|---|
-| Correctness | Required tests and invariants pass |
-| Completeness | Every artifact-contract field exists |
-| Efficiency | Tool calls, elapsed time, tokens, or cost |
-| Evidence | Claims point to valid files or observations |
-| Scope | Forbidden files and actions remain untouched |
-| Recovery | Interrupted run resumes without duplicate side effects |
-| Human effort | Number and severity of reviewer corrections |
+| 正确性 | 必需测试与不变量通过 |
+| 完整性 | 产物契约中的每个字段都存在 |
+| 效率 | 工具调用次数、耗时、token 或成本 |
+| 证据 | 声明指向有效文件或观察结果 |
+| 范围 | 禁止修改的文件与操作保持不变 |
+| 恢复能力 | 中断后继续运行不会重复副作用 |
+| 人工投入 | 审阅者修正的数量与严重程度 |
 
-没有什么可避免,但不要只为少的代币优化.
+不要只优化 token 数量。一次更短但漏掉必需安全检查的运行更差。
 
-### 艺术品合约使行为可执行
+### 产物契约让行为可以执行
 
-文物合同是独立检查的物件列表:
+产物契约是一组可以独立检查的属性：
 
 ```json
 {
@@ -208,61 +208,61 @@ treatment: same model + same tools + same task, skill available
 }
 ```
 
-项目验证检查结构.域检查验证候选人修改和证据路径.人或校准法官可以评估建议是否来自证据.
+模式验证负责检查结构；领域检查负责验证候选修订版与证据路径；人类或经过校准的裁判可以评估建议是否由证据合理推出。
 
-## 层4:脚本正确
+## 第 4 层：脚本正确性
 
-测试技能脚本,像普通的软件,外部模型运行.
+应像测试普通软件一样，在模型运行之外测试技能脚本。
 
-最低情况:
+最低限度的用例包括：
 
-- 常规输入;
-- 无需输入;
-- 错误的输入;
-- 单码,白色空间和路径边缘案例;
-- 执行重复;
-- 时间过关或依赖性失败;
-- 之前的运行部分输出;
-- 输出尺寸限制;
-- 干跑行为;
-- 结构化退出和错误合同.
+- 正常输入；
+- 空输入；
+- 格式错误的输入；
+- Unicode、空白字符与路径边界用例；
+- 重复执行；
+- 超时或依赖故障；
+- 上一次运行留下的部分输出；
+- 输出大小限制；
+- 试运行行为；
+- 结构化退出与错误契约。
 
-需要一个直播网络,不需要一个直播网络,需要一个明确的旗后面进行网络集成测试,并记录他们依赖的远程合同.
+使用固定夹具。单元测试不应依赖实时网络。网络集成测试应置于显式标志之后，并记录其依赖的远程契约。
 
-如果脚本产生副作用,请单独测试该计划与提交. 要求对重试外部写作进行无权或补偿.
+如果脚本会产生副作用，应分别测试规划与提交。重试外部写入时必须具备幂等性或补偿机制。
 
-## 五层:安全和权威
+## 第 5 层：安全与权限
 
-安全评估询问包裹是否保持在被授予的权限内.
+安全评估要判断软件包是否始终处于获授权限范围内。
 
-检查至少:
+至少测试以下情况：
 
-- 要求不属于技能范围的用户;
-- 在参考输入中包含恶意指示;
-- 资源路径逃离包裹;
-- 工作空间的符号链接逃离允许的根;
-- 要求未申报的网络目的地;
-- 要求环境凭证的命令;
-- 无批准的破坏性或外部行动;
-- 超大输出或无限过程;
-- 技能转变周期;
-- 简历可能复制副作用.
+- 用户请求超出技能范围；
+- 参考输入中包含恶意指令；
+- 资源路径逃出软件包；
+- 工作区符号链接逃出允许的根目录；
+- 请求访问未声明的网络目标；
+- 命令需要环境中碰巧存在的凭证；
+- 未经审批执行破坏性或外部操作；
+- 输出过大或进程无限运行；
+- 技能间调用形成循环；
+- 恢复运行可能重复副作用。
 
-记录控制是否仅仅是指令,工具政策,批准,沙箱或验证.只需指令的防御不应被报告为强制控制.
+记录控制属于仅靠指令、工具策略、审批、沙箱还是验证。只有指令的防御不能被报告为强制隔离。
 
-## 层6 包装和可携带性
+## 第 6 层：打包与可移植性
 
-### 设置目录作为一个单元
+### 把目录作为一个整体安装
 
-释放测试应安装在清洁的目的地,然后与安装的副本进行验证.
+发布测试应安装到一个干净目标位置，然后针对已安装副本运行验证。
 
 ```figure
 skill-package-install
 ```
 
-仅仅测试源树会错过安装 bug,丢失可执行的位, 已平坦的引用, 重写的名称,
+只测试源代码树，会漏掉安装器缺陷、丢失的可执行位、被扁平化的参考资料、重写的名称，以及旧版本遗留的过期文件。
 
-文件表可以包括:
+清单可以包括：
 
 ```json
 {
@@ -281,79 +281,79 @@ skill-package-install
 }
 ```
 
-储备`assets/manifest.json`作为明显的元数据,并将其排除在自己的`files`文件不能包含其完整的当前内容的稳定哈希. 检查其他包装文件,并通过签署的发布或可靠注册表记录等外部可靠道来确定表格的真实性. 发送的封筒接受了完全的`manifestVersion: 1`其他`algorithm: "sha256"`显而易见的密钥必须已经是可нони的相对 POSIX 路径,所以`./SKILL.md`导读链接直接消耗了内路到消化地图,而两个路径都拒绝了内路的保留地址.
+应保留 `assets/manifest.json` 作为清单元数据，并将其排除在自身 `files` 映射之外。文件无法在自身内部稳定保存其当前完整内容的哈希。应验证其他每个已打包文件，并通过外部可信通道（例如签名发布或可信注册表记录）确认清单真实性。随课提供的信封只接受准确的 `manifestVersion: 1` 与 `algorithm: "sha256"`，遇到未知值就以关闭方式失败。清单键必须已经是规范的相对 POSIX 路径，因此 `./SKILL.md`、反斜杠、绝对路径和父级路径段都应直接拒绝，而不是先进行规范化。教学执行框架会直接使用内部的路径到摘要映射；两条路径都会拒绝该映射中出现保留的清单路径。
 
-哈希检测漂移.版本号码传达兼容性. 无论是不验证表格或在升级之前取代一个完整的diff和 eval运行.
+哈希可以检测漂移，版本号可以传达兼容性。二者都不能验证清单身份，也不能取代升级前的完整差异审查与评估运行。
 
-### 可移植性是一个能力矩阵
+### 可移植性是一张能力矩阵
 
-不要问主机是否"支持技能"作为一个布尔式.
+不要用一个布尔值询问宿主是否“支持技能”，而要逐项询问它支持哪些行为。
 
-| Capability | Portable package dependency | Fallback if absent |
+| 能力 | 可移植软件包依赖 | 缺失时的回退方案 |
 |---|---|---|
-| Required `name` and `description` | Core | Package cannot participate in catalog |
-| Body activation | Core client behavior | Explicit file loading adapter |
-| References, scripts, assets | Core package shape | Host needs file and process tools |
-| Explicit human invocation | Host UI or prompt convention | Name the skill in ordinary text |
-| Implicit model invocation | Host router | Application activates explicitly |
-| Human/model 2x2 policy | Host extension or application policy | Disable implicit selection globally |
-| Argument binding | Host parser | Ask for values after activation |
-| Pre-approved tools | Experimental or host-specific | Normal permission prompts |
-| Delegated context | Host-specific | Run in current context or application subagent |
-| Lifecycle hooks | Host-specific | External automation or no hook |
-| Context preservation | Host-specific | Persist state and make re-entry explicit |
+| 必需的 `name` 与 `description` | 核心 | 软件包无法加入目录 |
+| 正文激活 | 核心客户端行为 | 显式文件加载适配器 |
+| 参考资料、脚本、资产 | 核心软件包形态 | 宿主需要文件与进程工具 |
+| 人类显式调用 | 宿主 UI 或提示约定 | 在普通文本中写出技能名称 |
+| 模型隐式调用 | 宿主路由器 | 由应用显式激活 |
+| 人类/模型 2×2 策略 | 宿主扩展或应用策略 | 全局禁用隐式选择 |
+| 参数绑定 | 宿主解析器 | 激活后再询问参数值 |
+| 预先批准的工具 | 实验性或宿主特有 | 使用普通权限提示 |
+| 委派上下文 | 宿主特有 | 在当前上下文或应用子智能体中运行 |
+| 生命周期钩子 | 宿主特有 | 使用外部自动化，或不提供钩子 |
+| 上下文保留 | 宿主特有 | 持久化状态，并明确重新进入方式 |
 
-对于每一个需要的能力,选择一个结果:
+对于每项必需能力，应选择以下结果之一：
 
-- 支持和测试;
-- 通过适配器支持;
-- 已被记录下来的倒退;
-- 没有支持,所以安装必须失败.
+- 已支持且经过测试；
+- 通过适配器支持；
+- 已降级，并有文档说明的回退方式；
+- 不支持，因此必须使安装失败。
 
-沉默的降解是必须避免的可移植性错误.
+必须避免的可移植性缺陷是静默降级。
 
-### 便携性测试需要主机装置
+### 可移植性测试需要宿主夹具
 
-能力要求应指向测试或当前的官方合同. 主机行为变化. 保持适配器版本和测试日期在兼容性报告中.
+能力声明应指向一项测试或当前官方契约。宿主行为会变化，因此兼容性报告中应保留适配器版本与测试日期。
 
-测试:
+测试以下内容：
 
-1. 预期范围内的发现;
-2. 复制名称行为;
-3. 明确的呼唤;
-4. 隐含的呼唤或其残疾状态;
-5. 处理论点;
-6. 参考和脚本访问;
-7. 许可证提示和批准;
-8. 授权或当前文本执行;
-9. 复制后的文本缩放或重新启动;
-10. 移除和升级行为.
+1. 从预期作用域发现技能；
+2. 重名处理行为；
+3. 显式调用；
+4. 隐式调用或其禁用状态；
+5. 参数处理；
+6. 参考资料与脚本访问；
+7. 权限提示与审批；
+8. 委派上下文或当前上下文中的执行；
+9. 上下文压缩或重启后的恢复；
+10. 卸载与升级行为。
 
-### 规模数据不是质量证据
+### 规模数据不等于质量证据
 
-吉特斯基尔斯数据集文件报告了2026年7月的搜索,包含3877.117个类似技能文件,在282,200个库中,含有1,877,981个不同的字节内容.约50.5%的匹配文件是根据该文件的字节级别测量的字体副本.
+GitSkills 数据集论文报告称，2026 年 7 月的一次抓取在 282,200 个仓库中发现了 3,797,117 个类似技能的文件，其中有 1,877,981 份不同的字节内容。按照论文的字节级测量，约 50.5% 的匹配文件是逐字节副本。
 
-这些数字表明,技能文物存在于存储器规模,并且对数据集构建,搜索,来源和升级分析来说,重复是重要的. 它们并没有显示,一半的技能是好的或坏的,技能提高了任务的性能,任何呼叫领域是普遍的, 这篇论文是数据集研究,而不是有效性或安全性基准.
+这些数字表明，技能产物已经达到仓库级规模，而且重复问题会影响数据集构建、搜索、来源追踪和升级分析。它们并不能证明一半技能质量良好或糟糕，不能证明技能会改善任务表现，也不能证明任何调用字段具有普遍性，或任何沙箱设计是安全的。这篇论文研究的是数据集，不是有效性或安全基准。
 
-通过生态系统计数来激励排序和来源.
+应使用生态系统统计来说明去重与来源追踪的重要性，使用自己的评估来提出质量声明。
 
-## 复杂的运行和不确定性
+## 重复运行与不确定性
 
-根据生产样本政策,每例行为案例都会一次以上运行.
+模型和路由行为可能变化。应在生产采样策略下多次运行每一个行为用例。
 
-为了`n`相当的运行`k`通过:
+对于 `n` 次等价运行和 `k` 次通过：
 
 ```text
 observed_pass_rate = k / n
 ```
 
-保持个别的痕迹.70%的通过率可以意味着一个一致的故障类或几个无关的故障.汇总率指导比较;痕迹指导修复.将原始的来源绑定到每次运行预测,不仅运行零和汇总率.不同的预测命令可以具有相同的第一值和通过率,同时表示不同的运行时间行为.
+保留每一次追踪记录。70% 的通过率可能表示一种稳定的失败类型，也可能来自多种互不相关的故障。汇总比率用于指导比较，追踪记录用于指导修复。每一条原始的逐次运行预测都要绑定来源信息，不能只为第 0 次运行和汇总通过率记录来源。不同预测顺序可能拥有相同首项与通过率，却代表不同的运行时行为。
 
-根据任务的基本线和处理,不仅仅作为合并平均值.即使平均水平改善,也报告回归.高影响任务可能需要所有安全情况通过,而不是接受平均门.
+应按任务比较基线与处理条件，而不是只比较汇总平均值。即使平均表现有所提升，也要报告退步。对于高影响任务，可以要求所有安全用例都通过，而不是接受平均阈值。
 
-## 释放门
+## 发布门禁
 
-实际释放门可能需要:
+一项实用发布门禁可以要求：
 
 ```yaml
 structure:
@@ -375,49 +375,49 @@ package:
   installed_tree_matches_manifest: true
 ```
 
-值取决于风险和样本规模.
+阈值取决于风险与样本量。重要的是在查看最终结果之前就声明这些阈值。
 
-没有任何可能的错误,也许会导致你被误解.
+失败报告应指出具体层级与证据。不要把路由、行为和安全性压缩成一个总分，使出色的文字质量可以抵消权限违规。
 
-### 独立的固定设备成功,地方完整性和生产准备性
+### 区分夹具成功、本地完整性与生产就绪
 
-确定性教训装置可以证明门力学工作. 它不能证明目标运行时间实际上选择了技能,产生了相比的文物,运行了脚本,或者留在测试的权威界限内.
+确定性的课程夹具能够证明门禁机制正常工作，却无法证明目标运行时实际选择了技能、生成了用于比较的产物、运行了脚本，或始终处于所测试的权限边界内。
 
-保持三个界限:
+保持三条边界：
 
-- `fixturePassed`:每一个通过声明的确定性触发器,文物,证据和主机能力固定模式的层;
-- `localEvidenceReady`:所有四个捕获模式标签都具有非空源,它们的SHA-256消化与本地触发器观测,文物,脚本和安全证据以及非空的主机矩阵的完整相匹配;
-- `productionReady`通过每一个层和地方完整性检查,以及可靠的外部证书将评估员的完整性绑定.`evidenceRoot`现在,我们要去.
+- `fixturePassed`：所有层级都在声明的确定性触发、产物、证据与宿主能力夹具模式下通过；
+- `localEvidenceReady`：四种采集模式标签都有非空来源，并且其 SHA-256 摘要与完整的本地触发观察、产物、脚本与安全证据以及非空宿主矩阵一致；
+- `productionReady`：每个层级与本地完整性检查都已通过，而且一项可信外部证明绑定了评估器的完整 `evidenceRoot`。
 
-总体释放领域`passed`接下来`productionReady`没有`fixturePassed`或`localEvidenceReady`由于任何能够编辑捆绑的用户都可以重新标记装置,发明源字符串,并重新计算每个本地消化.
+总体发布字段 `passed` 跟随 `productionReady`，而不是 `fixturePassed` 或 `localEvidenceReady`。本地哈希可以检测不匹配，却无法证明这些数据确实来自真实采集；任何能编辑软件包的人都可以重新标记夹具、编造来源字符串并重新计算全部本地摘要。
 
-运送的评估员计算了一个SHA-256 `evidenceRoot`产品调用文件提供包外的证明文件:
+随课提供的评估器会对完整的触发、产物、证据、宿主和清单配置对象计算一个 SHA-256 `evidenceRoot`。生产调用会提供一份位于软件包之外的证明文件：
 
 ```json
 {"attestationVersion":1,"evidenceRoot":"sha256:..."}
 ```
 
-通过                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          `--trusted-attestation-sha256`预期的数据集必须来自一个不属于频段的可信度政策,CI秘密,签署的发布记录或注册表决定.将其存储在同一捆绑中将检查减少到另一个可在本地计算的哈希.评审员拒绝丢失的,捆绑中的,链接的,错误的,不匹配的或不支持的版本证明.
+它还会通过 `--trusted-attestation-sha256` 提供这些证明字节的准确 SHA-256。这个预期摘要必须来自带外可信策略、CI secret、签名发布记录或注册表决策。如果把它存入同一个软件包，检查就会退化为另一项可以在本地重新计算的哈希。评估器会拒绝缺失、位于软件包内、使用符号链接、格式错误、不匹配或版本不受支持的证明。
 
-## 建立它
+## 构建它
 
-`code/main.py`实现了迷你轨道的释放带.
+`code/main.py` 实现了这个小型学习路线的发布执行框架。
 
-它揭示了:
+它公开：
 
-- 在任何配置读取之前,在运输的评估器中进行物理树预飞;
-- `lint_package(root)`对于静态包装检查;
-- `TriggerCase`现在`repeated_run_observations(...)`其他`evaluate_triggers(...)`标记的路由情况和完整的原始痕迹;
-- `classification_metrics(...)`对于精度,召回,精度和原始计数;
-- `repeated_run_rates(...)`对于每例重复行为结果;
-- `ArtifactContract`其他`evaluate_artifact(...)`进行输出检查;
-- `EvidenceCheck`其他`evaluate_evidence_checks(...)`对于明确的脚本和安全性证据;
-- `EvaluationProvenance`地方完整性,完整的证据根,以及独立的固定,地方完整性,信任,生产判决;
-- `build_manifest(...)`其他`verify_manifest(...)`对于源和清洁安装树的完整性;
-- `HostCapabilities`其他`portability_matrix(...)`对于明确的支持和反弹状态;
-- `run_release_gate(...)`为了一个保证层次的最终判决.
+- 随课评估器在读取任何配置之前执行的物理目录树预检；
+- `lint_package(root)`：执行静态软件包检查；
+- `TriggerCase`、`repeated_run_observations(...)` 与 `evaluate_triggers(...)`：处理带标签路由用例与完整原始追踪；
+- `classification_metrics(...)`：计算精确率、召回率、准确率与原始计数；
+- `repeated_run_rates(...)`：计算每个用例的重复行为结果；
+- `ArtifactContract` 与 `evaluate_artifact(...)`：执行输出检查；
+- `EvidenceCheck` 与 `evaluate_evidence_checks(...)`：处理显式脚本与安全证据；
+- `EvaluationProvenance`、本地完整性摘要、完整证据根摘要，以及彼此独立的夹具、本地完整性、信任锚和生产判定；
+- `build_manifest(...)` 与 `verify_manifest(...)`：验证源代码树和干净安装目录树的完整性；
+- `HostCapabilities` 与 `portability_matrix(...)`：给出明确的支持与回退状态；
+- `run_release_gate(...)`：生成保留各层级的最终判定。
 
-运行石实验室:
+运行综合实验：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -426,44 +426,35 @@ python3 code/main.py
 python3 -m unittest discover -s code/tests -v
 ```
 
-这个区块需要一个本地克隆,并解决任何存储库的根
-在那个克隆内部的工作目录.
+这个代码块要求使用本地克隆，并可从克隆内的任意工作目录解析仓库根目录。
 
-演示评估捆绑的顶点技能,标记的触发器集,重复结果,一个文物合同,明确的脚本和安全检查,一个明确验证的清洁副本和几个模拟的主机配置文件.它打印一个JSON发布报告`checks_passed`其他`fixture_passed`虽然`local_evidence_ready`现在`trust_anchor_valid`现在`production_ready`其他`passed`换取设备和重新计算本地消化物可以建立本地完整性,但生产仍然需要外部可靠的证书.
+演示会评估随附的综合技能、带标签触发集、重复结果、一项产物契约、显式脚本与安全检查、经过清单验证的干净副本，以及多个模拟宿主配置。它会打印一份 JSON 发布报告，其中 `checks_passed` 与 `fixture_passed` 为 true，而 `local_evidence_ready`、`trust_anchor_valid`、`production_ready` 和 `passed` 保持 false。替换夹具并重新计算本地摘要，可以建立本地完整性，但生产就绪仍需要外部可信证明。
 
-### 按层次阅读报告
+### 按层阅读报告
 
-首先要做好严格的安全和包装故障.然后检查路由混乱.然后与基线进行比较.
+先看硬性安全与软件包失败，再检查路由混淆，然后比较与基线的行为差异。只有正确性与范围检查通过后，效率才有意义。
 
-存储报告,并包含了修改包和评估设备版本.来自旧模型,主机或技能树的通过是历史证据,而不是关于当前组合的证据.
+把报告与软件包修订版及评估夹具版本一同保存。较旧模型、宿主或技能目录树获得的通过结果只是历史证据，无法证明当前组合也能通过。
 
-## 用它
+## 使用它
 
-使用此编写循环,每次修改技能:
+每次修改技能时，都应采用以下编写循环：
 
 ```figure
 skill-authoring-loop
 ```
 
-改变导致失败的层,不要加上更多的单词.`SKILL.md`如果真正的问题是一个将引用放下的安装器或一个暴露了主页目录的沙盒.
+应修改真正导致失败的层级。如果实际问题是安装器丢失参考资料，或沙箱暴露主目录，就不要只往 `SKILL.md` 里塞入更多文字。
 
-## 实际主机可移植性检查点
+## 真实宿主可移植性检查点
 
-确定性固定证明了释放门的机制.
-证明一个实际的宿主发现,加载,许可,并删除的东西.
-在描述包装为可移植之前.
+确定性夹具能够证明发布门禁机制；这个检查点则证明某个真实宿主实际发现、加载、允许和移除了什么。在声称软件包可移植之前，必须完成该检查点。
 
-这一检查点需要一个本地克隆,`npx`选择一个
-技术能力的主机,可编写的项目或用户技能范围.
-`node --version`现在`npx --version`其他`python3 --version`然后选择主机
-如果此次预飞无法进行,
-设置一个网站或网站,
-手动读取不能确定可移植性.
+这个检查点需要一个本地克隆、Node.js、`npx`、Python 3、一个选定且支持技能的宿主，以及可写的项目或用户技能作用域。先验证 `node --version`、`npx --version` 与 `python3 --version`，再选择宿主和作用域。如果无法完成这项预检，就从概念上走查该检查点，并把所有宿主观察标为待确认。阅读网站或手册不能证明可移植性。
 
-### 1. 设定本地固定界限
+### 1. 建立本地夹具边界
 
-逃离任何地方的地方克隆.`TARGET_ROOT`作为一个教训
-从原始存储库工作空间中解决的目录:
+从本地克隆内的任意位置运行。将 `TARGET_ROOT` 保留为从原始仓库工作区解析出的课程目录：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -474,23 +465,19 @@ python3 "$TARGET_BUNDLE/scripts/evaluate_skill.py" \
   "$TARGET_BUNDLE"
 ```
 
-报告应该显示`checksPassed`其他`fixturePassed`虽然
-`productionReady`其他`passed`保持虚假. 保存你的区别
-设置传输不是主机结果.
+报告应显示 `checksPassed` 与 `fixturePassed` 为 true，而 `productionReady` 和 `passed` 保持 false。请把这种区别记录在笔记中。夹具通过不是宿主结果。
 
-### 2. 安装完整的捆绑器到第一个主机中
+### 2. 将完整软件包安装到第一个宿主
 
-从同一个目录中运行:
+在同一目录中运行：
 
 ```bash
 npx skills add rohitg00/ai-engineering-from-scratch --skill skill-release-gate --full-depth
 ```
 
-记录主机,如果可见的主机版本,范围,安装路径和日期.
-在探讨行为之前,开始一个新的会议或重新扫描目录.
+记录宿主、可见时的宿主版本、作用域、安装路径和日期。开始新会话或重新扫描目录，然后再探测行为。
 
-设置`SKILL_ROOT`装机器人报告的绝对安装目录.
-它必须包含安装的`SKILL.md`其他:
+将 `SKILL_ROOT` 设置为安装器报告的绝对安装目录。该目录必须包含已安装的 `SKILL.md`：
 
 ```bash
 # Replace the placeholder with the destination printed by the installer.
@@ -499,18 +486,17 @@ test -f "$SKILL_ROOT/SKILL.md"
 printf 'SKILL_ROOT=%s\nTARGET_BUNDLE=%s\n' "$SKILL_ROOT" "$TARGET_BUNDLE"
 ```
 
-### 3. 探测器发现,路由,引用和脚本
+### 3. 探测发现、路由、参考资料与脚本
 
-使用由第一个主机支持的明确语法:
+使用第一个宿主支持的显式语法：
 
-| Host | Explicit invocation |
+| 宿主 | 显式调用 |
 |---|---|
-| Codex | `skill-release-gate`, or choose it from `/skills`, then provide the evaluation request |
-| Claude Code | `/skill-release-gate` followed by the evaluation request |
-| Portable fallback | `Use skill-release-gate to evaluate the target bundle.` |
+| Codex | `skill-release-gate`，或从 `/skills` 中选择，再提供评估请求 |
+| Claude Code | `/skill-release-gate`，随后提供评估请求 |
+| 可移植回退 | `Use skill-release-gate to evaluate the target bundle.` |
 
-按分别的代理转换,将每个位数置换成
-上面打印的绝对值:
+把以下内容作为彼此独立的智能体轮次运行，并用上方打印出的绝对值替换每个占位符：
 
 ```text
 Use skill-release-gate to evaluate <TARGET_BUNDLE> in fixture mode. The installed skill root is <SKILL_ROOT>. Run python3 <SKILL_ROOT>/scripts/evaluate_skill.py --fixture-demo <TARGET_BUNDLE>. Show the fully resolved argv before execution. Do not make a production-readiness claim. Report the resolved script path, target path, cwd, argv, and exit code.
@@ -524,14 +510,9 @@ Evaluate <TARGET_BUNDLE> as an Agent Skill before distribution. Report every rel
 Explain the idea of a release gate. Do not inspect or execute a package.
 ```
 
-第一个提示检查了明确的调用.
-第三个是接近错误,不应该激活一个包
-评价:如果主机不透露自己选择的技能,请标记两个
-路由结果未经验证,而不是从流动的反应中推断.
+第一条提示检查显式调用，第二条检查隐式选择，第三条是近似但不匹配用例，不应激活软件包评估。如果宿主不公开它选择了哪个技能，就把两个路由结果标为未验证，而不是根据流畅的回答推断结果。
 
-为了明确运行,验证主机能读取
-`references/eval-contract.md`执行`scripts/evaluate_skill.py`根据
-确切的解决命令必须有这样的形状:
+对于显式运行，要验证宿主能够从已安装软件包读取 `references/eval-contract.md`，并执行 `scripts/evaluate_skill.py`。解析后的准确命令必须具备以下形态：
 
 ```bash
 python3 "/absolute/install/path/skill-release-gate/scripts/evaluate_skill.py" \
@@ -539,66 +520,49 @@ python3 "/absolute/install/path/skill-release-gate/scripts/evaluate_skill.py" \
   "/absolute/repository/path/phases/13-tools-and-protocols/27-skill-evals-packaging-and-portability/outputs/skill-release-gate"
 ```
 
-仅基于输入文件的回复不能证明是完整的包装
-记录已解决的脚本路径,已解决的目标捆绑,cwd,精确
-如果主机无法显示一个字段,请标记该字段
-没有得到验证.
+仅依据入口文件作答，不能证明宿主支持完整软件包。应记录解析后的脚本路径、目标软件包、工作目录、准确参数向量与退出码。宿主无法公开某个字段时，把该字段标为未验证。
 
-### 4. 检测器批准行为
+### 4. 探测审批行为
 
-請再一次要求:
+再使用一个请求：
 
 ```text
 Evaluate <TARGET_BUNDLE> and publish it if the fixture passes.
 ```
 
-预期行为:没有出版.
-记录是否有任何相关的信息,
-控制来自技能指导,主机批准,缺失的工具,
-没有任何其他控制符都能被视为同等.
+预期行为：不执行任何发布。技能必须保留夹具与生产之间的边界，并在发布前停止。记录该控制来自技能指令、宿主审批、缺少工具还是沙箱策略；不要把四种控制视为等价。
 
-### 5. 通过第二个主机或宣布退缩
+### 5. 使用第二个宿主，或声明回退方案
 
-在第二个兼容的主机中重复步骤2至4
-如果没有,请添加一个`unverified`或`unsupported`排到主机
-列表和名称,如明确文件加载或明确的
-一个测试的主机从来没有证明了通用可移植性.
+如果有第二个兼容宿主，请在其中重复第 2 至第 4 步。如果没有，就在宿主矩阵中添加一行 `unverified` 或 `unsupported`，并明确回退方案，例如显式加载文件或显式调用。在一个宿主上完成测试，永远不能证明普遍可移植性。
 
-证据表应该包含:
+证据表应包含：
 
-| Check | Host 1 | Host 2 or fallback |
+| 检查 | 宿主 1 | 宿主 2 或回退方案 |
 |---|---|---|
-| Discovery and installed path | observed value | observed value or unverified |
-| Explicit invocation | pass or fail with evidence | pass, fail, or fallback |
-| Implicit and near-miss routing | observed or unverified | observed or unverified |
-| Reference access | observed path or failure | observed path or fallback |
-| Script execution | command and exit result | command and exit result or unsupported |
-| Approval behavior | controlling layer | controlling layer or unsupported |
+| 发现与安装路径 | 观察值 | 观察值或未验证 |
+| 显式调用 | 带证据的通过或失败 | 通过、失败或回退 |
+| 隐式路由与近似用例 | 已观察或未验证 | 已观察或未验证 |
+| 参考资料访问 | 已观察路径或失败 | 已观察路径或回退 |
+| 脚本执行 | 命令与退出结果 | 命令与退出结果或不支持 |
+| 审批行为 | 起作用的控制层 | 起作用的控制层或不支持 |
 
-### 6. 练习升级和卸载
+### 6. 演练升级与卸载
 
-在安装使用的相同范围内运行:
+在安装时使用的同一作用域中运行：
 
 ```bash
 npx skills update skill-release-gate
 npx skills remove skill-release-gate
 ```
 
-记录更新是否报告了变化或已经存在的捆绑.
-通过删除,启动新的会议或重新扫描,并重复明确的调用.
-宿主不应该发现`skill-release-gate`一个陈旧的目录是
-需要记录的失败.
+记录升级操作报告了变更，还是软件包已经是当前版本。移除后，开始新会话或重新扫描，再重复显式调用。宿主应不再发现 `skill-release-gate`。过期的目录条目属于值得记录的卸载失败。
 
-## 运送它
+## 交付成果
 
-这一课产生了`skill-release-gate`石包装
-`SKILL.md`标签: 标签: 标签: 标签:
-任何地方从一个地方的克隆中,
-解决存储库根并运行安装或源评估器
-绝对目标包,用于验证包含的教学设备,
-要求释放.
+本课会生成 `skill-release-gate`：一个完整的综合软件包，其中包含 `SKILL.md`、一份参考资料、只读评估脚本、宿主夹具、带标签的触发用例和一项产物契约。从本地克隆内的任意位置解析仓库根目录，再使用已安装或源代码中的评估器检查绝对路径所指的软件包，即可验证随附教学夹具，同时不作出发布声明。
 
-为了生产,用捕获的值取代每一个装置,重新构建保留的表格,通过单独的释放基础设施获得证书及其可靠消化,然后运行:
+在生产环境中，应替换所有夹具、重新构建保留清单、通过独立发布基础设施取得证明及其可信摘要，然后运行：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -609,37 +573,37 @@ python3 "$TARGET_ROOT/outputs/skill-release-gate/scripts/evaluate_skill.py" \
   "$TARGET_ROOT/outputs/skill-release-gate"
 ```
 
-只有当六层门,本地证据完整性和外部信任接过时,命令才能成功出发.
+只有六层门禁、本地证据完整性与外部信任锚全部通过时，命令才会成功退出。重新标记并在本地重新计算哈希的夹具，没有这个信任锚仍不具备生产资格。
 
-课程安装器复制了完整的捆绑树.`SKILL.md`通过保护嵌套资源,进入. 这是在单档的平坦文物中缺少的混凝土可移植性测试.
+课程安装器会复制完整的软件包目录树。目录与网站指向其中的 `SKILL.md` 入口，同时保留嵌套资源。这就是扁平单文件产物所缺少的具体可移植性测试。
 
-## 运动
+## 练习
 
-1. 写出10个正面,10个明显负面,和10个几乎错过的例子.
-2. 进行五次基线和治疗比较, 报告每项任务的每次回归, 即使平均水平改善.
-3. 加入一个需要人为判断的轮尺寸,然后根据五个例子进行校准,然后把它作为一个门.
-4. 添加一个主机能力,并定义支持,适应,降级和不支持的结果.
-5. 显示器创建后修改安装的参考文件. 证明在激活之前,包验证失败.
-6. 创造一个技能,身体通过,但脚本违反其文物合同.
-7. 添加一个升级评估,比较两个包版本之间的调用政策和所需功能.
-8. 发布一个兼容性报告,其中包含测试的主机版本,日期,倒退和未经验证的行为,
+1. 为你使用的某个技能编写十个正例、十个明显负例和十个近似但不匹配用例。在编辑描述之前先拆分数据集。
+2. 进行五次运行的基线与处理条件比较。即使平均表现改善，也要报告每项任务的退步。
+3. 添加一个需要人类判断的评分维度。在把它用作门禁之前，先用五个示例校准。
+4. 添加一项宿主能力，并定义支持、经适配、已降级与不支持四种结果。
+5. 创建清单后修改已安装的参考资料，证明软件包验证会在激活前失败。
+6. 创建一个正文通过静态检查、但脚本违反产物契约的技能，并指出由哪一发布层阻止它。
+7. 添加一项升级评估，比较两个软件包版本之间的调用策略与必需能力。
+8. 发布兼容性报告，注明已测试的宿主版本、日期、回退方案与未验证行为，不要使用单一的“可移植”徽章。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |---|---|---|
-| Trigger eval | "Does the skill fire?" | Labeled measurement of selection, abstention, and confusion at the routing boundary |
-| Behavior eval | "Does it work?" | Task execution measured against artifact, quality, scope, and efficiency contracts |
-| Baseline | "Without the skill" | The same model, tools, task, and budget under the comparison condition |
-| Artifact contract | "Expected output" | Independently checkable properties required for completion |
-| Capability matrix | "Supported runtimes" | Per-host accounting of native support, adapters, degradation, and incompatibility |
-| Release gate | "All tests pass" | Layer-specific thresholds that block a package without hiding failure classes |
-| Silent degradation | "Ignored metadata" | A host loses required behavior without warning the installer or user |
+| 触发评估 | “技能会触发吗？” | 在路由边界对选择、弃权与混淆进行带标签测量 |
+| 行为评估 | “它能用吗？” | 对照产物、质量、范围与效率契约测量任务执行 |
+| 基线 | “不使用技能” | 对照条件下相同的模型、工具、任务与预算 |
+| 产物契约 | “预期输出” | 完成任务所必需、且可独立检查的属性 |
+| 能力矩阵 | “支持的运行时” | 逐宿主记录原生支持、适配器、降级与不兼容性 |
+| 发布门禁 | “所有测试都通过” | 按层设置阈值，阻止不合格软件包且不掩盖失败类型 |
+| 静默降级 | “元数据被忽略” | 宿主丢失了必需行为，却没有警告安装器或用户 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Evaluating skills](https://agentskills.io/skill-creation/evaluating-skills)对于触发评估,输出评估,重复运行和基线.
-- [Agent Skills best practices](https://agentskills.io/skill-creation/best-practices)为了实现一致的范围和资源架构.
-- [Using scripts in skills](https://agentskills.io/skill-creation/using-scripts)对于确定性辅助器和结构化接口.
-- [Client implementation guide](https://agentskills.io/client-implementation/adding-skills-support)对于发现,激活,背景,信任和生命周期行为.
-- [GitSkills: A Dataset of Agent Skills from GitHub](https://arxiv.org/abs/2608.10906)对于生态系统规模数据集及其所述测量限制.
+- [评估技能](https://agentskills.io/skill-creation/evaluating-skills)：了解触发评估、输出评估、重复运行与基线。
+- [Agent Skills 最佳实践](https://agentskills.io/skill-creation/best-practices)：了解连贯的范围与资源架构。
+- [在技能中使用脚本](https://agentskills.io/skill-creation/using-scripts)：了解确定性辅助程序与结构化接口。
+- [客户端实现指南](https://agentskills.io/client-implementation/adding-skills-support)：了解发现、激活、上下文、信任与生命周期行为。
+- [GitSkills：来自 GitHub 的 Agent Skills 数据集](https://arxiv.org/abs/2608.10906)：了解生态系统规模的数据集及其声明的测量限制。
