@@ -1,30 +1,30 @@
-# 稳定扩散 建筑和精细调节
+# Stable Diffusion：架构与微调
 
-> 稳定扩散是DDPM,在预训练的VAE的隐藏空间中运行,通过横向注意力来调节文字,用快速确定性ODE解决器进行样本测试,并通过无分类器指导来引导.
+> Stable Diffusion 是一种在预训练 VAE 的潜在空间中运行的 DDPM，通过交叉注意力接受文本条件，使用快速确定性 ODE 求解器采样，并由无分类器引导控制方向。
 
-**Type:** Learn + Use
+**Type:** 学习 + 使用
 **Languages:** Python
-**Prerequisites:** Phase 4 Lesson 10 (Diffusion), Phase 7 Lesson 02 (Self-Attention)
-**Time:** ~75 minutes
+**Prerequisites:** 第 4 阶段第 10 课（扩散）、第 7 阶段第 02 课（自注意力）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 追踪稳定扩散管道的五个部分:VAE,文本编码器,U-Net,时间表,安全检查器以及它们实际上每一个都做什么
-- 解释隐藏扩散以及为什么训练在4x64x64隐藏空间 (而不是3x512x512图像) 减少计算量48倍,而不损失质量
-- 使用`diffusers`通过控制网进行图像生成,图像到图像运行,涂料和引导生成
-- 调整细节,在小型定制数据集上使用LoRA稳定扩散,并在推断时加载LoRA适配器
+- 追踪 Stable Diffusion 流水线的五个组成部分：VAE、文本编码器、U-Net、调度器、安全检查器，并说明每一部分的实际作用
+- 解释潜在扩散，以及为什么在 4x64x64 潜在空间，而不是 3x512x512 图像空间中训练，可以在不损失质量的情况下把计算量降低 48 倍
+- 使用 `diffusers` 生成图像，并执行图生图、图像修补和 ControlNet 引导生成
+- 使用 LoRA 在小型自定义数据集上微调 Stable Diffusion，并在推理时加载 LoRA 适配器
 
-## 问题
+## 问题所在
 
-直接在512x512RGB图像上训练DDPM是昂贵的.每一步训练都通过U-Net来回升,看到3x512x512 =786,432输入值,采样需要50+次通过同一U-Net.在稳定扩散1.5的质量水平 (2022年发布) 上,像素空间扩散需要大约256个GPU月的训练和每张图像在消费GPU上需要10-30秒.
+直接在 512x512 RGB 图像上训练 DDPM 成本高昂。每个训练步骤都要通过一个接收 3x512x512 = 786,432 个输入值的 U-Net 反向传播；采样则要让同一个 U-Net 前向运行 50 次以上。若要达到 Stable Diffusion 1.5（2022 年发布）的质量，像素空间扩散大约需要 256 个 GPU 月的训练，而且在消费级 GPU 上每张图像需要 10–30 秒。
 
-让开放式文字到图像的操作是**latent diffusion**训练一个VAE,将3x512x512图像映射到4x64x64隐形子,然后在隐形空间中进行扩散.计算下降到`(3*512*512)/(4*64*64) = 48x`在同一GPU上取样从几十秒钟下降到两个秒钟以下.
+让开放权重文生图成为现实的诀窍是**潜在扩散**（Rombach 等，CVPR 2022）。先训练一个 VAE，把 3x512x512 图像映射到 4x64x64 潜在张量并能反向恢复，再在潜在空间中执行扩散。计算量会下降 `(3*512*512)/(4*64*64) = 48x`，在同一张 GPU 上，采样也会从数十秒缩短到两秒以内。
 
-几乎所有现代图像生成模型都是隐藏的扩散模型,其变化包括自动编码器,指标器 (U-Net或 DiT) 和文本调节.学习稳定扩散,你已经学习了模板.
+几乎每一种现代图像生成模型——SDXL、SD3、FLUX、HunyuanDiT、Wan-Video——都是潜在扩散模型，只是在自编码器、去噪器（U-Net 或 DiT）和文本条件方式上有所不同。学会 Stable Diffusion，也就掌握了这一类模型的模板。
 
-## 概念
+## 核心概念
 
-### 管道
+### 流水线
 
 ```mermaid
 flowchart LR
@@ -45,46 +45,46 @@ flowchart LR
     style IMG fill:#dcfce7,stroke:#16a34a
 ```
 
-- **VAE**冷的自动编码器.编码器将图像转化为隐形 (用于img2img和训练).解码器将隐形转化为图像.
-- **Text encoder** CLIP文本编码器 (SD 1.x/2.x), CLIP-L + CLIP-G (SDXL),或 T5-XXL (SD3/FLUX).生成一个代币嵌入的序列.
-- **U-Net**标示器. 具有跨重视层,从隐藏到每个分辨率级别内嵌的文本.
-- **Scheduler**采样算法 (DDIM,Euler,DPM-Solver++). 选择了 sigmas,将预测的噪音混合到隐藏中.
-- **Safety checker**输出图像上可选的NSFW/非法内容过器.
+- **VAE**——冻结的自编码器。编码器把图像转换为潜变量，用于图生图和训练；解码器把潜变量还原为图像。
+- **文本编码器**——SD 1.x/2.x 使用 CLIP 文本编码器，SDXL 使用 CLIP-L + CLIP-G，SD3/FLUX 使用 T5-XXL。它会生成一串 token 嵌入。
+- **U-Net**——去噪器。在每个分辨率层级都包含交叉注意力层，让潜变量关注文本嵌入。
+- **调度器**——采样算法，例如 DDIM、Euler、DPM-Solver++。它选择 sigma，并把预测噪声逐步混合回潜变量。
+- **安全检查器**——可选的 NSFW / 非法内容输出图像过滤器。
 
-### 无分类指导 (CFG)
+### 无分类器引导（CFG）
 
-简体文本调节学习`epsilon_theta(x_t, t, c)`每次提醒`c` CFG 运营同一个网络`c`结果是: 由于声的发生在声中,声的发生在声中,声的发生在声中.
+普通文本条件模型学习 `epsilon_theta(x_t, t, c)`，其中每个提示词记为 `c`。CFG 在训练时有 10% 的概率丢弃 `c`，以空嵌入替代，从而让同一个模型既能预测有条件噪声，也能预测无条件噪声。推理时：
 
 ```
 eps = eps_uncond + w * (eps_cond - eps_uncond)
 ```
 
-`w`率是指导的.`w=0`没有条件`w=1`完全有条件的.`w>1`通过 SD 默认方式, SD 输出将会变得更"即时"`w=7.5`现在,我们要去.
+`w` 是引导尺度。`w=0` 表示无条件生成，`w=1` 表示普通条件生成，`w>1` 会推动输出“更服从提示词”，代价是多样性下降。SD 默认采用 `w=7.5`。
 
-由于CFG是文字到图像的原因,因此产品质量很好.如果没有CFG,输出偏差很弱;如果没有CFG,输出偏差很弱.
+CFG 是文生图达到生产级质量的关键。没有它，提示词对输出的影响很弱；使用后，提示词会主导生成结果。
 
-### 隐形空间几何学
+### 潜在空间几何
 
-射器的4通道隐藏不仅仅是压缩图像. 它是一个多元化,数学的大致与语义编辑相匹配 (即时工程 + 插曲都在这里生活), 无机4x64x64隐藏的解码不会产生随机看起来的图像,它产生垃圾,因为只有特定的隐藏的子组才能解码有效的图像.
+VAE 的四通道潜变量不只是一张压缩图像，而是一个算术运算大致对应语义编辑的流形；提示词工程与插值都在这里发生，扩散 U-Net 也把全部建模能力投入这片空间。解码随机 4x64x64 潜变量不会得到看似随机但合理的图像，只会得到垃圾，因为只有潜在空间中的特定子流形能够解码成有效图像。
 
-两种后果:
+这带来两个结果：
 
-1. **Img2img**图像结构存活,因为编码几乎可以逆转;内容根据提示变化.
-2. **Inpainting**= 与 img2img相同,但指标只更新隐藏区域;未隐藏区域则保持在编码的隐藏状态.
+1. **图生图** = 把图像编码为潜变量，加入部分噪声，运行去噪器，再解码。由于编码近似可逆，图像结构能够保留，而内容则根据提示词变化。
+2. **图像修补** = 与图生图相同，但去噪器只更新掩码区域，未遮罩区域保持编码后的潜变量不变。
 
-### 网络架构
+### U-Net 架构
 
- SD U-Net是从10课开始的TinyUNet的大版本,
+SD U-Net 是第 10 课 TinyUNet 的大型版本，并增加了三个部分：
 
-- **Transformer blocks**在每一个空间分辨率上,包含自我注意力+对文本嵌入的横向注意力.
-- **Time embedding**通过MLP在鼻状编码上.
-- **Skip connections**在相匹配分辨率的编码器和解码器之间.
+- 在每个空间分辨率上加入 **Transformer 模块**，其中包含自注意力以及面向文本嵌入的交叉注意力。
+- 通过正弦编码上的 MLP 生成**时间嵌入**。
+- 在匹配分辨率的编码器与解码器之间加入**跳跃连接**。
 
-总参数在SD 1.5: ~860M.SDXL: ~2.6B.FLUX: ~12B.参数跳跃主要是在注意层.
+SD 1.5 约有 8.6 亿参数，SDXL 约 26 亿，FLUX 约 120 亿。参数量的大幅增长主要发生在注意力层中。
 
-### 洛拉细调
+### LoRA 微调
 
-稳定散的完整细节调整需要20 GB以上的VRAM,并更新了860M参数.LoRA (低级调整) 保持了基模型的冷,并将小级分解矩阵注入注意层中.SD的LoRA适配器通常为10-50MB,在单个消费者GPU上在10-60分钟内运行,并在推断时间中作为降入修改进行加载.
+完整微调 Stable Diffusion 需要 20 GB 以上显存，并更新 8.6 亿个参数。LoRA（Low-Rank Adaptation，低秩适配）会冻结基础模型，并向注意力层注入小型低秩分解矩阵。SD 的 LoRA 适配器通常只有 10–50 MB，在单张消费级 GPU 上训练 10–60 分钟即可完成，并能在推理时作为即插即用修改加载。
 
 ```
 Original: W_q : (d_in, d_out)   frozen
@@ -93,26 +93,26 @@ LoRA:     W_q + alpha * (A @ B)   where A : (d_in, r), B : (r, d_out)
 r is typically 4-32.
 ```
 
-洛拉是几乎每个社区的细节调节分布的方式.
+几乎所有社区微调模型都通过 LoRA 分发。CivitAI 和 Hugging Face 上托管了数百万个 LoRA。
 
-### 你会看到的时间表
+### 常见调度器
 
-- **DDIM**确定性,50步,简单.
-- **Euler ancestral** ,30-50步,稍微有创意的样本.
-- **DPM-Solver++ 2M Karras**定性,20-30步,生产默认.
-- **LCM / TCD / Turbo**一致性模型和蒸变体; 1-4步,以某些质量为代价.
+- **DDIM**——确定性，约 50 步，结构简单。
+- **Euler ancestral**——随机性，30–50 步，生成结果略有更强创意。
+- **DPM-Solver++ 2M Karras**——确定性，20–30 步，是生产环境默认选择。
+- **LCM / TCD / Turbo**——一致性模型与蒸馏变体；只需 1–4 步，但会牺牲一部分质量。
 
-交换时间表是单行变化`diffusers`并且有时在没有任何重新培训的情况下解决样本问题.
+在 `diffusers` 中，只需改一行代码即可切换调度器，而且有时无需重新训练便能修复样本问题。
 
 ```figure
 cv3-latent-compression
 ```
 
-## 建立它
+## 动手构建
 
-这一课使用`diffusers`它们是自主课程的主题,而不是从零开始重建稳定扩散.你需要重建的部分 (VAE,文本编码器,U-Net,规划器).
+本课会端到端使用 `diffusers`，而不是从零重建 Stable Diffusion。重建所需的各个部分，例如 VAE、文本编码器、U-Net 和调度器，本身都值得单独讲一课；这里的目标是熟练掌握生产级 API。
 
-### 步骤1:文字到图像
+### 第 1 步：文生图
 
 ```python
 import torch
@@ -132,9 +132,9 @@ image = pipe(
 image.save("dog.png")
 ```
 
-`float16`没有明显的质量损失. `num_inference_steps=25`具有默认的DPM-Solver++匹配`num_inference_steps=50`通过DDIM.
+`float16` 可以把显存占用减半，而不会带来肉眼可见的质量损失。默认使用 DPM-Solver++ 时，`num_inference_steps=25` 可以达到 DDIM 设置 `num_inference_steps=50` 时的相近质量。
 
-### 步骤 2: 改变时间表
+### 第 2 步：切换调度器
 
 ```python
 from diffusers import DPMSolverMultistepScheduler, EulerAncestralDiscreteScheduler
@@ -143,9 +143,9 @@ pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
 ```
 
-时间表表的状态与U-Net权重分离.你可以训练DDPM和任何时间表表的样本.
+调度器状态与 U-Net 权重解耦。可以使用 DDPM 训练，再用任意调度器采样。
 
-### 步骤3:图像对图像
+### 第 3 步：图生图
 
 ```python
 from diffusers import StableDiffusionImg2ImgPipeline
@@ -165,9 +165,9 @@ out = img2img(
 ).images[0]
 ```
 
-`strength`音量是指在除之前增加多少噪音 (0.0 = 没有变化, 1.0 = 完全再生).
+`strength` 表示去噪前加入多少噪声：0.0 表示保持不变，1.0 表示完全重新生成。风格迁移通常使用 0.5–0.7。
 
-### 步骤4:涂料
+### 第 4 步：图像修补
 
 ```python
 from diffusers import StableDiffusionInpaintPipeline
@@ -188,9 +188,9 @@ out = inpaint(
 ).images[0]
 ```
 
-面具中的白色像素是再生区域.
+掩码中的白色像素表示要重新生成的区域，黑色像素表示需要保留的区域。
 
-### 步骤5:LoRA加载
+### 第 5 步：加载 LoRA
 
 ```python
 pipe.load_lora_weights("sayakpaul/sd-lora-ghibli")
@@ -199,11 +199,11 @@ pipe.fuse_lora(lora_scale=0.8)
 image = pipe(prompt="a village square in ghibli style").images[0]
 ```
 
-`lora_scale`控制强度;0.0 =没有效果,1.0 =完全效果. `fuse_lora`调用器将适配器放入适配的重量,但防止交换.`pipe.unfuse_lora()`在加载不同的适配器之前.
+`lora_scale` 控制强度：0.0 表示没有效果，1.0 表示完整效果。`fuse_lora` 会把适配器就地融合到权重中以提高速度，但也会阻止直接切换适配器。在加载另一个适配器前，应调用 `pipe.unfuse_lora()`。
 
-### 步骤 6: LoRA培训 (草图)
+### 第 6 步：LoRA 训练（概要）
 
-实际的LORA培训生活在`peft`或`diffusers.training`概述:
+真正的 LoRA 训练由 `peft` 或 `diffusers.training` 完成，流程如下：
 
 ```python
 # Pseudocode
@@ -224,48 +224,48 @@ for step, batch in enumerate(dataloader):
     optimizer.step()
 ```
 
-只有LoRA矩阵才会接收梯度;基层U-Net,VAE和文本编码器被结. 随着批量大小为1和梯度检查点,这适合8GB的VRAM.
+只有 LoRA 矩阵接收梯度；基础 U-Net、VAE 和文本编码器全部冻结。采用批大小 1 和梯度检查点时，8 GB 显存即可容纳训练。
 
-## 用它
+## 实际应用
 
-在生产中,你实际做出的决定:
+生产环境中真正需要作出的决策包括：
 
-- **Model family**:SD 1.5用于开源社区细节调音,SDXL用于更高的忠诚度,SD3 / FLUX用于最先进的技术和严格的许可要求.
-- **Scheduler**: DPM-Solver++ 2M Karras 进行20-30步,LCM-LoRA 延迟低于1秒时.
-- **Precision**其他`float16`关于4080/4090的情况`bfloat16`在A100及新型道路上,`int8`(通过`bitsandbytes`或`compel`) 当VRAM紧张时.
-- **Conditioning**: 简体文本工作;为了更强大的控制,在基管线上添加ControlNet (可,深度,姿势).
+- **模型家族：** 社区开放微调选择 SD 1.5，更高保真度选择 SDXL，追求当前最佳效果并能接受严格许可证要求时选择 SD3 / FLUX。
+- **调度器：** 20–30 步使用 DPM-Solver++ 2M Karras；延迟要求低于 1 秒时使用 LCM-LoRA。
+- **精度：** 4080/4090 使用 `float16`，A100 及更新硬件使用 `bfloat16`，显存紧张时使用 `int8`，可通过 `bitsandbytes` 或 `compel` 实现。
+- **条件控制：** 普通文本已经有效；若要更强控制，可在基础流水线上增加 ControlNet（Canny、深度、姿态）。
 
-对于批发发,`AUTO1111`现在,`ComfyUI`对于生产API, `diffusers`其他`accelerate`或`optimum-nvidia`通过 TensorRT 编译.
+批量生成时，`AUTO1111` / `ComfyUI` 是社区常用工具；生产 API 则使用 `diffusers` + `accelerate`，或通过 `optimum-nvidia` 进行 TensorRT 编译。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-sd-pipeline-planner.md`一个提示,以选择SD 1.5 / SDXL / SD3 / FLUX加上调度器和精度,考虑到延迟预算,忠诚度目标和许可限制.
-- `outputs/skill-lora-training-setup.md`写完整的 LoRA 训练配置,包括标题,排名,批量大小和学习率.
+- `outputs/prompt-sd-pipeline-planner.md`——根据延迟预算、保真度目标和许可证约束，选择 SD 1.5 / SDXL / SD3 / FLUX、调度器与精度的提示词。
+- `outputs/skill-lora-training-setup.md`——为自定义数据集生成完整 LoRA 训练配置，包括说明文本、秩、批大小和学习率。
 
-## 运动
+## 练习
 
-1. **(Easy)**生成相同的提示`guidance_scale`在`[1, 3, 5, 7.5, 10, 15]`图像的变化如何?
-2. **(Medium)**拍摄任何真实的照片,查看它.`StableDiffusionImg2ImgPipeline`在`strength`在`[0.2, 0.4, 0.6, 0.8, 1.0]`什么强度保留了组合,同时改变了风格?为什么1.0完全忽略了输入?
-3. **(Hard)**训练一个LoRA在一个主体 (一个物,一个标志,一个角色) 的10-20个图像上,并生成其中的主体的新奇场景. 报告LoRA排名和训练步骤,没有过度适应输入图像的最佳身份保护.
+1. **（简单）** 使用不同 `guidance_scale` 生成同一个提示词，取值依次为 `[1, 3, 5, 7.5, 10, 15]`。描述图像如何变化。引导值达到多少时开始出现伪影？
+2. **（中等）** 取任意真实照片，通过 `StableDiffusionImg2ImgPipeline` 运行，并改变 `strength`，取值依次为 `[0.2, 0.4, 0.6, 0.8, 1.0]`。哪个强度既能保留构图，又能改变风格？为什么 1.0 会完全忽略输入？
+3. **（困难）** 使用同一主体，例如宠物、徽标或角色的 10–20 张图像训练 LoRA，并生成包含该主体的新场景。报告在不过拟合输入图像的前提下，最能保持身份特征的 LoRA 秩和训练步数。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Latent diffusion | "Diffuse in latents" | Run the entire DDPM in the VAE latent space (4x64x64) instead of pixel space (3x512x512); 48x compute saving |
-| VAE scale factor | "0.18215" | Constant that rescales the VAE's raw latent to roughly unit variance; hardcoded in every SD pipeline |
-| Classifier-free guidance | "CFG" | Mix conditional and unconditional noise predictions; the single most impactful inference knob |
-| Scheduler | "Sampler" | The algorithm that turns noise + model predictions into a denoised latent trajectory |
-| LoRA | "Low-rank adapter" | Small rank-decomposition matrices that fine-tune attention layers without touching base weights |
-| Cross-attention | "Text-image attention" | Attention from latent tokens to text tokens; injects prompt information at every U-Net level |
-| ControlNet | "Structure conditioning" | A separately-trained adapter that steers SD with an extra input (canny, depth, pose, segmentation) |
-| DPM-Solver++ | "The default scheduler" | Second-order deterministic ODE solver; best quality at low step counts (20-30) in 2026 |
+| 潜在扩散 | “在潜变量中扩散” | 在 VAE 潜在空间（4x64x64），而不是像素空间（3x512x512）中运行完整 DDPM，节省 48 倍计算 |
+| VAE 缩放因子 | “0.18215” | 把 VAE 原始潜变量重新缩放到约单位方差的常数；硬编码在每条 SD 流水线中 |
+| 无分类器引导 | “CFG” | 混合有条件和无条件噪声预测，是影响最大的单个推理参数 |
+| 调度器 | “采样器” | 把噪声与模型预测转换成去噪潜变量轨迹的算法 |
+| LoRA | “低秩适配器” | 在不修改基础权重的情况下微调注意力层的小型秩分解矩阵 |
+| 交叉注意力 | “文本—图像注意力” | 从潜在 token 到文本 token 的注意力，在 U-Net 的每个层级注入提示词信息 |
+| ControlNet | “结构条件” | 使用 Canny、深度、姿态或分割等额外输入引导 SD 的独立训练适配器 |
+| DPM-Solver++ | “默认调度器” | 二阶确定性 ODE 求解器；在 2026 年以较少步数（20–30）取得最佳质量 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [High-Resolution Image Synthesis with Latent Diffusion (Rombach et al., 2022)](https://arxiv.org/abs/2112.10752)稳定散纸;包括任何证明设计合理的除
-- [Classifier-Free Diffusion Guidance (Ho & Salimans, 2022)](https://arxiv.org/abs/2207.12598)CFG文件
-- [LoRA: Low-Rank Adaptation of Large Language Models (Hu et al., 2021)](https://arxiv.org/abs/2106.09685) LoRA是NLP的第一位;它几乎没有变化转移到SD
-- [diffusers documentation](https://huggingface.co/docs/diffusers)每个SD/SDXL/SD3/FLUX管道的参考
+- [《High-Resolution Image Synthesis with Latent Diffusion》（Rombach 等，2022）](https://arxiv.org/abs/2112.10752)——Stable Diffusion 论文，包含证明各项设计合理性的完整消融实验
+- [《Classifier-Free Diffusion Guidance》（Ho 与 Salimans，2022）](https://arxiv.org/abs/2207.12598)——CFG 论文
+- [《LoRA: Low-Rank Adaptation of Large Language Models》（Hu 等，2021）](https://arxiv.org/abs/2106.09685)——LoRA 最初用于 NLP，几乎无需修改就迁移到了 Stable Diffusion
+- [diffusers 文档](https://huggingface.co/docs/diffusers)——所有 SD / SDXL / SD3 / FLUX 流水线的参考资料
