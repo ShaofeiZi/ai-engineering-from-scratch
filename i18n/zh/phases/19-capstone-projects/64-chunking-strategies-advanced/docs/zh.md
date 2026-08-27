@@ -1,25 +1,25 @@
-# 碎策略,相比
+# 分块策略对比
 
-> 碎决定你的回升器能出现什么, 错误地划界限, 没有嵌入模型, 没有重排器, 没有LLM可以修复下游的损坏.
+> 分块方式决定了检索器究竟有机会召回什么内容。边界一旦切错，后面的 embedding model、reranker 和 LLM 都无法补回这一步造成的损失。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 11 lessons 04 (embeddings), 06 (RAG), 07 (advanced RAG); Phase 19 Track B foundations (lessons 20-29)
-**Time:** ~90 minutes
+**Prerequisites:** 第 11 阶段第 04 课（embeddings）、第 06 课（RAG）、第 07 课（advanced RAG）；第 19 阶段 Track B 基础课（第 20–29 课）
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 从零开始实施五种分断策略:固定窗口,句子,递归分断,语义集群和结构分类标题.
-- 测量以黄金标记的答案范围为止的固定材料体内 recall@k,并解释为什么一个策略在散文上获胜,而另一种策略在技术文件上获胜.
-- 阅读一段时间分布,并识别每个策略所注入的失败模式:孤儿句子,中标的切割,仅标题的部分,语义漂移.
-- 通过检查三个属性来选择一个新的体积的默认,而不运行基准:文档类型,平均段子长度,以及格式是否具有明确的结构.
+- 从零实现五种分块策略：fixed-window、sentence、recursive-split、semantic clustering，以及 structural markdown headers。
+- 在带有 gold-labeled answer span 的示例语料上测量 recall@k，并解释为什么某种策略更适合 prose，而另一种策略更适合技术文档。
+- 读懂 chunk 长度分布，并识别各策略带来的失败模式：orphan sentences、mid-symbol cuts、header-only chunks、semantic drift。
+- 即使不跑 benchmark，也能只根据三个属性为新语料挑选默认策略：document type、average paragraph length，以及格式是否自带显式结构。
 
 ## 问题
 
-每个RAG管道都开始切割源文档成足够小的部分,以使嵌入模型适合它们,并且足够大,以使每个部分都具有独立的想法.切割地点的选择不是一个超参数.这是检索器能回归的上限.
+每条 RAG pipeline 的第一步，都是把源文档切成若干小块。块既要足够小，embedding model 才能装得下；也要足够大，才能保留一个完整、自洽的语义单元。切分边界并不是一个无关紧要的超参数，它直接决定了 retriever 能返回什么内容的上限。
 
-问"预算中断门是什么样子"的查询只能成功, 如果固定窗口分区器从周围的环境中切除了门值,嵌入将转移到不同的集群,BM25分数下降,重排查器看到噪音,LLM生成的答案是错误的. 2024年"LongRAG:通过长文本LLM增强回收生成"的论文仅仅是从分量选择中测量了回收回收的绝对转变率为35%. 后续工作在2025年对文本部分标题缩小了差距,但并没有缩小它.
+一个查询如果在问 “what does the budget abort threshold look like”，只有当包含这个 threshold 的 chunk 本身可被召回时，检索才可能成功。如果 fixed-window splitter 恰好把 threshold 的值和上下文切开，embedding 就会漂到别的 cluster，BM25 分数下降，reranker 看到的也只剩噪音，最终 LLM 生成的答案就会出错。2024 年论文 “LongRAG: Enhancing Retrieval-Augmented Generation with Long-context LLMs” 表明，仅仅因为 chunking 方案不同，retrieval recall 就可能出现 35 个百分点的绝对波动。2025 年关于 contextual chunk headers 的后续工作缩小了这个差距，但并没有把问题彻底解决。
 
-这一课将五种策略放在一边, 运行它们与金标记的答案范围的固定组合,
+本课会把五种策略并排实现，让它们在带有 gold-labeled answer span 的 fixture corpus 上跑同一套评测，让你直接用 recall 数字来比较。
 
 ## 概念
 
@@ -45,45 +45,45 @@ flowchart LR
 
 ### 固定窗口
 
-粗力基线.切除每一个N字符.可选地重叠,因此在N位置切断的句子在N位置开始的部分内出现完整.在边界快速,确定性,可怕.用它作为控制,而不是默认.
+最直接、也最粗暴的 baseline。每隔 N 个字符硬切一次。也可以加 overlap，这样一个刚好在 N 位置被截断的句子，能在从 N - overlap 开始的下一块里重新完整出现。它很快、确定性强，但边界质量很差。拿它当 control，不要把它当默认值。
 
-### 判决
+### 句子切分
 
-通过Regex或简单的状态机划分句子边界.将一个或多个句子包装成一个部分,达到目标字符预算.停止切割中文字.仍然切割中段和中段.许多早期RAG管道中的默认和没有其他结构的散文的合理选择.
+用 regex 或简单状态机按句子边界切分，然后把一个或多个句子打包进目标字符预算内的 chunk。它至少不会把词切成两半，但仍然可能在段落中间、章节中间断开。很多早期 RAG pipeline 都把它当默认值；对于没有其他显式结构的 prose，它依然是个合理选择。
 
-### 复发分
+### 递归切分
 
-根据"二次新线"的定义,在一个区别中,一个区别是"二次新线" (二次新线,一段),然后是"单一新线",然后是"字符".当部分适合预算时,复制结束.在文件中,有不一致的结构,因为它适应每个地区.
+这是 2023 年那批库带火的层级策略。优先尝试最强的分隔符，例如双换行，也就是 paragraph；如果还不够小，就退到单换行；再不行就退到句子；最后才退到字符级。只要 chunk 已经落进预算，就停止递归。它对结构不一致的文档很强，因为它会按局部结构自适应地选择切法。
 
 ### 语义集群
 
-嵌入每个句子. 集结连接句子,共享一个主题中位数. 切除每当与中位数的运行相似性下降到门. 边界反映了意义,而不是字符. 缓慢构建,依赖嵌入模型,但对在段落内更换主题的文档具有弹性.
+先对每个句子做 embedding，再把主题中心接近的相邻句子聚成一块。每当下一句与当前 centroid 的相似度掉到阈值以下，就在那里切开。它的边界不是按字符，而是按语义变化决定。代价是构建更慢，而且强依赖 embedding model；但对那些在单个段落内部频繁切换主题的文档，它更有韧性。
 
 ### 结构性标记标题
 
-对于包含明确结构的文件 (标记,重构文本,RFC式编号部分),切断标题边界.每个部分成为标题加上下面的所有内容,并将其降至下一个标题,以相同或更高的水平.每个主题的最小部分,但只有在体积形成良好时才可用.
+如果文档本身携带显式结构，比如 markdown、reStructuredText 或 RFC 风格的编号章节，就直接按 heading boundary 切。每个 chunk 都包含一个 heading，以及它下面直到下一个同级或更高层级标题之前的全部内容。按主题来看，它切出来的块最小也最干净，但前提是语料本身得足够规整。
 
 ### 如何测量边界选择
 
-标有金色的查询包含源文档内部的答案跨度的确切字符抵消. 碎后,你问: 取器回来的任何一块是否覆盖了黄金跨度? 如果是,那么对此查询的 recall@k 为 1. 如果没有,则是0. 查询组中平均值 对于每个策略进行相同的评估, 扩散显示了您在您的结构中存活的边界政策.
+一个 gold-labeled query 会附带答案 span 在源文档中的精确字符 offset。完成 chunking 之后，问题就变成了：retriever 返回的 top-k chunks 里，是否有任意一个与 gold span 发生重叠？如果有，这个 query 的 recall@k 就记为 1；如果没有，就记为 0。对整个 query 集合求平均，再对每种策略重复同样的评估，最后你看到的 spread 就是在告诉你：哪种边界策略能在你的语料里真正站得住。
 
 ```figure
 ci-chunk-boundaries
 ```
 
-## 建立它
+## 动手实现
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `fixed_window(text, size, overlap)`- 基本线.
-- `sentence_chunks(text, target)`- - 简单的句子包装.
-- `recursive_split(text, separators, target)`- 层次回归.
-- `semantic_chunks(text, similarity_threshold)`- 基于中心位的集群,在确定性模拟嵌入的顶部.
-- `structural_markdown(text)`- 标题意识的分区器.
-- `mock_embed(text, dim)`- 基于哈希的嵌入,所以循环运行离线.
-- `DenseIndex`- 类似于19期B轨道混合物检索课程中使用的形状.
-- `eval_recall(strategy, corpus, queries, k)`- - 比较循环.
-- `main()`运行每个策略在固定器件体内,打印一个回调@k表.
+- `fixed_window(text, size, overlap)`，也就是 baseline。
+- `sentence_chunks(text, target)`，简单的句子打包器。
+- `recursive_split(text, separators, target)`，层级递归切分。
+- `semantic_chunks(text, similarity_threshold)`，基于 centroid 的聚类切分，建立在一个确定性的 mock embedding 之上。
+- `structural_markdown(text)`，一个能识别标题结构的 splitter。
+- `mock_embed(text, dim)`，基于 hash 的 embedding，这样整个循环可以离线跑。
+- `DenseIndex`，其数据形状与 Phase 19 Track B 混合检索课里用的是同一类。
+- `eval_recall(strategy, corpus, queries, k)`，负责对比各策略的评估循环。
+- 一个 `main()`，它会把所有策略都跑在 fixture corpus 上，然后打印一张 recall@k 表。
 
 运行它:
 
@@ -91,69 +91,69 @@ ci-chunk-boundaries
 python3 code/main.py
 ```
 
-输出表是一个小表,每个策略有一个行,每个k一个列.句子在结构式固定上输掉.结构性划分在划分固定上获胜.回复性保持在混合固定上,因为回复性适应.在没有有用的结构线索的情况下,语义聚合在散文固定上获胜.
+输出是一张小表：每种策略一行，每个 k 一列。sentence 会在结构化 fixture 上落后，structural-markdown 会在 markdown fixture 上胜出。recursive 在 mixed fixture 上表现稳，因为它能自适应；semantic clustering 则会在缺少明显结构线索的 prose fixture 上占优。
 
-## 失败模式表不会隐藏
+## 表格无法掩盖的失败模式
 
-**Orphan sentences.**语句包装产生错过主题句子的部分. 嵌入后指向错误的集群.
+**Orphan sentences.** sentence packing 会产生脱离主题句的碎块，于是 embedding 会漂到错误的 cluster。
 
-**Mid-symbol cuts.**固定窗口内代码或YAML将识别符分为两半.
+**Mid-symbol cuts.** fixed-window 在 code 或 YAML 内部切开时，会把 identifier 直接劈成两半，两半都只剩噪音。
 
-**Header-only chunks.**结构性值发出一个部分,只包含`## Title`过这些或附上下一个部分的第一段.
+**Header-only chunks.** structural markdown 有时会吐出只包含 `## Title` 的 chunk。要么过滤掉，要么把下一块的首段并进来。
 
-**Semantic drift.**语义集群在一个主题上均时,下切割.一个5000字符的部分将许多具体答案包装成一个分散的嵌入.将语义与硬字符盖合在一起.
+**Semantic drift.** semantic clustering 在整篇语料都围绕同一主题时容易切得不够细。一个 5000 字符的 chunk 会把许多具体答案揉进一个发散的 embedding。要把 semantic 与硬性字符上限一起使用。
 
-**Stale embeddings.**语义集群使用嵌入模型.如果你改变模型,你也会改变块. 按单元模型与检索模型分开,或者重新构建索引.
+**Stale embeddings.** semantic clustering 依赖 embedding model。你一旦换模型，chunk 本身也会变化。要么把 chunk model 与 retrieval model 分开固定，要么每次一起重建 index。
 
-## 选择默认值而没有运行基准值
+## 不跑基准时如何选默认值
 
-三个属性决定了新的体积的默认分数.
+给新语料选默认 chunker，主要看三个属性。
 
-| Property | Value | Default |
+| 属性 | 取值 | 默认策略 |
 |----------|-------|---------|
-| Document type | Prose with no structure | Recursive split, target 800 |
-| Document type | Markdown / RFC / API docs | Structural markdown |
-| Document type | Code | AST-aware (out of scope; see Phase 19 lesson 02) |
-| Paragraph length | Long, single topic | Sentence, target 500 |
-| Paragraph length | Short, mixed topics | Semantic, threshold 0.6 |
+| 文档类型 | 无显式结构的 prose | Recursive split，target 800 |
+| 文档类型 | Markdown / RFC / API docs | Structural markdown |
+| 文档类型 | 代码 | AST-aware（此处不展开；参见第 19 阶段第 02 课） |
+| 段落长度 | 很长且单一主题 | Sentence，target 500 |
+| 段落长度 | 较短且主题混杂 | Semantic，threshold 0.6 |
 
-只有一个战略的基础.
+如果拿不准，就先选 recursive split。它是单一策略里最稳的 baseline。
 
 ## 用它
 
-生产模式:
+生产实践：
 
-- 在运送新管道之前,运行评估;不要相信您的图书馆默认的策略.
-- 每当你改变嵌入模型或体组混合时,再运行评估;获胜者是体组依赖的.
-- 保持每个部分的元数据中战略名称,以便您可以稍后归因回归.
+- 在发布新 pipeline 前先跑 eval；不要盲信库默认的 chunking 策略。
+- 每次换 embedding model 或换 corpus mix，都重新跑一遍；赢家取决于具体语料。
+- 在每个 chunk 的 metadata 里记录 strategy name，后面出现回归时才能溯源。
 
-## 运送它
+## 放进系统里
 
-在第69课中,F轨道端到端RAG系统使用了这里选定的克作为其第一阶段.在第68课中,评估带写出 recall@k 从相同的形状`eval_recall`选择一个胜利的策略,然后把它推进.
+第 69 课里的 Track F 端到端 RAG 系统，会把这里选出来的 chunker 作为第一阶段。第 68 课的 eval harness 读取的 recall@k，也和本课 `eval_recall` 返回的是同一种数据形状。选出在你语料上胜出的策略，然后把它继续接入后续系统。
 
-## 运动
+## 练习
 
-1. 添加第六个策略:使用代币窗口`tiktoken`根据相同的装置的固定窗口进行比较.
-2. 给表格重新运行,解释为什么除了结构性划分之外的每个策略都失去了回忆.
-3. 取代确定性嵌入式与您的项目真正提供商的嵌入式.测量语义集群回忆 delta.报告战略之间的差距是否扩大或缩小.
-4. 添加一个`summary`单片段的字段:一个句子的中心形容. 再次运行评估,并附加总结到单片体内. 测量召回升.
+1. 加第六种策略：token-window，用 `tiktoken` 而不是字符数。把它和 fixed-window 在同一个 fixture 上比较。
+2. 往 prose fixture 里注入 30% 的 code blocks。重新跑表，解释为什么除了 structural markdown 之外，其他策略都会掉 recall。
+3. 把确定性的 mock embedding 换成你项目里真实 provider 的 embedding。测 semantic-clustering 的 recall delta，并报告不同策略间的差距是变宽还是变窄。
+4. 给每个 chunk 增加一个 `summary` 字段，也就是一句话的 centroid 描述。把 summary 拼接回 chunk body 后重新跑 eval，测量 recall 提升。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说的话 | 它真正表示什么 |
 |------|-----------------|------------------------|
-| Recall@k | "Did we get the right chunk?" | Fraction of queries where any of the top-k chunks overlaps the gold answer span |
-| Chunk overlap | "Sliding window" | Re-include the last N characters of the previous chunk in the next chunk |
-| Structural splitter | "Header-aware chunks" | Cut at H1/H2/H3 boundaries; the heading text is part of the chunk |
-| Semantic chunker | "Topic-aware chunks" | Embed sentences, cluster by centroid similarity, cut on drift |
-| Centroid drift | "Topic shift" | Cosine similarity between the running mean and the next sentence drops past a threshold |
+| Recall@k | "Did we get the right chunk?" | top-k chunk 中是否有任意一个覆盖了 gold answer span |
+| Chunk overlap | "Sliding window" | 在下一块中重新包含前一块最后 N 个字符 |
+| Structural splitter | "Header-aware chunks" | 按 H1/H2/H3 边界切分，heading 文本本身也属于 chunk |
+| Semantic chunker | "Topic-aware chunks" | 对句子做 embedding，按 centroid similarity 聚类，遇到 drift 就切开 |
+| Centroid drift | "Topic shift" | 运行均值与下一句之间的 cosine similarity 下降到阈值以下 |
 
 ## 进一步阅读
 
-- [LongRAG: Enhancing Retrieval-Augmented Generation with Long-context LLMs (arXiv 2406.15319)](https://arxiv.org/abs/2406.15319)
+- [LongRAG：用长上下文 LLM 增强 Retrieval-Augmented Generation（arXiv 2406.15319）](https://arxiv.org/abs/2406.15319)
 - [Anthropic, Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval)
 - [LlamaIndex, Chunking strategies for production RAG](https://docs.llamaindex.ai/en/stable/optimizing/production_rag/)
-- 第十一阶段第六课 - RAG基本面
-- 阶段11课07 - 高级RAG
-- 第19阶段课程65:混合采集,
-- 第19阶段课程68 - 评估杆,以评分生产中的战略选择
+- 第 11 阶段第 06 课 - RAG fundamentals
+- 第 11 阶段第 07 课 - advanced RAG
+- 第 19 阶段第 65 课 - hybrid retrieval that ranks the chunks produced here
+- 第 19 阶段第 68 课 - the eval harness that scores the strategy choice in production
