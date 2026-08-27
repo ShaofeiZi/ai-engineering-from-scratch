@@ -1,27 +1,27 @@
-# 石课41:全面评估管道
+# 完整评估流水线
 
-> 训练是你可以通过损失曲线监测的部分. 评估是你必须设计的部分. 这一课构建了一个统一的评估管道,采用任何训练有素的语言模型,运行四种异质的评估,将结果汇集成每项任务报告, 四项评估涵盖了每个运输模型所需的尺寸:语言建模 (困难),短形正确性 (准确匹配),开放形式相似性 (F1标志),以及质量评分 (评判).
+> 训练是你可以用 loss curve 直接盯住的部分，评估则是你必须自己设计的部分。本课会构建一条统一的评估流水线，它接收任意一个训练好的语言模型，在其上运行四种异构评估，把结果聚合成一份按任务拆分的报告，并额外附带一个本地 mock LLM-as-judge，这样整个闭环无需联网也能跑通。四项评估覆盖了任何真正要交付的模型都需要面对的维度：language modelling（perplexity）、短答案正确性（exact-match）、开放式相似度（token F1），以及定性打分（judge）。
 
-**Type:** Build
-**Languages:** Python (torch, numpy)
-**Prerequisites:** Phase 19 lessons 30-37 (NLP LLM track: tokenizer, embedding table, attention block, transformer body, pre-training loop, checkpointing, generation, perplexity)
-**Time:** ~90 minutes
+**Type:** 构建
+**Languages:** Python（torch、numpy）
+**Prerequisites:** 第 19 阶段第 30 到 37 课（NLP LLM 路线：分词器、嵌入表、注意力模块、Transformer 主体、预训练循环、检查点、生成与困惑度）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 计算一个微小的变压器上的隐形代币计算.
-- 执行一个准确的匹配评估,
-- 计算预测和参考字符串之间的代币级 F1 标准化.
-- 建立一个地方的假法师作为法官,以1-5的比例评分模型的结果.
-- 总结四项评估成一个重量化报告,每项任务分类.
+- 在一个小型 transformer 上用 masked-token accounting 计算留出集 perplexity。
+- 在短形式 factual prompt 上运行 exact-match 评估。
+- 对 prediction 和 reference string 计算标准化后的 token-level F1。
+- 构建一个本地 mock LLM-as-judge，用 1-5 的分数给模型输出打分。
+- 把四项评估聚合成一份带 per-task breakdown 的加权报告。
 
 ## 问题
 
-一个单一的指标从来没有描述语言模型. 困惑表明模型是如何适合语言分布的,但没有说明它是否回答问题. 精确匹配显示模型是否产生金弦,但惩罚正确的句子. 符号F1允许抛词,但被词汇重叠与错误的内容所欺骗. 法律法官的法学法学具有质量维度,但成本高昂,
+单一指标永远不足以描述一个语言模型。perplexity 说明模型对语言分布拟合得怎么样，但完全不能回答“它会不会答题”；exact-match 会告诉你模型有没有生成 gold string，但会惩罚正确的改写；token F1 对 paraphrase 更宽容，却又很容易被词汇重叠但语义错误的输出欺骗；LLM-as-judge 能覆盖定性维度，但成本高而且带随机性。
 
-实际上你想要的管道有四个.每个评估涵盖一个其他缺失的维度.每个测量都运行在一个不同的数据小组上,以该指标的形状.最终报告显示每个任务的数字并肩和总数,这样一个评论者可以一眼看看模型正在做什么交易.
+真正想要的评估流水线，必须同时拥有这四种视角。每项评估都补上了其他指标看不到的那一块。每项评估都在为它量身设计的 held-out 数据子集上运行。最终报告把每项任务的数字并排展示，再给出一个 aggregate，让 reviewer 一眼就能看出模型到底是在做什么权衡。
 
-这一课将这条管道,从头到尾,建立在一个文件中.
+本课会把这条流水线从头到尾搭出来，而且全部写在一个文件里。
 
 ## 概念
 
@@ -38,50 +38,50 @@ flowchart LR
   R --> A[(aggregate score)]
 ```
 
-每个 eval 是从 `(model, dataset) -> EvalResult`结果包含了测量值,每例的检查细节,以及集体名称. 管道组合它们,并设置一个配置,说明哪些评估要运行以及如何权重它们.
+每个评估都是一个从 `(model, dataset) -> EvalResult` 的函数。返回结果会携带指标值、用于排查问题的 per-example 细节，以及供聚合器使用的名称。整条 pipeline 再通过一份 config 把它们串起来，决定要跑哪些评估，以及它们的权重分别是多少。
 
-## 困惑,正确计算
+## 困惑度（Perplexity）：正确计数
 
-困惑是`exp(mean negative log-likelihood per token)`实施有两个陷:
+perplexity 的定义是 `exp(mean negative log-likelihood per token)`。实现里有两个常见陷阱：
 
-- 平均值必须是实际的代币位置,而不是批量 * 序列.
-- 模型预测下一个代币,所以在位置上.`i`预测标志在位置`i+1`失败仍然是流动的,但指标变得毫无意义.
+- 平均数必须只在真实 token 位置上取，而不是在整个 batch * sequence 上取。padding token 必须从分母里剔除，否则 perplexity 会被虚假地“改善”。
+- 模型预测的是下一个 token，所以位置 `i` 的 logits 预测的是位置 `i+1` 的 token。这里的 off-by-one 一旦出错，loss 仍然会算出来，但指标就彻底失去意义。
 
-评估计算每批量的总量`-log p(token)`通过不pad的位置和每批的代币数量,然后在最后分开. 这比平均每批的困难 (低于短序列的重量) 更安全,并且符合教科书的定义.
+这份评估会在每个 batch 内先累计非 padding 位置上的 `-log p(token)` 总和，再累计 token 总数，最后统一相除。相比“先算每个 batch 的 perplexity 再做平均”，这种写法数值上更稳，也不会低估短序列的权重，并且与教科书定义一致。
 
-## 完全匹配,与规范化
+## 精确匹配（Exact-match）：加入归一化
 
-带在比较之前将预测和参考都正常化:
+harness 在比较 prediction 和 reference 之前，会先对两边做同样的 normalisation：
 
-- 简字母.
-- 周围的白色空间.
-- 内部白空的崩将运行到一个空间.
-- 落后终端分分 (`.`现在`!`现在`?`) 如果双方仅因分别.
+- 转为小写。
+- 去掉首尾空白。
+- 把内部连续空白折叠成单个空格。
+- 如果双方只在结尾标点上不同，就去掉尾部句末标点（`.`、`!`、`?`）。
 
-规范化使得精确匹配在实践中有用.`"Paris"`确实是对的,一个说`"Paris."`们也在说`"  paris  "`标准化后,答案仍然需要相同的字符串.
+做完这些 normalisation，exact-match 在实践中才真正有用。一个输出 `"Paris"` 的模型是对的；输出 `"Paris."` 的模型也应该算对；输出 `"  paris  "` 的模型同样应该算对。归一化之后，这个指标依然要求两边必须成为完全相同的字符串。
 
-## 标志 F1,正确的方向
+## 词元级 F1（Token F1）：按正确方式计算
 
-代币F1是通过代币袋计算的精度和召回的和平均值.
+token F1 是在 bag-of-tokens 上计算 precision 和 recall 后得到的调和平均。步骤是：
 
-1. 规范预测和参考 (与精确匹配相同的规则).
-2. 分成每个代币列表 (白色空间代币化).
-3. 计算多组交叉点.
-4. 精度 = `intersection_count / len(pred_tokens)`提醒 = `intersection_count / len(ref_tokens)`1=和平均值.
+1. 对 prediction 和 reference 做归一化处理，规则与 exact-match 相同。
+2. 把两边都切成 token 列表，使用 whitespace tokenisation。
+3. 计算它们的 multiset intersection。
+4. Precision = `intersection_count / len(pred_tokens)`。Recall = `intersection_count / len(ref_tokens)`。F1 = 调和平均。
 
-如果预测和参考都是空的,F1是1 (空格匹配).如果只有一个空的,F1是0.这个模式匹配SQuAD评估参考,并产生稳定的数字跨句子.
+如果 prediction 和 reference 都是空字符串，那么 F1 视为 1，因为这是一个真空匹配；如果只有一边为空，F1 就是 0。这个约定与 SQuAD 的评估参考一致，也能在 paraphrase 场景下给出更稳定的数字。
 
-## 地方假法师作为法官
+## 本地模拟评审器（Mock LLM-as-Judge）
 
-实际法官是一个API背后的边界模型.对于这个课程,法官必须在线运行.假法官是一个确定性得分符,接收指令,模型的预测和参考,并返回一个分数.`{1, 2, 3, 4, 5}`评分规则是明确的:
+真正的 judge 往往是一个挂在 API 后面的 frontier model。但这节课要求整个流程离线可跑，所以 judge 也必须本地化。这里的 mock judge 是一个确定性打分器：输入 instruction、模型 prediction 和 reference，输出一个分数，分值属于 `{1, 2, 3, 4, 5}`，外加一句简短 rationale。规则完全显式：
 
-- 如果正常预测等于正常参考.
-- 4,如果预测和参考之间的F1符号至少为0.8.
-- 如果F1标志是3`[0.5, 0.8)`现在,我们要去.
-- 如果F1标志是`[0.2, 0.5)`现在,我们要去.
-- 否则,
+- 如果 normalised prediction 与 normalised reference 完全相等，给 5。
+- 如果 prediction 与 reference 的 token F1 至少是 0.8，给 4。
+- 如果 token F1 落在 `[0.5, 0.8)`，给 3。
+- 如果 token F1 落在 `[0.2, 0.5)`，给 2。
+- 否则给 1。
 
-这不是一个真正的判断者,但它有正确的接口. 通过更改一个函数来更换一个真正的模型. 管道不关心.
+它当然不是真正的 judge，但接口是对的。以后如果你要换成真实模型，只需要替换一个函数；整个 pipeline 本身完全不需要知道这件事。
 
 ```mermaid
 flowchart LR
@@ -92,22 +92,22 @@ flowchart LR
   Judge --> Why[rationale]
 ```
 
-## 总结
+## 聚合
 
-总体是标准化评估分数的权重平均值.`[0, 1]`其他:
+aggregate score 是对归一化后评估分数做加权平均。每个评估都先把自己的结果映射到 `[0, 1]`：
 
-- 乱:正常化`1 / (1 + log(perplexity))`图为1的复杂性,图为1的复杂性,图为0的无限性.
-- 已有.`[0, 1]`现在,我们要去.
-- 标志 F1: 已经进入了`[0, 1]`现在,我们要去.
-- 评委:分为5.
+- Perplexity：归一化方式是 `1 / (1 + log(perplexity))`。perplexity 为 1 时映射到 1；趋近无穷时映射到 0。
+- Exact-match：天然就在 `[0, 1]`。
+- Token F1：天然就在 `[0, 1]`。
+- Judge：直接除以 5。
 
-权重可以配置.默认混合是0.2的困难度,0.3的精确匹配,0.3的代币F1,0.2的评判.权重的选择是产品的决定;课程暴露了按,所以你可以实验.
+权重是可配置的。默认配比是 0.2 perplexity、0.3 exact-match、0.3 token F1、0.2 judge。权重怎么选，本质上是一个产品决策；这节课把这个旋钮暴露出来，就是为了让你能自己试。
 
 ```figure
 cg-eval-quadrant
 ```
 
-## 建筑
+## 架构
 
 ```mermaid
 flowchart TD
@@ -126,34 +126,34 @@ flowchart TD
   R --> Pretty[stdout table]
 ```
 
-其他`EvalSuite`每个个评估是一个自由函数,`(model, tokenizer, dataset, config)`返回一个`EvalResult`现在,我们要去.`Aggregator`测试程序打印表,写出一个JSON副本,下游CI可以摄入.
+`EvalSuite` 是一个很薄的协调器。每个单独的评估都是一个自由函数，接收 `(model, tokenizer, dataset, config)`，返回一个 `EvalResult`。`Aggregator` 负责收集结果并产出最终报告。demo 会把表格打印到 stdout，并同时写出一份 JSON 副本，供下游 CI 直接消费。
 
-## 你会建造什么
+## 你将构建什么
 
-实施是一个`main.py`另外还有一些检查.
+实现由一个 `main.py` 和测试组成。
 
-1. `TinyGPT`课程包括了38-40课程中的相同的解码器架构,因此课程独立.
-2. `InstructionTokenizer`通过 INST/ RESP/ PAD 专项的字节标记器.
-3. 设置四个装置:一个LM体,一个EM组,一个F1组,一个评审组.
-4. `perplexity_eval`收益`EvalResult`具有杂性值和每代币损失的历史图.
-5. `exact_match_eval`报告中,每例的 EM 记录均值.
-6. `token_f1_eval`:返回F1代号平均值和每例记录.
-7. `mock_judge`其他`judge_eval`平均分数在整个集中.
-8. `Aggregator.normalise`标准化规则:
-9. `Aggregator.aggregate`:重量平均和汇总报告.
-10. `run_demo`简单地训练一个小模型,运行四个评估,打印报告表,写JSON,成功的结果是零.
+1. `TinyGPT`：沿用 lessons 38-40 的同款 decoder-only 架构，这样本课可以单独成立。
+2. `InstructionTokenizer`：带 INST / RESP / PAD special token 的 byte tokeniser。
+3. 四份 fixture：一个 LM corpus、一个 EM 集、一个 F1 集、一个 judge 集，每份 20 个确定性样本。
+4. `perplexity_eval`：返回 `EvalResult`，包含 perplexity 数值和 per-token loss histogram。
+5. `exact_match_eval`：返回平均 EM，以及每个样本的记录。
+6. `token_f1_eval`：返回平均 token F1，以及每个样本的记录。
+7. `mock_judge` 和 `judge_eval`：返回每个样本的分数与 rationale，以及整个集合上的平均分。
+8. `Aggregator.normalise`：定义每种 eval 的归一化规则。
+9. `Aggregator.aggregate`：计算加权平均并组装完整报告。
+10. `run_demo`：先简单训练一个小模型，再运行四项评估，打印报告表，写出 JSON，并在成功时零退出。
 
-## 阅读报告
+## 如何读报告
 
-报告有三个层.顶部是总分数.下面是每期的四个数字.下面是诊断的每例分数.一个失败的CI运行通常需要总分,但一个追逐回归的评论家希望每例分数,以查看模型错了哪些输入.
+报告分三层。最上面是 aggregate score。下一层是四个单独的评估数字。再往下则是用于诊断的 per-example breakdown。CI 失败时通常只关心 aggregate，但一个正在追回归的 reviewer 会需要 per-example 细节，才能知道模型到底错在了哪些输入上。
 
- JSON 排放器使用稳定键,以便一个CI仪表板可以绘制版本中的趋势线. 漂亮的打印表是为了训练运行后观察终端的人.
+JSON dump 使用稳定键名，因此 CI dashboard 可以基于它画跨版本趋势线。pretty-printed table 则是给训练跑完后盯着终端看结果的人准备的。
 
-## 实现目标
+## 延伸练习
 
-- 添加校准评估:模型的软max概率是否与其准确性相匹配?
-- 添加强度评估:每例标记一个扰乱 (typo, paraphrase, distractor) 并报告每次扰乱的度量下降.
-- 替换一个HTTP调用背后的假定法官用一个真实模型.函数签名不会改变.
-- 增加每任务的体重学习:不要固定体重,而是将体重调整到目标优先顺序.
+- 加一个 calibration eval：模型 softmax 概率和真实准确率是否匹配？可以按 confidence 分桶，并报告每个桶里的经验准确率。
+- 加一个 robustness eval：给每个样本打上 perturbation 标签（typo、paraphrase、distractor），并报告每种扰动下的指标下降。
+- 把 mock judge 替换成一个通过 HTTP 调用的真实模型。函数签名不需要变。
+- 加入 per-task weight learning：不再使用固定权重，而是根据一组目标模型偏好顺序去拟合权重。
 
-实际的评估管道上层了更多的维度;模式保持不变:每个评估一个函数,一个集成器,一个报告.
+这份实现会把四项评估、聚合器和报告机制都交给你。真实世界里的评估流水线会在此基础上叠更多维度，但模式不会变：每项评估一个函数，一个聚合器，一份报告。
