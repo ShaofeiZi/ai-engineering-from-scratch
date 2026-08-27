@@ -1,172 +1,172 @@
-# 案例研究和2026年最新技术
+# 案例研究与 2026 年最新水平
 
-> 对于研究的结尾到结尾,每一个都说明了多代理工程的不同部分. **Anthropic's Research system**,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,**MetaGPT / ChatDev**(软件工程的SOP编码角色专业化;ChatDev的"沟通性幻觉化";通过DAG扩展到1000个代理, arXiv:2406.07155) 是正规的角色分解案例. **OpenClaw / Moltbook**(原本由彼得·斯坦伯格 (Peter Steinberger) 命名为Clawdbot,2025年11月;两次改名;2026年3月247万个GitHub星;本地ReAct-loop代理;Moltbook作为一个仅供代理商使用的社交网络,在发行几天内拥有约2.3万个代理账户,Meta收购2026-03-10) 说明了人口规模发生的事情:新兴的经济活动,即时注射风险,国家级监管 (中国限制了OpenClaw在政府计算机上,2026年3月).**Framework landscape April 2026:**兰格拉夫和克鲁艾的首席生产;AG2是社区的AutoGen延续;微软的AutoGen处于维护模式 (融入微软代理框架,RC Feb 2026);OpenAI代理SDK是生产Swarm的继任者;谷歌ADK (4月 2025) 是A2A原生参与者. 现在每个主要框架都提供MCP支持;大多数都提供A2A. 这一课将每个案例都读完, 并将常见的模式进行分析,
+> 有三套生产级参考值得完整研读，每套都展示了多智能体工程的不同侧面。**Anthropic Research 系统**（编排器—工作者、15 倍 token、相比单个 Opus 4 提升 90.2%、彩虹部署）是监督者模式的标准案例。**MetaGPT / ChatDev**（把 SOP 编入软件工程角色；ChatDev 的“沟通式去幻觉”；MacNet 通过 DAG 扩展到 1000 多个智能体，arXiv:2406.07155）是角色分解的标准案例。**OpenClaw / Moltbook**（最初是 Peter Steinberger 于 2025 年 11 月发布的 Clawdbot，之后两次改名；到 2026 年 3 月 GitHub 星标达 24.7 万；采用本地 ReAct 循环的智能体；Moltbook 作为仅面向智能体的社交网络，上线数天内便出现约 230 万个智能体账户，并于 2026 年 3 月 10 日被 Meta 收购）展示了群体规模下会发生什么：涌现式经济活动、提示注入风险，以及国家级监管（中国于 2026 年 3 月限制政府电脑使用 OpenClaw）。**2026 年 4 月的框架格局**也已成形：LangGraph 和 CrewAI 领跑生产环境；AG2 是社区维护的 AutoGen 延续；Microsoft AutoGen 进入维护模式（并入 Microsoft Agent Framework，2026 年 2 月发布候选版）；OpenAI Agents SDK 是生产级 Swarm 后继者；Google ADK（2025 年 4 月）则是原生支持 A2A 的新进入者。所有主流框架如今都支持 MCP，多数也支持 A2A。本课会完整研读这三类案例，提炼共同模式并梳理框架格局，帮助你基于事实而不是营销术语，为下一套生产系统选择参考方案。
 
-**Type:** Learn (capstone)
+**Type:** 学习（综合课）
 **Languages:** —
-**Prerequisites:** all of Phase 16 (Lessons 01-24)
-**Time:** ~90 minutes
+**Prerequisites:** 第 16 阶段全部内容（第 01–24 课）
+**Time:** 约 90 分钟
 
 ## 问题
 
-复合代理工程是一个年轻的学科. 制作参考数量很少,每个产品都涵盖了不同的空间. 读一读一读是有用的;比较它们作为一组更有用. 这一课将三项可信的2026例证作为一个完整的阅读列表, 入了共同的模式,
+多智能体工程仍是一门年轻学科。真正称得上生产参考的资料不多，而且每份资料只覆盖设计空间的一个侧面。逐一阅读固然有用，并列比较则更有价值。本课把三组典型的 2026 案例研究组成一份端到端阅读清单，提炼共同模式并梳理框架格局，让你在选择框架或设计架构时依据知识，而不是宣传材料。
 
 ## 概念
 
-### 人类研究系统
+### Anthropic Research 系统
 
-制作监督员工案例. 克劳德·奥普斯4计划和合成; 克劳德·索内特4副主题研究并行. 发表工程帖子: https://www.anthropic.com/engineering/multi-agent-research-system.
+这是生产级监督者—工作者模式的标准案例。Claude Opus 4 负责规划和综合，Claude Sonnet 4 子智能体并行研究。官方工程文章见：https://www.anthropic.com/engineering/multi-agent-research-system 。
 
-关键测量结果:
+关键测量结果：
 
-- **+90.2%**内部研究评估的单剂Opus 4的改善.
-- **80% of BrowseComp variance**解释**token usage alone**多代理主要因为每个子代理得到一个新的背景窗口.
-- **15x tokens per query**对于单人代理.
-- **Rainbow deployment**因为代理人是长期的,有权力.
+- 在内部研究评估中，相比单个 Opus 4 提升 **90.2%**。
+- **80% 的 BrowseComp 方差**仅由 **token 使用量**便可解释；多智能体之所以胜出，很大程度上是因为每个子智能体都拥有全新的上下文窗口。
+- **每次查询消耗 15 倍 token**，显著高于单个智能体。
+- **彩虹部署**是必要条件，因为智能体生命周期长且带有状态。
 
-设计课程编码:
+沉淀出的设计经验包括：
 
-1. **Scale effort to query complexity.**简单 → 1 个代理,有 3-10 个工具调用. 中等 → 3 个代理. 复杂的研究 → 10+ 个子代理.
-2. **Broad first, then narrow.**子做广泛的搜索;子合成; 后续的子做针对的深度.
-3. **Rainbow deploys.**保持旧运行时间版本活着,直到他们的飞行员完成.
-4. **Verification is not optional.**系统没有明确的验证器作用.
+1. **投入规模应与查询复杂度匹配。** 简单任务使用 1 个智能体和 3–10 次工具调用；中等任务使用 3 个智能体；复杂研究使用 10 个以上子智能体。
+2. **先广后深。** 子智能体先进行广泛搜索，由主导智能体统一综合，再派后续子智能体定向深入。
+3. **必须采用彩虹部署。** 旧运行时版本要持续运行，直到其上尚未结束的智能体全部完成。
+4. **验证绝非可选项。** 没有验证者角色时，系统会出现明显幻觉。
 
-这就是生产规模的监督员工拓 (阶段16 · 05) 的参考案例.
+这是监督者—工作者拓扑（第 16 阶段 · 05）在生产规模下最典型的参考案例。
 
-### 转载数据
+### MetaGPT / ChatDev
 
-产品SOP角色分解案例. 覆盖 arXiv:2308.00352 (MetaGPT) 和 arXiv:2307.07924 (ChatDev).
+这是生产级 SOP 角色分解的标准案例，重点资料是 arXiv:2308.00352（MetaGPT）和 arXiv:2307.07924（ChatDev）。
 
-编码软件工程SOP作为角色提示:产品经理,建筑师,项目经理,工程师,QA工程师.`Code = SOP(Team)`每个角色都有一个狭窄的专业提示; 角色间交换都包含结构化文物 (PRD文件,建筑文件,代码).
+MetaGPT 把软件工程 SOP 编入角色提示：产品经理、架构师、项目经理、工程师和质量保证工程师。它最经典的表述是 `Code = SOP(Team)`。每个角色的提示都很聚焦且高度专业化；角色之间传递的是 PRD、架构文档和代码等结构化工件。
 
-德夫的贡献: **communicative dehallucination**设计人员在设计UI之前向程序员询问该语言是什么,而不是猜测. 这一报告报告显示,多代理管道中的幻觉可测量.
+ChatDev 的关键贡献是**沟通式去幻觉（communicative dehallucination）**：智能体在回答前先向同伴索要必要细节，而不是猜测。例如，设计智能体在开始设计界面前，会先询问程序员目标语言是什么。论文报告表明，这种做法能显著降低多智能体流水线中的幻觉。
 
-现在,MacNet (arXiv:2406.07155) 扩展了ChatDev到**>1000 agents via DAGs**每个DAG节点都是角色专业化;边缘编码交换合约. 规模是可能的,因为路由是明确的和离线计算.
+MacNet（arXiv:2406.07155）进一步通过 DAG 把 ChatDev 扩展到 **1000 多个智能体**。每个 DAG 节点对应一种专门化角色，边则编码移交契约。它之所以能扩展到这一规模，是因为路由明确且可以离线计算。
 
-设计课程:
+对应的设计经验是：
 
-1. **Structure matters more than size.**紧密的五角色的SOP团队击败了50名非结构化团队.
-2. **Handoff contracts in writing.**角色之间传递的文物遵循一个方案.
-3. **Communicative dehallucination**它们是便宜的,承载的模式.
-4. **DAGs scale further than chat.**当流量可识别时,将其编码.
+1. **结构比规模更重要。** 一个紧凑的五角色 SOP 团队，胜过由 50 个智能体组成的无结构集群。
+2. **必须明确写出移交契约。** 角色之间传递的工件应遵循固定模式。
+3. **沟通式去幻觉**成本低，却是关键的承重模式。
+4. **DAG 比聊天更容易扩展。** 只要流程是可预知的，就应该把它编码出来。
 
-这就是角色专业化 (16 · 08) 和结构化拓学 (16 · 15) 的参考案例.
+这是角色专业化（第 16 阶段 · 08）与结构化拓扑（第 16 阶段 · 15）的参考案例。
 
-### 开关/Moltbook生态系统
+### OpenClaw / Moltbook 生态
 
-产量人口规模的情况.
+这是生产环境中的群体规模案例。时间线大致如下：
 
-- **Nov 2025:**鱼 (Peter Steinberger的当地ReAct循环编码代理) 舰船.
-- **Dec 2025 – Mar 2026:**改名为两次 (Clawdbot → OpenClaw →继续在 OpenClaw 下).
-- **Feb 2026:**马尔特本作为一个只代理的社交网络,
-- **Mar 2026 (2026-03-10):**梅塔收购了Moltbook.
-- **Mar 2026:**中国限制了OpenClaw的政府计算机.
-- **Mar 2026:**开关跨越了247万个GitHub星星.
+- **2025 年 11 月：** Clawdbot（Peter Steinberger 的本地 ReAct-loop 编码 agent）发布。
+- **2025 年 12 月到 2026 年 3 月：** 两次改名（Clawdbot → OpenClaw → 持续在 OpenClaw 名下演进）。
+- **2026 年 2 月：** Moltbook 作为仅面向智能体的社交网络上线；几天内便出现约 230 万个智能体账户。
+- **2026 年 3 月 10 日：** Meta 收购 Moltbook。
+- **2026 年 3 月：** 中国限制 OpenClaw 在政府电脑上的使用。
+- **2026 年 3 月：** OpenClaw 的 GitHub 星标达到 24.7 万。
 
-它们是多元代理的,
+这展示了把数百万个智能体放到共享基底上后会发生什么：
 
-- **Emergent economic activity.**代理商通过代币支付购买,销售和服务.
-- **Prompt-injection risks at population scale.**病毒代理的一个恶意提示在几个小时内传播到成千上万的代理对代理的互动.
-- **State-level regulatory response.**几个星期后, 监管进入生态系统.
+- **涌现式经济活动。** 智能体会彼此购买、出售和提供服务，并以代币支付结算。
+- **群体规模的提示注入风险。** 一条恶意提示只要嵌入病毒式传播的智能体资料，就能在几小时内污染成千上万次智能体间交互。
+- **国家级监管响应。** 产品上线几周内，监管就会进入生态。
 
-设计的教训是部分技术,部分治理:
+这个案例的经验，一半是技术，一半是治理：
 
-1. **Multi-agent at population scale is a new regime.**个人系统最佳实践 (验证,角色清晰度) 仍然适用,但不足.
-2. **Prompt injection is the new XSS.**默认情况下,将代理人的个人资料和跨代理信息视为不可信赖的输入.
-3. **Regulation is faster than design cycles.**计划一下.
-4. **Open-source + viral scale compounds.**射4个月的247万颗星星是不寻常的;
+1. **群体规模的多智能体系统是一种全新形态。** 单系统级最佳实践（验证、角色清晰）仍然必要，但远远不够。
+2. **提示注入就是新的 XSS。** 默认把智能体资料与跨智能体消息都视为不可信输入。
+3. **监管比设计周期跑得更快。** 你必须预先为此设计。
+4. **开源与病毒式扩散会放大一切。** 约 4 个月获得 24.7 万个星标属于极端事件，架构必须考虑部署带来的突发负载。
 
-看到[OpenClaw Wikipedia](https://en.wikipedia.org/wiki/OpenClaw)对于技术基础,Clawdbot / OpenClaw存储库揭示了本地ReAct循环;Moltbook的公开帖子显示了社交图架构.
+相关生态背景可参考 [OpenClaw 的 Wikipedia 页面](https://en.wikipedia.org/wiki/OpenClaw)，以及 CNBC 和 Palo Alto Networks 的相关报道。在技术层面，Clawdbot / OpenClaw 仓库展示了本地 ReAct 循环；Moltbook 的公开帖子则揭示了构建其上的社交图架构。
 
-### 框架景观2026年4月
+### 2026 年 4 月的框架格局
 
-| Framework | Status | Best for | Notes |
+| 框架 | 状态 | 最适合 | 说明 |
 |---|---|---|---|
-| **LangGraph** (LangChain) | Production leader | structured graph + checkpointing + human-in-the-loop | recommended default for production |
-| **CrewAI** | Production leader | role-based crews with Sequential/Hierarchical processes | strong for role decomposition |
-| **AG2** | Community maintained | GroupChat + speaker selection | AutoGen v0.2 continuation |
-| **Microsoft AutoGen** | Maintenance mode (Feb 2026) | — | merged into Microsoft Agent Framework RC |
-| **Microsoft Agent Framework** | RC (Feb 2026) | orchestration patterns + enterprise integration | new entrant; watch |
-| **OpenAI Agents SDK** | Production | Swarm successor | tool-return handoff pattern |
-| **Google ADK** | Production (April 2025) | A2A-native | Google Cloud integration |
-| **Anthropic Claude Agent SDK** | Production | single-agent + Research extension | see the Research system post |
+| **LangGraph**（LangChain） | 生产领先 | 结构化图、检查点和人在环 | 推荐作为生产环境默认选择 |
+| **CrewAI** | 生产领先 | 基于角色的团队，以及顺序／分层流程 | 擅长角色分解 |
+| **AG2** | 社区维护 | GroupChat 与发言者选择 | AutoGen v0.2 的延续 |
+| **Microsoft AutoGen** | 维护模式（2026 年 2 月） | — | 已并入 Microsoft Agent Framework 发布候选版 |
+| **Microsoft Agent Framework** | 发布候选版（2026 年 2 月） | 编排模式与企业集成 | 新进入者，值得关注 |
+| **OpenAI Agents SDK** | 生产可用 | Swarm 的后继者 | 采用工具返回 Agent 的移交模式 |
+| **Google ADK** | 生产可用（2025 年 4 月） | A2A 原生 | 与 Google Cloud 集成 |
+| **Anthropic Claude Agent SDK** | 生产可用 | 单智能体与 Research 扩展 | 参见 Research 系统文章 |
 
-现在每个主要框架都在运输.**MCP**支持;大多数船**A2A**协议兼容性不再是区别因素.
+现在所有主流框架都提供 **MCP** 支持，多数也支持 **A2A**。协议兼容性已经不再是区分点。
 
-### 在所有三个案件中,
+### 三个案例的共同模式
 
-1. **Orchestrator + workers**(人类明确监督者,MetaGPT PM-as-supervisor,OpenClaw个体代理 +网络效应).
-2. **Structured handoff contracts**(人类的子基任务描述,MetaGPT PRD/架构文件,OpenClaw A2A文物).
-3. **Verification as first-class role**(Anthropic的验证器,MetaGPT的QA工程师,OpenClaw的网络验证器).
-4. **Scaling is topology + substrate, not just more agents**(彩虹部署,MacNet DAGs,人口规模基板).
-5. **Cost is material and disclosed**对于每一个角色的预算,Moltbook的交互价格.
-6. **Security posture is explicit**(人类的沙盒,MetaGPT的角色限制,OpenClaw的即时注射作为已知攻击表面).
+1. **编排器加工作者。** Anthropic 使用显式监督者，MetaGPT 由产品经理承担监督者职能，OpenClaw 则由个体智能体与网络效应共同驱动。
+2. **结构化移交契约。** Anthropic 有明确的子智能体任务描述，MetaGPT 有 PRD 和架构文档，OpenClaw 有 A2A 工件。
+3. **验证是一等角色。** Anthropic 有验证者，MetaGPT 有质量保证工程师，OpenClaw 生态中也会出现网络内验证者。
+4. **扩展依赖拓扑与运行基底，而不是单纯增加智能体。** Anthropic 使用彩虹部署，MacNet 使用 DAG，OpenClaw 使用群体规模的运行基底。
+5. **成本真实存在，必须披露。** 15 倍 token、MetaGPT 的逐角色预算、Moltbook 的逐次交互定价，都是设计约束。
+6. **安全姿态必须明确。** Anthropic 强调沙箱，MetaGPT 依赖角色限制，OpenClaw 把提示注入明确视为攻击面。
 
-### 选择下一个项目参考
+### 为下一个项目选择参考案例
 
-- **Production research / knowledge task → Anthropic Research.**新文本的子集赢了.
-- **Engineering / tool-chain workflow → MetaGPT / ChatDev.**角色+SOP+交换合同
-- **Network-effect social product → OpenClaw / Moltbook.**基层+新兴经济.
-- **Classic enterprise automation → CrewAI or LangGraph**(生产领导者,稳定运行时间).
+- **生产级研究 / 知识任务 → Anthropic Research。** 拥有全新上下文的子智能体最具代表性。
+- **工程 / 工具链工作流 → MetaGPT / ChatDev。** 角色 + SOP + 移交契约。
+- **网络效应型社交产品 → OpenClaw / Moltbook。** 运行基底 + 涌现经济。
+- **传统企业自动化 → CrewAI 或 LangGraph。** 生产成熟，运行时稳定。
 
-### 2026年最新总结
+### 2026 年最新水平总结
 
-在2026年4月的场地:
+到 2026 年 4 月，这个领域的状态大致是：
 
-- **Frameworks are converging.**支持MCP+A2A是桌面投注. 交换语义是剩下的设计选择.
-- **Evaluation is hardening.**现在的防污现实检查.
-- **Production failure rates are measurable**现实MAS的比例为41%-86.7%,
-- **Cost is the central engineering constraint.**代币成本每任务,墙钟每交互,彩虹部署的上海费用.多代理赢得准确性,但损失成本,交易是商业决定.
-- **Regulation is a near-term input, not a background concern.**司法管辖区的速度比个体部署周期更快.
+- **框架正在收敛。** 支持 MCP 与 A2A 已成为基本要求，真正剩下的差异主要是移交语义。
+- **评估日益严格。** SWE-bench Pro、MARBLE、STRATUS 等基准让现实检验越来越严；Pro 是当前最重要的抗污染关卡。
+- **生产失败率已经可测量。** Cemri 2025 的 MAST 显示，真实 MAS 的失败率在 41%–86.7% 之间，行业已经告别“演示看起来很美”的阶段。
+- **成本是最核心的工程约束。** 每项任务的 token 成本、每次交互的挂钟时间和彩虹部署的额外开销都很实际。多智能体通常在准确率上胜出、在成本上落后，而这正是业务决策。
+- **监管是近端输入，不是背景噪声。** 各司法辖区的动作速度，已经快于单个团队的部署节奏。
 
 ```figure
 a5-orchestrator-scale
 ```
 
-## 用它
+## 实际使用
 
-`outputs/skill-case-study-mapper.md`是阅读拟议的多代理系统设计并将其映射到最近的案例研究中,并将已经测试的案例研究的设计决定呈现出来.
+`outputs/skill-case-study-mapper.md` 是一项技能，用来读取拟议中的多智能体系统设计，将其映射到最接近的案例研究，并指出该案例已经验证过哪些设计决策。
 
-## 运送它
+## 交付成果
 
-2026年生产多代理的初步规则:
+2026 年生产级多代理系统的起步规则：
 
-- **Start from a case study, not from scratch.**选择最接近的人类研究/ MetaGPT/ OpenClaw 的方法,并适应.
-- **Adopt MCP + A2A.**跨框架的可移植性是有价值的;协议支持是免费的.
-- **Measure against SWE-bench Pro or your internal Pro-equivalent.**检测到是受污染的.
-- **Pay the verification tax.**独立验证器的成本是您的代币预算的20-30%,并且可以测量准确度.
-- **Rainbow deploy long-running agents.**预计多小时的代理运行将是常规的.
-- **Read WMAC 2026 and the MAST follow-ups.**纪律正在迅速发展.
+- **先从案例研究出发，不要从零设计。** 先选最接近 Anthropic Research / MetaGPT / OpenClaw 的参考，再做改造。
+- **默认采用 MCP + A2A。** 跨框架可移植性具有实际价值，而协议支持如今几乎没有额外成本。
+- **对标 SWE-bench Pro 或自建的同等基准。** Verified 已受到污染。
+- **承担验证成本。** 独立验证者大约会占用 20%–30% 的 token 预算，但能换来可测量的正确性。
+- **对长生命周期智能体采用彩虹部署。** 持续数小时的智能体运行将成为常态。
+- **持续读 WMAC 2026 和 MAST 后续工作。** 这门学科还在高速演进。
 
-## 运动
+## 练习
 
-1. 阅读人类研究系统的完整内容. 确定如果您将Opus 4取代于较小的模型 (例如,海库 4) 改变的三个设计决定.
-2. 阅读 MetaGPT 第3-4节 (arXiv:2308.00352).从您自己的域名 (而不是软件) 编码一个SOP作为角色提示.SOP意味着多少角色?
-3. 查看ChatDev (arXiv:2307.07924). 确定"沟通性幻觉"的机制.
-4. 阅读OpenClaw和Moltbook. 选择一个特定的失败模式,在人口规模上出现,
-5. 选择您目前的多代理项目. 在三个案例研究中,哪个是最接近参考?从该案例研究中,您尚未采取哪些设计决定? 写下您将在本季度采取的一个.
+1. 完整阅读 Anthropic Research 系统的工程文章。设想把 Opus 4 换成更小的模型（例如 Haiku 4）后，哪三项设计决策必须调整？
+2. 阅读 MetaGPT 第 3–4 节（arXiv:2308.00352）。从自己的领域选择一个 SOP（不要选择软件工程），把它编码成角色提示。这个 SOP 一共隐含多少个角色？
+3. 阅读 ChatDev（arXiv:2307.07924）。找出“沟通式去幻觉”的具体机制，并把它实现到现有的某个多智能体系统中。
+4. 阅读 OpenClaw 与 Moltbook 的资料。选择一种只有在群体规模下才会出现、不会出现在五智能体系统中的失败模式。你会如何进行工程防护？
+5. 看看你当前的多代理项目。三套案例研究里，哪一个最接近？这个参考案例中有哪些设计决策你还没有采用？写下一个你准备在本季度引入的决策。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| Anthropic Research | "The supervisor reference" | Claude Opus 4 + Sonnet 4 subagents; 15x tokens; +90.2% over single-agent. |
-| MetaGPT | "SOP as prompts" | Role decomposition for software engineering; `Code = SOP(Team)`. |
-| ChatDev | "Agents as roles" | Designer / programmer / reviewer / tester; communicative dehallucination. |
-| MacNet | "Scale ChatDev via DAG" | arXiv:2406.07155; 1000+ agents via explicit DAG routing. |
-| OpenClaw | "Local ReAct-loop agents" | Steinberger's project; 247k stars by March 2026. |
-| Moltbook | "Agent-only social network" | 2.3M agent accounts; acquired by Meta March 2026. |
-| Rainbow deploy | "Multiple versions concurrent" | Keep old runtime versions alive for in-flight long-running agents. |
-| Communicative dehallucination | "Ask before answering" | Agents request specifics from peers instead of guessing. |
-| WMAC 2026 | "The AAAI workshop" | April 2026 community focal point for multi-agent coordination. |
+| Anthropic Research | “监督者模式的参考案例” | Claude Opus 4 配合 Sonnet 4 子智能体；消耗 15 倍 token；相比单个智能体提升 90.2%。 |
+| MetaGPT | “把 SOP 编入提示” | 面向软件工程的角色分解；`Code = SOP(Team)`。 |
+| ChatDev | “智能体扮演不同角色” | 设计者、程序员、审查者、测试者，以及沟通式去幻觉。 |
+| MacNet | “通过 DAG 扩展 ChatDev” | arXiv:2406.07155；依靠显式 DAG 路由扩展到 1000 多个智能体。 |
+| OpenClaw | “采用本地 ReAct 循环的智能体” | Steinberger 的项目；到 2026 年 3 月获得 24.7 万个 GitHub 星标。 |
+| Moltbook | “仅面向智能体的社交网络” | 约 230 万个智能体账户；2026 年 3 月被 Meta 收购。 |
+| 彩虹部署 | “多个版本并存” | 让旧运行时版本继续存活，直到尚未结束的长生命周期智能体完成。 |
+| 沟通式去幻觉 | “先问再答” | 智能体在回答前先向同伴索要必要细节，而不是猜测。 |
+| WMAC 2026 | “AAAI 研讨会” | 2026 年多智能体协调社区的重要焦点。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Anthropic — How we built our multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)监督工人的生产参考
-- [MetaGPT — Meta Programming for Multi-Agent Collaborative Framework](https://arxiv.org/abs/2308.00352) SOP作用分解
-- [ChatDev — Communicative Agents for Software Development](https://arxiv.org/abs/2307.07924)沟通性幻觉
-- [MacNet — scaling role-based agents to 1000+](https://arxiv.org/abs/2406.07155) DAG基础的规模
-- [OpenClaw on Wikipedia](https://en.wikipedia.org/wiki/OpenClaw)生态系统概况
-- [WMAC 2026](https://multiagents.org/2026/)AAAI2026年多代理协调桥梁计划研讨会
-- [LangGraph docs](https://docs.langchain.com/oss/python/langgraph/workflows-agents)生产领导者
-- [CrewAI docs](https://docs.crewai.com/en/introduction)基于角色的框架
+- [Anthropic — How we built our multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system) - 监督者—工作者模式的生产参考
+- [MetaGPT — Meta Programming for Multi-Agent Collaborative Framework](https://arxiv.org/abs/2308.00352) - 基于标准作业流程的角色分解
+- [ChatDev — Communicative Agents for Software Development](https://arxiv.org/abs/2307.07924) - 沟通式去幻觉
+- [MacNet — scaling role-based agents to 1000+](https://arxiv.org/abs/2406.07155) - 基于 DAG 的扩展
+- [OpenClaw on Wikipedia](https://en.wikipedia.org/wiki/OpenClaw) - 生态总览
+- [WMAC 2026](https://multiagents.org/2026/) - AAAI 2026 多智能体协调桥接项目研讨会
+- [LangGraph docs](https://docs.langchain.com/oss/python/langgraph/workflows-agents) - 生产环境中的主流方案
+- [CrewAI docs](https://docs.crewai.com/en/introduction) - 基于角色的框架
