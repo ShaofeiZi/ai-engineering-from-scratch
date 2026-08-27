@@ -1,145 +1,145 @@
-# 士师的观察性堆选择
+# LLM 可观测性栈选型
 
-> 2026年可观测性市场分为两类. 开发平台 (LangSmith,Langfuse,Comet Opik) 通过评估,即时管理,会议重播来组装监测. 网关/仪器工具 (Helicone, SigNoz, OpenLLMetry,Phoenix) 专注于远程测量. 兰格斯是MIT授权的核心,具有强大的OSS平衡 (50K事件/月免费云). 尼克斯是基于Elastic License 2.0的OpenTelemetry原产品,非常适用于漂移/RAG可视化,而不是持续的生产后端. 亚里兹AX使用零副本的冰berg/Parquet集成,声称100倍比单可观测性便宜. 长史密斯为长链/长图带领, $ 39 / 用户 / 月, 仅在企业中自主托管. 机是代理的,15-30分钟的设置,100万个月的空调,但在代理的痕迹上, 常见的生产模式:Gateway (Helicone/Portkey) + eval平台 (Phoenix/TruLens) 附加在OpenTelemetry上.
+> 2026 年的可观测性市场大致分成两类。开发平台（LangSmith、Langfuse、Comet Opik）把监控、evals、prompt 管理、session replay 打包在一起；网关和埋点工具（Helicone、SigNoz、OpenLLMetry、Phoenix）则聚焦于 telemetry。Langfuse 以 MIT 授权核心实现了较好的 OSS 平衡（云端每月免费 50K events）。Phoenix 原生支持 OpenTelemetry，采用 Elastic License 2.0，非常适合做漂移和 RAG 可视化，但并不是一个持久化的生产后端。Arize AX 通过零拷贝的 Iceberg/Parquet 集成，声称成本可以比单体式可观测方案低 100 倍。LangSmith 在 LangChain/LangGraph 场景下领先，价格为 $39/user/mo，且只有 Enterprise 才支持 self-host。Helicone 走 proxy 模式，15-30 分钟即可接入，每月免费 100K req，但对 agent trace 的深度较弱。常见的生产搭配是：Gateway（Helicone/Portkey）+ eval platform（Phoenix/TruLens），中间用 OpenTelemetry 粘合。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy trace-sampling simulator)
-**Prerequisites:** Phase 17 · 08 (Inference Metrics), Phase 14 (Agent Engineering)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库，玩具级 trace 采样模拟器）
+**Prerequisites:** 阶段 17 · 08（推理指标），阶段 14（智能体工程）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 区分开发平台 (组合:评估+提示+会议) 与门户/远程仪器 (仅跟踪+指标).
-- 绘制六个主要工具 (Langfuse,LangSmith,Phoenix,Ariz AX,Helicone,Opik) 根据其许可,定价和甜点使用情况.
-- 解释OpenTelemetry粘合图案,允许您将门户工具与单独的评估平台结合起来.
-- 命名2026年的成本差异 (Arize AX的零复制方法与单一摄入量) 并说明大约100倍乘法.
+- 区分开发平台（打包了 evals + prompts + sessions）与网关/telemetry 工具（只提供 traces + metrics）。
+- 将六个主要工具（Langfuse、LangSmith、Phoenix、Arize AX、Helicone、Opik）映射到它们的许可证、定价和最适用场景。
+- 解释 OpenTelemetry 粘合模式，以及它如何让你把网关工具和单独的 eval 平台组合起来。
+- 说出 2026 年的成本分水岭（Arize AX 的零拷贝方案对比单体 ingest），并记住大约 100 倍这个量级。
 
 ## 问题
 
-你发送了LLM功能.它运行.你没有可见的即时失败,工具循环,延迟回归,成本高峰,或即时缓存的击率.你谷歌"LLM可观测性"并得到八种工具,所有声称它们都在三个不同的价格点解决相同的问题.
+你上线了一个 LLM 功能。它能跑，但你完全看不到 prompt 失败、工具循环、延迟回归、成本尖峰，或者 prompt cache hit rate。你去搜“LLM observability”，结果看到八个工具，都说自己在解决同一个问题，只是价格各不相同。
 
-斯回答"我的RAG管道漂移吗?"子回答"哪个应用程序正在燃烧代币?"斯回答"我可以自主主主办整个东西吗?"不同的工具,不同的观众.
+它们其实解决的不是同一类问题。LangSmith 回答的是“为什么这个 LangGraph run 失败了？”；Phoenix 回答的是“我的 RAG pipeline 漂移了吗？”；Helicone 回答的是“哪个应用在烧 tokens？”；Langfuse 回答的是“我能不能把整套东西 self-host？”工具不同，受众也不同。
 
-选择涉及四个轴:堆 (长链?原始 SDK?多供应商?),许可证容忍度 (仅为MIT?弹性 OK?商业罚款?),预算 (免费层次? $100/mo? $需要一个好主机,
+选型通常要看四个轴：技术栈（LangChain？原生 SDK？多供应商？）、许可证接受度（必须 MIT？Elastic 可以？商业也行？）、预算（free tier？$100/mo？$1000/mo？），以及 self-host 要求（必须、自带加分、还是完全不需要）。
 
 ## 概念
 
-### 两类
+### 两大类别
 
-**Development platforms**通过测试,提示管理,数据集版本化,会议重播,你运行实验,看哪个提示工作,数据集回归,对旧获胜者进行新的提示.
+**开发平台**会把 observability、evals、prompt management、dataset versioning、session replay 打成一套。你可以直接做实验，比较哪一个 prompt 更好，也可以用数据集对新 prompt 做 regression，对照旧版本结果。代表产品包括 LangSmith、Langfuse、Comet Opik。
 
-**Gateway/telemetry tools**仪器推断调用 快速,响应,代币,延迟,模型,成本.直升机,SigNoz,OpenLLMetry, Phoenix.最小化.可以通过OpenTelemetry与单独的评估工具结合.
+**网关/telemetry 工具**专注于推理调用本身的埋点：prompt、response、tokens、latency、model、cost。Helicone、SigNoz、OpenLLMetry、Phoenix 都属于这一类。它们更轻、更专一，也更容易通过 OpenTelemetry 与独立 eval 工具组合使用。
 
-### 长          
+### Langfuse：OSS 平衡点
 
-- 通过Docker进行自主托管.
-- 云免费级别:每月50万次活动. 支付:每月29美元.
-- 基本的数据,即时管理,追踪,数据集,所有四个开发平台的功能.
-- 您需要LangSmith类功能,但必须自主托管或保留OSS许可.
+- 核心采用 Apache / MIT 许可；可通过 Docker self-host。
+- 云端 free tier：50K events/month。付费版：团队 $29/mo。
+- 覆盖 evals、prompt management、traces、datasets，基本把开发平台四件套都补齐了。
+- 最适合的情况是：你想要接近 LangSmith 的功能，但又必须 self-host，或者必须保持 OSS 许可证。
 
-###  (Arize) 电力测量第一,开放电力测量本土
+### Phoenix（Arize）：telemetry 优先、原生 OpenTelemetry
 
-- 弹性许可证2.0;自主主机.
-- 非常擅长RAG和漂移视觉化, 嵌入空间散射图片是第一级的.
-- 没有作为持续的生产后端设计,主要是开发时间可观测性.
-- 热点:RAG管道开发,漂移调试,配对生产的单独门口.
+- Elastic License 2.0；self-host 难度低。
+- 在 RAG 和 drift 可视化上非常强，embedding space scatter plots 是一等功能。
+- 它不是按“持久化生产后端”来设计的，主要偏向开发阶段可观测性。
+- 最适合 RAG pipeline 开发、漂移排查，以及和独立 gateway 搭配处理生产场景。
 
-###        
+### Arize AX：规模化路线
 
-- 通过冰山/帕克特进行零复制数据湖集成.
-- 据称,它比单形可观测性 (达达多格类) 便宜100倍.
-- 需要具有LLC特异性的仪表板,而无需Datadog定价.
+- 商业产品。通过 Iceberg/Parquet 做零拷贝数据湖集成。
+- 声称在大规模场景下比单体式可观测性方案（类似 Datadog）便宜约 100 倍。核心逻辑是：trace 数据存到你自己的 S3 Parquet 中，Arize 直接读取。
+- 最适合每天超过 10M traces、已经有数据湖、又想要 LLM 专用 dashboard 但不想承受 Datadog 定价的团队。
 
-### 首先是兰格史密斯 兰格链/兰格图
+### LangSmith：LangChain/LangGraph 优先
 
-- 商业价格为39美元/月,只能在企业上自主托管.
-- 长链和长图堆的最佳. 如果你没有上任何一个,它不那么有吸引力.
-- 团队承诺加入"长链",愿意付出.
+- 商业产品，$39/user/month。只有 Enterprise 才支持 self-host。
+- 在 LangChain 和 LangGraph 栈上属于 best-in-class；如果你不在这两个生态里，它的吸引力会明显下降。
+- 最适合已经明确押注 LangChain，并且愿意为此付费的团队。
 
-### 基代理基的可行最低值
+### Helicone：proxy 模式的最低可行方案
 
-- 通过换取你的15-30分钟设置`OPENAI_API_BASE`给了直升机代理人.
-- 美国麻省理工学院授权; 每月100万免费,每月20美元.
-- 包含过失,缓存,利率限制 也作为一个门户.
-- 经纪人/多步骤的痕迹的深度较小.
-- 快速启动,单堆应用程序,需要一个门口+一个可观测的应用程序.
+- 只要把你的 `OPENAI_API_BASE` 切到 Helicone proxy，15-30 分钟就能完成接入。
+- MIT 许可；每月免费 100K req，付费从 $20/mo+ 起。
+- 同时提供 failover、caching、rate limits，因此本身也兼具 gateway 职能。
+- 对 agent / multi-step trace 的深度不如开发平台。
+- 最适合想快速启动、技术栈单一，又希望 gateway + observability 二合一的应用。
 
-###  OSS开发平台
+### Opik（Comet）：OSS 开发平台
 
--  Apache 2.0 完全是OSS.
-- 类似于星遗产的兰格斯.
-- 点: ML 团队已经在彗星上,想要在同一面板上可以观察LLM.
+- Apache 2.0，完全 OSS。
+- 功能面与 Langfuse 相近，但带有 Comet 生态背景。
+- 最适合已经在用 Comet 的 ML 团队，希望在同一个界面里查看 LLM observability。
 
-### 开放Telemetry-第一完整APM
+### SigNoz：OpenTelemetry 优先的一体化 APM
 
-- 通过OpenTelemetry来处理一般APM加上LLM.
-- 服务和LLM调用之间可观的统一性.
+- Apache 2.0。既能处理通用 APM，也能通过 OpenTelemetry 覆盖 LLM 调用。
+- 最适合想把普通服务和 LLM 调用统一纳入同一套 observability 的团队。
 
-### 接:OpenTelemetry + GenAI语义公约
+### 粘合层：OpenTelemetry + GenAI semantic conventions
 
-开通电气在2025年底发布了GenAI语义公约 (`gen_ai.system`现在`gen_ai.request.model`现在`gen_ai.usage.input_tokens`产品的生产模式出现:
+OpenTelemetry 在 2025 年底发布了 GenAI semantic conventions，例如 `gen_ai.system`、`gen_ai.request.model`、`gen_ai.usage.input_tokens`。凡是消费 OTel 的工具，就有了互操作能力。当前逐渐成型的生产模式是：
 
-1. 通过每次LLM电话,将Genai会议发送到 OTel.
-2. 往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往往
-3. 对于回归的双舰到评估平台 (Phoenix/Langfuse).
-4. 通过Arize AX或DuckDB进行长期分析的数据湖 (Iceberg) 档案.
+1. 所有 LLM 调用都发出带 GenAI conventions 的 OTel。
+2. 日常运维流量先路由到 gateway（Helicone / Portkey）。
+3. 同时双写到 eval 平台（Phoenix / Langfuse）做回归分析。
+4. 长期归档则进入数据湖（Iceberg），再由 Arize AX 或 DuckDB 做长期分析。
 
-### 陷:在错误层上使用仪器
+### 陷阱：埋点埋在了错误的层
 
-通过使用您的代理框架中的工具 (例如添加LangSmith痕迹) 将您与该框架相结合.在HTTP/OpenAI-SDK层 (通过OpenLLMetry或您的网关) 中的工具是可移植的.
+如果你把埋点放在 agent framework 内部，比如直接加 LangSmith traces，你就被这个框架绑定住了。把埋点放在 HTTP/OpenAI-SDK 这一层，比如通过 OpenLLMetry 或 gateway，则更具可移植性。
 
-### 样本你不能保留一切
+### 采样：你不可能全留
 
-在每天超过100万次请求时,完整的追踪成本高于LLM调用. 根据规则的样本:100%错误,100%高成本,5%成功. 总是保持总量;长尾保持原料.
+当请求量超过每天 1M 时，完整保存所有 trace 的成本甚至会高过 LLM 调用本身。更现实的做法是按规则采样：100% 保留错误，100% 保留高成本请求，5% 保留成功请求。聚合指标始终保留，原始 trace 只为长尾问题保留样本。
 
-### 你应该记住的数字
+### 你需要记住的数字
 
-- 免费云:每月50万次活动.
-- 长史密斯: 39美元/月.
-- 免费升机:每月100万.
-- 亚里兹AX声称:比单型尺价格便宜100倍.
-- 开通电信GenAI公约:2025航运,2026年广泛采用.
+- Langfuse 云端免费额度：50K events/month。
+- LangSmith：$39/user/month。
+- Helicone 免费额度：100K req/month。
+- Arize AX 的宣传口径：在大规模场景下比单体式方案便宜约 100 倍。
+- OpenTelemetry GenAI conventions：2025 年发布，2026 年已被广泛采用。
 
 ```figure
 i4-otel-glue
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`模拟了1M的追踪日间的保留策略 (100%摄入量,样本取,样本取+错误). 报告存储成本和每个数据下丢失的数据.
+`code/main.py` 会模拟一个 1M-trace 的一天，在不同保留策略下（100% ingest、sampling、sampling + errors）分别计算存储成本，并展示每种策略会丢掉什么。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-observability-stack.md`根据堆,规模,预算,许可证姿势,选择工具.
+这一课会产出 `outputs/skill-observability-stack.md`。给定技术栈、规模、预算和许可证约束，它会选出合适的工具组合。
 
-## 运动
+## 练习
 
-1. 你的兰格链团队希望OSS自主托管可观测性.
-2. 随着5M的每天跟踪,Datadog的价格为15万美元,
-3. 设计一个OpenTelemetry GenAI属性,设置您的组织的指导方针应在每次LLM调用时强制执行.
-4. 争辩说城是否足够生产.
-5. 机是20ms代理上线费用.在P99TTFT300ms,这是可接受的吗?如果SLA是100ms?
+1. 你的团队使用 LangChain，但又想要 OSS self-hosted observability。在 Langfuse 和 Opik 之间做选择，并说明理由。
+2. 如果每天有 5M traces，而 Datadog 的报价是 $150K/month，计算 Arize AX 的 break-even。
+3. 设计一套 OpenTelemetry GenAI attribute set，作为你们组织要求每次 LLM 调用都必须打出的埋点字段。
+4. 论证 Phoenix 单独使用时是否足以支撑生产环境。在哪些情况下它不够？
+5. Helicone 额外引入 20 ms proxy 开销。如果你的 P99 TTFT 是 300 ms，这能接受吗？如果 SLA 是 100 ms 呢？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| OpenLLMetry | "OTel for LLMs" | Open-source OpenTelemetry instrumentation for LLMs |
-| GenAI conventions | "OTel attributes" | Standard OTel attribute names for LLM calls |
-| LangSmith | "LangChain observability" | Commercial platform bundled with LangChain ecosystem |
-| Langfuse | "OSS LangSmith" | MIT OSS with similar feature set |
-| Phoenix | "Arize dev tool" | OpenTelemetry-native dev/eval platform |
-| Arize AX | "scale observability" | Commercial zero-copy Iceberg/Parquet observability |
-| Helicone | "proxy observability" | HTTP proxy collecting LLM telemetry + gateway features |
-| Opik | "Comet LLM" | Apache 2.0 OSS dev platform from Comet |
-| Session replay | "trace rerun" | Replay a full agent session with tool calls |
-| Eval | "offline test" | Running candidate model/prompt over labeled dataset |
+| 术语 | 人们常说 | 实际含义 |
+|------|----------|----------|
+| OpenLLMetry | “OTel for LLMs” | 面向 LLM 的开源 OpenTelemetry instrumentation |
+| GenAI conventions | “OTel attributes” | LLM 调用的标准 OTel 属性名 |
+| LangSmith | “LangChain observability” | 与 LangChain 生态捆绑的商业平台 |
+| Langfuse | “OSS LangSmith” | MIT OSS，功能集与之相近 |
+| Phoenix | “Arize dev tool” | 原生 OpenTelemetry 的开发 / eval 平台 |
+| Arize AX | “scale observability” | 商业化的零拷贝 Iceberg/Parquet 可观测方案 |
+| Helicone | “proxy observability” | 收集 LLM telemetry 的 HTTP proxy，同时带 gateway 功能 |
+| Opik | “Comet LLM” | 来自 Comet、采用 Apache 2.0 的 OSS 开发平台 |
+| Session replay | “trace rerun” | 重放一次完整的 agent session，包括工具调用 |
+| Eval | “offline test” | 在标注数据集上运行候选模型或 prompt |
 
-## 进一步阅读
+## 延伸阅读
 
 - [SigNoz — Top LLM Observability Tools 2026](https://signoz.io/comparisons/llm-observability-tools/)
 - [Langfuse — Arize AX Alternative analysis](https://langfuse.com/faq/all/best-phoenix-arize-alternatives)
-- [PremAI — Setting Up Langfuse, LangSmith, Helicone, Phoenix](https://blog.premai.io/llm-observability-setting-up-langfuse-langsmith-helicone-phoenix/)
+- [PremAI — 搭建 Langfuse、LangSmith、Helicone 与 Phoenix](https://blog.premai.io/llm-observability-setting-up-langfuse-langsmith-helicone-phoenix/)
 - [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
-- [Arize Phoenix docs](https://docs.arize.com/phoenix)
+- [Arize Phoenix 文档](https://docs.arize.com/phoenix)
 - [Helicone docs](https://docs.helicone.ai/)
