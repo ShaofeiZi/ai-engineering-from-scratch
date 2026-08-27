@@ -1,25 +1,25 @@
-# 终端到终端的研究演示
+# 端到端研究演示
 
-> 演示是你之前写的每一份合同都必须写的场所.如果其中一个泄露,演示是抓住它的教训.
+> Demo 是前面写下的每一份 contract 真正开始组合的地方。只要其中任何一份有泄漏，最先把问题抓出来的，往往就是这节 Demo 课。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 lessons 50-53
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段第 50 到 53 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 通过自动研究循环进行结尾:假设种子,实验运行者,安排者,评论者循环,论文作家.
-- 通过简单的Python进口,而不是框架,编写前四个D轨道课程的原始内容.
-- 运行循环到一个自动结束的终端, 发出一个单个演示报告,
-- 保持演示确定性,以便测试组可以确认最终的形状.
-- 任何阶段的合同破裂时,表面上设置一个明显的故障模式,以便下一个阶段不会出现破产输入.
+- 把自动研究循环完整串起来：hypothesis seed、experiment runner、scheduler、critic loop、paper writer。
+- 通过普通 Python imports 组合前面四节 Track D 课程中的 primitives，而不是引入框架。
+- 让整个循环跑到一个会自行终止的结束状态，并输出一份单独的 demo report，列出每个阶段的产物。
+- 保持 demo 的确定性，使测试套件能够断言最终输出形状。
+- 当任一阶段的 contract 断裂时，暴露清晰的 failure mode，避免下一阶段在坏输入上继续运行。
 
 ```figure
 ch-research-pipeline
 ```
 
-## 在这里构成的
+## 这里会组合什么
 
 ```mermaid
 flowchart LR
@@ -34,11 +34,11 @@ flowchart LR
     Writer --> Report[Demo report]
 ```
 
-种子是一个列表三个假设. 编程师在它们上进行了六次实验,其中有三个并行插槽. 公共汽车报告一个或多个纸质触发器. 选手选择了单个最佳结果. 评论者循环在该结果构建的草稿上反复. 纸质编写者发出了最终的Latex,BibTeX和表格.
+一共五个阶段。seed 是一个包含三个 hypotheses 的列表。scheduler 会在它们上面运行六次实验，并提供三个并行 slots。bus 会报告一个或多个 paper triggers。picker 会从中挑出单个最佳结果。critic loop 会围绕这个结果生成的草稿继续迭代。最后，paper writer 会输出最终的 LaTeX、BibTeX 和 manifest。
 
-## 为什么进口而不是复制
+## 为什么用 import，而不是 copy
 
-每个早些时候的课程都会带来一个`main.py`演示程序通过调整它们进口`sys.path`这不是框架线程,而是以前的课程已经使用的检测文件的导入.
+前面每一课都交付了一个 `main.py`，里面包含公开 dataclasses 和 functions。这个 demo 通过把每一课的父目录加入 `sys.path` 来 import 它们。这不是框架级 wiring；它和前面课程测试文件已经在使用的 import 方式完全一样。
 
 ```mermaid
 flowchart TB
@@ -48,15 +48,15 @@ flowchart TB
     Demo --> Inline[Inline stub: seed and runner]
 ```
 
-线条取代了50到53课程:一个小种子假设生成器和同步的奖励函数.用户可以通过调整两个进口来替换线条取这些课程的真实原始.
+这里的 inline stub 代替了第 50 到 53 课：一个很小的 seed hypotheses 生成器，加上一个同步 reward function。用户只需要改两条 import，就可以把这个 inline stub 换成那些课程里的真实 primitives。
 
-## 确定性保障
+## 确定性保证
 
-演示是建立的决定性.实验运行者种植的.评论循环的修改器在固定顺序中行走固定尺寸.纸作家的散文生成器是第五十四课中的嘲笑.规划者的UCB选手在反复顺序上打破了联系,而不是随机选择.
+这个 demo 从构造上就是确定性的。experiment runner 使用带种子的 numpy。critic loop 的 reviser 会按固定顺序遍历固定维度。paper writer 的 prose generator 使用的是第 54 课里的 mocked 版本。scheduler 的 UCB picker 在并列时按迭代顺序打破平局，而不是随机选择。
 
-测试通过两次运行演示并比较表格来证实这一属性.
+在相同 seed 下，demo 会输出完全相同的 report。测试通过把 demo 连续运行两次并比较 manifest，来钉住这一性质。
 
-## 演示报告形状
+## Demo 报告的结构
 
 ```mermaid
 flowchart TB
@@ -67,11 +67,11 @@ flowchart TB
     Rep --> Term[stop_reason]
 ```
 
-每个字面上都是从上游阶段来的.演示程序不会转换任何输出,它会构成它们.这是演示程序的测试.
+每个字段都原样来自上游阶段。demo 不会改写任何输出；它只是把这些输出组合起来。而这正是这个 demo 想验证的东西。
 
-## 失效模式处理
+## 失败模式处理
 
-每个阶段都会成功,或者会出现输入错误.
+每个阶段要么成功，要么抛出一种 typed error。
 
 ```text
 Scheduler ........ returns SchedulerReport with stop_reason
@@ -81,30 +81,30 @@ Critic loop ...... returns LoopResult with status converged or stopped
 Paper writer ..... raises PaperValidationError on contract break
 ```
 
-测试中,有任何阶段的失败, 测试中只有一种输入例外.`test_no_triggers_raises_typed_error`其他`test_best_picker_raises_when_no_triggers`确认选手提升`NoTriggerError`现在,`BestResultError`当没有一支支支支火发起子的时候,
+任何一个阶段失败，demo 都会以 typed exception 直接短路。测试把这个 contract 固定住了：`test_no_triggers_raises_typed_error` 和 `test_best_picker_raises_when_no_triggers` 会断言，当没有任何 branch 触发 trigger 时，picker 必须抛出 `NoTriggerError` / `BestResultError`，而 writer 永远不会被调用。
 
-## 最好的选择者
+## 最佳结果选择器
 
-调度器每分支发出纸质触发器. 调度器选择所有触发器中最高平均奖励的分支. 结按分支 id 字母分裂,因此演示是确定性的. 调度器是一个小的纯函数;测试键在固定调度器报告上.
+scheduler 会按 branch 发出 paper triggers。picker 会选择 mean reward 最高的 branch。若分数并列，则按 branch id 的字母顺序打破平局，以保证 demo 仍然是确定性的。picker 本身是一个很小的纯函数；测试会用固定的 scheduler report 把它钉住。
 
-## 电缆的关键循环
+## 给批评器循环接线
 
-五五课中的批判循环运行在一个`MiniPaper`演示程序建立了一个`MiniPaper`通过将抽象填写到分支ID,种植两个部分 (介绍和结果),并设置`originality_tag`根据分支的平均奖励 (如果高`>= 0.8`平均水平`>= 0.6`其他情况下,低).
+第 55 课里的 critic loop 工作在 `MiniPaper` 上。demo 会根据选中的 branch 构造一个 `MiniPaper`：把 branch id 写进 abstract，预先放入两个 section，也就是 Introduction 和 Results，并依据该 branch 的 mean reward 设置 `originality_tag`。规则是：如果 `>= 0.8` 就是 high；如果 `>= 0.6` 就是 medium；否则就是 low。
 
-修改者将草案重复到融合.输出进入纸质写作器.
+接着 reviser 会把这份草稿迭代到收敛，输出再交给 paper writer。
 
-## 电缆的报纸作家
+## 给论文写作器接线
 
-课54的报纸作家在全文工作.`Paper`演示程序将升级收藏的数据.`MiniPaper`通过`mini_to_full_paper`根据评论家建议的引用密钥联盟,它将一个数字连接到选定的分支和一个小型合成文献.
+第 54 课里的 paper writer 工作在完整的 `Paper` 形状上，包含 figures 和 bibliography。demo 会把收敛后的 `MiniPaper` 通过 `mini_to_full_paper` 升级：为选中的 branch 挂上一张 figure，并基于 critic 建议的 cite keys 并集构造一份很小的 synthetic bibliography。demo 添加的每一个 cite，也都会同步加入 bibliography 列表，因此验证能够通过。
 
-## 如何读取代码
+## 如何阅读代码
 
-`code/main.py`定义`BestResultError`现在`NoTriggerError`现在`DemoReport`现在`pick_best_branch`现在`build_mini_paper`现在`mini_to_full_paper`其他`run_demo`进口量在最高调整`sys.path`一次,然后拉下`PaperWriter`现在`CriticLoop`其他`IterationScheduler`他们的课程.
+`code/main.py` 定义了 `BestResultError`、`NoTriggerError`、`DemoReport`、`pick_best_branch`、`build_mini_paper`、`mini_to_full_paper` 和 `run_demo`。文件顶部会一次性调整 `sys.path`，并从相应课程里导入 `PaperWriter`、`CriticLoop` 和 `IterationScheduler`。
 
-`code/tests/test_e2e.py`封面:演示程序从端到端运行,并发出一个报告,所有五个填满的字段,两次运行中的确定性,没有分支越过门时的错误, 文件验证错误,当作者合同破裂时,纸质表包含选定的分支的数字,和安排器停止原因是预期值之一.
+`code/tests/test_e2e.py` 覆盖：demo 能端到端跑通，并输出五个字段都已填充的 report；连续两次运行保持确定性；当没有任何 branch 越过阈值时会抛出对应的类型化错误；当 writer 的 contract 断裂时也会直接失败；paper manifest 包含被选中 branch 对应的 figure；以及 scheduler 的 stop reason 属于预期值集合。
 
-## 走得更远
+## 继续往前做
 
-一旦演示程序绿色,就值得连接三个扩展. 首先,持续状态:每个阶段的结果写入一个小的JSON存储器, 第二,仪表板:从调度器和评论循环中追踪事件作为一个单一的时间线. 第三,真正的模型调用:将嘲笑的散文生成器和确定性评论器换成基于模型的;
+一旦这个 demo 变绿，有三个扩展值得继续接线。第一，持久化状态：把每个阶段的结果写到一个小型 JSON store 中，让重启可以从中断点继续，而不必重跑便宜阶段。第二，dashboard：把 scheduler 和 critic loop 的 trace events 渲染成一条统一时间线。第三，真实模型调用：把 mocked prose generator 和 deterministic critic 换成 model-driven 版本；而 wiring 本身完全不变。
 
-演示的任务是证明构成是建筑.五个课程,四个进口,一个报告.下次你添加一个阶段,
+这个 demo 的工作，就是证明 composition 本身就是 architecture。五节课，四条 import，一份 report。下一次你再加一个阶段，wiring 只会多长一行。
