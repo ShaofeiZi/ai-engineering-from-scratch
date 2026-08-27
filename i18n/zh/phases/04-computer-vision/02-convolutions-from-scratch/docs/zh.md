@@ -1,32 +1,32 @@
-# 从零开始的转变
+# 从零实现卷积
 
-> 卷积是一个小的密集层,你在图像上滑过,在每个位置都分享相同的重量.
+> 卷积就是一个微型全连接层：让它在图像上滑动，并在每个位置共享同一组权重。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 3 (Deep Learning Core), Phase 4 Lesson 01 (Image Fundamentals)
-**Time:** ~75 minutes
+**Prerequisites:** 第 3 阶段（深度学习核心）、第 4 阶段第 01 课（图像基础）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 实现从零开始的2D卷积,仅使用NumPy,包括嵌套循环版本和向量化`im2col`版本
-- 计算输出空间大小,内核大小,填充和步骤的任何组合,并证明`(H - K + 2P) / S + 1`公式
-- 手工设计的核子 (边缘,模糊,尖,) 并解释为什么每个核子都产生其活动模式
-- 堆卷入特征提取器,将堆深度连接到接收场大小
+- 只使用 NumPy 从零实现二维卷积，包括嵌套循环版本和向量化的 `im2col` 版本
+- 针对输入大小、卷积核大小、Padding 和 Stride 的任意组合计算输出空间尺寸，并说明 `(H - K + 2P) / S + 1` 公式为何成立
+- 手工设计边缘检测、模糊、锐化和 Sobel 卷积核，并解释每种卷积核为何会产生相应的激活模式
+- 把多个卷积堆叠成特征提取器，并建立堆叠深度与感受野大小之间的联系
 
-## 问题
+## 问题所在
 
-对于一个224x224RGB图像的完全连接层,每一个神经元需要224*224*3=150,528个输入权重. 一个隐藏的层有1000个单位,已经有1亿5千万个参数, 更糟糕的是,那层没有任何概念, 上左边的狗和右边的狗是相同的模式. 它将每个像素位置视为独立的, 这对图像来说是完全错误的: 将猫翻译成3像素不应该迫使网络重新学习这个概念.
+如果对一张 224x224 的 RGB 图像使用全连接层，每个神经元都需要 224 * 224 * 3 = 150,528 个输入权重。仅一个包含 1,000 个单元的隐藏层，就已经需要 1.5 亿个参数——而此时还没有学到任何有用内容。更糟的是，这一层不知道左上角的狗与右下角的狗属于同一种模式。它把每个像素位置都视为彼此独立，而这恰好违背了图像的本质：把一只猫平移三个像素，不应该迫使网络重新学习“猫”这个概念。
 
-图像模型需要的两个特性是**translation equivariance**(输出转移时输入转移) 和**parameter sharing**密集层给你没有一个. 缩给你免费的两个.
+图像模型需要两个性质：**平移等变性**，也就是输入平移时输出随之平移；以及**参数共享**，也就是同一个特征检测器在所有位置运行。全连接层两者都不具备，卷积则天然同时具备。
 
-缩并不是用于深度学习.它是支持JPEG压缩,Photoshop中的高斯模糊,工业视觉中的边缘检测和所有有史以来发送的音频过器的相同操作.CNN在2012年至2020年期间占据了ImageNet的地位,原因是缩是相近的值相关的数据的正确前线,并且可以在任何地方出现相同的模式.
+卷积并不是为深度学习发明的。JPEG 压缩、Photoshop 中的高斯模糊、工业视觉中的边缘检测，以及每一种已经发布的音频滤波器，使用的都是同一种运算。CNN 在 2012 到 2020 年间主导 ImageNet，原因在于：对于相邻值彼此相关、同一种模式又可能出现在任意位置的数据，卷积提供了正确的先验。
 
-## 概念
+## 核心概念
 
-### 一个核子,滑动
+### 一个卷积核，不断滑动
 
-2D卷积采用一个称为内核 (或过器) 的小重量矩阵,将其滑过输入,并在每个位置计算元素智能的产品的总和.
+二维卷积使用一个称为卷积核（或滤波器）的小型权重矩阵，让它在输入上滑动，并在每个位置计算逐元素乘积之和。这个总和就成为一个输出像素。
 
 ```mermaid
 flowchart LR
@@ -48,7 +48,7 @@ flowchart LR
     style OUT fill:#dcfce7,stroke:#16a34a
 ```
 
-具体的3x3示例,在5x5输入 (无填充,步骤1):
+下面是在 5x5 输入上应用 3x3 卷积核的具体示例，不使用 Padding，Stride 为 1：
 
 ```
 Input X (5 x 5):                Kernel W (3 x 3):
@@ -68,31 +68,31 @@ The kernel slides across every valid 3 x 3 window. Output Y is 3 x 3:
  ... and so on
 ```
 
-这一公式**shared weights, locality, sliding window**是整个想法. 其余一切都是会计.
+这一条公式——**共享权重、局部连接、滑动窗口**——就是卷积的全部核心思想，其余只是簿记工作。
 
 ### 输出尺寸公式
 
-鉴于输入空间大小`H`核子大小`K`料`P`走进`S`其他:
+已知输入空间尺寸 `H`、卷积核大小 `K`、Padding `P` 和 Stride `S`：
 
 ```
 H_out = floor( (H - K + 2P) / S ) + 1
 ```
 
-记住这一点,你将计算每一个建筑数十倍.
+请记住这个公式。设计架构时，你会反复计算它。
 
-| Scenario | H | K | P | S | H_out |
+| 场景 | H | K | P | S | H_out |
 |----------|---|---|---|---|-------|
-| Valid conv, no padding | 32 | 3 | 0 | 1 | 30 |
-| Same conv (preserves size) | 32 | 3 | 1 | 1 | 32 |
-| Downsample by 2 | 32 | 3 | 1 | 2 | 16 |
-| Pool 2x2 | 32 | 2 | 0 | 2 | 16 |
-| Large receptive field | 32 | 7 | 3 | 2 | 16 |
+| Valid 卷积，不填充 | 32 | 3 | 0 | 1 | 30 |
+| Same 卷积（保持尺寸） | 32 | 3 | 1 | 1 | 32 |
+| 下采样 2 倍 | 32 | 3 | 1 | 2 | 16 |
+| 2x2 池化 | 32 | 2 | 0 | 2 | 16 |
+| 大感受野 | 32 | 7 | 3 | 2 | 16 |
 
-"同样的填充"意味着选择P,以便H_out=H当S=1.为奇数K,即P= (K - 1) /2.这就是为什么3x3核主导的.它们是最小的奇数核,仍然有一个中心.
+“Same padding”是指当 S == 1 时，选择 P 使 H_out == H。对于奇数 K，P = (K - 1) / 2。这就是 3x3 卷积核占据主流的原因：它是仍然拥有中心点的最小奇数尺寸卷积核。
 
-### 子
+### 填充
 
-没有填充,每一个卷积都会缩小特征地图. 堆20个,你的224x224图像变成184x184,这会浪费边界的计算,并使剩余的连接复杂,需要相匹配的形状.
+如果不使用 Padding，每次卷积都会缩小特征图。连续堆叠 20 层后，224x224 图像会变成 184x184，不仅浪费边缘处的信息，也会让要求形状一致的残差连接变得复杂。
 
 ```
 Zero padding (P = 1) on a 5 x 5 input:
@@ -106,11 +106,11 @@ Zero padding (P = 1) on a 5 x 5 input:
   0  0  0  0  0  0  0
 ```
 
-实践中遇到的模式:`zero`子`reflect`(反射边缘,在生成型号中避免硬边界),`replicate`,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,`circular`(包裹,用于形问题).
+实践中常见的模式包括：`zero`，最常用；`reflect`，镜像边缘，可避免生成模型中的硬边界；`replicate`，复制边缘值；`circular`，从另一侧循环取值，适用于环面问题。
 
-### 步骤
+### 步幅
 
-步骤是滑梯的步骤大小. `stride=1`现在,我们可以在线观看.`stride=2`任何现代建筑 (ResNet,ConvNeXt,MobileNet) 都使用步骤式的轮,而不是最大池.
+Stride 是卷积核每次滑动的步长。`stride=1` 是默认值，`stride=2` 会把空间尺寸减半，也是 CNN 中无需额外池化层便可下采样的经典方式。每种现代架构，包括 ResNet、ConvNeXt 和 MobileNet，都会在某些位置使用带步幅卷积代替最大池化。
 
 ```
 Stride 1 on a 5 x 5 input, 3 x 3 kernel:
@@ -129,9 +129,9 @@ Stride 2 on the same input:
   Output: 2 x 2
 ```
 
-### 多个输入道
+### 多输入通道
 
-实际图像有三个道.RGB输入上的3x3卷积实际上是3x3x3体积:每输入道一个3x3片.在每个空间位置上,你乘以和加在三个片段上并添加一个偏差.
+真实图像有三个通道。在 RGB 输入上应用 3x3 卷积，实际使用的是 3x3x3 体积：每个输入通道对应一个 3x3 切片。在每个空间位置，需要跨三个切片相乘并求和，再加上偏置。
 
 ```
 Input:   (C_in,  H,  W)        3 x 5 x 5
@@ -146,11 +146,11 @@ Output:  (C_out, H', W')       64 x 3 x 3
 Parameter count: C_out * C_in * K * K + C_out   (the + C_out is biases)
 ```
 
-对于一个模型的设计,最后一行是你计算的.`64 * 3 * 3 * 3 + 64 = 1,792`价格很低.
+设计模型时，你会不断计算最后这一行。对 3 通道输入应用一个具有 64 个输出通道的 3x3 卷积，一共有 `64 * 3 * 3 * 3 + 64 = 1,792` 个参数，成本很低。
 
-### 们的法
+### im2col 技巧
 
-嵌套循环是容易读取的,但慢的.GPU需要大矩阵乘法. 技巧是:将输入的每个接收场窗口平坦成一个大矩阵的列,将内核平坦成一排,整个卷积变成一个单一的矩阵.
+嵌套循环容易理解，却很慢；GPU 更擅长大型矩阵乘法。诀窍是把输入中的每个感受野窗口展平为大矩阵的一列，再把卷积核展平为一行，于是整个卷积就变成一次矩阵乘法。
 
 ```mermaid
 flowchart LR
@@ -166,11 +166,11 @@ flowchart LR
     style OUT fill:#dcfce7,stroke:#16a34a
 ```
 
-每个生产 conv 实现都是这个加上缓存的各种方法 (直接 conv, Winograd,FFT conv 对于大型内核).理解 im2col,你就明白核心.
+每个生产级卷积实现，都是这种思路再加上缓存分块等技巧的某种变体，例如直接卷积、Winograd，以及用于大卷积核的 FFT 卷积。理解 im2col，也就理解了核心原理。
 
-### 接收场
+### 感受野
 
-一个3x3conv看出9个输入像素. 堆叠两个3x3conv和第二层的神经元看出5x5输入像素.三个3x3conv给出7x7. 一般来说:
+单个 3x3 卷积会观察 9 个输入像素。堆叠两个 3x3 卷积，第二层中的一个神经元就会观察 5x5 的输入区域；三个 3x3 卷积则得到 7x7。一般而言：
 
 ```
 RF after L stacked K x K convs (stride 1) = 1 + L * (K - 1)
@@ -178,17 +178,17 @@ RF after L stacked K x K convs (stride 1) = 1 + L * (K - 1)
 With strides:   RF grows multiplicatively with stride along each layer.
 ```
 
-整个"3x3全程下降"的原因 (VGG,ResNet,ConvNeXt) 是两个3x3conv看到相同的输入面积,
+“一路使用 3x3”之所以有效，例如 VGG、ResNet 和 ConvNeXt，正是因为两个 3x3 卷积能看到与一个 5x5 卷积相同的输入区域，却使用更少参数，而且中间还多了一次非线性变换。
 
 ```figure
 convolution-kernel
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1: 置阵列
+### 第 1 步：填充数组
 
-首先是最小的原始函数:一个函数在H x W阵列周围着零.
+从最小的基础操作开始：编写一个函数，在 H x W 数组周围填充零。
 
 ```python
 import numpy as np
@@ -207,11 +207,11 @@ print()
 print(pad2d(x, 1))
 ```
 
-追踪轴的技巧`x.shape[:-2]`意思是相同的函数在`(H, W)`现在`(C, H, W)`其他`(N, C, H, W)`没有修改.
+末尾轴技巧 `x.shape[:-2]` 使同一个函数无需修改，就能处理 `(H, W)`、`(C, H, W)` 或 `(N, C, H, W)`。
 
-### 步骤2: 2D 卷积,带有嵌套循环
+### 第 2 步：使用嵌套循环实现二维卷积
 
- 缓慢,但明确的参考实施.`torch.nn.functional.conv2d`基本上是这样.
+这是参考实现——速度很慢，但含义没有歧义。`torch.nn.functional.conv2d` 在原理上做的就是这些操作。
 
 ```python
 def conv2d_naive(x, w, b=None, stride=1, padding=0):
@@ -236,11 +236,11 @@ def conv2d_naive(x, w, b=None, stride=1, padding=0):
     return out
 ```
 
-它们是基于C_in,kh,kw的隐含数量.
+这里共有四重循环：输出通道、行、列，以及隐含的 C_in、kh、kw 求和。这是之后检验所有快速实现时采用的基准真值。
 
-### 步骤3:使用手工设计的内核验证
+### 第 3 步：使用手工卷积核验证
 
-建立一个垂直的索贝尔核,将它应用到合成步骤图像上,
+构造一个竖直 Sobel 卷积核，把它应用到合成的阶跃图像上，观察竖直边缘如何亮起。
 
 ```python
 def synthetic_step_image():
@@ -259,11 +259,11 @@ y = conv2d_naive(x, sobel_x, padding=1)
 print(y[0].round(1))
 ```
 
-预计在第7列 (左到右亮度增加) 和其他地方的零值上,
+预期第 7 列会出现较大的正值，对应亮度从左向右增加；其他位置都为零。仅凭这一次打印，就能快速检查数学实现是否正确。
 
-### 步骤4: im2col
+### 第 4 步：im2col
 
-转换输入中的每个内核大小的窗口为矩阵的列.`C_in=3, K=3`它们的数量为27个.
+把输入中每个与卷积核等大的窗口转换为矩阵中的一列。当 `C_in=3, K=3` 时，每一列包含 27 个数。
 
 ```python
 def im2col(x, kh, kw, stride=1, padding=0):
@@ -284,11 +284,11 @@ def im2col(x, kh, kw, stride=1, padding=0):
     return cols, h_out, w_out
 ```
 
-现在重量起重将是一个单向的.
+这里仍然存在 Python 循环，但最繁重的工作接下来会由一次向量化矩阵乘法完成。
 
-### 步骤5:通过im2col + matmul快速调整
+### 第 5 步：使用 im2col + 矩阵乘法加速卷积
 
-换一个矩阵乘法.
+用一次矩阵乘法替代四重循环。
 
 ```python
 def conv2d_im2col(x, w, b=None, stride=1, padding=0):
@@ -301,7 +301,7 @@ def conv2d_im2col(x, w, b=None, stride=1, padding=0):
     return out.reshape(c_out, h_out, w_out)
 ```
 
-检查正确性:运行两个实现和比较.
+正确性检查：运行两种实现并比较结果。
 
 ```python
 rng = np.random.default_rng(0)
@@ -315,11 +315,11 @@ y_im2col = conv2d_im2col(x, w, b, padding=1)
 print(f"max abs diff: {np.max(np.abs(y_naive - y_im2col)):.2e}")
 ```
 
-`max abs diff`应该在附近`1e-5`差异是浮点积累顺序,而不是一个bug.
+`max abs diff` 应该约为 `1e-5`。差异来自浮点数累加顺序，而不是程序错误。
 
-### 步骤 6:手工设计的核子库
+### 第 6 步：一组手工设计的卷积核
 
-五个过器显示一个单层的可以在任何训练之前表达什么.
+下面五种滤波器展示了单层卷积在未经任何训练时就能表达哪些操作。
 
 ```python
 KERNELS = {
@@ -336,11 +336,11 @@ def apply_kernel(img2d, kernel):
     return conv2d_im2col(x, w, padding=1)[0]
 ```
 
-应用到任何灰色图像,模糊的软化,尖的升边缘,Sobel-x照亮垂直边缘,Sobel-y照亮水平边缘.这些正是AlexNet和VGG中*第一*训练的 conv层最终学习的模式,因为一个好的图像模型需要边缘和斑点探测器,无论后面的任务是什么.
+把这些卷积核应用到任意灰度图像上，blur 会柔化画面，sharpen 会让边缘更清晰，Sobel-x 会突出竖直边缘，Sobel-y 会突出水平边缘。AlexNet 和 VGG 中训练得到的*第一层*卷积，最终学习到的正是这类模式——因为无论后续任务是什么，良好的图像模型都需要边缘和斑块检测器。
 
-## 用它
+## 实际应用
 
-皮托尔奇的`nn.Conv2d`它们是自动化,CUDA核和cuDNN优化.
+PyTorch 的 `nn.Conv2d` 使用自动微分、CUDA 内核和 cuDNN 优化封装了同一项操作，形状语义完全相同。
 
 ```python
 import torch
@@ -358,37 +358,37 @@ print(f"\ninput  shape: {tuple(x.shape)}")
 print(f"output shape: {tuple(y.shape)}")
 ```
 
-换换`padding=1`为了`padding=0`输出量下降到222x222.`stride=1`为了`stride=2`现在,我们可以把它放在112x112上.
+把 `padding=1` 改为 `padding=0`，输出会缩小到 222x222；把 `stride=1` 改为 `stride=2`，输出会缩小到 112x112。使用的正是前面记住的同一个公式。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-cnn-architect.md`一个提示,鉴于输入大小,参数预算和目标接收场,设计了一个堆`Conv2d`每一步都用右K/S/P的层.
-- `outputs/skill-conv-shape-calculator.md`一个技能,它通过网络规格层次进行行程,并返回每个区块的输出形状,接收场和参数数.
+- `outputs/prompt-cnn-architect.md`——给定输入大小、参数预算和目标感受野后，设计一组在每一步都采用正确 K/S/P 的 `Conv2d` 层。
+- `outputs/skill-conv-shape-calculator.md`——逐层分析网络规格，返回每个模块的输出形状、感受野和参数数量。
 
-## 运动
+## 练习
 
-1. **(Easy)**考虑到 128x128 的灰度输入和一个堆积的`[Conv3x3(s=1,p=1), Conv3x3(s=2,p=1), Conv3x3(s=1,p=1), Conv3x3(s=2,p=1)]`通过 PyTorch 检查,可通过手动计算出输出空间大小和每个层的接收场`nn.Sequential`的车.
-2. **(Medium)**延长时间`conv2d_naive`其他`conv2d_im2col`接受一个`groups`证明这个.`groups=C_in=C_out`复制了深度曲,并且其参数数数是`C * K * K`没有`C * C * K * K`现在,我们要去.
-3. **(Hard)**执行后退的转移`conv2d_im2col`通过手动计算:鉴于输出梯度,计算出`x`其他`w`检查对`torch.autograd.grad`俩是 im2col 的梯度是`col2im`它们必须积累重叠的窗户.
+1. **（简单）** 给定 128x128 灰度输入和一组 `[Conv3x3(s=1,p=1), Conv3x3(s=2,p=1), Conv3x3(s=1,p=1), Conv3x3(s=2,p=1)]`，手工计算每层的输出空间尺寸和感受野，再用由虚拟卷积组成的 PyTorch `nn.Sequential` 验证。
+2. **（中等）** 扩展 `conv2d_naive` 和 `conv2d_im2col`，使其接收 `groups` 参数。证明 `groups=C_in=C_out` 会得到深度卷积，而且参数数量是 `C * K * K`，而不是 `C * C * K * K`。
+3. **（困难）** 手工实现 `conv2d_im2col` 的反向传播：给定输出梯度，计算 `x` 和 `w` 的梯度，再在相同输入与权重上同 `torch.autograd.grad` 验证。诀窍是：im2col 的梯度为 `col2im`，而且必须累加重叠窗口。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Convolution | "Sliding a filter" | A learnable dot product applied at every spatial location with shared weights; mathematically a cross-correlation, but everyone calls it convolution |
-| Kernel / filter | "The feature detector" | A small weight tensor of shape (C_in, K, K) whose dot product with a window of input produces one output pixel |
-| Stride | "How far you jump" | The step size between consecutive kernel placements; stride 2 halves each spatial dimension |
-| Padding | "Zeros on the edges" | Extra values added around the input so the kernel can centre on border pixels; `same` padding keeps output size equal to input size |
-| Receptive field | "How much the neuron sees" | The patch of original input that a given output activation depends on, growing with depth and stride |
-| im2col | "The GEMM trick" | Rearranging every receptive window into columns so convolution becomes one big matrix multiply — the core of every fast conv kernel |
-| Depthwise conv | "One kernel per channel" | A conv with `groups == C_in`, computing each output channel from only its matching input channel; the backbone of MobileNet and ConvNeXt |
-| Translation equivariance | "Shift in, shift out" | Property that shifting the input by k pixels shifts the output by k pixels; comes for free with shared weights |
+| 卷积 | “滑动滤波器” | 在每个空间位置使用共享权重执行的可学习点积；数学上其实是互相关，但所有人都称它为卷积 |
+| 卷积核/滤波器 | “特征检测器” | 形状为 (C_in, K, K) 的小型权重张量，与输入窗口点积后生成一个输出像素 |
+| Stride | “每次跳多远” | 相邻卷积核位置之间的步长；步幅为 2 会把每个空间维度减半 |
+| Padding | “边缘补零” | 在输入周围添加额外数值，使卷积核能够以边缘像素为中心；`same` Padding 会保持输出与输入尺寸相同 |
+| 感受野 | “神经元能看到多少” | 某个输出激活所依赖的原始输入区域，会随深度与 Stride 增大 |
+| im2col | “GEMM 技巧” | 把每个感受野窗口重排成矩阵的列，使卷积变成一次大型矩阵乘法；这是所有快速卷积内核的核心 |
+| 深度卷积 | “每个通道一个卷积核” | `groups == C_in` 的卷积，每个输出通道只由对应输入通道计算，是 MobileNet 与 ConvNeXt 的骨干组件 |
+| 平移等变性 | “输入平移，输出也平移” | 输入平移 k 个像素时，输出也平移 k 个像素的性质，由共享权重自然获得 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [A guide to convolution arithmetic for deep learning (Dumoulin & Visin, 2016)](https://arxiv.org/abs/1603.07285)每一个课程都默默地复制的补/步骤/扩展的最终图表
-- [CS231n: Convolutional Neural Networks for Visual Recognition](https://cs231n.github.io/convolutional-networks/)加拿大法典讲座笔记,包括原始的解释
-- [The Annotated ConvNet (fast.ai)](https://nbviewer.org/github/fastai/fastbook/blob/master/13_convolutions.ipynb)从手动卷积到训练有素的数字分类器的笔记本
-- [Receptive Field Arithmetic for CNNs (Dang Ha The Hien)](https://distill.pub/2019/computing-receptive-fields/) 接收场计算的纸质互动解释器
+- [《A guide to convolution arithmetic for deep learning》（Dumoulin 与 Visin，2016）](https://arxiv.org/abs/1603.07285)——关于 Padding、Stride 和 Dilation 的权威图解，几乎所有课程都借鉴了它
+- [CS231n：Convolutional Neural Networks for Visual Recognition](https://cs231n.github.io/convolutional-networks/)——经典课程讲义，包括最早的 im2col 讲解
+- [The Annotated ConvNet（fast.ai）](https://nbviewer.org/github/fastai/fastbook/blob/master/13_convolutions.ipynb)——从手工卷积一直讲到训练数字分类器的 Notebook
+- [Receptive Field Arithmetic for CNNs（Dang Ha The Hien）](https://distill.pub/2019/computing-receptive-fields/)——以论文质量制作的感受野计算交互式讲解
