@@ -1,32 +1,32 @@
-# 代理杆合同
+# 智能体 Harness 循环契约
 
-> 导弹是代理,模型是共处理器,这个课程结了任何模型的循环合约.
+> harness 才是智能体，模型只是它的协处理器。这一课把循环契约固定下来，让你之后可以把任何模型接进同一个 loop。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 13 lessons 01-07, Phase 14 lesson 01
-**Time:** ~90 minutes
+**Prerequisites:** 第 13 阶段第 01-07 课，第 14 阶段第 01 课
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 指定一个代理圈作为一个明确过渡的确定状态机.
-- 运营商将电线政策,远程测量和防护线路纳入的10个生命周期曲主题.
-- 定义两个拉点,循环将控制权返回调用者,并在新输入中恢复.
-- 执行每次会议预算 (转换,工具调用,墙钟) 并且不过度时会泄露部分状态.
-- 发出11种事件类型的输入流,以便下游UI和跟踪器可以订阅,而不直接检查循环.
+- 把智能体 harness loop 明确定义成一个 deterministic state machine，并写清楚每条 transition。
+- 实现十个 lifecycle hook topic，让 operator 能把 policy、telemetry 和 guardrails 挂进去。
+- 定义两个 pull point，使 loop 在固定位置把控制权交还调用方，并在拿到新输入后恢复。
+- 执行每个 session 的预算约束，包括 turns、tool calls 和 wall-clock，且在超限时不泄露部分状态。
+- 发出一个包含十一种 event type 的 typed stream，让下游 UI 和 tracer 无需直接读取 loop 内部也能订阅执行过程。
 
 ```figure
 cf-loop-contract
 ```
 
-## 框架
+## 这个框架
 
-编码代理四十轮无监督运行,不是聊天循环.它是一个状态机,操作员可以拦截节点,操作员可以审计边缘.一旦你写下合同,交换模型,工具或政策不再是重构者.它变成了注册电话.
+一个可以无人值守跑四十轮的 coding agent，不再是聊天循环，而是一个状态机：operator 可以拦截它的节点，也可以审计它的边。一旦你把这份 contract 写清楚，之后再替换模型、工具或 policy，就不再是一次“重构”，而只是一次注册动作。
 
-这一课构建了合同.我们命名了六个州,十个子主题,两个拉点,十一个事件类型,一个预算包裹. 工具登记器,JSON-RPC运输,发送器,规划器) 其他所有东西都插入了这个形状.
+这一课的目标，就是把这份 contract 定下来。我们会给出六个状态、十个 hook topic、两个 pull point、十一种 event type，以及一个 budget envelope。此后 harness 中的其他部分，例如 tool registry、JSON-RPC transport、dispatcher、planner，都会往这个固定形状里插。
 
-## 美国
+## 状态
 
-循环有6个状态,5个状态是活跃的,一个状态是终端的.
+整个 loop 有六个状态，其中五个是 active state，一个是 terminal state。
 
 ```mermaid
 stateDiagram-v2
@@ -43,13 +43,13 @@ stateDiagram-v2
     DONE --> [*]
 ```
 
-`IDLE`只有一个合法入口点.`DONE`只有法律办法.`AWAITING_TOOL`只有一个引力点,其他转变都是内部的.
+`IDLE` 是唯一合法入口。`DONE` 是唯一合法出口。`AWAITING_TOOL` 是唯一一个会产生 pull point 的状态。其他 transition 全都属于内部跳转。
 
-状态机是确定性的. 给出相同的事件日志,带重返相同的状态. 这种属性是允许你重播调试,而不需要重新调用模型.
+这个状态机必须是 deterministic 的。也就是说，只要给定相同的 event log，harness 就必须重回同一个 state。正是这个性质，才让你能够在调试时重放 session，而不必重新调用模型。
 
-## 子的主题
+## Hook 主题
 
-子是操作员的连接. 连接器开火十个主题. 每个主题都接受任何数量的订阅者.订阅者按注册顺序开火.订阅者可以改变有效载荷,升级取消转换,或返回哨兵跳过下一步.
+hook 是 operator 切入 loop 的缝。harness 一共会触发十个 topic。每个 topic 都允许有任意多个 subscriber，按注册顺序执行。subscriber 可以修改 payload、抛出异常中止 turn，或者返回一个 sentinel 来跳过下一步。
 
 ```text
 before_plan         after_plan
@@ -61,52 +61,52 @@ on_budget_exceeded
 on_complete
 ```
 
-模板反映了2025年中旬的克劳德代码,库尔索和开源代码的融合.这些名称是功能性的,而不是标志性的.`rm -rf`住在`before_tool_call`子可以运送开放电气跨度.`after_step`一个恢复停顿的子生活在`on_pause`现在,我们要去.
+这组 hook 形状，与 Claude Code、Cursor 和 OpenCode 到 2025 年中期收敛出的形态非常接近。名字都是功能性的，不是品牌性的。一个用来拦截 `rm -rf` 的 hook 应该挂在 `before_tool_call`。一个负责发 OpenTelemetry span 的 hook 应该挂在 `after_step`。一个负责暂停后恢复 session 的 hook 应该挂在 `on_pause`。
 
-## 引力点
+## 控制权交还点
 
-循环给出了两次控制.`AWAITING_TOOL`没有工具的结果,它无法取得进展.`on_pause`预算耗尽,或者一个子明确要求人力审查.
+loop 一共会把控制权交还两次。第一次是在 `AWAITING_TOOL`，也就是它在没有工具结果时无法继续推进。第二次是在 `on_pause`，即预算耗尽，或者某个 hook 显式要求人工复核。
 
-拉动点不是例外,而是回报. 呼叫者检查了带状况,拿出了带要求的东西,然后打电话.`resume(payload)`带从停留的地方恢复. 这与Python发电机相同的形状. 运输在拉点是你的选择. 在TUI中,它是键盘. 在MCP上,它是`tools/call`在排队里,这是一个工作调查.
+pull point 不是异常，而是 return。调用方拿到返回后，会检查当前 harness state，取来 loop 所请求的外部信息，然后调用 `resume(payload)`。harness 会从上次停住的地方继续。这种形状和 Python generator 很像。至于 pull point 上层的 transport 用什么，是你的自由：在 TUI 里可以是按键，在 MCP 里可以是 `tools/call`，在队列系统里则可以是 job poll。
 
-## 事件流程
+## 事件流
 
-循环将事件添加到合同中特定点的输入流中.该流只添加,用户可以从任何偏移中重播.实施的十一种事件类型是:
+loop 会在 contract 规定的位置把事件追加到一个 typed stream 中。这个 stream 是 append-only 的，而且订阅者可以从任意 offset 重新 replay。当前实现的十一种 event type 是：
 
-- `session.start`发射一次,当`run(goal)`称为
-- `plan.draft` 发出计划者返回计划草案时
-- `plan.commit` 作为活动计划的承诺后发行草案
-- `step.start`每一步执行的开始发射
-- `step.end`每一步执行结束时发放
-- `tool.call`在需要工具的步骤给调用者提供控制时发射
-- `tool.result` 发出简历,并附工具结果
-- `tool.error`在简历上发出错误或断电话时
-- `budget.warn`在预算限制达到时发行
-- `session.pause`当循环在暂停时产生 (预算或)
-- `session.complete`当循环达到时发射一次`DONE`
+- `session.start`：在调用 `run(goal)` 时触发一次
+- `plan.draft`：planner 返回草案计划时触发
+- `plan.commit`：草案被确认成 active plan 后触发
+- `step.start`：每个 executing step 开始时触发
+- `step.end`：每个 executing step 结束时触发
+- `tool.call`：某个 step 需要工具，因此 loop 把控制权交还调用方时触发
+- `tool.result`：在恢复时带着工具结果回来时触发
+- `tool.error`：在恢复时带着错误回来，或 hook 直接中断工具调用时触发
+- `budget.warn`：达到预算阈值时触发
+- `session.pause`：loop 因预算或 hook 而暂停并产生 yield 时触发
+- `session.complete`：loop 进入 `DONE` 时触发一次
 
-事件不会重复杆有效载荷.杆是必不可少的 (变化,中断).事件是观测 (记录,船).把它们视为直角.
+event 不应该复制 hook payload。hook 是 imperative 的，用于修改、阻断和分流；event 是 observational 的，用于记录、下发和回放。两者要保持正交。
 
-## 预算包裹
+## 预算边界
 
-一个会议包含三个限制.转数,工具调用数,墙钟秒.每轮增长一次.每次工具调用增长一次.墙钟在每次状态过渡时检查.当达到任何限制时,循环启动.`on_budget_exceeded`发射`budget.warn`之后转向`IDLE`在下一个拉动点上,
+一个 session 有三个限制：turn count、tool call count、wall-clock seconds。每执行一轮，turns 加一；每发生一次工具调用，tool calls 加一；wall-clock 则在每次状态切换时检查。任何一个限制被触发时，loop 都会先触发 `on_budget_exceeded`，再发出 `budget.warn`，然后在下一个 pull point 上以 budget-exceeded 的原因回到 `IDLE`。
 
-预算不是杀号开关,而是收益,调用者决定是否延长预算,恢复,还是关闭会议.
+预算不是 kill switch，而是 yield。是由调用方来决定：延长预算并恢复，还是直接关闭这个 session。
 
-## 这一课不做什么
+## 本课不做什么
 
-它不调用模型,它不注册真正的工具,它不实现运输.这是下一个四个课程.
+它不会真的调用模型。不会注册真实工具。也不会实现 transport。这些会在后面四课里补上。这一课要钉死的是 contract，好让后面四课可以直接往上接，而不用重新定义 loop。
 
-确定性规划者在`main.py`它们是一个替代程序. 它返回一个硬码的计划,三个步骤,其中两个需要工具结果.
+`main.py` 里的 deterministic planner 只是一个占位实现。它会返回一个写死的三步计划，其中两步需要 tool result。重点不是 plan，而是 loop 本身。
 
-## 如何读取代码
+## 如何阅读代码
 
-`HarnessLoop`火,发射活动.`Budget`追踪限制.`Event`的字体是输入的字体.`HookRegistry`现在,我们要把它放在机上.`_transition`状态变化是唯一的函数,所以状态机的变化不变在一个地方.
+`HarnessLoop` 是核心类。它保存 state，触发 hooks，并发出 events。`Budget` 负责追踪预算限制。`Event` 是 stream 中的 typed envelope。`HookRegistry` 是 dispatch table。`_transition` 是唯一一个允许修改 state 的函数，因此状态机的不变量都集中在这一处。
 
-阅读`main.py`读一读.`code/tests/test_loop.py`测试记录了每一个转移和每一个子发射命令.
+先从头到尾读 `main.py`，然后再读 `code/tests/test_loop.py`。测试会钉住每一条 transition，以及每一个 hook 的触发顺序。
 
-## 走得更远
+## 继续深入
 
-制造一个带的最困难部分不是国家机器.它使合同可执行.合同必须存活于规划器的热重装.它必须存活于一个返回错误的JSON的工具.它必须存活于一个子.`before_tool_call`试验中,这些试验都在执行失败模式,运行它们,打破它们,增加案例.
+在生产里，构建 harness 最难的部分通常不是状态机本身，而是让 contract 真正具有可执行性。它必须能在 planner 热重载后继续存活；必须能顶住某个工具返回 malformed JSON；也必须能顶住某个 hook 在四十轮 session 的三分之二处、也就是 `before_tool_call` 阶段抛异常。测试已经覆盖了这些失败模式。把它们跑起来，故意弄坏，再继续补例子。
 
-接下来课程将添加工具登记库.之后,JSON-RPC运输.之后,发送器.到第二十四课时,这个文件中的循环将与实际工具进行真正的计划,实际预算被执行.
+下一课会加入 tool registry。再下一课会加入 JSON-RPC transport。之后是 dispatcher。到第二十四课时，这个文件里的 loop 就会开始用真实工具、真实预算去执行真实计划。
