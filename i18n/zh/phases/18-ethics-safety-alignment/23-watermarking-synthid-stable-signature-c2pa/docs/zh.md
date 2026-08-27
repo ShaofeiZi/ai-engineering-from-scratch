@@ -1,77 +1,77 @@
-# 标记水 合成ID,稳定签名,C2PA
+# 水印技术：SynthID、Stable Signature、C2PA
 
-> 据了解,在2026年, 通过"责任的GENAI工具包" (Responsible GenAI Toolkit) 发行了2023年8月的图像水标,文本+视频2024年5月 (Gemini + Veo),文本开源2024年10月,并与Gemini 3 Pro一起实现了2025年11月的多媒体检测器. 文字水标将下一个代币的样本抽象概率不知不觉地调整;图像/视频水标存活压缩,切割,过,率变化. 稳定签名 (Fernandez et al., ICCV 2023, arXiv:2303.15435) 细调隐藏扩散解码器,使每个输出都包含固定信息;在 FPR<1e-6 中,被切割的 (内容的10%) 生成的图像被检测到90%以上. 后续"稳定签名不稳定" (arXiv:2405.07145,2024年5月) 细调消除水印,同时保持质量. C2PA 加密签署的,具有改性明显的元数据标准 (C2PA 2.2解释器 2025). 水标和C2PA是互补的:可以删除元数据,但具有更丰富的来源;水标通过转码仍然存在,但具有更少的信息.
+> 到了 2026 年，AI 生成内容的 provenance 基本由三类技术共同构成。SynthID（Google DeepMind）最早在 2023 年 8 月用于图像水印，2024 年 5 月扩展到文本与视频（Gemini + Veo），2024 年 10 月又通过 Responsible GenAI Toolkit 开源了文本版本，并在 2025 年 11 月随着 Gemini 3 Pro 推出统一的多媒体检测器。文本水印的做法是以人眼几乎察觉不到的方式微调 next-token sampling probabilities；图像和视频水印则要尽量在 compression、cropping、filters、frame-rate changes 之后仍能保留下来。Stable Signature（Fernandez et al., ICCV 2023, arXiv:2303.15435）则是另一条路线，它通过微调 latent diffusion decoder，让每张输出图像都包含固定消息；在只保留 10% 内容的裁剪图像上，检测率仍可超过 90%，同时将 FPR 控制在 1e-6 以下。随后 2024 年 5 月的 “Stable Signature is Unstable”（arXiv:2405.07145）又表明，只要进一步 fine-tuning，就能在基本不损伤图像质量的前提下移除该水印。C2PA 则是加密签名、可篡改留痕的元数据标准（C2PA 2.2 Explainer 2025）。水印与 C2PA 不是替代关系，而是互补关系：metadata 可能被剥离，但能承载更丰富的 provenance；水印则更容易穿越转码流程，但携带的信息量有限。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python (stdlib, token-watermark embed + detect)
-**Prerequisites:** Phase 10 · 04 (sampling), Phase 01 · 09 (information theory)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 10 · 04（采样）、阶段 01 · 09（信息论）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 描述代币级水标 (SynthID文本式) 和可检测的机制.
-- 描述稳定签名和2024年的移除攻击.
-- 国家C2PA的作用以及为什么它是补充水标.
-- 描述主要的限制:模型特定的信号,在抛词下强度和保持意义的攻击 (arXiv:2508.20228).
+- 描述 token-level watermarking，也就是 SynthID-text 风格文本水印，以及它为什么可以被检测出来。
+- 描述 Stable Signature，以及 2024 年将其破坏掉的 removal attack。
+- 说明 C2PA 的角色，以及为什么它与 watermarking 是互补关系。
+- 描述几个关键限制：model-specific signal、paraphrase 下的脆弱性，以及 meaning-preserving attacks（arXiv:2508.20228）。
 
 ## 问题
 
-2023-2024年,深度假冒和人工智能生成的内容将进入政治和消费者背景.水标是拟议的技术来源信号:创建时标记几代人,后者检测. 2025年证据:没有水标是无条件的强大,但与C2PA元数据层叠加,组合提供可用的来源故事.
+从 2023 到 2024 年，deepfakes 与 AI-generated content 已经大规模进入政治传播和消费场景。水印因此被提出为一种技术性的 provenance signal：在内容生成时就打上标记，之后再由检测器识别。到 2025 年的证据表明，没有任何水印方案能做到无条件稳健，但如果把水印和 C2PA metadata 叠加使用，已经足以构成一套可用的 provenance 方案。
 
 ## 概念
 
-### 文字水标 (SynthID-text风格)
+### 文本水印（SynthID-text style）
 
-基尔堡等人2023机制,由谷歌生产:
+Kirchenbauer et al. 2023 提出的机制，后来被 Google 工程化落地：
 
-1. 在每一步解码时,将前一个K代码加密起来,以产生词汇的伪随机分区为"绿色"和"红色"的集合.
-2. 通过添加 δ 给绿色的logits来对绿色集合进行偏差样本.
-3. 代子含有比偶然产生的更多的绿色代币.
+1. 在每一个 decoding step，对前 K 个 tokens 做哈希，从而把词表伪随机地划分成 “green” 和 “red” 两个集合。
+2. 通过给 green logits 加上 δ，让采样过程更偏向 green set。
+3. 于是最终生成文本里，green tokens 的数量会多于随机情形下的期望值。
 
-检测:重新检查每个前,在生成中计算绿色代币,计算z分数.z分数为>0用于水标文本, ~0用于人类文本.
+检测时，需要重新对每个前缀做哈希，统计生成结果中 green tokens 的数量，再计算 z-score。对带水印文本来说，z-score 会大于 0；对人类自然文本来说，它通常接近 0。
 
-性能:
-- 读者无法感知 (δ 足够小,质量损失是微不足道的).
-- 通过访问词汇分区功能可检测.
-- 转写文本破坏信号.
+这种方案的性质是：
+- 对读者几乎不可感知，因为 δ 足够小，质量损失有限。
+- 只要能访问词表划分函数，就能做检测。
+- 不抗 paraphrase，一旦内容被改写，信号就会被破坏。
 
-通过谷歌的"负责任GenAI工具包"2024年10月,
+SynthID-text 已在 2024 年 10 月通过 Google 的 Responsible GenAI Toolkit 开源。
 
-### 稳定签名 (图片)
+### Stable Signature（图像）
 
-费尔南德斯等人.ICCV 2023. 细调隐藏扩散解码器,使每一个生成的图像都包含嵌入隐藏表示中的固定二进制信息.检测通过神经解码器从隐藏中解码.在FPR<1e-6时,切割的图像被检测到90%以上.
+Fernandez et al. 在 ICCV 2023 提出的方案。其思路是微调 latent diffusion decoder，让每一张生成图像的 latent representation 中都嵌入固定的二进制消息。检测时再用一个 neural decoder 从 latent 中把这段消息读出来。即便只保留原图 10% 的内容，检测率仍能超过 90%，且 FPR<1e-6。
 
-2024年5月"稳定签名不稳定" (arXiv:2405.07145):微调解码器删除水印,同时保持图像质量.对抗后代微调是便宜的;水印的对抗强度有限.
+但 2024 年 5 月的 “Stable Signature is Unstable”（arXiv:2405.07145）表明，只要再对 decoder 进行 fine-tuning，就可以把水印移除，同时基本保持图像质量不变。也就是说，这类水印在对抗性场景下的稳健性其实是有限的，因为 post-generation fine-tuning 的成本并不高。
 
-### 综合ID统一检测器 (2025年11月)
+### SynthID unified detector（2025 年 11 月）
 
-双子座3 Pro:一个多媒体探测器,可以在一个API中读取文字,图像,音频和视频的SynthID信号.
+随着 Gemini 3 Pro 一起发布的，是一个统一的多媒体检测器。它可以在同一套 API 中读取文本、图像、音频、视频里的 SynthID 信号，从而把 Google 的 provenance stack 串成一体。
 
-### 化剂
+### C2PA
 
-内容来源和真实性联盟.加密签署的伪造性明显的元数据标准.C2PA 2.2解释器 (2025).C2PA明示记录来源声明 (谁创建,何时,什么变化) 签署的创作者密钥.
+C2PA 的全称是 Coalition for Content Provenance and Authenticity。它是一套加密签名、可篡改留痕的 metadata 标准。根据 C2PA 2.2 Explainer（2025），一份 C2PA manifest 会记录 provenance claims，例如谁创建了内容、什么时候创建、经历了哪些变换，并由创建者的密钥签名。
 
-补充水标:
-- 转换数据可以删除;水印不能 (很容易).
-- 转载数据的数据是丰富的 (完整的来源链);水标携带比特.
-- 基于平台的采用,水标自动嵌入.
+它与 watermarking 的互补关系体现在：
+- Metadata 可能被剥离；水印则不那么容易被剥离。
+- Metadata 信息量丰富，可以携带完整 provenance chain；水印通常只能携带少量 bits。
+- C2PA 依赖平台采用；水印则在生成时自动嵌入。
 
-谷歌将搜索,广告和"关于这个图像"都整合起来.
+Google 已经在 Search、Ads 和 “About this image” 里同时使用这两层能力。
 
-### 限制
+### 局限性
 
-- **Model-specific.**通过SynthID启用模型的SynthID水标代.没有SynthID的模型的一代没有水标,因此"没有SynthID信号"并不是认证真实性的证明.
-- **Paraphrase.**文字水标没有保存含义的表达.
-- **Transformation attacks.**文件的含义是: arXiv:2508.20228 (2025) 显示了破坏文本水标和许多图像水标的含义保护攻击.
-- **Fine-tune removal.**根据"稳定签名不稳定",后代细调取消嵌入式水标.
+- **Model-specific。** SynthID 只能给启用了 SynthID 的模型输出打标。一个没有 SynthID 的模型生成出来的内容天然就没有该信号，因此 “no SynthID signal” 不能被当作真实性证明。
+- **Paraphrase。** 文本水印不具备在 meaning-preserving paraphrase 下持续存在的能力。
+- **Transformation attacks。** arXiv:2508.20228（2025）表明，一些保持语义不变的攻击可以同时摧毁文本水印以及许多图像水印。
+- **Fine-tune removal。** 正如 “Stable Signature is Unstable” 所展示的，后续 fine-tuning 可以移除嵌入式图像水印。
 
-### 欧盟人工智能法第50条
+### EU AI Act Article 50
 
-通过人工智能生成的内容标签的透明度法规 (第一个草案2025年12月,第二个草案2026年3月,预计2026年6月将最终通过[European Commission status page](https://digital-strategy.ec.europa.eu/en/policies/code-practice-ai-generated-content)) 该法规将于2026年4月起继续起草,时间表可能会发生变化.要求技术层的监管层.必须标记深度假.
+欧盟关于 AI-generated content labeling 的透明度守则仍在起草中。根据 [European Commission status page](https://digital-strategy.ec.europa.eu/en/policies/code-practice-ai-generated-content)，第一版草案发布于 2025 年 12 月，第二版草案发布于 2026 年 3 月，最终稿预计在 2026 年 6 月完成。截至 2026 年 4 月，这套 Code 仍然处于草案阶段，时间表也可能继续变化。这一层是要求技术层落地的监管层要求。Deepfakes 必须被标注。
 
-### 在这个阶段的第18阶段
+### 它在 Phase 18 里的位置
 
-课程22-23讲述了模型所发射的信息 (私人数据,来源信号).课程27涵盖了培训数据治理.课程24是要求这些技术措施的监管框架.
+Lessons 22-23 讨论的是模型发出来的内容本身，也就是 private data 与 provenance signal。Lesson 27 会继续进入 training-data governance。Lesson 24 则是要求这些技术措施存在的监管框架。
 
 ```figure
 an-watermark-greenlist
@@ -79,40 +79,40 @@ an-watermark-greenlist
 
 ## 用它
 
-`code/main.py`标记是整数0..N-1;标记是对 Hash定义的绿色集合的样本偏差.一个探测器计算了绿色标记 z-score.你可以观察1000代标的检测,观看对象的破坏信号,测量人类文本上的虚假阳性率.
+`code/main.py` 会构建一个玩具文本水印系统。token 被表示成 0..N-1 的整数；带水印的采样过程会偏向哈希定义出的 green set；检测器则计算 green-token z-score。你可以观察 1000-token 生成结果上的检测效果，观看 paraphrase 如何破坏信号，并测量人类文本上的 false-positive rate。
 
-## 运送它
+## 交付它
 
-这一课产生了`outputs/skill-provenance-audit.md`鉴于内容部署有 provenance 索赔,它审计:水标机制 (如果有的话),C2PA签署链 (如果有的话),每个内容的反抗性强度,以及每种模式覆盖性.
+这一课会产出 `outputs/skill-provenance-audit.md`。给定一个声称具有 provenance 的内容部署，它会审计：是否存在水印机制、是否存在 C2PA signing chain、两者各自的 adversarial robustness，以及每种模态上的覆盖范围。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`报告水标1000代币生成与人为作文的z分数. 确定 95%的可信度门时的虚假阳性率.
+1. 运行 `code/main.py`。分别报告带水印的 1000-token 生成结果与人类撰写文本的 z-score，并找出在 95% confidence threshold 下的 false-positive rate。
 
-2. 执行一个抛物语攻击,以代码替换30%的代码.
+2. 实现一个 paraphrase attack，用同义词替换 30% 的 tokens。然后重新测量 z-score。
 
-3. 阅读Kirchenbauer等2023第6节关于强度. 为什么文字水标在表达中失败,但图像水标在剪切中存活下来?
+3. 阅读 Kirchenbauer et al. 2023 的第 6 节关于 robustness 的讨论。为什么文本水印会在 paraphrase 下失效，而图像水印却能在 cropping 下继续存活？
 
-4. 设计一个使用SynthID-text + C2PA元数据的部署.描述消费者看到的来源链.确定每个组件的一个故障模式.
+4. 设计一个同时使用 SynthID-text 和 C2PA metadata 的部署。描述消费者最终能看到的 provenance chain，并指出每个组成部分各自的一个 failure mode。
 
-5. 2024 年"稳定签名不稳定"结果显示,微调取消了图像水印.设计一个限制攻击的部署控制,例如,需要签署的微调检查站.
+5. 2024 年的 “Stable Signature is Unstable” 结果表明，fine-tuning 可以移除图像水印。请设计一个限制此类攻击的部署控制，例如要求 fine-tuned checkpoints 必须是签名发布物。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|------------------------|
-| SynthID | "Google's watermark" | Cross-modal provenance signal; text, image, audio, video |
-| Token watermark | "Kirchenbauer-style" | Biased-sampling text watermark detectable via green-token z-score |
-| Stable Signature | "image watermark" | Fine-tuned-decoder watermark; ICCV 2023 |
-| C2PA | "the metadata standard" | Cryptographically signed tamper-evident provenance metadata |
-| Paraphrase robustness | "does rewording break it" | Text watermark property; currently limited |
-| Fine-tune removal | "adversarial unwatermark" | Attack that removes image watermark via decoder fine-tuning |
-| Cross-modal detector | "unified SynthID" | November 2025 unified API across modalities |
+| SynthID | “Google 的水印” | 跨模态的来源标记信号，覆盖文本、图像、音频和视频 |
+| 词元水印（Token watermark） | “Kirchenbauer 风格” | 通过绿色词元的 z 分数检测、采用偏置采样生成的文本水印 |
+| Stable Signature | “图像水印” | 通过微调解码器实现的水印；发表于 ICCV 2023 |
+| C2PA | “元数据标准” | 经过密码学签名、能够显现篡改痕迹的来源元数据 |
+| 改写鲁棒性（Paraphrase robustness） | “改写会破坏水印吗” | 文本水印抵抗改写的能力；目前仍然有限 |
+| 微调移除（Fine-tune removal） | “对抗性去水印” | 通过微调解码器移除图像水印的攻击 |
+| 跨模态检测器（Cross-modal detector） | “统一 SynthID” | 2025 年 11 月推出、覆盖多种模态的统一 API |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Kirchenbauer et al. — A Watermark for Large Language Models (ICML 2023, arXiv:2301.10226)](https://arxiv.org/abs/2301.10226)标志水标机制
-- [Fernandez et al. — Stable Signature (ICCV 2023, arXiv:2303.15435)](https://arxiv.org/abs/2303.15435)图像水印纸
-- ["Stable Signature is Unstable" (arXiv:2405.07145)](https://arxiv.org/abs/2405.07145)移除攻击
-- [Google DeepMind — SynthID](https://deepmind.google/models/synthid/)跨模式水标
-- [C2PA 2.2 Explainer (2025)](https://c2pa.org/specifications/specifications/2.2/explainer/Explainer.html)元数据标准
+- [Kirchenbauer et al. — A Watermark for Large Language Models (ICML 2023, arXiv:2301.10226)](https://arxiv.org/abs/2301.10226) — 词元水印机制
+- [Fernandez et al. — Stable Signature (ICCV 2023, arXiv:2303.15435)](https://arxiv.org/abs/2303.15435) — 图像水印论文
+- ["Stable Signature is Unstable" (arXiv:2405.07145)](https://arxiv.org/abs/2405.07145) — 水印移除攻击
+- [Google DeepMind — SynthID](https://deepmind.google/models/synthid/) — 跨模态水印
+- [C2PA 2.2 Explainer (2025)](https://c2pa.org/specifications/specifications/2.2/explainer/Explainer.html) — 元数据标准
