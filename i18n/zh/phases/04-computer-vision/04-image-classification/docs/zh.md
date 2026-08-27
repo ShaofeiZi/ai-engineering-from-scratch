@@ -1,30 +1,30 @@
 # 图像分类
 
-> 类别是从像素到类别的概率分布的函数.
+> 分类器就是一个从像素映射到类别概率分布的函数，其他一切都是配套管线。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 2 Lesson 09 (Model Evaluation), Phase 3 Lesson 10 (Mini Framework), Phase 4 Lesson 03 (CNNs)
-**Time:** ~75 minutes
+**Prerequisites:** 第 2 阶段第 09 课（模型评估）、第 3 阶段第 10 课（迷你框架）、第 4 阶段第 03 课（CNN）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 建立CIFAR-10的端到端图像分类管道:数据集,增强,模型,培训循环,评估
-- 解释每个组件的作用 (数据加载器,损失,优化器,计划器,增强) 并预测损失曲线中任何组件的破解如何表现
-- 从零开始实施混合,切割和标签滑滑,并证明每一个值得添加的时间
-- 阅读一个混矩阵和每个类的精度/召回表,以诊断数据集和模型失误超出总准确性
+- 在 CIFAR-10 上构建端到端图像分类流水线：数据集、数据增强、模型、训练循环与评估
+- 解释每个组件（DataLoader、损失、优化器、调度器、数据增强）的作用，并预测任一组件出错时会如何反映在损失曲线上
+- 从零实现 Mixup、Cutout 和标签平滑，并说明何时值得加入每种技术
+- 阅读混淆矩阵和逐类别精确率/召回率表，在总体准确率之外诊断数据集与模型故障
 
-## 问题
+## 问题所在
 
-每个视觉任务都将降低到某个层次的图像分类.检测分类区域. 分类分类分类像素.检索分类与类中位数相似.获得分类正确的数据集循环,增强政策,损失,评估是将技能转移到阶段中的其他任务.
+每种真正交付的视觉任务，都能在某个层面归结为图像分类。目标检测是在分类区域，分割是在分类像素，检索则根据样本与类别中心的相似度进行排序。正确掌握分类任务——数据集循环、数据增强策略、损失和评估——这项能力可以迁移到本阶段的每一种其他任务。
 
-许多分类错误都不在模型中. 它们生活在一个道中:一个破碎的规范化,一个不调整的培训组,增强,扭曲标签,一个通过培训数据污染的验证分断, 通过正确的设置,在CIFAR-10上达到93%的CNN通常会在破产时达到70-75%的分数,
+大多数分类缺陷并不在模型中，而是藏在流水线里：错误的归一化、没有打乱的训练集、破坏标签语义的数据增强、被训练数据污染的验证集，以及在第 30 个 epoch 后悄悄发散的学习率。正确配置时能在 CIFAR-10 上达到 93% 的 CNN，流水线出错时往往只能得到 70%–75%，而整个过程中损失曲线看起来仍然似乎合理。
 
-通过手动连接整个管道,所以每个部分都可检查.`torchvision.datasets`这可能隐藏了昆虫.
+本课会手工连接整条流水线，让每个部分都可以检查。我们不会使用 `torchvision.datasets` 中任何可能掩盖错误的功能。
 
-## 概念
+## 核心概念
 
-### 类别管道
+### 分类流水线
 
 ```mermaid
 flowchart LR
@@ -46,28 +46,28 @@ flowchart LR
     style H fill:#dcfce7,stroke:#16a34a
 ```
 
-交叉透取原始的记录,而不是软max输出,所以任何`model(x).softmax()`增加仅适用于输入,而不是标签,除了混合,这混合了两者.`optimizer.zero_grad()`错误的发生在一个阶段, 跳过它会积累渐变, 看起来像一个非常不稳定的学习率.
+这个循环中的每一行都可能存在缺陷。交叉熵接收原始 logits，而不是 Softmax 输出，因此在计算损失前调用 `model(x).softmax()` 会悄悄算出错误梯度。数据增强只应用于输入，不应用于标签；Mixup 是例外，因为它同时混合输入与标签。每一步必须调用一次 `optimizer.zero_grad()`；跳过它会累积梯度，表现得像极不稳定的学习率。这些缺陷都不会抛出错误，只会让学习曲线变平。
 
-### 交叉,和软max
+### 交叉熵、Logits 与 Softmax
 
-一个分类器产生`C`应用软max将它们转化为概率分布:
+分类器会为每张图像生成 `C` 个数，称为 logits。应用 Softmax 后，它们会变成概率分布：
 
 ```
 softmax(z)_i = exp(z_i) / sum_j exp(z_j)
 ```
 
-交叉透量测量正确类的负记录概率:
+交叉熵衡量正确类别的负对数概率：
 
 ```
 CE(z, y) = -log( softmax(z)_y )
         = -z_y + log( sum_j exp(z_j) )
 ```
 
-右边的表格是数值稳定的表格 (log-sum-exp).`nn.CrossEntropyLoss`软max+NLL在一个操作中合并并并直接取原始的logits. 应用软max自己首先几乎总是一个错误.
+右侧形式具有数值稳定性，也就是 log-sum-exp。PyTorch 的 `nn.CrossEntropyLoss` 会把 Softmax + NLL 融合成一个操作，直接接收原始 logits。自己先应用 Softmax 几乎总是错误，因为那会计算 log(softmax(softmax(z)))，一个没有意义的量。
 
-### 为什么增强效果
+### 数据增强为何有效
 
-对于转换 (从重量共享) 的 CNN 有诱导偏见,但没有内置的变化,即作物,翻转,颜色的震惊或.教导它这些变化的唯一方法是向它展示它们的像素.训练过程中的每一次随机转变都是说:"这两个图像都有相同的标签;学习忽略差异的特征.
+CNN 通过权重共享获得了平移方面的归纳偏置，却没有内置针对裁剪、翻转、颜色抖动或遮挡的不变性。教会它这些不变性的唯一方法，就是向它展示体现这些变化的像素。训练中的每个随机变换都在告诉模型：“这两张图像的标签相同，请学习忽略其中差异的特征。”
 
 ```
 Original crop:  "dog facing left"
@@ -77,11 +77,11 @@ Colour jitter:  "dog in warmer light"
 RandomErasing:  "dog with patch missing"
 ```
 
-规则:增强必须保留标签.一个数字上的切割和旋转可以将"6"转换为 "9";对于该数据集,您使用较小的旋转范围,并选择尊重数字特定的不变的增强.
+规则是：数据增强必须保持标签不变。对数字应用 Cutout 或旋转，可能把“6”变成“9”；对于这类数据集，应该缩小旋转范围，并选择符合数字特定不变性的增强方式。
 
-### 混合和切割混合物
+### Mixup 与 Cutmix
 
-常见的增强将像素转化,但保持标签的热度.**Mixup**其他**cutmix**通过插入两者来打破这一点.
+普通数据增强只改变像素，标签仍然是独热形式；**Mixup** 和 **Cutmix** 则同时对两者插值。
 
 ```
 Mixup:
@@ -94,30 +94,30 @@ Cutmix:
   y = area-weighted mix of y_i and y_j
 ```
 
-模型停止记忆尖的单热目标,并学习间隔. 训练损失增加,测试精度增加. 这是任何分类器的唯一最便宜的强度升级.
+它们之所以有效，是因为模型不再记忆尖锐的独热目标，而会学习类别之间的平滑插值。训练损失会上升，测试准确率也会上升。对于任何分类器，这是成本最低的单项稳健性升级。
 
-### 标签滑滑
+### 标签平滑
 
-的表哥,而不是训练`[0, 0, 1, 0, 0]`列车对抗`[eps/C, eps/C, 1-eps, eps/C, eps/C]`为了一个小的`eps`模型不会产生任意尖的位,并且几乎没有成本地提高校准.`nn.CrossEntropyLoss(label_smoothing=0.1)`自PyTorch 1.10以来.
+它与 Mixup 类似。训练时不再使用 `[0, 0, 1, 0, 0]`，而是使用 `[eps/C, eps/C, 1-eps, eps/C, eps/C]`，其中 `eps` 是 0.1 之类的小值。这样能阻止模型生成任意尖锐的 logits，并且几乎不增加成本就能改善校准。PyTorch 从 1.10 开始就在 `nn.CrossEntropyLoss(label_smoothing=0.1)` 中内置支持。
 
-### 超出准确性的评估
+### 超越准确率的评估
 
-总的来说,一个90-10的二进制分类器总是预测大多数类的分数是90%.
+总体准确率会掩盖类别不平衡。一个 90:10 的二分类器始终预测多数类，也能获得 90% 准确率。以下工具才能真正告诉你发生了什么：
 
-- **Per-class accuracy**每类一个数字;立即出现低绩效类别.
-- **Confusion matrix** C x C 格格,行 i col j = 预测的真实类 i 的数量为类 j; 横向是正确的,外横向是您的模型居住的地方.
-- **Top-1 / Top-5**是否正确的类型在前1或前5个预测中;对ImageNet来说,前5个是重要的,因为"诺威奇特里耶尔"与"诺福克特里耶尔"等类型是真正模糊的.
-- **Calibration (ECE)**0.8的可靠性预测 80% 的时间是否正确?现代网络系统上过于安全;通过温度缩小或标签平滑来解决.
+- **逐类别准确率**——每个类别一个数值，可以立即暴露表现较差的类别。
+- **混淆矩阵**——一个 C x C 网格，第 i 行第 j 列表示真实类别 i 被预测成类别 j 的次数；对角线是正确结果，非对角线才是模型问题所在。
+- **Top-1 / Top-5**——正确类别是否位于概率最高的 1 个或 5 个预测中。Top-5 对 ImageNet 很重要，因为“诺里奇㹴”和“诺福克㹴”这类类别本来就很难区分。
+- **校准（ECE）**——置信度为 0.8 的预测是否确实有 80% 正确？现代网络通常系统性地过度自信，可以使用温度缩放或标签平滑修复。
 
 ```figure
 receptive-field
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:确定性合成数据集
+### 第 1 步：确定性的合成数据集
 
-为了使这门课程能够复制和快速,我们构建了一个合成数据集,看起来像CIFAR  32x32 RGB图像,具有类型特定的结构,模型必须学习.
+CIFAR-10 存储在磁盘上。为了让本课可复现且运行迅速，我们构建一个外观类似 CIFAR 的合成数据集：32x32 RGB 图像，每个类别都带有模型必须学习的特定结构。同一套流水线无需修改，就能用于真实 CIFAR-10。
 
 ```python
 import numpy as np
@@ -165,11 +165,11 @@ class ArrayDataset(Dataset):
         return img, int(self.Y[i])
 ```
 
-每个类别都会有自己的颜色调色和频率模式,加上高斯噪音,迫使模型学习信号而不是记忆像素.
+每个类别都有自己的色彩组合和频率模式，并加入高斯噪声，迫使模型学习信号，而不是记忆像素。一共十个类别，每类一千张图像，最后随机打乱。
 
-### 标准化和增强
+### 第 2 步：归一化与数据增强
 
-两种变化,每个视觉管道都有.
+这是每条视觉流水线都需要的两类变换。
 
 ```python
 def standardize(mean, std):
@@ -206,11 +206,11 @@ def compose(*fns):
     return _fn
 ```
 
-放映板在收获之前,而不是零板,因为黑色边界是模型将学会以无用的方式忽略的信号.
+裁剪前应使用反射填充，而不是零填充，因为黑色边框会形成一种信号，使模型学到一种并无实际价值的不变性。
 
-### 步骤3:混合
+### 第 3 步：Mixup
 
-混合了训练阶段内的两个图像和两个标签. 作为一批转换,所以它住在前进的传递旁边而不是数据集内部.
+Mixup 在训练步骤内部混合两张图像和两个标签。它以批次变换实现，因此与前向传播相邻，而不是放在数据集内部。
 
 ```python
 def mixup_batch(x, y, num_classes, alpha=0.2):
@@ -229,11 +229,11 @@ def soft_cross_entropy(logits, soft_targets):
     return -(soft_targets * log_probs).sum(dim=-1).mean()
 ```
 
-`soft_cross_entropy`目标是完全单热的时,它降低到通常的单热情况.
+`soft_cross_entropy` 是针对软标签分布计算的交叉熵。当目标恰好为独热向量时，它就退化为普通交叉熵。
 
-### 步骤4:训练循环
+### 第 4 步：训练循环
 
-完整的食谱:一个通过数据,每批次的梯度,每期的时间表.
+完整方案是：遍历一次数据，每个批次计算一次梯度，每个 epoch 调度一次学习率。
 
 ```python
 import torch
@@ -287,17 +287,17 @@ def evaluate(model, loader, device, num_classes):
     return loss_sum / total, correct / total, cm
 ```
 
-每次写训练循环时,你检查的五种不变:
+每次编写训练循环时，都要检查以下五条不变量：
 
-1. `model.train()`在培训之前,`model.eval()`在评估之前,  转移退出和批量规范行为.
-2. `.zero_grad()`在之前`.backward()`现在,我们要去.
-3. `.item()`没有什么能让计算图保持活力.
-4. `@torch.no_grad()`节省记忆和时间,防止微妙的事故.
-5.                                                                                                                                                                                                                                                               
+1. 训练前调用 `model.train()`，评估前调用 `model.eval()`，以切换 Dropout 和 BatchNorm 的行为。
+2. 先调用 `.zero_grad()`，然后再调用 `.backward()`。
+3. 累积指标时使用 `.item()`，避免对象继续持有计算图。
+4. 评估时使用 `@torch.no_grad()`，以节省内存与时间并防止隐蔽意外。
+5. 直接对原始 logits 执行 Argmax，而不是先用 Softmax。结果相同，却少一次操作。
 
-### 步骤5: 组合
+### 第 5 步：组装完整流水线
 
-使用`TinyResNet`根据前一课,训练几个时代,评估.
+使用上一课的 `TinyResNet`，训练几个 epoch 并进行评估。
 
 ```python
 from main import synthetic_cifar, ArrayDataset
@@ -337,11 +337,11 @@ for epoch in range(10):
           f"train {tr_loss:.3f}/{tr_acc:.3f}  val {va_loss:.3f}/{va_acc:.3f}")
 ```
 
-在合成数据集中,在五个时代内,这种验证准确性几乎达到完美,这就是点:管道正确,模型可以学习可学的东西.
+在合成数据集上，验证准确率会在五个 epoch 内接近完美，这正是本实验的目的：流水线正确，模型能够学会数据中确实可学习的规律。把数据集换成真实 CIFAR-10，同一循环无需修改即可训练到约 90%。
 
-### 步骤 6:阅读混矩阵
+### 第 6 步：阅读混淆矩阵
 
-只有精度,它永远不会告诉你模型在哪里失败.
+准确率从来无法告诉你模型具体在哪里失败，混淆矩阵可以。
 
 ```python
 def print_confusion(cm, labels=None):
@@ -365,11 +365,11 @@ _, _, cm = evaluate(model, val_loader, device, 10)
 print_confusion(cm)
 ```
 
-列是真实类,列是预测.在3级到5级之间,一个离线数量的集群意味着模型混了这两个,并为目标数据收集或类型特定增强提供了起点.
+行表示真实类别，列表示预测类别。如果类别 3 与类别 5 之间存在一簇非对角线计数，说明模型经常混淆这两个类别，也为有针对性地收集数据或设计类别特定增强提供了起点。
 
-## 用它
+## 实际应用
 
-`torchvision`对于真正的CIFAR-10来说,全线是四条线加上训练循环.
+`torchvision` 把上面的全部步骤封装成符合惯用写法的组件。处理真实 CIFAR-10 时，完整流水线只需四行配置加一个训练循环。
 
 ```python
 from torchvision.datasets import CIFAR10
@@ -389,37 +389,37 @@ train_ds = CIFAR10(root="./data", train=True,  download=True, transform=train_tf
 val_ds   = CIFAR10(root="./data", train=False, download=True, transform=eval_tf)
 ```
 
-值得注意的是,平均/STD是**dataset-specific**计算在CIFAR-10训练集,而不是ImageNet,反射板是社区默认的作物政策.
+需要注意两点：均值与标准差是**数据集特定的**，来自 CIFAR-10 训练集，而不是 ImageNet；反射填充则是社区默认的裁剪策略。如果直接在这里复制 ImageNet 统计量，准确率会悄悄损失约 1%，通常要等到有人分析模型时才会发现。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-classifier-pipeline-auditor.md`一个提示,检查了上述五种变量的训练脚本,并发现了第一个违规行为.
-- `outputs/skill-classification-diagnostics.md`一个技能,在一个混矩阵和一个类名单的情况下,总结每个类的失败并提出最具影响力的解决方案.
+- `outputs/prompt-classifier-pipeline-auditor.md`——审查训练脚本是否满足上述五条不变量，并指出第一处违规的提示词。
+- `outputs/skill-classification-diagnostics.md`——给定混淆矩阵和类别名称列表后，总结逐类别故障并提出影响最大的单项修复建议。
 
-## 运动
+## 练习
 
-1. **(Easy)**根据合成数据集,在5个时代中,使用和无混合的模型进行训练. 两者都进行了训练. 解释为什么与混合的训练损失更高,但对验证的精度相似或更好.
-2. **(Medium)**执行切割  在每个训练图像中零出一个随机8x8平方 并运行一个除除算与没有增长,hflip+crop,hflip+crop+cutout,hflip+crop+mixup. 报告每个图像的精度.
-3. **(Hard)**建立一个CIFAR-100管道 (100类,相同输入尺寸) 并将ResNet-34训练运行在公布的准确度的1%内复制. 额外:扫描三个学习率和两个减重,登录到本地CSV,生成最终的混矩阵-顶部混表.
+1. **（简单）** 在合成数据集上分别采用和不采用 Mixup，把同一模型训练五个 epoch。绘制两者的训练损失与验证损失，并解释为什么采用 Mixup 时训练损失更高，验证准确率却相当或更好。
+2. **（中等）** 实现 Cutout：在每张训练图像中把一个随机 8x8 方块置零。对“不使用增强”“水平翻转+裁剪”“水平翻转+裁剪+Cutout”“水平翻转+裁剪+Mixup”进行消融实验，报告每种方案的验证准确率。
+3. **（困难）** 构建 CIFAR-100 流水线，它有 100 个类别，输入尺寸相同，并复现一次 ResNet-34 训练，使准确率与已发布结果相差不超过 1%。扩展要求：扫描三个学习率和两个权重衰减值，记录到本地 CSV，并生成最终的混淆矩阵高频混淆表。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Logits | "Raw outputs" | The pre-softmax vector of C numbers per image; cross-entropy expects these, not softmaxed values |
-| Cross-entropy | "The loss" | Negative log-probability of the correct class; combines log-softmax and NLL in one stable op |
-| DataLoader | "The batcher" | Wraps a dataset with shuffling, batching, and (optional) multi-worker loading; gets blamed for half of training bugs |
-| Augmentation | "Random transforms" | Any pixel-level transform at training time that preserves the label; teaches invariances the CNN does not have natively |
-| Mixup / Cutmix | "Mix two images" | Blend both inputs and labels so the classifier learns smooth interpolations instead of hard boundaries |
-| Label smoothing | "Softer targets" | Replace one-hot with (1-eps, eps/(C-1), ...); improves calibration and slightly boosts accuracy |
-| Top-k accuracy | "Top-5" | The correct class is in the k highest-probability predictions; used on datasets with genuinely ambiguous classes |
-| Confusion matrix | "Where errors live" | C x C table where entry (i, j) counts images of true class i predicted as j; diagonal is right, off-diagonal tells you what to fix |
+| Logits | “原始输出” | 每张图像在 Softmax 前生成的 C 维向量；交叉熵需要接收它，而不是已经 Softmax 的值 |
+| 交叉熵 | “损失” | 正确类别概率的负对数；以一个稳定操作组合 Log-softmax 与 NLL |
+| DataLoader | “分批器” | 为数据集提供打乱、分批和可选多工作进程加载；一半训练缺陷都容易归咎于它 |
+| 数据增强 | “随机变换” | 训练时保持标签不变的任何像素级变换；用于教会 CNN 它并不天然具备的不变性 |
+| Mixup / Cutmix | “混合两张图像” | 同时混合输入和标签，使分类器学习平滑插值，而不是硬边界 |
+| 标签平滑 | “更软的目标” | 用 (1-eps, eps/(C-1), ...) 替换独热向量，改善校准并略微提高准确率 |
+| Top-k 准确率 | “Top-5” | 正确类别位于概率最高的 k 个预测中；适用于存在真正模糊类别的数据集 |
+| 混淆矩阵 | “错误发生在哪里” | C x C 表格，元素 (i, j) 表示真实类别 i 被预测成 j 的图像数量；对角线正确，非对角线揭示应修复的问题 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [CS231n: Training Neural Networks](https://cs231n.github.io/neural-networks-3/) 仍然是单页的训练管道最清晰的巡回
-- [Bag of Tricks for Image Classification (He et al., 2019)](https://arxiv.org/abs/1812.01187)每一个小技巧,总共增加3~4%的ResNet精度
-- [mixup: Beyond Empirical Risk Minimization (Zhang et al., 2017)](https://arxiv.org/abs/1710.09412)原始混合论文;三个页的理论加上令人信服的实验
-- [Why temperature scaling matters (Guo et al., 2017)](https://arxiv.org/abs/1706.04599)证明现代网络是错误校准的,并用一个尺度参数来固定它
+- [CS231n：训练神经网络](https://cs231n.github.io/neural-networks-3/)——至今仍是单页讲清完整训练流水线的最佳资料
+- [《Bag of Tricks for Image Classification》（He 等，2019）](https://arxiv.org/abs/1812.01187)——一系列小技巧组合起来，可让 ResNet 在 ImageNet 上提高 3%–4% 准确率
+- [《mixup: Beyond Empirical Risk Minimization》（Zhang 等，2017）](https://arxiv.org/abs/1710.09412)——Mixup 原始论文，三页理论配合极具说服力的实验
+- [《Why temperature scaling matters》（Guo 等，2017）](https://arxiv.org/abs/1706.04599)——证明现代网络存在校准偏差，并使用单个标量参数修复的论文
