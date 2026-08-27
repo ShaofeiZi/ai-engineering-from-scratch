@@ -1,125 +1,125 @@
-# 状态图管弦乐  持久执行和检查点
+# 有状态图编排：持久执行与检查点
 
-> 代理是一个状态机;节点是函数;边缘是过渡;状态是每个节点后的检查点.在最后一个成功检查点中恢复任何失败. 兰格格拉夫是2026年低级状态调整模型的参考.
+> Agent 可以被建模为状态机：节点是函数，边是状态转移，状态会在每个节点后落盘成检查点。任何失败都可以从最后一个成功检查点恢复。到 2026 年，LangGraph 已经成为这种低层有状态编排模型的代表性参考实现。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 14 · 01 (Agent Loop), Phase 14 · 12 (Workflow Patterns)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 第 14 阶段 · 01（Agent Loop），第 14 阶段 · 12（工作流模式）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 描述兰格拉夫的核心模型:状态机,具有打字状态,函数节点,条件边缘和节点后检查点.
-- 文件强调的四个功能:持久执行,流媒体,人在循环,全面的内存.
-- 解释LangGraph支持的三个管弦乐拓:监督,同行 (群) 和层次 (嵌套子图).
-- 实现一个具有输入状态,条件边缘和检查点/恢复周期的 stdlib状态图.
+- 描述 LangGraph 的核心模型：带类型的状态机、函数节点、条件边，以及节点后检查点。
+- 说出官方文档强调的四项能力：durable execution、streaming、human-in-the-loop、comprehensive memory。
+- 解释 LangGraph 支持的三种编排拓扑：supervisor、peer-to-peer（swarm）和 hierarchical（nested subgraphs）。
+- 用 stdlib 实现一个带 typed state、conditional edges 和 checkpoint/resume 周期的状态图。
 
 ## 问题
 
-代理人和工作流程都有一个问题:当40步运行在38步失败时,你想从38步开始,而不是重新开始.二级状态模型让运营商在一个库中重新尝试,该库假设新的运行.
+Agent 和 workflow 共享同一个现实问题：一条 40 步的执行链，如果在第 38 步失败，你想要的是从第 38 步继续，而不是整条流程从头再来。把状态当成二等公民的框架，最后都会逼着运维在“默认假设每次都是新运行”的库外面硬补重试逻辑。
 
-兰格拉夫的设计答案:状态是一个第一类类的类型对象,突变是明确的,并且检查点在每个节点之后仍然存在.`load_state(session_id)`给我打电话.
+LangGraph 的设计回答很直接：状态是第一类、带类型的对象；状态变更必须显式表达；并且每个节点结束后都要持久化检查点。恢复不是补丁，而是一次标准的 `load_state(session_id)` 调用。
 
 ## 概念
 
-### 图表
+### 图
 
-图表由:
+一个图由以下部分定义：
 
-- **State type.**一个打字的定律 (或皮达因模型),每个节点都会读取和变异.
-- **Nodes.**纯功能的`(state) -> state_update`更新后将合并到状态.
-- **Edges.**节点之间的条件或直接过渡.
-- **Entry and exit.** `START`其他`END`卫兵节点标记了边界.
+- **State type。** 一个 typed dict（或 Pydantic model），所有节点都从它读取并修改它。
+- **Nodes。** 纯函数，形如 `(state) -> state_update`。函数返回后，更新会被合并回总状态。
+- **Edges。** 节点之间的直接转移或条件转移。
+- **Entry and exit。** `START` 与 `END` 这两个哨兵节点标记执行边界。
 
-举个例子:一个代理人`classify`现在`refund`现在`bug`现在`sales`现在`done`节点 作为图的路由工作流程.
+例如，一个包含 `classify`、`refund`、`bug`、`sales`、`done` 这些节点的 agent，本质上就是一个以图表示的 routing workflow。
 
-### 持续执行
+### 持久执行
 
-每个节点返回后,运行时间将状态串行并将其写入一个检查点 (SQLite,Postgres,Redis,定制).在步骤N中失败时,运行时间可以`resume(session_id)`接下来从步骤N+1进行精确状态.
+每个节点返回后，运行时都会把当前状态序列化并写入 checkpointer，比如 SQLite、Postgres、Redis，或者自定义后端。假设在第 N 步失败，运行时就可以通过 `resume(session_id)` 从第 N+1 步继续，而且使用的是失败前精确保存下来的状态。
 
-拉格格拉夫文件明确强调生产用户在哪里重要:克拉纳,Uber,J.P.摩根.
+LangGraph 文档明确把这点当作核心卖点，并列举了 Klarna、Uber、J.P. Morgan 这类生产用户。它真正有价值的不只是“图”这种结构，而是“图 + 检查点”让恢复成本变得足够低。
 
-### 流媒体
+### 流式输出
 
-每个节点都能产生部分输出. 图表向调用者传输每个节点-delta事件,以便随着图表运行 UI 更新.
+每个节点都可以产生部分输出。图会把每个节点的 delta 事件持续流给调用方，因此 UI 可以随着图的执行过程实时更新，而不是只能等最终结果。
 
-### 轮中的人
+### 人在回路
 
-检查和修改节点之间的状态. 实现:在关键节点之前暂停,向人类表现状态,接受修改,恢复. 检查点使这很容易,因为状态已经串行.
+可以在节点之间查看并修改状态。典型实现方式是：在一个关键节点前暂停，把当前状态展示给人工，允许人工修改后再恢复执行。由于状态本来就已经被序列化保存，这个能力做起来会很自然。
 
 ### 记忆
 
-短期 (运行中对话历史状态) 和长期 (通过检查点加上单独的长期存储器持续的跨运行). 兰格拉夫通过工具与外部内存系统 (Mem0,定制) 集成.
+既包括短期记忆，也就是单次运行中的对话历史保存在状态里；也包括长期记忆，也就是跨运行持久化的数据，通常由 checkpointer 和独立的长期存储共同承担。LangGraph 还可以通过工具接入外部记忆系统，例如 Mem0 或自定义 memory backend。
 
-### 三种拓
+### 三种拓扑
 
-1. **Supervisor.**专业的子管. `create_supervisor()`在`langgraph-supervisor`(尽管2026年兰格链团队建议通过直接调用工具来进行更多的语境控制).
-2. **Swarm / peer-to-peer.**代理人直接通过共享工具表面交付.
-3. **Hierarchical.**监管部门管理子监管部门,作为嵌套子图.
+1. **Supervisor。** 一个中心化的 router LLM 负责把任务分发给专业子 agent。API 形态上对应 `create_supervisor()` 以及 `langgraph-supervisor`，不过 LangChain 团队在 2026 年更建议直接通过 tool calls 来实现，以获得更强的上下文控制。
+2. **Swarm / peer-to-peer。** Agent 之间通过共享工具面直接 handoff，没有中央路由器。
+3. **Hierarchical。** 由 supervisor 管理 sub-supervisor，本质上就是嵌套子图。
 
-### 在这个模式出现错误的地方
+### 这种模式会在哪些地方出错
 
-- **Checkpoints too small.**只有检查对话转换, 工具状态和记忆写不可回收. 完整状态必须串行.
-- **Non-deterministic nodes.**简历假设节点输入产生相同状态更新. 随机种子,墙钟,外部API必须捕获.
-- **Over-use of conditional edges.**图表的每个边缘都是条件的,这是一个无法推理的状态机器.
+- **检查点过小。** 如果你只保存对话轮次，而没保存工具状态和 memory 写入，那恢复时这些副作用就丢了。必须序列化完整状态。
+- **节点不具备确定性。** Resume 默认假设给定节点输入会产生相同的状态更新。随机种子、墙上时钟、外部 API 响应这类信息都要被显式捕获。
+- **条件边滥用。** 如果图里几乎每条边都是条件边，那它就会退化成一个根本无法推理的状态机。应优先使用线性链路，只在必要位置分支。
 
 ```figure
 langgraph-state
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行一个 stdlib 状态图:
+`code/main.py` 实现了一个 stdlib 版本的状态图：
 
-- `State`一个字符号的字符号`messages`现在`step`现在`route`现在`output`现在`human_approval`现在,我们要去.
-- `Node`可调用状态检查和返回更新命令.
-- `StateGraph`节点+边缘+条件边缘+运行+续航.
-- `SQLiteCheckpointer`将每个节点后的状态串行;`load(session_id)`恢复.
-- 展示图:分类 -> 分类(退款 / 错误 / 销售) -> 人类门 -> 发送.
+- `State`：一个 typed dict，包含 `messages`、`step`、`route`、`output`、`human_approval`。
+- `Node`：接收状态并返回 update dict 的可调用对象。
+- `StateGraph`：封装 nodes、edges、conditional edges、run 与 resume。
+- `SQLiteCheckpointer`（这里是一个 in-memory fake）：在每个节点后序列化状态；`load(session_id)` 可以恢复状态。
+- 一个演示图：classify -> branch(refund / bug / sales) -> human gate -> send。
 
-运行它:
+运行方式：
 
 ```
 python3 code/main.py
 ```
 
-后续的痕迹显示,第一次跑步失败了,
+trace 会展示第一次运行如何在 human gate 处失败、状态如何被持久化，以及恢复之后如何产出最终输出。
 
-## 用它
+## 如何使用
 
-- **LangGraph**参考,生产准备. 使用`create_react_agent`现在`create_supervisor`没有任何可能的图表.
-- **AutoGen v0.4**演员模式替代性高竞争性场景.
-- **Claude Agent SDK**管理带有内置的会议商店.
-- **Custom**当你需要对状态形状或检查点后端的确切控制时.
+- **LangGraph**：当前最成熟、最适合生产的参考实现。你可以用 `create_react_agent`、`create_supervisor`，也可以自己组图。
+- **AutoGen v0.4**（Lesson 14）：适合高并发场景的 actor model 替代方案。
+- **Claude Agent SDK**（Lesson 17）：自带 session store 的托管式 harness。
+- **Custom**：当你需要完全掌控状态结构或 checkpointer 后端时。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-state-graph.md`在任何目标运行时间内生成一个长图形状态图,
+`outputs/skill-state-graph.md` 会在任意目标 runtime 里生成一个 LangGraph 风格的 state graph，并把 checkpoint 与 resume 一并接好。
 
-## 运动
+## 练习
 
-1. 添加一个条件边缘从`classify`为了`end`继续运行,然后再追踪人类的设置.`route`通过手动.
-2. 换一个真实的SQLite检查点,按步骤测量序列化.
-3. 实现平行边缘:两个节点同时运行,通过定制减速器合并.
-4. 阅读`langgraph-supervisor`转移玩具到`create_supervisor`比较了痕迹的形状.
-5. 添加流量:每一个节点在运行时都会产生部分状态.
+1. 从 `classify` 加一条条件边到 `end`：当分类置信度低于阈值时直接结束。然后让人工手动设置 `route`，再恢复执行。
+2. 把这个 SQLite-like fake 换成真正的 SQLite checkpointer，并测量每一步的序列化开销。
+3. 实现并行边：两个节点同时运行，再由一个自定义 reducer 合并。这里 immutable state 带来了什么好处？
+4. 阅读 `langgraph-supervisor` 参考文档，把这个 toy 移植到 `create_supervisor`。比较两者 trace 的形状。
+5. 加入 streaming：每个节点运行时都能持续产出部分状态，并实时打印这些 delta。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| State graph | "Agent as state machine" | Typed state + nodes + edges + reducers |
-| Checkpointer | "Persistence backend" | Serializes state after every node; enables resume |
-| Reducer | "State merger" | Function that combines current state with a node's update |
-| Conditional edge | "Branch" | Edge chosen by a function of state |
-| Subgraph | "Nested graph" | A graph used as a node inside another graph |
-| Durable execution | "Resume from failure" | Restart at the last successful node with exact state |
-| Supervisor | "Router LLM" | Central dispatcher for specialist subagents |
-| Swarm | "P2P agents" | Agents hand off via shared tools; no central router |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| State graph | "Agent as state machine" | 带类型状态 + 节点 + 边 + reducer |
+| Checkpointer | "Persistence backend" | 每个节点后序列化状态；支持 resume |
+| Reducer | "State merger" | 把当前状态与节点更新合并起来的函数 |
+| Conditional edge | "Branch" | 由状态函数决定选择哪条边 |
+| Subgraph | "Nested graph" | 作为另一个图中节点使用的图 |
+| Durable execution | "Resume from failure" | 从最后一个成功节点，以精确状态继续执行 |
+| Supervisor | "Router LLM" | 专业子 agent 的中央调度者 |
+| Swarm | "P2P agents" | Agent 通过共享工具 handoff；没有中央路由器 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [LangGraph overview](https://docs.langchain.com/oss/python/langgraph/overview)参考文件
-- [langgraph-supervisor reference](https://reference.langchain.com/python/langgraph/supervisor/)监督模式API
-- [AutoGen v0.4, Microsoft Research](https://www.microsoft.com/en-us/research/articles/autogen-v0-4-reimagining-the-foundation-of-agentic-ai-for-scale-extensibility-and-robustness/)演员模式替代
-- [Claude Agent SDK overview](https://platform.claude.com/docs/en/agent-sdk/overview)会议店和副行
+- [LangGraph overview](https://docs.langchain.com/oss/python/langgraph/overview) — 官方参考文档
+- [langgraph-supervisor reference](https://reference.langchain.com/python/langgraph/supervisor/) — supervisor 模式 API
+- [AutoGen v0.4, Microsoft Research](https://www.microsoft.com/en-us/research/articles/autogen-v0-4-reimagining-the-foundation-of-agentic-ai-for-scale-extensibility-and-robustness/) — actor-model 替代方案
+- [Claude Agent SDK overview](https://platform.claude.com/docs/en/agent-sdk/overview) — session store 与 subagents
