@@ -1,84 +1,84 @@
-# 直接优先优化
+# DPO：直接偏好优化
 
->  RLHF 工作.它还需要训练三个模型 (SFT,奖励模型,政策),管理PPO的不稳定性,并调整KL罚款.DPO问:如果你能跳过所有这些吗?DPO直接优化语言模型在偏好对.没有奖励模型.没有PPO.一个训练循环.同样的结果.
+> RLHF 确实有效，但它需要训练三个模型（SFT、奖励模型、策略模型），处理 PPO 的不稳定性，还要调节 KL 惩罚。DPO 提出了一个问题：如果能跳过这一切呢？DPO 直接使用偏好对优化语言模型。不需要奖励模型，不需要 PPO，只有一个训练循环，却能取得相同效果。
 
-**Type:** Build
-**Languages:** Python (with numpy)
-**Prerequisites:** Phase 10, Lesson 07 (RLHF)
-**Time:** ~90 minutes
+**Type:** 构建
+**Languages:** Python（使用 numpy）
+**Prerequisites:** 阶段 10 第 07 课（RLHF）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 实施DPO培训,直接优化语言模型在没有单独的奖励模型的偏好对
-- 通过保险日志概率来推导DPO损失函数并解释它如何隐含地代表奖励模型
-- 根据训练稳定性,计算成本和需要的模型数量,比较DPO与RLHF
-- 调整beta参数,以控制训练有素政策与参考模型有多不同
+- 实现 DPO 训练，直接在偏好对上优化语言模型，不再使用单独的奖励模型
+- 推导 DPO 损失函数，并解释它如何通过策略的对数概率隐式表示奖励模型
+- 从训练稳定性、计算成本和所需模型数量方面比较 DPO 与 RLHF
+- 调节 beta 参数，控制训练后策略偏离参考模型的程度
 
 ## 问题
 
-您在07课时构建了RLHF管道.三个阶段.三个模型.SFT模型,奖励模型和PPO优化的政策模型.仅仅奖励模型需要数千个人类偏好对和一个独立的训练循环.PPO需要仔细调整KL系数,学习率,剪辑比和时代数.
+你在第 07 课构建了一条 RLHF 流水线：三个阶段，三个模型。先得到 SFT 模型，再训练奖励模型，最后用 PPO 优化策略模型。仅奖励模型就需要数千个人类偏好对和独立的训练循环；PPO 则需要仔细调节 KL 系数、学习率、裁剪比率与训练轮数。
 
-在实践中,PPO训练是臭名昭著的不稳定.小小的超参数变化导致训练分歧.奖励模型是人类偏好的不完美代理,政策找到了利用其弱点的方法.KL惩罚有助于,但需要自己的调整 - - 太低,你得到奖励黑客,太高,模型几乎不学.
+实践中，PPO 训练以不稳定著称。超参数稍有变化，训练就可能发散。奖励模型只是人类偏好的不完美代理，策略会设法利用它的弱点。KL 惩罚有所帮助，却也需要单独调节——太低会出现奖励黑客，太高则几乎学不到东西。
 
-由于这种复杂性,InstructGPT发布后,大多数开源模型多年来一直与RLHF扎.这三阶段的管道很脆弱.每个阶段都有自己的故障模式,错误复合.
+这份复杂性正是 InstructGPT 发表后多年间，大多数开源模型仍难以使用 RLHF 的原因。三阶段流水线十分脆弱，每个阶段都有自己的失效模式，而且错误会层层累积。
 
-在2023年5月,拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉斐尔·拉菲尔·拉菲尔·拉菲尔·拉菲尔·拉菲尔·拉菲尔·拉菲尔·拉菲尔·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕·帕··帕·帕·帕········帕·帕·帕···帕····帕·帕··································································································································································································· 优质奖励函数是数学上由语言模型的自己的代币概率决定的. 你可以完全跳过奖励模型,并直接在偏好对上优化语言模型.
+2023 年 5 月，Stanford 的 Rafael Rafailov、Archit Sharma 等人发表了《Direct Preference Optimization: Your Language Model is Secretly a Reward Model》。核心洞见是：不需要单独的奖励模型。最优奖励函数在数学上由语言模型自身的词元概率决定，因此可以完全跳过奖励模型，直接在偏好对上优化语言模型。
 
-博将RLHF降低到一个监督学习步骤.一个模型.一个损失函数.一个训练循环.没有强化学习. Zephyr-7B,是规模上使用DPO的第一个模型之一,在几个基准上匹配或击败了与全RLHF训练的模型.Meta在Llama 3的配线管道的一部分使用DPO.人类在配线研究中引用了DPO类型的方法.
+DPO 把 RLHF 简化为单个监督学习步骤：一个模型、一个损失函数、一个训练循环，不使用强化学习。Zephyr-7B 是最早大规模使用 DPO 的模型之一，它在多项基准上达到或超过完整 RLHF 训练的模型。Meta 在 Llama 3 的对齐流水线中使用了 DPO，Anthropic 也在对齐研究中引用过 DPO 风格的方法。
 
 ## 概念
 
-### 关键的见解
+### 核心洞见
 
-利率率优化这一目标:
+RLHF 优化以下目标：
 
 ```
 maximize: E[R(x, y)] - beta * KL(pi || pi_ref)
 ```
 
-在此,R是奖励模型,pi是政策,pi_ref是参考模型,beta是KL系数.
+其中 R 是奖励模型，pi 是策略，pi_ref 是参考模型，beta 是 KL 系数。
 
-对于任何奖励函数R,最佳政策是:
+DPO 论文证明，这个目标存在闭式最优解。对于任意奖励函数 R，最优策略为：
 
 ```
 pi*(y | x) = pi_ref(y | x) * exp(R(x, y) / beta) / Z(x)
 ```
 
-在 Z(x) 是正常化常数.
+其中 Z(x) 是归一化常数。重新整理可得：
 
 ```
 R(x, y) = beta * log(pi*(y | x) / pi_ref(y | x)) + beta * log Z(x)
 ```
 
-奖励完全表达在政策模型的概率和参考模型的概率方面.你不需要训练一个独立的奖励模型.奖励是*隐含*在概率比.
+这就是突破所在。奖励完全由策略模型概率与参考模型概率表达，无须训练单独的奖励模型。奖励被*隐式*编码在概率比率中。
 
-取代这个为布拉德利-特里偏好模型:
+将它代入 Bradley-Terry 偏好模型：
 
 ```
 P(y_w > y_l | x) = sigmoid(R(x, y_w) - R(x, y_l))
                   = sigmoid(beta * (log pi(y_w|x)/pi_ref(y_w|x) - log pi(y_l|x)/pi_ref(y_l|x)))
 ```
 
-由于两个答案都在同一提示x上,Z(x) 术语取消了.剩下的只是政策模型的日志概率和参考模型的日志概率的函数.
+由于两个回答以同一个提示词 x 为条件，Z(x) 项会相互抵消。剩下的表达式只依赖当前策略模型与参考模型在偏好回答和拒绝回答上的对数概率。
 
-### 局的损失
+### DPO 损失
 
 ```
 L_DPO = -log(sigmoid(beta * (log pi(y_w|x)/pi_ref(y_w|x) - log pi(y_l|x)/pi_ref(y_l|x))))
 ```
 
-我们要打开每一块包装:
+逐项拆解：
 
-- **y_w**= 首选 (获胜) 反应
-- **y_l**= 拒绝 (输掉) 的反应
-- **x**快速
-- **pi**=当前模型 (正在接受培训)
-- **pi_ref**=参考模型 (结的SFT检查点)
-- **beta**=控制偏差的温度参数 (通常是0.1至0.5)
+- **y_w** = 偏好（胜出）回答
+- **y_l** = 拒绝（落败）回答
+- **x** = 提示词
+- **pi** = 当前模型（正在训练）
+- **pi_ref** = 参考模型（冻结的 SFT 检查点）
+- **beta** = 控制偏离参考模型程度的温度参数（通常为 0.1～0.5）
 
-比例`log pi(y|x) / pi_ref(y|x)`当这个比率是正确的时,当前模型将比参考结果更高的概率分配给响应 y.当负时,当前模型将更低的概率分配给.
+比率 `log pi(y|x) / pi_ref(y|x)` 是对数概率比。当它为正时，当前模型为回答 y 分配的概率高于参考模型；为负时，则低于参考模型。
 
-由于DPO损失,模型可以增加优先响应的日志概率比,并减少拒绝响应的日志概率. 贝塔参数控制模型可以如何积极偏离参考 - 小贝塔意味着允许大偏差,大贝塔使模型接近参考.
+DPO 损失会推动模型提高偏好回答的对数概率比，并降低拒绝回答的对数概率比。beta 参数控制模型可以多激进地偏离参考模型——较小的 beta 允许更大偏离，较大的 beta 则让模型更靠近参考模型。
 
 ```mermaid
 graph TD
@@ -114,73 +114,73 @@ graph TD
     style DIFF fill:#1a1a2e,stroke:#e94560,color:#fff
 ```
 
-### 为什么DPO更简单
+### DPO 为什么更简单
 
-| Aspect | RLHF (PPO) | DPO |
+| 方面 | RLHF（PPO） | DPO |
 |--------|-----------|-----|
-| Models to train | 3 (SFT + reward + policy) | 1 (policy only) |
-| Training loops | 3 (SFT, RM training, PPO) | 2 (SFT, DPO) |
-| Hyperparameters | lr, KL coeff, clip ratio, RM lr, epochs x3 | lr, beta, epochs |
-| Reward model | Required (separate training) | Implicit in model probabilities |
-| RL algorithm | PPO (complex, unstable) | Supervised learning (stable) |
-| GPU memory | 3-4 models in memory during PPO | 2 models (current + reference) |
-| Training stability | Sensitive to hyperparameters | Robust, similar to SFT |
+| 需要训练的模型 | 3 个（SFT + 奖励 + 策略） | 1 个（仅策略） |
+| 训练循环 | 3 个（SFT、RM 训练、PPO） | 2 个（SFT、DPO） |
+| 超参数 | lr、KL 系数、裁剪比率、RM lr、三阶段轮数 | lr、beta、轮数 |
+| 奖励模型 | 必需（单独训练） | 隐式包含在模型概率中 |
+| 强化学习算法 | PPO（复杂、不稳定） | 监督学习（稳定） |
+| GPU 内存 | PPO 期间内存中有 3～4 个模型 | 2 个模型（当前 + 参考） |
+| 训练稳定性 | 对超参数敏感 | 稳健，与 SFT 类似 |
 
-对于一个70B模型,每个副本都需要140GB的FP16.消除奖励模型的存储量是相当大的. 对于一个70B模型,每个副本需要140GB的FP16.
+DPO 训练期间需要在内存中放两个模型——当前模型和冻结参考模型。RLHF 则需要三个或四个：策略、参考、奖励模型，以及可选的价值函数基线。对于 70B 模型，每个 FP16 副本都占 140GB。移除奖励模型带来的内存节省十分可观。
 
-### 当DPO超过RLHF时
+### DPO 何时优于 RLHF
 
-**Small datasets.**对于5,000到20,000个优先对,DPO通常匹配或超过RLHF.RLHF中的奖励模型需要足够的数据来概括 - - 有限数据,它过度过度并产生不可靠的奖励信号.DPO通过根本不需要奖励模型来绕过这个问题.
+**小型数据集。** 拥有 5,000～20,000 个偏好对时，DPO 往往可以达到或超过 RLHF。RLHF 中的奖励模型需要足够数据才能泛化；数据有限时，它会过拟合并产生不可靠的奖励信号。DPO 完全不需要奖励模型，从而绕过这个问题。
 
-**Limited compute.**对于没有大型GPU集群的团队来说,这是实际的选择.
+**计算资源有限。** DPO 所需计算量约为完整 RLHF 的三分之一（三个训练循环缩减为一个）。对于没有大型 GPU 集群的团队，这是切实可行的选择。
 
-**Rapid iteration.**想尝试10种不同的偏好数据集,看哪个产生最佳模型?DPO让你每次实验都在几个小时内进行.RLHF需要重新训练每个数据集的奖励模型.
+**快速迭代。** 想尝试 10 个不同偏好数据集，看看哪个模型效果最好？DPO 可以在几小时内跑完每个实验，而 RLHF 每换一份数据集都要重新训练奖励模型。
 
-### 当RLHF超过DPO时
+### RLHF 何时优于 DPO
 
-**Large-scale training.**在GPT-4或Claude的规模上,RLHF的单独奖励模型可以捕获更细微的偏好信号.奖励模型作为一种学习的损失函数,适应复杂的质量标准.
+**大规模训练。** 在 GPT-4 或 Claude 的规模上，RLHF 的独立奖励模型可以捕捉更细腻的偏好信号。奖励模型相当于学习得到的损失函数，能够适应复杂的质量标准。
 
-**Complex reward signals.**当"更好"涉及多个维度 (有用性,无害性,诚实), 奖励模型可以学习这种多目的的交易.
+**复杂奖励信号。** 当“更好”涉及多个维度（帮助性、无害性、诚实性）时，奖励模型可以学习这种多目标权衡。DPO 把每个偏好对视为二元信号——一个更好、一个更差——却不建模原因。
 
-**Iterative alignment.**基于RLHF的方法,RLHF管道可以通过当前的政策生成新的响应,让人类评价它们,并在线循环中重新训练奖励模型.DPO在固定的偏好对数据集上工作.宪法人工智能 (Anthropic的方法) 广泛使用RLHF的重复性属性.
+**迭代式对齐。** RLHF 流水线可以让当前策略生成新回答，由人类评分，再在线重新训练奖励模型。DPO 使用固定的偏好对数据集。宪法式 AI（Anthropic 的方法）大量利用了 RLHF 的这种迭代特性。
 
-### 超越DPO:KTO,ORPO,SIMPO
+### DPO 之后：KTO、ORPO、SimPO
 
-部启发了一系列简化的配列方法.
+DPO 催生了一系列简化对齐方法。
 
-**KTO (Kahneman-Tversky Optimization, 2024):**你甚至不需要双子. 基创技术使用无对反, 只需将每个反应标记为"好"或"坏",而不用将其与其他选择进行比较. 这使得数据收集显著简化. 没有给注释者显示两个答案,然后问"哪个更好?",你显示一个答案,然后问"这是好的吗?"损失函数应用了前景理论的损失厌恶:坏答案受到惩罚,而不是好答案被奖励.
+**KTO（Kahneman-Tversky Optimization，2024）：** 连成对数据都不需要。KTO 使用非成对反馈——只需把每条回答标为“好”或“坏”，无须与另一个答案比较。这大幅简化了数据收集：不再向标注者展示两个回答并问“哪个更好？”，而是只展示一个回答并问“这个好吗？”损失函数引入前景理论中的损失厌恶：坏回答受到的惩罚，大于好回答得到的奖励。
 
-**ORPO (Odds Ratio Preference Optimization, 2024):**组合SFT和配线在一个训练步骤中.而不是首先做SFT然后DPO,ORPO修改SFT损失以包括一个偏好信号.损失有两个条款:一个标准的下一个代币预测损失在偏好响应,加上一个机会比率条款增加了偏好和拒绝响应概率之间的差距.一个训练循环而不是两个.
+**ORPO（Odds Ratio Preference Optimization，2024）：** 在单个训练步骤中结合 SFT 与对齐。它不再先做 SFT 再做 DPO，而是修改 SFT 损失并加入偏好信号。损失包含两项：偏好回答上的标准下一词元预测损失，以及扩大偏好回答与拒绝回答概率差距的优势比项。只需一个训练循环，而不是两个。
 
-**SimPO (Simple Preference Optimization, 2024):**完全消除了参考模型. SimPO 没有计算与冷引用的日志概率比,而是用响应的平均日志概率 (长度正常化) 作为隐含的奖励.这节省了记忆 (不需要参考模型) 并简化了训练.长度正常化防止模型更短的响应.
+**SimPO（Simple Preference Optimization，2024）：** 完全移除参考模型。SimPO 不再计算相对于冻结参考模型的对数概率比，而是用回答的平均对数概率（按长度归一化）作为隐式奖励。这样既节省内存（不需要参考模型），也简化训练。长度归一化会阻止模型偏爱较短回答。
 
-| Method | Year | Models in Memory | Needs Pairs? | Needs Reference? | Training Loops |
+| 方法 | 年份 | 内存中的模型数 | 需要成对数据？ | 需要参考模型？ | 训练循环数 |
 |--------|------|-----------------|-------------|-----------------|----------------|
-| RLHF | 2022 | 3-4 | Yes (for RM) | Yes | 3 |
-| DPO | 2023 | 2 | Yes | Yes | 2 |
-| KTO | 2024 | 2 | No (unpaired) | Yes | 2 |
-| ORPO | 2024 | 1 | Yes | No | 1 |
-| SimPO | 2024 | 1 | Yes | No | 1 |
+| RLHF | 2022 | 3～4 | 是（供 RM 使用） | 是 | 3 |
+| DPO | 2023 | 2 | 是 | 是 | 2 |
+| KTO | 2024 | 2 | 否（非成对） | 是 | 2 |
+| ORPO | 2024 | 1 | 是 | 否 | 1 |
+| SimPO | 2024 | 1 | 是 | 否 | 1 |
 
-趋势很明显:每个方法消除了一个更多的复杂性.RLHF需要一个奖励模型和PPO.DPO消除了这两种.KTO消除了对数据.ORPO消除了单独的SFT阶段.SIMPO消除了参考模型.调整税 - 从基模型到调整模型的计算和复杂性成本 - 持续下降.
+趋势很明确：每种方法都继续移除一层复杂性。RLHF 需要奖励模型和 PPO，DPO 同时去掉二者，KTO 去掉成对数据，ORPO 去掉独立 SFT 阶段，SimPO 则去掉参考模型。从基础模型转向对齐模型所需的计算与复杂性成本——即“对齐税”——正在持续下降。
 
-### 实际的DPO部署
+### 真实 DPO 部署
 
-**Zephyr-7B (HuggingFace, October 2023):**基于Mistral 7B,SFT在UltraChat (200K例),然后DPO在UltraFeedback (60K偏好对).在MT-Bench上获得6.47分,这是当时最高的7B模型.比较来说,Llama 2 Chat 70B获得6.86分,这意味着Zephyr仅使用DPO对齐使用,获得了6%,这意味着Zephyr仅使用了DPO对齐的模型的10倍.
+**Zephyr-7B（HuggingFace，2023 年 10 月）：** 基于 Mistral 7B，先在 UltraChat（20 万个样本）上做 SFT，再在 UltraFeedback（6 万个偏好对）上做 DPO。它在 MT-Bench 上得到 6.47 分，是当时得分最高的 7B 模型。相比之下，Llama 2 Chat 70B 得分为 6.86，也就是说，Zephyr 仅凭 DPO 对齐，就把差距缩小到了一个参数量为其 10 倍模型的 6% 以内。
 
-**Llama 3 (Meta, April 2024):**结合表明,DPO和RLHF可以互补--RLHF用于广泛的排列,DPO用于目标的精炼.
+**Llama 3（Meta，2024 年 4 月）：** 在初始 RLHF 阶段后使用 DPO。这种组合说明 DPO 与 RLHF 可以互补——RLHF 负责广泛对齐，DPO 用于针对性精修。
 
-**Neural Magic / nm-chat (2024):**应用DPO到多个开源模型,在仅针对SFT的基线上,对对准准则的5-15%的改善一直存在.
+**Neural Magic / nm-chat（2024）：** 对多个开源模型应用 DPO，相比仅 SFT 的基线，在对齐基准上持续取得 5%～15% 的提升。
 
 ```figure
 dpo-loss
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1: 首选数据集
+### 第 1 步：偏好数据集
 
-像RLHF一样的格式 (即时,优先,拒绝) 倍.
+使用与 RLHF 相同的格式——（提示词、偏好回答、拒绝回答）三元组。DPO 直接使用这些数据，不需要中间奖励模型。
 
 ```python
 import numpy as np
@@ -223,9 +223,9 @@ PREFERENCE_DATA = [
 ]
 ```
 
-### 步骤2:序列记录概率
+### 第 2 步：序列对数概率
 
-对于DPO损失,需要计算给提示的响应的总日志概率.这意味着运行模型在完整的 (提示+响应) 序列上,并总结每个响应代币的日志概率.
+DPO 损失需要计算给定提示词时，一个回答的总对数概率。这意味着，要在完整的（提示词 + 回答）序列上运行模型，并对每个回答词元的对数概率求和。
 
 ```python
 def tokenize_sequence(text, vocab_size=256):
@@ -268,11 +268,11 @@ def compute_sequence_log_prob(model, prompt_tokens, response_tokens, max_seq_len
     return total_log_prob
 ```
 
-这种函数是DPO的工作马.对于每个偏好对,它运行四次:偏好响应模型,拒绝响应模型,偏好响应参考,拒绝响应参考.这相当于每次训练示例的4次前进通过,而RLHF的生成+奖励分数+价值估计+PPO更新.更简单,更快,更稳定.
+这个函数是 DPO 的主力。对于每个偏好对，它会运行四次：当前模型处理偏好回答、当前模型处理拒绝回答、参考模型处理偏好回答、参考模型处理拒绝回答。每个训练样本需要 4 次前向传播；相比 RLHF 的生成 + 奖励评分 + 价值估计 + PPO 更新，它更简单、更快、更稳定。
 
-### 步骤3: 投资者损失
+### 第 3 步：DPO 损失
 
-文件的核心是代码,一个函数,一个损失,没有奖励模型.
+用代码写出论文核心。一个函数，一种损失，不需要奖励模型。
 
 ```python
 def sigmoid(x):
@@ -305,13 +305,13 @@ def dpo_loss(policy_logprob_preferred, policy_logprob_rejected,
     }
 ```
 
-其他`preferred_ratio`其他`rejected_ratio`当当前模型将更高的概率分配给首选反应 (与参考相比) 和更低的概率分配给拒绝的反应时,逻辑是正的,损失是低的.训练信号将模型推向正面方向.
+`preferred_ratio` 与 `rejected_ratio` 就是 DPO 推导中的对数概率比。当当前模型相对于参考模型为偏好回答分配更高概率、同时为拒绝回答分配更低概率时，Logit 为正，损失较低。训练信号正是把模型推向这个方向。
 
-其他`implicit_preferred_reward`其他`implicit_rejected_reward`您可以提取它们来验证训练是否有效 - - 偏好和拒绝的奖励之间的差距应该在训练上增加.
+`implicit_preferred_reward` 与 `implicit_rejected_reward` 是 DPO 损失隐式分配的奖励。可以提取它们来确认训练是否有效——训练期间，偏好回答与拒绝回答之间的奖励差应当不断增大。
 
-### 步骤4:DPO培训循环
+### 第 4 步：DPO 训练循环
 
-没有PPO,没有奖励模型,只是向前传递和梯度更新.
+这是一个标准监督训练循环：没有 PPO，没有奖励模型，只有前向传播与梯度更新。
 
 ```python
 def copy_model_weights(source, target):
@@ -395,11 +395,11 @@ def dpo_train(policy_model, reference_model, preference_data,
     return policy_model, losses, margins
 ```
 
-训练循环与RLHF相比非常简单.对于每个偏好对:计算四个日志概率 (两个模型,两个反应),将它们插入DPO损失中,计算梯度,更新政策.没有生成步骤.没有奖励模型推断.没有优势估计.没有剪辑.
+与 RLHF 相比，这个训练循环简单得令人耳目一新。对每个偏好对，计算四个对数概率（两个模型、两个回答），代入 DPO 损失，计算梯度并更新策略。不需要生成步骤，不需要奖励模型推理，不需要优势估计，也不需要裁剪。
 
-### 步骤5:比较DPO与RLHF
+### 第 5 步：比较 DPO 与 RLHF
 
-测量隐含的奖励利和日志概率变化,将DPO与07课程的RLHF模型进行比较.
+测量隐式奖励差与对数概率变化，将 DPO 和第 07 课的 RLHF 模型进行比较。
 
 ```python
 def evaluate_preference_accuracy(model, reference_model, preference_data, beta=0.1, max_seq_len=128):
@@ -452,9 +452,9 @@ def analyze_implicit_rewards(model, reference_model, preference_data, beta=0.1, 
     print()
 ```
 
-### 步骤 6: 贝塔敏感性分析
+### 第 6 步：Beta 敏感度分析
 
-测试结果是DPO的等于RLHF中的KL系数.它控制模型可以从参考中偏离多大.
+beta 参数相当于 DPO 中的 RLHF KL 系数，控制模型能够偏离参考模型的程度。下面的实验展示其影响。
 
 ```python
 def beta_sensitivity_analysis(sft_model, preference_data, betas, max_seq_len=128):
@@ -502,11 +502,11 @@ def beta_sensitivity_analysis(sft_model, preference_data, betas, max_seq_len=128
     return results
 ```
 
-小β (0.01) 让模型自由偏离参考 - - 快速学习但出现退化解决方案的风险.大β (1.0) 让模型接近参考 - - 稳定但学习缓慢.大多数应用程序的甜点点是0.1到0.3.
+较小的 beta（0.01）允许模型自由偏离参考模型——学习更快，却有产生退化解的风险。较大的 beta（1.0）让模型靠近参考模型——训练稳定，但学习较慢。多数应用的最佳范围是 0.1～0.3。
 
-## 用它
+## 学以致用
 
-### 完整的DPO管道演示
+### 完整 DPO 流水线演示
 
 ```python
 if __name__ == "__main__":
@@ -618,41 +618,41 @@ if __name__ == "__main__":
     print("    - Many production systems use both: RLHF first, DPO to refine.")
 ```
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/prompt-alignment-method-selector.md`根据您的数据可用性,计算预算和调整目标,它建议制定一种方法和培训计划.
+本课会生成 `outputs/prompt-alignment-method-selector.md`——一个帮助你为具体用途选择正确对齐方法（SFT、RLHF、DPO、KTO、ORPO、SimPO）的提示词。给定可用数据、计算预算和对齐目标，它会推荐相应方法与训练方案。
 
-## 运动
+## 练习
 
-1. 实现KTO (Kahneman-Tversky优化).KTO不需要双,只需要标记每个反应为"好"或"坏".`-log(sigmoid(beta * log_ratio))`对于一个坏反应,`-log(1 - sigmoid(beta * log_ratio))`根据相同的数据 (独立地将"好"和"坏"视为好) 进行训练,并与DPO进行准确比较.
+1. 实现 KTO（Kahneman-Tversky Optimization）。KTO 不需要成对数据，只需把每条回答标记为“好”或“坏”。好回答的损失为 `-log(sigmoid(beta * log_ratio))`，坏回答的损失为 `-log(1 - sigmoid(beta * log_ratio))`，并对坏回答损失应用损失厌恶乘数（通常为 1.5 倍）。在相同数据上训练（把偏好回答单独视为“好”，拒绝回答单独视为“坏”），并与 DPO 比较准确率。
 
-2. 实现长度正常化DPO. 代替原始日志概率,按响应代币数量划分: `normalized_logprob = total_logprob / num_tokens`模型不愿意更短的响应 (总计记录检查率较高).
+2. 实现长度归一化 DPO。不使用原始对数概率，而是除以回答词元数：`normalized_logprob = total_logprob / num_tokens`。这会防止模型偏爱总对数概率更高的短回答。比较使用和不使用归一化时的隐式奖励差。
 
-3. 建立ORPO类型的组合损失. 添加一个标准的下一个代币预测损失在首选的响应对DPO损失: `L = L_sft(preferred) + alpha * L_dpo`试试0.1,0.5和1.0的阿尔法值. 合并损失应产生一个遵循指令 (从SFT术语) 和更好的反应 (从DPO术语) 的模型,从而消除了单独的SFT阶段的需要.
+3. 构建 ORPO 风格联合损失。把偏好回答上的标准下一词元预测损失加入 DPO 损失：`L = L_sft(preferred) + alpha * L_dpo`。分别尝试 0.1、0.5、1.0 的 alpha。联合损失应让模型既能遵循指令（来自 SFT 项），又会偏好更好的回答（来自 DPO 项），从而不再需要单独的 SFT 阶段。
 
-4. 运行反复DPO.运行DPO3个时代,然后从训练模型中生成新的响应,将它们与原来的首选响应结合成新的首选对,然后再次运行DPO.这次"自动玩"过程的两轮.比较1轮和2轮后的首选精度,看是否反复精炼有帮助.
+4. 实现迭代式 DPO。运行 3 轮 DPO，再由训练后的模型生成新回答，把它们与原偏好回答组成新的偏好对，然后再次运行 DPO。完成两轮这种“自博弈”过程。比较第 1 轮与第 2 轮后的偏好准确率，判断迭代精修是否有效。
 
-5. 试图: (a) 基础模型 (SFT前), (b) DPO的第一时期的检查点, (c) 政策模型的指数动向平均值. 报告哪个参考产生最高的偏好准确性和最稳定的训练曲线.
+5. 比较使用不同参考模型的 DPO。除了 SFT 检查点，还分别尝试：（a）基础模型（SFT 前）；（b）DPO 第 1 轮的检查点；（c）策略模型的指数移动平均。报告哪种参考模型带来最高偏好准确率和最稳定的训练曲线。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| DPO | "RLHF without RL" | Direct Preference Optimization: a supervised learning algorithm that optimizes the language model directly on preference pairs, bypassing the reward model and PPO |
-| Implicit reward | "The reward is in the model" | The reward function is determined by the log-probability ratio between the policy and reference models -- no separate reward model needed |
-| Beta (DPO) | "The temperature" | Controls how far the policy can deviate from the reference model -- small beta allows large deviations, large beta keeps the model close |
-| Log-probability ratio | "How much the model changed" | log pi(y\|x) - log pi_ref(y\|x) -- positive means the current model assigns higher probability than the reference |
-| Reference model | "The frozen checkpoint" | A copy of the SFT model whose weights never change -- serves as the anchor for computing probability ratios |
-| KTO | "DPO without pairs" | Kahneman-Tversky Optimization: works with unpaired "good" or "bad" labels instead of requiring preference pairs |
-| ORPO | "One-step alignment" | Odds Ratio Preference Optimization: combines SFT and alignment into a single training loop by adding a preference term to the SFT loss |
-| SimPO | "No reference needed" | Simple Preference Optimization: eliminates the reference model by using length-normalized average log-probability as the implicit reward |
-| Alignment tax | "The cost of making models safe" | The additional compute, data, and complexity required to go from a base model to an aligned model -- DPO reduces this significantly |
+| DPO | “不使用强化学习的 RLHF” | 直接偏好优化：直接在偏好对上优化语言模型、绕过奖励模型与 PPO 的监督学习算法 |
+| 隐式奖励 | “奖励就在模型里” | 奖励函数由策略模型与参考模型之间的对数概率比确定——无须单独的奖励模型 |
+| Beta（DPO） | “温度” | 控制策略能够偏离参考模型的程度——较小的 beta 允许大幅偏离，较大的 beta 让模型保持接近 |
+| 对数概率比 | “模型变化了多少” | log pi(y\|x) - log pi_ref(y\|x)——正值表示当前模型分配的概率高于参考模型 |
+| 参考模型 | “冻结的检查点” | 权重永不变化的 SFT 模型副本——作为计算概率比的锚点 |
+| KTO | “不需要成对数据的 DPO” | Kahneman-Tversky Optimization：使用非成对“好”或“坏”标签，而不要求偏好对 |
+| ORPO | “一步对齐” | Odds Ratio Preference Optimization：把偏好项加入 SFT 损失，在一个训练循环中完成 SFT 与对齐 |
+| SimPO | “无须参考模型” | Simple Preference Optimization：以长度归一化的平均对数概率作为隐式奖励，从而移除参考模型 |
+| 对齐税 | “让模型安全的成本” | 从基础模型转为对齐模型所需的额外计算、数据和复杂性——DPO 显著降低了这项成本 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Rafailov et al., 2023 -- "Direct Preference Optimization: Your Language Model is Secretly a Reward Model"](https://arxiv.org/abs/2305.18290)-- 简化从RLHF到监督学习的调整
-- [Tunstall et al., 2023 -- "Zephyr: Direct Distillation of LM Alignment"](https://arxiv.org/abs/2310.16944)-- Zephyr-7B,显示DPO在超反匹配RLHF在基准
-- [Ethayarajh et al., 2024 -- "KTO: Model Alignment as Prospect Theoretic Optimization"](https://arxiv.org/abs/2402.01306)--消除对配制偏好的必要性
-- [Hong et al., 2024 -- "ORPO: Monolithic Preference Optimization without Reference Model"](https://arxiv.org/abs/2403.07691)-- 结合SFT和配线在一个步骤
-- [Meng et al., 2024 -- "SimPO: Simple Preference Optimization with a Reference-Free Reward"](https://arxiv.org/abs/2405.14734)--完全消除了参考模型
-- [Llama 3 Technical Report](https://arxiv.org/abs/2407.21783)--Meta的配线管道,结合RLHF和DPO
+- [Rafailov 等，2023——“直接偏好优化：你的语言模型暗中就是奖励模型”](https://arxiv.org/abs/2305.18290)——把对齐从 RLHF 简化为监督学习的 DPO 论文
+- [Tunstall 等，2023——“Zephyr：语言模型对齐的直接蒸馏”](https://arxiv.org/abs/2310.16944)——Zephyr-7B，证明在 UltraFeedback 上运行 DPO 可以在基准上媲美 RLHF
+- [Ethayarajh 等，2024——“KTO：将模型对齐视为前景理论优化”](https://arxiv.org/abs/2402.01306)——移除对成对偏好的需求
+- [Hong 等，2024——“ORPO：无需参考模型的整体式偏好优化”](https://arxiv.org/abs/2403.07691)——在一个步骤中结合 SFT 与对齐
+- [Meng 等，2024——“SimPO：使用无参考奖励的简单偏好优化”](https://arxiv.org/abs/2405.14734)——完全移除参考模型
+- [Llama 3 技术报告](https://arxiv.org/abs/2407.21783)——Meta 结合 RLHF 与 DPO 的对齐流水线
