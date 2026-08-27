@@ -1,47 +1,47 @@
-# 线性代数直观
+# 线性代数直觉
 
-> 每个人工智能模型都是用高档帽子的矩阵数学.
+> 每个 AI 模型，本质上都只是戴了一顶华丽帽子的矩阵运算。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python, Julia
-**Prerequisites:** Phase 0
-**Time:** ~60 minutes
+**Prerequisites:** 第 0 阶段
+**Time:** 约 1 小时
 
 ## 学习目标
 
-- 在Python中从零开始实现向量和矩阵操作 (加值,点数,矩阵乘法)
-- 几何地解释点产品,投影和格兰姆-施密特过程所做的事情
-- 使用排序缩小来确定对向量的线性独立性,排列和基础
-- 连接线性代数概念到AI应用:嵌入,注意力分数和LoRA
+- 使用 Python 从零实现向量和矩阵运算（加法、点积与矩阵乘法）
+- 从几何角度解释点积、投影和 Gram–Schmidt 过程的作用
+- 使用行化简判断一组向量的线性无关性、秩与基
+- 将线性代数概念与嵌入、注意力分数和 LoRA 等 AI 应用联系起来
 
 ## 问题
 
-打开任何ML文件. 在第一页内,你会看到向量,矩阵,点产品和转化.没有线性代数直觉,这些只是符号.用它,你可以看到神经网络实际上在做什么 - - 移动空间中的点.
+随便打开一篇机器学习论文，你很可能在第一页就看到向量、矩阵、点积和变换。如果缺乏线性代数直觉，这些只是符号；具备直觉之后，你就能看清神经网络实际在做什么——在空间中移动点。
 
-你不需要成为数学家,你需要看到这些运算的几何含义,然后自己编码它们.
+你不必成为数学家。你需要先理解这些运算在几何上意味着什么，然后亲手把它们编写出来。
 
-## 概念
+## 核心概念
 
-### 矢量是点 (和方向)
+### 向量是点（也是方向）
 
-矢量只是一个数量列表. 但这些数字意味着什么 - - 他们是空间中的坐标.
+向量只是一列数字，但这些数字具有含义——它们是空间中的坐标。
 
-**2D vector [3, 2]:**
+**二维向量 [3, 2]：**
 
-| x | y | Point |
+| x | y | 点 |
 |---|---|-------|
-| 3 | 2 | The vector points from origin (0,0) to (3, 2) on the plane |
+| 3 | 2 | 该向量在平面上从原点 (0,0) 指向 (3, 2) |
 
-矢量有3^2 +2^2) =3^3 () 向上向右.
+这个向量的长度为 sqrt(3^2 + 2^2) = sqrt(13)，方向指向右上方。
 
-在人工智能中,向量代表了一切:
-- 一个词 → 768 个数字的向量 (其"含义"在嵌入空间中)
-- 一个图像 → 数百万像素值的向量
-- 一个用户 → 偏好向量
+在 AI 中，向量可以表示一切：
+- 一个词 → 由 768 个数字组成的向量（它在嵌入空间中的“含义”）
+- 一张图片 → 由数百万个像素值组成的向量
+- 一个用户 → 由偏好组成的向量
 
-### 矩阵是变化
+### 矩阵是变换
 
-一个矩阵将一个向量转化为另一个. 它可以旋转,扩展,延伸或投影.
+矩阵把一个向量变换成另一个向量。它可以执行旋转、缩放、拉伸或投影。
 
 ```mermaid
 graph LR
@@ -62,14 +62,14 @@ graph LR
     M --> B2
 ```
 
-在人工智能中,矩阵是模型:
-- 转换输入成输出的神经网络重量 →矩阵
-- 关注分数 → 决定要专注于什么的矩阵
-- 嵌入式 → 矩阵将单词映射到向量
+在 AI 中，矩阵就是模型本身：
+- 神经网络权重 → 把输入变换为输出的矩阵
+- 注意力分数 → 决定关注哪些内容的矩阵
+- 嵌入 → 把词映射为向量的矩阵
 
-### 点产品测量相似性
+### 点积衡量相似度
 
-两个向量的点乘法告诉你它们是多么相似.
+两个向量的点积可以反映它们有多相似。
 
 ```
 a · b = a₁×b₁ + a₂×b₂ + ... + aₙ×bₙ
@@ -79,15 +79,15 @@ Perpendicular:       a · b = 0  (unrelated)
 Opposite direction:  a · b < 0  (dissimilar)
 ```
 
-这就是搜索引擎,推系统和RAG的工作方式 - - 找到高点产品的向量.
+搜索引擎、推荐系统和 RAG 的工作方式正是如此——寻找点积较高的向量。
 
-### 线性独立性
+### 线性无关
 
-如果集合中没有向量可以被写成其他向量的组合,则向量是线性独立的.如果v1,v2,v3是独立的,则它们跨越3D空间.如果一个是其他向量的组合,则它们只跨越平面.
+如果一组向量中的任何一个都不能表示成其他向量的线性组合，那么这些向量就是线性无关的。如果 v1、v2、v3 线性无关，它们可以张成三维空间；如果其中一个能由其他向量组合得到，它们就只能张成一个平面。
 
-为什么对人工智能很重要:你的特征矩阵应该有线性独立的列.如果两个特征完全相连 (线性依赖),模型无法区分它们的效果.这导致回归的多线性 - - 重量矩阵变得不稳定,小输入变化产生了野蛮的输出波动.
+这对 AI 为什么重要：特征矩阵的列应该线性无关。如果两个特征完全相关（线性相关），模型便无法区分它们各自的影响。这会在回归中造成多重共线性——权重矩阵变得不稳定，输入的微小变化可能引发输出的剧烈波动。
 
-**Concrete example:**
+**具体示例：**
 
 ```
 v1 = [1, 0, 0]
@@ -95,42 +95,42 @@ v2 = [0, 1, 0]
 v3 = [2, 1, 0]   # v3 = 2*v1 + v2
 ```
 
-v1和 v2是独立的,既不是一个尺度乘数,也不是一个结合的.但是 v3 = 2*v1 + v2,所以 {v1, v2, v3} 是一个依赖的集合.这些三个向量都位于xy平面.不管你如何结合它们,你不能达到 [0, 0, 1].你有三个向量,但只有两个自由维度.
+v1 和 v2 线性无关——二者都不是另一个向量的标量倍数或线性组合。但 v3 = 2*v1 + v2，因此 {v1, v2, v3} 是线性相关集合。这三个向量都位于 xy 平面内；无论怎样组合，都无法到达 [0, 0, 1]。你虽然有三个向量，却只有两个自由维度。
 
-在数据集中:如果 feature_3 = 2*feature_1 + feature_2,添加 feature_3给模型提供了零新信息.更糟糕的是,它使正常方程单一 - 对于权重没有唯一的解决方案.
+放到数据集中理解：如果 feature_3 = 2*feature_1 + feature_2，那么加入 feature_3 不会为模型提供任何新信息。更糟的是，它会使正规方程变成奇异方程，因而不存在唯一的权重解。
 
-### 基础和地位
+### 基与秩
 
-基础是整个空间的最小线性独立向量集合.
+基是一组能够张成整个空间的最小线性无关向量集合。基向量的数量就是空间的维数。
 
-3D空间的标准基础是 {[1,0,0], [0,1,0], [0,0,1]}.但在3D中任何三个独立向量都构成一个有效的基础.
+三维空间的标准基是 {[1,0,0], [0,1,0], [0,0,1]}，但三维空间中的任意三个线性无关向量都能构成一组有效的基。选择一组基，也就是选择一个坐标系。
 
-矩阵的排名 = 线性独立列数 = 线性独立列数.如果排名 < min(列, cols),矩阵是排名不足的.这意味着:
-- 系统有无限多的解决方案 (或没有)
-- 信息在转变中丢失
-- 矩阵不能倒车
+矩阵的秩 = 线性无关列的数量 = 线性无关行的数量。如果 rank < min(rows, cols)，这个矩阵就是秩亏的。这意味着：
+- 方程组有无穷多个解（或者无解）
+- 变换会丢失信息
+- 矩阵不可逆
 
-| Situation | Rank | What it means for ML |
+| 情况 | 秩 | 对机器学习的含义 |
 |-----------|------|---------------------|
-| Full rank (rank = min(m, n)) | Maximum possible | Unique least-squares solution exists. Model is well-conditioned. |
-| Rank deficient (rank < min(m, n)) | Below maximum | Features are redundant. Infinitely many weight solutions. Regularization needed. |
-| Rank 1 | 1 | Every column is a scaled copy of one vector. All data lies on a line. |
-| Near rank-deficient (small singular values) | Numerically low | Matrix is ill-conditioned. Tiny input noise causes large output changes. Use SVD truncation or ridge regression. |
+| 满秩（rank = min(m, n)） | 可达到的最大值 | 存在唯一的最小二乘解，模型条件良好 |
+| 秩亏（rank < min(m, n)） | 低于最大值 | 特征存在冗余，权重解有无穷多个，需要正则化 |
+| 秩为 1 | 1 | 每一列都是同一个向量的缩放副本，所有数据都位于一条直线上 |
+| 接近秩亏（奇异值很小） | 数值意义上的低秩 | 矩阵病态，输入中的微小噪声会引发输出大幅变化；应使用 SVD 截断或岭回归 |
 
 ### 投影
 
-投影向量**a**在向量上**b**给出了**a**方向**b**其他:
+把向量 **a** 投影到向量 **b** 上，可以得到 **a** 在 **b** 方向上的分量：
 
 ```
 proj_b(a) = (a dot b / b dot b) * b
 ```
 
-剩余 (a - proj_b(a)) 垂直于b.这种直角分解是最小平方的配件的基础.
+残差（a - proj_b(a)）与 b 垂直。这种正交分解是最小二乘拟合的基础。
 
-在ML中,投影在任何地方:
-- 线性回归将从观测到列空间的距离降至最低 - - 解决方案是投影
-- PCA对最大差距方向进行数据投影
-- 转变器中的注意力计算了查询对键的投影
+投影在机器学习中无处不在：
+- 线性回归会最小化观测值到列空间的距离——其解本身就是一次投影
+- PCA 将数据投影到方差最大的方向
+- Transformer 中的注意力会计算查询向量在键向量上的投影
 
 ```mermaid
 graph LR
@@ -143,21 +143,21 @@ graph LR
     end
 ```
 
-**Example:**其他类型的子
+**示例：**a = [3, 4]，b = [1, 0]
 
-其他类型的产品:
+proj_b(a) = (3*1 + 4*0) / (1*1 + 0*0) * [1, 0] = 3 * [1, 0] = [3, 0]
 
-投影下降了y元件.这是其最简单的形式的维度减少 - - 抛弃你不关心的方向.
+投影会丢弃 y 分量。这就是最简单形式的降维——舍弃你不关心的方向。
 
-### 格拉姆-施密德过程
+### Gram–Schmidt 过程
 
-转换任何单独向量集合为一个正规的基础.正规意味着每个向量都有长度1并且每个对都是垂直的.
+Gram–Schmidt 过程可以把任意一组线性无关向量转换为一组标准正交基。“标准正交”意味着每个向量长度为 1，并且任意两个向量彼此垂直。
 
-算法:
-1. 取第一向量,正常化它
-2. 取第二个向量,减去它的投影到第一个,正常化
-3. 减去其投影到之前的所有向量,正常化
-4. 复制剩余的向量
+算法步骤：
+1. 取第一个向量并将其归一化
+2. 取第二个向量，减去它在第一个向量上的投影，再进行归一化
+3. 取第三个向量，减去它在此前所有向量上的投影，再进行归一化
+4. 对剩余向量重复上述过程
 
 ```
 Input:  v1, v2, v3, ... (linearly independent)
@@ -173,18 +173,18 @@ u3 = w3 / |w3|
 Output: u1, u2, u3, ... (orthonormal basis)
 ```
 
-是正规的基础,R捕获投影系数.QR分解用于:
-- 解决线性系统 (比高斯消除更稳定)
-- 计算自值 (QR算法)
-- 最小方体回归 (标准数值方法)
+QR 分解内部采用的正是这一过程。Q 是标准正交基，R 保存投影系数。QR 分解可用于：
+- 求解线性方程组（比高斯消元更稳定）
+- 计算特征值（QR 算法）
+- 最小二乘回归（标准数值方法）
 
 ```figure
 eigen-directions
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:从零开始的向量 (Python)
+### 第 1 步：从零实现向量（Python）
 
 ```python
 class Vector:
@@ -224,7 +224,7 @@ print(f"|a| = {a.magnitude():.4f}")
 print(f"cosine similarity = {a.cosine_similarity(b):.4f}")
 ```
 
-### 步骤2:从零开始的矩阵 (Python)
+### 第 2 步：从零实现矩阵（Python）
 
 ```python
 class Matrix:
@@ -267,7 +267,7 @@ print(f"Original: {point}")
 print(f"Rotated 90°: {rotated}")
 ```
 
-### 步骤3:为什么这对人工智能很重要
+### 第 3 步：理解它对 AI 的意义
 
 ```python
 import random
@@ -282,7 +282,7 @@ print(f"Output (2D): {output}")
 print("This is what a neural network layer does -- matrix multiplication.")
 ```
 
-### 步骤4:朱莉亚版本
+### 第 4 步：Julia 版本
 
 ```julia
 a = [1.0, 2.0, 3.0]
@@ -300,7 +300,7 @@ println("Wx = ", W * x)
 println("This is a neural network layer.")
 ```
 
-### 步骤5:线性独立和从零开始投影 (Python)
+### 第 5 步：从零实现线性无关判断与投影（Python）
 
 ```python
 def is_linearly_independent(vectors):
@@ -359,9 +359,9 @@ print(f"u1 · u3 = {basis[0].dot(basis[2]):.6f}")
 print(f"u2 · u3 = {basis[1].dot(basis[2]):.6f}")
 ```
 
-## 用它
+## 实际使用
 
-现在,NumPy的情况也一样,实际上你会使用的东西:
+下面使用 NumPy 完成同样的工作——这才是实践中真正会采用的方式：
 
 ```python
 import numpy as np
@@ -379,7 +379,7 @@ x = np.array([1.0, 0.5, -0.3])
 print(f"Wx = {W @ x}")
 ```
 
-### 排名,投影和QR使用NumPy
+### 使用 NumPy 计算秩、投影和 QR 分解
 
 ```python
 import numpy as np
@@ -397,7 +397,7 @@ print(f"Q is orthogonal: {np.allclose(Q @ Q.T, np.eye(3))}")
 print(f"R is upper triangular: {np.allclose(R, np.triu(R))}")
 ```
 
-### 光 - 电压器是自动变化的向量
+### PyTorch——张量是支持自动微分的向量
 
 ```python
 import torch
@@ -414,50 +414,50 @@ print(f"dot product = {similarity.item():.4f}")
 print(f"d(dot)/dx = {x.grad}")
 ```
 
-对于 x 的点子产量的梯度只是 y. PyTorch 计算了这个自动. 神经网络中的每一个操作都是由这样的操作构建的 - - 矩阵乘法,点子产品,投影 - -
+点积对 x 的梯度就是 y，PyTorch 自动完成了计算。神经网络中的每项操作都建立在矩阵乘法、点积和投影等基础运算之上，自动微分则会跟踪贯穿所有运算的梯度。
 
-你刚刚从头开始把NumPy在一行里做了什么,现在你知道在帽子下发生了什么.
+你刚刚从零实现了 NumPy 一行代码就能完成的功能，现在也理解了它在底层究竟做了什么。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/prompt-linear-algebra-tutor.md`-- 让人工智能助理通过几何直觉教线性代数
+本课会产出：
+- `outputs/prompt-linear-algebra-tutor.md`——帮助 AI 助手通过几何直觉讲解线性代数的提示词
 
-## 联系
+## 知识关联
 
-这一课中的一切都与现代人工智能的特定部分有关:
+本课的每个概念都与现代 AI 的具体组成部分相关：
 
-| Concept | Where it shows up |
+| 概念 | 出现位置 |
 |---------|------------------|
-| Dot product | Attention scores in transformers, cosine similarity in RAG |
-| Matrix multiply | Every neural network layer, every linear transformation |
-| Linear independence | Feature selection, avoiding multicollinearity |
-| Rank | Determining if a system is solvable, LoRA (low-rank adaptation) |
-| Projection | Linear regression (projecting onto column space), PCA |
-| Gram-Schmidt / QR | Numerical solvers, eigenvalue computation |
-| Orthonormal basis | Stable numerical computation, whitening transforms |
+| 点积 | Transformer 中的注意力分数、RAG 中的余弦相似度 |
+| 矩阵乘法 | 每一层神经网络、每一种线性变换 |
+| 线性无关 | 特征选择、避免多重共线性 |
+| 秩 | 判断方程组是否可解、LoRA（低秩适配） |
+| 投影 | 线性回归（投影到列空间）、PCA |
+| Gram–Schmidt / QR | 数值求解器、特征值计算 |
+| 标准正交基 | 稳定的数值计算、白化变换 |
 
-洛拉值得特别提及. 它通过将重量更新分解成低级矩阵来细节化大型语言模型. 洛拉 (LoRA) 没有更新4096x4096重量矩阵 (16M参数),而是更新了两个4096x16和16x4096 (131K参数) 尺寸的矩阵. 排名16的限制意味着LoRA假设重量更新在全4096维空间的16维子空间中生活. 这就是线性代数做了真正的工作.
+LoRA 值得特别说明。它把权重更新分解成低秩矩阵，从而微调大型语言模型。LoRA 不必更新一个 4096x4096 的权重矩阵（1600 万个参数），而只需更新两个大小分别为 4096x16 和 16x4096 的矩阵（13.1 万个参数）。秩为 16 的约束意味着，LoRA 假设权重更新位于完整 4096 维空间中的一个 16 维子空间内。这正是线性代数解决实际问题的例子。
 
-## 运动
+## 练习
 
-1. 实施`Vector.angle_between(other)`返回两个向量之间的度角
-2. 创建一个2D扩展矩阵,将x坐标翻倍和y坐标三倍,然后将其应用到向量 [1, 1]
-3. 给出5个随机字样向量 (维度50),使用共数相似性找到两个最相似的
-4. 检查Gram-Schmidt输出是否真的正规:检查每个对都有点产量0和每个向量都有大小1
-5. 创建一个3x3矩阵,排名 2. 通过 验证`rank()`然后解释列的几何对象.
-6. 投向向量 [1,2,3] 到 [1,1,1].结果的几何表现是什么?
+1. 实现 `Vector.angle_between(other)`，返回两个向量之间的夹角（单位为度）
+2. 创建一个二维缩放矩阵，使 x 坐标翻倍、y 坐标变为三倍，然后将它应用到向量 [1, 1]
+3. 给定 5 个随机的类词向量（维度为 50），使用余弦相似度找出最相似的两个
+4. 验证 Gram–Schmidt 的输出确实标准正交：检查任意两个向量的点积都为 0，且每个向量的长度都为 1
+5. 创建一个秩为 2 的 3x3 矩阵，使用 `rank()` 方法验证，然后解释这些列向量张成什么几何对象
+6. 将向量 [1, 2, 3] 投影到 [1, 1, 1] 上。所得结果在几何上表示什么？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Vector | "An arrow" | A list of numbers representing a point or direction in n-dimensional space |
-| Matrix | "A table of numbers" | A transformation that maps vectors from one space to another |
-| Dot product | "Multiply and sum" | A measure of how aligned two vectors are -- the core of similarity search |
-| Embedding | "Some AI magic" | A vector that represents the meaning of something (word, image, user) |
-| Linear independence | "They don't overlap" | No vector in the set can be written as a combination of the others |
-| Rank | "How many dimensions" | The number of linearly independent columns (or rows) in a matrix |
-| Projection | "The shadow" | The component of one vector in the direction of another |
-| Basis | "The coordinate axes" | A minimal set of independent vectors that span the space |
-| Orthonormal | "Perpendicular unit vectors" | Vectors that are mutually perpendicular and each have length 1 |
+| Vector | “一根箭头” | 表示 n 维空间中一个点或方向的一列数字 |
+| Matrix | “一张数字表” | 将向量从一个空间映射到另一个空间的变换 |
+| Dot product | “相乘再求和” | 衡量两个向量方向一致程度的指标，也是相似度搜索的核心 |
+| Embedding | “某种 AI 魔法” | 表示某个对象（词、图像、用户）含义的向量 |
+| Linear independence | “它们不重叠” | 集合中没有任何一个向量可以表示为其他向量的线性组合 |
+| Rank | “有多少维” | 矩阵中线性无关列（或行）的数量 |
+| Projection | “影子” | 一个向量沿另一个向量方向的分量 |
+| Basis | “坐标轴” | 能够张成整个空间的最小线性无关向量集合 |
+| Orthonormal | “互相垂直的单位向量” | 两两垂直且长度均为 1 的向量 |
