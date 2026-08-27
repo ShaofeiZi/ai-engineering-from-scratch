@@ -1,32 +1,32 @@
-# 图像基础  像素,道,颜色空间
+# 图像基础——像素、通道与颜色空间
 
-> 图像是光样本的数. 你将使用的每个视觉模型都从这个一个事实开始.
+> 图像是由光线采样值构成的张量。你以后使用的每一个视觉模型，都从这个事实出发。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 1 Lesson 12 (Tensor Operations), Phase 3 Lesson 11 (Intro to PyTorch)
-**Time:** ~45 minutes
+**Prerequisites:** 第 1 阶段第 12 课（张量运算）、第 3 阶段第 11 课（PyTorch 入门）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 解释一个连续场景如何被分化为像素,以及为什么采样/量化决定对每一个下游模型设定了上限
-- 读取,切片,检查图像作为NumPy阵列,并流动地切换HWC和CHW布局
-- 将RGB,灰度,HSV和YCbCr之间的转换,并证明每个颜色空间存在的原因
-- 应用像素级预处理 (规范化,标准化,大小化,频道第一) 正如预训练的 PyTorch 视觉模型所预期的那样
+- 解释连续场景如何离散化为像素，以及采样与量化决策为何会决定所有下游模型的性能上限
+- 把图像作为 NumPy 数组读取、切片和检查，并熟练切换 HWC 与 CHW 布局
+- 在 RGB、灰度、HSV 和 YCbCr 之间转换，并说明每种颜色空间存在的理由
+- 完全按照预训练 PyTorch 视觉模型的要求，应用像素级预处理，包括归一化、标准化、缩放和通道前置
 
-## 问题
+## 问题所在
 
-每篇你读的论文,每篇你下载的预训练重量,每一个你打电话的视觉API都假设输入的特定编码.`uint8`模型想要的图像`float32`运行,然后默默产生垃圾. 输送BGR到一个RGB训练的网络,准确性下降了10点. 输入一个模型道,最后输入当它预期道时,第一层的 conv 处理高度作为功能道.这都不会造成错误.它只会毁掉你的测量,你花了一个星期在寻找一个bug,生活在你加载文件的方式.
+你会阅读的每篇论文、下载的每份预训练权重、调用的每个视觉 API，都假设输入采用某种特定编码。如果把 `uint8` 图像传给需要 `float32` 的模型，程序仍会运行——但会悄无声息地产生垃圾结果。把 BGR 输入到使用 RGB 训练的网络，准确率会骤降十个百分点。模型期待通道优先输入时，却传入通道在后的数据，第一层卷积就会把高度当成特征通道。这些问题都不会抛出错误，只会毁掉指标，让你花上一周寻找一个其实藏在文件加载方式中的缺陷。
 
-一个卷积不复杂,一旦你知道它在滑过什么.难的是",图像"意味着相机,JPEG解码器,PIL,OpenCV,火视觉和CUDA内核的不同东西.每个堆都有自己的轴序,字节范围和频道会议.一个视觉工程师不能保持这些直线船的破碎管道.
+理解卷积究竟在什么数据上滑动之后，卷积本身并不复杂。真正困难的是，对相机、JPEG 解码器、PIL、OpenCV、torchvision 和 CUDA 内核而言，“图像”分别代表不同的东西。每套技术栈都有自己的轴顺序、字节范围和通道约定。无法理清这些差异的视觉工程师，会交付存在缺陷的流水线。
 
-通过这个课程,你将知道一个像素是什么,为什么每个像素有三个数字,而不是一个, "通过图像网统计正常化"实际上是什么,以及如何在这个阶段的每一个课程所假设的两个或三个布局之间移动.
+本课会打牢基础，让本阶段余下内容可以建立在它之上。完成后，你将理解像素是什么、为什么每个像素包含三个数而不是一个、“使用 ImageNet 统计量归一化”究竟做了什么，以及如何在本阶段其他课程默认使用的两三种布局之间切换。
 
-## 概念
+## 核心概念
 
-### 一眼看完整的预加工管道
+### 完整预处理流水线概览
 
-每个生产视觉系统都是相同的逆转变序列. 一步错误,模型会看到不同的输入.
+每个生产级视觉系统都由同一系列可逆变换组成。只要其中一步出错，模型看到的输入就会与训练时不同。
 
 ```mermaid
 flowchart LR
@@ -46,33 +46,33 @@ flowchart LR
     style H fill:#bfdbfe,stroke:#2563eb
 ```
 
-两个红色和蓝色的框中,80%的默默失误存在:缺乏标准化和错误的布局.
+红色和蓝色两个框是 80% 静默故障的来源：缺少标准化，以及布局错误。
 
-### 像素是一个样本,而不是一个方形
+### 像素是采样点，而不是方块
 
-摄像头传感器计算着落在一个小探测器的电网上的光子.每个探测器集成光子,每秒的部分,并发出与相应的电压.
+相机传感器会统计落在微型探测器网格上的光子。每个探测器在短暂时间内积累光线，并输出与接收到的光子数量成正比的电压。随后，传感器把这个电压离散化为整数，一个探测器就对应一个像素。
 
 ```
 Continuous scene                 Sensor grid                     Digital image
 (infinite detail)                (H x W detectors)               (H x W integers)
 
     ~~~~~                        +--+--+--+--+--+                 210 198 180 155 120
-   现在,我们在这个世界里,
-  没有任何东西,没有任何东西.
+   ~   ~   ~                     |  |  |  |  |  |                 205 195 178 152 118
+  ~ light ~      ---->           +--+--+--+--+--+     ---->       200 190 175 150 115
    ~~~~~                         |  |  |  |  |  |                 195 185 170 148 112
                                  +--+--+--+--+--+                 188 180 165 145 108
 ```
 
-在这个阶段,有两个选择,
+这一步会作出两个选择，而它们决定了所有下游处理的性能上限：
 
-- **Spatial sampling**太少,边缘会变得化.太多,储存和计算会爆炸.
-- **Intensity quantization**电压的细度决定了电压的细度. 8位为 256 层次,并且是显示标准的. 10, 12, 16位为医疗成像,高清和原始传感器管道提供更平滑的梯度和材料.
+- **空间采样**决定场景每一度视角上安排多少个探测器。探测器太少，边缘会呈锯齿状，也就是混叠；太多，则存储与计算量会急剧增加。
+- **强度量化**决定把电压划分得多细。8 位可表示 256 个级别，是显示领域的标准；10 位、12 位和 16 位能产生更平滑的渐变，对医学影像、HDR 和原始传感器流水线十分重要。
 
-像素不是一个有色的方形,面积.它是一个单一的测量.当你改变尺寸或旋转时,你正在重新样本测量格.
+像素并不是一个带面积的彩色方块，而是一次单独测量。缩放或旋转图像时，你实际上是在对这张测量网格重新采样。
 
-### 为什么有三种道
+### 为什么有三个通道
 
-一个探测器在整个可见光谱中计算光子,即灰度.为了获得颜色,传感器将红色,绿色和蓝色过器的摩赛克覆盖电网.在测试后,每个空间位置都有三个整数:红色过器的响应,绿色过器和蓝色过器附近.这些三个整数是像素的RGB三分组.
+一个探测器会统计整个可见光谱中的光子，这样得到的是灰度。为了获得颜色，传感器会在网格上覆盖红、绿、蓝滤色片组成的马赛克。经过去马赛克处理后，每个空间位置都有三个整数，分别来自附近的红色、绿色和蓝色滤光探测器。这三个整数就是该像素的 RGB 三元组。
 
 ```
 One pixel in memory:
@@ -85,11 +85,11 @@ An H x W RGB image:
                                     each in [0, 255] for uint8
 ```
 
-三不是魔法.深度摄像头添加Z频道.卫星添加红外线和紫外线带.医疗扫描通常有一个频道 (X射线,CT) 或许多 (超谱).频道数量是最后一个轴;层学会在它上混合.
+三个通道并不神奇。深度相机会增加 Z 通道，卫星会增加红外与紫外波段，医学扫描通常只有一个通道（X 光、CT），也可能拥有很多通道（高光谱）。通道数位于最后一个轴上；卷积层会学习如何跨通道混合信息。
 
-### 两项布局公约:HWC和CHW
+### 两种布局约定：HWC 与 CHW
 
-每个图书馆都选择一个.
+同一个张量可以有两种排列顺序，每个库都会选择其中一种。
 
 ```
 HWC (height, width, channels)           CHW (channels, height, width)
@@ -107,16 +107,16 @@ v |R G B|R G B|R G B|                   v |G G G G G G|
    almost every image file on disk       frameworks, cuDNN kernels
 ```
 
-CHW存在于卷积内核通过H和W滑动的原因.保持频道轴首先意味着每个内核每个频道都会看到连接的2D平面,这可以清洁地向量化.磁盘格式保持HWC,因为这与扫描线如何从传感器中出发相匹配.
+CHW 之所以存在，是因为卷积核会沿 H 和 W 滑动。把通道轴放在最前面，可以让每个卷积核看到每个通道上一块连续的二维平面，便于向量化。磁盘格式采用 HWC，则是因为它符合传感器逐扫描线输出数据的方式。
 
-单行转换将会打字千次:
+下面这行转换代码，你以后会写上千次：
 
 ```
 img_chw = img_hwc.transpose(2, 0, 1)      # NumPy
 img_chw = img_hwc.permute(2, 0, 1)        # PyTorch tensor
 ```
 
-存储器配置,可视化:
+内存布局可视化如下：
 
 ```mermaid
 flowchart TB
@@ -134,21 +134,21 @@ flowchart TB
     CHW -->|"transpose(1, 2, 0)"| HWC
 ```
 
-### 字节范围和d类型
+### 字节范围与数据类型
 
-现在有三次会议:
+以下三种约定最为常见：
 
-| Convention | dtype | Range | Where you see it |
+| 约定 | dtype | 范围 | 常见位置 |
 |------------|-------|-------|------------------|
-| Raw | `uint8` | [0, 255] | Files on disk, PIL, OpenCV output |
-| Normalized | `float32` | [0.0, 1.0] | After `img.astype('float32') / 255` |
-| Standardized | `float32` | roughly [-2, +2] | After subtracting mean and dividing by std |
+| 原始值 | `uint8` | [0, 255] | 磁盘文件、PIL、OpenCV 输出 |
+| 归一化 | `float32` | [0.0, 1.0] | 执行 `img.astype('float32') / 255` 之后 |
+| 标准化 | `float32` | 大约 [-2, +2] | 减去均值并除以标准差之后 |
 
-缩网络是基于标准化输入训练的.`mean=[0.485, 0.456, 0.406]`现在`std=[0.229, 0.224, 0.225]`计算在 [0, 1]正常化像素上,对整个ImageNet训练集中的三个频道的算术平均和标准偏差.`uint8`应用视觉中最常见的单一默失败是预期标准化的浮动模型.
+卷积网络使用标准化后的输入训练。ImageNet 统计量 `mean=[0.485, 0.456, 0.406]`、`std=[0.229, 0.224, 0.225]`，是在整个 ImageNet 训练集上，对已经归一化到 [0, 1] 的像素计算出的三个通道算术均值和标准差。把原始 `uint8` 输入一个期待标准化浮点数的模型，是应用视觉中最常见的静默故障。
 
-### 颜色空间以及它们的存在
+### 颜色空间及其存在的原因
 
-RGB是捕获格式,但它并不总是模型中最有用的表示.
+RGB 是采集格式，却不一定始终是对模型最有用的表示。
 
 ```
  RGB               HSV                       YCbCr / YUV
@@ -165,27 +165,27 @@ RGB是捕获格式,但它并不总是模型中最有用的表示.
                                              to chroma detail than to Y.
 ```
 
-在大多数现代CNN中,你能播放RGB,你会遇到其他空间,
+大多数现代 CNN 都直接接收 RGB。以下场景会遇到其他颜色空间：
 
-- **HSV**经典简历代码,基于颜色的细分,白色平衡.
-- **YCbCr**阅读JPEG内部,视频管道,仅使用Y的超级分辨率模型.
-- **Grayscale** OCR,文件模型,任何颜色是扰动变量而不是信号的情况.
+- **HSV**——经典计算机视觉代码、基于颜色的分割、白平衡。
+- **YCbCr**——读取 JPEG 内部数据、视频流水线，以及只处理 Y 通道的超分辨率模型。
+- **灰度**——OCR、文档模型，以及颜色是干扰变量而非信号的任何场景。
 
-根据RGB的灰度尺度是重量总数,而不是平均值,因为人类眼睛对绿色更敏感,而不是红色或蓝色:
+从 RGB 转换灰度时应使用加权和，而非简单平均，因为人眼对绿色比红色或蓝色更敏感：
 
 ```
 Y = 0.299 R + 0.587 G + 0.114 B       (ITU-R BT.601, the classic weights)
 ```
 
-### 面积比,重大小和插射
+### 宽高比、缩放与插值
 
-每个模型都有固定输入尺寸 (224x224对于大多数ImageNet分类器,384x384或512x512对于现代探测器).您的图像很少匹配.
+每个模型都有固定输入尺寸，大多数 ImageNet 分类器使用 224x224，现代检测器则常用 384x384 或 512x512，而你的图像很少恰好符合。以下三种缩放选择最重要：
 
-- **Resize shorter side, then center crop**标准的图像网配方. 保存面积比例,抛弃边缘像素的条纹.
-- **Resize and pad**保存视角比率和每个像素,添加黑色条.
-- **Resize directly to target**拉伸图像. 廉价,扭曲几何,对许多分类任务很好.
+- **缩放短边，再中心裁剪**——标准 ImageNet 方案。保持宽高比，但会丢弃边缘的一条区域。
+- **缩放并填充**——保持宽高比并保留每个像素，但会增加黑边，是检测与 OCR 的标准选择。
+- **直接缩放到目标大小**——拉伸图像。成本低，会扭曲几何形状，但对许多分类任务已经足够。
 
-插射方法决定了当新网格不与旧网格一致时,中间像素的计算方式:
+新网格与旧网格无法对齐时，插值方法决定中间像素如何计算：
 
 ```
 Nearest neighbour     fastest, blocky, only choice for masks/labels
@@ -194,17 +194,17 @@ Bicubic               slower, sharper on upscaling
 Lanczos               slowest, best quality, used for final display
 ```
 
-基本规则:训练的双线,你将查看的资产的双立方或双立方,
+经验法则是：训练使用双线性插值，需要展示的素材使用双三次或 Lanczos，包含整数类别 ID 的任何数据都使用最近邻插值。
 
 ```figure
 conv-output-size
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1: 构建一个图像色器,检查其形状
+### 第 1 步：构建图像张量并检查形状
 
-开始使用确定性合成图像,所以第一个实验室只使用NumPy进行离线运行.文件解码是一个独立的边界:一旦JPEG或PNG解码器返回RGB字节,下面的每个数操作都是相同的.
+先使用确定性的合成图像，让第一个实验只依赖 NumPy，也能离线运行。文件解码是另一条边界：无论 RGB 字节来自 JPEG、PNG 解码器还是这个合成生成器，只要解码完成，后续张量操作都完全相同。
 
 ```python
 import numpy as np
@@ -228,11 +228,11 @@ print(f"max:    {arr.max()}")
 print(f"pixel at (0, 0): {arr[0, 0]}")
 ```
 
-预期产量:`shape: (H, W, 3)`现在`dtype: uint8`范围`[0, 255]`这就是可行的解码表示,无论字节来自摄像头,图像解码器,或者这个合成发电机.
+预期输出为 `shape: (H, W, 3)`、`dtype: uint8`，取值范围为 `[0, 255]`。无论字节来自相机、图像解码器还是这个合成生成器，这都是解码后表示的标准形式。
 
-### 步骤2:分开道和重新排序布局
+### 第 2 步：拆分通道并重新排列布局
 
-单独取出R,G,B,然后从HWC转换为PyTorch的CHW.
+分别取出 R、G、B，再把布局从 HWC 转换成 PyTorch 使用的 CHW。
 
 ```python
 R = arr[:, :, 0]
@@ -247,11 +247,11 @@ print(f"\nHWC shape: {arr.shape}")
 print(f"CHW shape: {arr_chw.shape}")
 ```
 
-只有一个道,三个灰度平面.CHW只需要重新排序轴,如果内存布局允许,则不需要任何数据副本.
+这样得到三个灰度平面，每个通道一个。CHW 只是重新排列轴；如果内存布局允许，并不一定需要复制数据。
 
-### 步骤3:灰度和HSV转换
+### 第 3 步：灰度与 HSV 转换
 
-按重量和灰度,然后是手动RGB到HSV.
+先使用加权和得到灰度图，再手工实现 RGB 到 HSV 的转换。
 
 ```python
 def rgb_to_grayscale(rgb):
@@ -289,11 +289,11 @@ print(f"sat range: [{hsv[..., 1].min():.2f}, {hsv[..., 1].max():.2f}]")
 print(f"val range: [{hsv[..., 2].min():.2f}, {hsv[..., 2].max():.2f}]")
 ```
 
-图表以度,和值出现在 [0, 1]. 这与OpenCV相匹配`hsv_full`会议.
+色相以角度表示，饱和度和明度位于 [0, 1]，与 OpenCV 的 `hsv_full` 约定一致。
 
-### 步骤4:规范,标准化,并逆转
+### 第 4 步：归一化、标准化并还原
 
-通过原始字节,到一个预先训练的图像网模型所期望的精确数,然后回来.
+把原始字节转换成预训练 ImageNet 模型所期待的精确张量，然后再还原回去。
 
 ```python
 mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
@@ -322,11 +322,11 @@ max_diff = np.abs(roundtrip.astype(int) - arr.astype(int)).max()
 print(f"roundtrip max pixel diff: {max_diff}    # should be 0 or 1")
 ```
 
-预处理/减处理对是每个火视图的准确值.`transforms.Normalize`电话是在盖子下.
+每个通道的均值应该接近零，标准差接近一。preprocess/deprocess 这一对函数，正是每次调用 torchvision `transforms.Normalize` 时底层所做的工作。
 
-### 步骤5:从零开始重新尺寸
+### 第 5 步：从零实现缩放
 
-最近的邻居圆每一个输出坐标为一个源像素.双线交差发现四个周围的像素,并通过距离混合它们.下面的两个实现都使用结点一致的坐标,因此第一和最后的源像素保持固定.
+最近邻插值会把每个输出坐标舍入到一个源像素。双线性插值则找到周围四个像素，并按照距离进行混合。下面两种实现都使用端点对齐坐标，因此首尾两个源像素保持固定。
 
 ```python
 def resize_coordinates(source_length, target_length):
@@ -371,11 +371,11 @@ for name, out in [("nearest", nearest), ("bilinear", bilinear)]:
     print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
 ```
 
-接近的比分在粗度上最高,因为它保持硬边缘.双线性比分更平滑,因为每个新的像素都在每个轴上混合了两个位置.可运行的伴侣用Catmull-Rom立方核将相同的可分离的想法扩展到每个轴的四个邻居,然后在没有图像库的情况下打印所有三个结果.
+最近邻插值的粗糙度得分最高，因为它保留了硬边缘；双线性插值更平滑，因为每个新像素都会混合两个轴上的相邻位置。配套可运行代码把同样的可分离思路扩展到每个轴四个邻居的 Catmull-Rom 三次核，并且无需图像库即可打印三种结果。
 
-## 用它
+## 实际应用
 
-皮托奇在批量,设备意识的光器上执行相同操作.下面的代码将更短的侧面改大小,取一个中心作物,标准化每个频道,并产生预训练模型预期的NCHW光器.
+PyTorch 会在支持批次和设备的张量上执行相同操作。下面的代码会缩放短边、执行中心裁剪、逐通道标准化，并生成预训练模型期待的 NCHW 张量。
 
 ```python
 import torch
@@ -410,37 +410,37 @@ print(f"per-channel mean: {batch.mean(dim=(0, 2, 3)).tolist()}")
 print(f"per-channel std:  {batch.std(dim=(0, 2, 3)).tolist()}")
 ```
 
-按照这个顺序进行四步:将字节转换为浮动,将HWC换为NCHW,将较短的侧面的尺寸改为256,取一个224x224的中心作物,然后减去ImageNet的平均值并按其标准偏差划分.逆转这个顺序默默改变到达模型的结果.
+必须严格按照以下四步顺序执行：把字节转换为浮点数并把 HWC 改成 NCHW；将短边缩放到 256；执行 224x224 中心裁剪；最后减去 ImageNet 均值并除以标准差。改变顺序会悄无声息地改变模型实际接收的内容。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-vision-preprocessing-audit.md`一个提示,将任何模型卡或数据集卡变成一个精确的预处理变量清单,团队必须遵守.
-- `outputs/skill-image-tensor-inspector.md`一个技能,在任何图像形的子或阵列中,报告d类型,布局,范围,以及它看起来是否原始,正常或标准.
+- `outputs/prompt-vision-preprocessing-audit.md`——把任意模型卡或数据集卡转换成检查清单，列出团队必须遵守的精确预处理不变量。
+- `outputs/skill-image-tensor-inspector.md`——给定任意图像形状的张量或数组，报告数据类型、布局和范围，并判断它看起来是原始值、归一化值还是标准化值。
 
-## 运动
+## 练习
 
-1. **(Easy)**创建一个2x2 RGB `uint8`转换HWC为CHW,然后再再转换,打印两种形状,证明回路保存了每一个值.
-2. **(Medium)**写下`standardize(img, mean, std)`它们的相反,`roundtrip_max_diff <= 1`您的功能必须在HWC中的单个图像和NCHW中的一批相同的呼叫上工作.
-3. **(Hard)**运行一个1x1 conv,学习RGB的重量混合物,成一个灰色频道.`[0.299, 0.587, 0.114]`结它们,并检查输出与手册匹配`rgb_to_grayscale`其他经典的颜色空间转换可以写成1x1卷曲?
+1. **（简单）** 创建一个包含四种不同颜色的 2x2 RGB `uint8` 数组。从 HWC 转换成 CHW 再转回来，打印两种形状，并证明往返转换保留了每一个值。
+2. **（中等）** 编写 `standardize(img, mean, std)` 及其逆函数，确保两者在任意 uint8 图像上通过 `roundtrip_max_diff <= 1` 测试。两个函数必须使用同一种调用方式，既能处理 HWC 的单张图像，也能处理 NCHW 批次。
+3. **（困难）** 取一个包含 3 个通道、已经按 ImageNet 统计量标准化的张量，让它通过一个 1x1 卷积，由卷积学习 RGB 到单通道灰度的加权混合。把权重初始化为 `[0.299, 0.587, 0.114]` 并冻结，验证输出与手工实现的 `rgb_to_grayscale` 在浮点误差范围内一致。还有哪些经典颜色空间变换可以表示成 1x1 卷积？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Pixel | "A coloured square" | One sample of light intensity at one grid location — three numbers for colour, one for grayscale |
-| Channel | "The colour" | One of the parallel spatial grids stacked into an image tensor; last axis in HWC, first in CHW |
-| HWC / CHW | "The shape" | Axis orderings for an image tensor; disk and PIL use HWC, PyTorch and cuDNN use CHW |
-| Normalize | "Scale the image" | Divide by 255 so pixels live in [0, 1] — necessary but not sufficient |
-| Standardize | "Zero-center" | Subtract mean and divide by std per channel so the input distribution matches what the model was trained on |
-| Grayscale conversion | "Average the channels" | A weighted sum with coefficients 0.299/0.587/0.114 that matches human luminance perception |
-| Interpolation | "How resize picks pixels" | The rule that decides output values when the new grid does not align with the old one — nearest for labels, bilinear for training, bicubic for display |
-| Aspect ratio | "Width over height" | The ratio that distinguishes "resize and pad" from "resize and stretch" |
+| 像素 | “彩色方块” | 网格中某个位置上的一次光强采样；彩色图像有三个数，灰度图像有一个数 |
+| 通道 | “颜色” | 堆叠成图像张量的平行空间网格之一；HWC 中位于最后一轴，CHW 中位于第一轴 |
+| HWC / CHW | “形状” | 图像张量的轴顺序；磁盘格式和 PIL 使用 HWC，PyTorch 与 cuDNN 使用 CHW |
+| 归一化 | “缩放图像” | 除以 255，使像素位于 [0, 1]；这是必要步骤，但仅此还不够 |
+| 标准化 | “零中心化” | 逐通道减去均值并除以标准差，使输入分布与模型训练时一致 |
+| 灰度转换 | “对通道取平均” | 使用 0.299/0.587/0.114 系数进行加权求和，以符合人类对亮度的感知 |
+| 插值 | “缩放时如何选择像素” | 新网格与旧网格不对齐时决定输出值的规则；标签使用最近邻，训练使用双线性，展示使用双三次 |
+| 宽高比 | “宽度除以高度” | 区分“缩放并填充”与“缩放并拉伸”的比率 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Charles Poynton — A Guided Tour of Color Space](https://poynton.ca/PDFs/Guided_tour.pdf)最清晰的技术处理为什么有这么多的颜色空间,
-- [PyTorch Vision Transforms Docs](https://pytorch.org/vision/stable/transforms.html)你实际上将在生产中构成的全部转换管道
-- [How JPEG Works (Colt McAnlis)](https://www.youtube.com/watch?v=F1kYBnY6mwg)对色子样本,DCT的明确视觉巡回,以及为什么JPEG编码为YCbCr而不是RGB
-- [ImageNet Preprocessing Conventions (torchvision models)](https://pytorch.org/vision/stable/models.html)对真理的来源`mean=[0.485, 0.456, 0.406]`为什么动物园里的每个模特都会期待它
+- [Charles Poynton——A Guided Tour of Color Space](https://poynton.ca/PDFs/Guided_tour.pdf)——对颜色空间为何如此之多、每种颜色空间何时有用的清晰技术说明
+- [PyTorch Vision Transforms 文档](https://pytorch.org/vision/stable/transforms.html)——生产环境中实际组合使用的完整变换流水线
+- [How JPEG Works（Colt McAnlis）](https://www.youtube.com/watch?v=F1kYBnY6mwg)——直观介绍色度子采样、DCT，以及 JPEG 为何编码 YCbCr 而非 RGB
+- [ImageNet 预处理约定（torchvision models）](https://pytorch.org/vision/stable/models.html)——`mean=[0.485, 0.456, 0.406]` 的权威来源，以及模型库中每个模型为何都期待这种输入
