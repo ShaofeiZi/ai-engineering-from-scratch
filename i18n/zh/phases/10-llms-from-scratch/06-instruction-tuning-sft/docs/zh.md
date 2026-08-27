@@ -1,36 +1,36 @@
-# 指示调整 (SFT)
+# 指令微调（SFT）
 
-> 基本模型预测下一个代币.就这样了.它不遵循说明,不回答问题,也不拒绝有害请求.SFT是代币预测器和有用的助理之间的桥梁.你曾经交谈过的每个模型 - - 克劳德,GPT,Llama Chat - - 都经历了这个步骤.
+> 基础模型只会预测下一个词元，仅此而已。它不会遵循指令、回答问题，也不会拒绝有害请求。SFT 是连接词元预测器与实用助手的桥梁。你曾经对话过的每个模型——Claude、GPT、Llama Chat——都经历过这一步。
 
-**Type:** Build
-**Languages:** Python (with numpy)
-**Prerequisites:** Phase 10, Lesson 04 (Pre-Training a Mini GPT)
-**Time:** ~90 minutes
+**Type:** 构建
+**Languages:** Python（使用 numpy）
+**Prerequisites:** 阶段 10 第 04 课（预训练一个 Mini GPT）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 实施监督细节调整 (SFT),将基语言模型转换为遵循指令的助理
-- 使用系统,用户和助理角色的聊天模板格式化训练数据,以及非助理代币的面具损失
-- 解释为什么SFT是必要的:基本模型继续文字而不是回答问题
-- 通过对待持久的指令组的基模型与精细调节的模型响应进行评估,评估SFT质量
+- 实现监督微调（SFT），把基础语言模型转化为遵循指令的助手
+- 使用带系统、用户和助手角色的聊天模板格式化训练数据，并屏蔽非助手词元上的损失
+- 解释 SFT 为何必不可少：基础模型只会续写文本，而不会回答问题
+- 在留出的指令集上比较基础模型与微调模型的回答，以评估 SFT 质量
 
 ## 问题
 
-它们可以预测下一个代币给给给的序列. 给它"变压器架构"并可能继续"已经彻底改变了自然语言处理". 这对下一个代币预测器来说是令人印象深刻的.
+你在第 04 课训练了一个模型。给定一段序列，它能预测下一个词元。输入“The transformer architecture”，它可能接着写“has revolutionized natural language processing”。对于下一词元预测器而言，这已经很厉害。
 
-现在试试一下:给它提供"法国的首都是什么?"一个基本模型没有回答"巴黎". 德国的首都是什么? 因为它从包含问题列表的文件中学到. 或许它会产生"很多人问的问题",因为这是一个可信的下一个标志的延续. 模型没有"答案"的概念. 它只知道"继续".
+现在试试输入“What is the capital of France?”。基础模型不会回答“Paris”，而会继续这种文本模式。它可能输出“What is the capital of Germany? What is the capital of Spain?”，因为它从包含问题列表的文档中学到了这种模式；也可能输出“is a question that many people ask”，因为这是合理的下一词元续写。模型并没有*回答*这个概念，只知道如何*续写*。
 
-这就是GPT-3 (基本模型,2020年6月发布) 和ChatGPT (指令调整,2022年11月发布) 之间的差距.相同的架构.相同的预训练.差异是20,000至100,000个精心设计的 (指令,反应) 双子,教导模型遵循对话模式.
+这就是 GPT-3（基础模型，2020 年 6 月发布）与 ChatGPT（经过指令微调，2022 年 11 月发布）之间的差距。架构相同，预训练也相同；区别在于 2 万～10 万对精心编写的（指令、回答）数据，它们教会模型遵循对话模式。
 
-斯坦福阿尔帕卡证明你不需要数百万个例子. 在2023年3月,他们调整了Llama 7B仅在GPT-3.5生成的52,000个指示响应对.$600. The result was a chatbot that could follow instructions, answer questions, and hold conversations. Not as good as ChatGPT, but shockingly close for $六百个和几个小时的训练.
+Stanford Alpaca 证明，根本不需要数百万个样本。2023 年 3 月，他们仅用 GPT-3.5 生成的 52,000 对指令-回答数据微调 Llama 7B，总成本为 600 美元。得到的聊天机器人可以遵循指令、回答问题并进行对话。它不如 ChatGPT，却在只花 600 美元和数小时训练的前提下达到了惊人的接近程度。
 
-基因分析系统的基础知识是: 质量比数量更重要. 熟练的注释者写的27,000个例子超过了从互联网上剪除的100万个噪音例子.
+Meta 的 Llama 2 Chat 在初始 SFT 阶段只使用了约 27,000 个高质量样本。关键洞见是：质量比数量更重要。由熟练标注者编写的 27,000 个样本，胜过从互联网抓取的 100 万个噪声样本。
 
 ## 概念
 
-### 实际上SFT所做的事情
+### SFT 究竟做了什么
 
-监督精细调节从训练前开始继续进行相同的训练循环 - - 进步,计算损失,倒退,更新权重 - - 但用不同的数据.
+监督微调延续预训练时的同一个训练循环——前向传播、计算损失、反向传播、更新权重——但改用另一类数据。训练内容不再是原始文本，而是结构化对话：
 
 ```json
 {
@@ -40,15 +40,15 @@
 }
 ```
 
-模型已经知道巴黎是法国的首都.它在维基百科,教科书和网页上预训练中学到了这一点.SFT不教模型新的事实.它教模型一个新的 *行为*:当你看到一个问题,产生答案.当你看到一个指示,产生完成.当你看到一个有害的请求,产生拒绝.
+模型其实已经知道法国的首都是巴黎，因为它在预训练期间从 Wikipedia、教材和网页中学到了这一事实。SFT 不会教给模型新事实，而是教给它一种新*行为*：看到问题时给出答案，看到指令时完成任务，看到有害请求时予以拒绝。
 
-预训练给模型知识,SFT给模型礼仪.
+可以这样理解：预训练赋予模型知识，SFT 则教给模型礼仪。
 
 ### 数据格式
 
-现在,我们在这个行业中,有三种格式. 每个格式都编码相同的信息,
+行业主要采用三种格式。它们用不同分隔符编码同一种信息——谁说了什么。
 
-**Alpaca Format**美国政府的要求
+**Alpaca 格式**（Stanford，2023 年 3 月）：
 
 ```json
 {
@@ -58,9 +58,9 @@
 }
 ```
 
-简单且广泛使用.`input`斯坦福发布了52,000个例子,由GPT-3.5为600美元. 这启动了开源命令调整运动.
+这种格式简单且应用广泛。`input` 字段是可选的，因为许多指令不需要额外上下文。Stanford 发布了 52,000 个这种格式的样本，由 GPT-3.5 以 600 美元生成，从而掀起了开源指令微调浪潮。
 
-**ShareGPT Format**(共同体,2023年):
+**ShareGPT 格式**（社区，2023）：
 
 ```json
 {
@@ -74,9 +74,9 @@
 }
 ```
 
-支持多转交谈. "from" 字段使用"human"和"gpt"按照规则,不管实际模型.Vicuna在使用者共享的ChatGPT转录中从70,000个ShareGPT对话中训练.
+它支持多轮对话。按照惯例，无论实际模型是什么，from 字段都使用“human”和“gpt”。Vicuna 使用从用户分享的 ChatGPT 对话记录中抓取的 70,000 段 ShareGPT 对话训练。
 
-**ChatML Format**(OpenAI,许多开源模型使用):
+**ChatML 格式**（OpenAI 提出，许多开源模型采用）：
 
 ```
 <|im_start|>system
@@ -87,74 +87,74 @@ What is the capital of France?<|im_end|>
 The capital of France is Paris.<|im_end|>
 ```
 
-使用特殊代币 (`<|im_start|>`现在`<|im_end|>`文,等许多其他模型使用ChatML. 文和文的代码是通过文和文的代码来定义角色.
+它使用特殊词元（`<|im_start|>`、`<|im_end|>`）分隔角色。这些词元会在微调期间加入词元化器的词表。Qwen、Yi 和许多其他模型都使用 ChatML。
 
-所有三个格式都能做到同样的:它们告诉模型"这是指令,这是反应,学习这个模式".
+三种格式实现的是同一件事：告诉模型“这是指令，这是回答，请学习这种模式”。
 
-### 为什么它能有效
+### 为什么它有效
 
-模型已经从训练前就知道语言. 它已经看到数十亿个问题,然后得到答案,然后得到说明,然后完成,以及人们之间的对话.
+模型已经通过预训练掌握语言，也见过数十亿个问题后跟回答、指令后跟结果以及人与人对话的样本。这些模式已经编码在权重中。
 
-基于这种潜伏能力,SFT 专注于这种潜伏能力.而不是模型需要从文本中弄清楚是否应回答问题或继续文件,SFT 则明确地训练在对话模式上.经过几千个例子,模型学会了:当你看到助理角色标记时,产生有用的反应.
+SFT 会集中这种潜在能力。模型不再需要从上下文中猜测自己应当回答问题还是续写文档；SFT 会明确地用对话模式进行训练。只需几千个样本，模型就能学会：看到助手角色标记时，生成有帮助的回答。
 
-这就是为什么27000个例子足够的.你不教导模型英语.你不教导模型英语.你不教导模型英语.你不教导模型英语.你教导模型英语.
+这就是 27,000 个样本已经足够的原因。你不是在教模型英语，也不是在教它世界知识，而是在教它一种简单行为：回应指令。知识早已存在。
 
-### 隐藏的损失
+### 掩码损失
 
-对于SFT来说,这是最重要的技术细节,
+这是 SFT 最重要的技术细节，却被大多数教程略过。
 
-在预训练期间,你计算每个代币的损失.模型学习在序列中预测每一个下一个代币.在SFT期间,你只计算在 *响应*代币上的损失.指令代币是为了文本,但模型不会因为"预测"它们错误而受到惩罚.
+预训练时，会计算每个词元上的损失，模型学习预测序列中的每个下一词元。SFT 时，则只计算*回答*词元上的损失。指令词元只提供上下文，模型不会因“预测”错它们而受到惩罚。
 
-为什么?因为你不想模型学会*生成*指示.你想它学会*响应*指示.如果你计算了指示代币的损失,你正在训练模型预测"法国的首都是什么?"就好像是问这个问题的人.这浪费了梯度信号,可以让模型困惑于它的作用.
+为什么？因为你不希望模型学会*生成*指令，而希望它学会*回应*指令。如果对指令词元也计算损失，就相当于训练模型预测“What is the capital of France?”，仿佛问题是模型自己问的。这既浪费梯度信号，也可能让模型混淆自己的角色。
 
-实际上,你创建一个损失面具: 1用于响应代币, 0用于指示代币.
+实践中，需要创建损失掩码：回答词元为 1，指令词元为 0。在求平均前，将逐词元损失乘以这个掩码。
 
 ```
 Tokens:    [SYS] You are helpful [USER] What is the capital? [ASST] Paris is the capital [EOS]
 Loss mask:   0    0    0     0      0     0   0  0     0       1     1    1   1     1      1
 ```
 
-只有之后的代币`[ASST]`模型在前进传递过程中看到整个对话 (它需要指示才能产生正确的反应),但仅根据预测反应的程度更新其权重.
+只有 `[ASST]` 后面的词元参与损失计算。前向传播时，模型会看到完整对话（生成正确回答需要指令），但权重更新只取决于它预测回答的质量。
 
 ### 训练超参数
 
-对于训练前的超值,SFT使用了非常不同的超值.你不是从头开始训练,而是调整已经运行的模型.
+SFT 使用的超参数与预训练截然不同。你不是从零训练，而是在调整一个已经能工作的模型。
 
-| Parameter | Pre-Training (Llama 2 7B) | SFT (Llama 2 Chat) |
+| 参数 | 预训练（Llama 2 7B） | SFT（Llama 2 Chat） |
 |-----------|---------------------------|---------------------|
-| Learning rate | 3e-4 (peak) | 2e-5 |
-| Epochs | 1 (single pass over data) | 2 |
-| Batch size | 4M tokens | 64 examples |
-| Warmup steps | 2,000 | 0-100 |
-| Weight decay | 0.1 | 0.0-0.1 |
-| Data size | 2T tokens | 27,000 examples |
+| 学习率 | 3e-4（峰值） | 2e-5 |
+| 轮数 | 1（数据只遍历一遍） | 2 |
+| 批大小 | 4M 个词元 | 64 个样本 |
+| 预热步数 | 2,000 | 0～100 |
+| 权重衰减 | 0.1 | 0.0～0.1 |
+| 数据量 | 2T 个词元 | 27,000 个样本 |
 
-对于SFT来说,学习率是15倍低的.这是关键的.细调过程中学习率高,破坏了预训练知识.模型"忘记"所学到的东西,并过度进入小细调数据集.这是灾难性的忘记.
+SFT 的学习率低 15 倍，这一点至关重要。微调时使用过高的学习率，会破坏预训练知识：模型“忘记”已经学到的内容，并过拟合到小型微调数据集。这就是灾难性遗忘。
 
-两个时代意味着模型看到每个训练示例两次. 在一个小数据集上,超过3个时代导致记忆 -- 模型开始将训练示例复制成文字,而不是概括.
+训练两轮意味着模型会看到每个样本两次。在小数据集上训练超过 3 轮会导致记忆——模型开始逐字复现训练样本，而不是进行泛化。
 
-### 遗忘是灾难性的
+### 灾难性遗忘
 
-调整细节可以破坏一般能力.训练太长时间使用指令后的数据,模型就会失去编码,数学或创意文本的能力.它变得非常擅长其训练数据的特定格式,而其他一切都很糟糕.
+微调可能破坏通用能力。在指令遵循数据上训练太久，模型会失去编写代码、处理数学或创作文本的能力。它会变得极其擅长训练数据的特定格式，却不再擅长其他任务。
 
-减轻三种情况:
+有三种缓解方法：
 
-1. **Low learning rate.**更新更小意味着减少了预先训练的功能破坏.
+1. **低学习率。** 使用 1e-5 到 5e-5。更新幅度越小，对预训练特征的破坏越少。
 
-2. **Short training.**在模型过之前停止.
+2. **短时间训练。** 只训练 1～3 轮，在模型过拟合前停止。
 
-3. **Mix in pre-training data.**拉马2聊天将少量的原始预训数据 (2-5%) 混合到SFT数据集中.这在学习新的指示后行为时"提醒"其一般能力模型.
+3. **混入预训练数据。** Llama 2 Chat 在 SFT 数据集中混入了少量（2%～5%）原始预训练数据。这会在学习新的指令遵循行为时，“提醒”模型不要忘记通用能力。
 
 ### 真实数字
 
-在一个NVIDIA A100 80GB GPU上,需要大约1小时来调整7B模型,
+在单张 NVIDIA A100 80GB GPU 上，使用 1 万个高质量指令对微调 7B 模型，大约需要 1 小时。计算如下：
 
-- 平均数量为1万个例子 × 512个代币 = 5,12M个代币
-- 两个时期 = 总共1024万个代币
-- 对于7B型号细调的A100输出量: ~3,000个代币/秒
-- 时间: 时间:
+- 10,000 个样本 × 平均 512 个词元 = 512 万个词元
+- 2 轮 = 共 1024 万个词元
+- A100 微调 7B 模型的吞吐量：约 3,000 词元/秒
+- 1024 万 / 3,000 = 约 3,400 秒 = 约 57 分钟
 
-对于我们的小GPT (4层, 128个),训练几乎是即时的.
+对于我们的 Mini GPT（4 层、128 维），训练几乎瞬间完成。重点在于理解机制，而不是规模。
 
 ```mermaid
 graph TD
@@ -193,11 +193,11 @@ graph TD
 loss-masking
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:指令数据集
+### 第 1 步：指令数据集
 
-在生产过程中,像Scale AI和Anthropic这样的公司使用人类注释器来编写这些.我们将编程创建它们,以展示格式.
+创建一个合成指令数据集。在生产环境中，Scale AI、Anthropic 等公司会雇用人类标注者编写这些内容。这里以编程方式创建，以演示数据格式。
 
 ```python
 import numpy as np
@@ -238,11 +238,11 @@ INSTRUCTION_DATA = [
 ]
 ```
 
-斯坦福阿尔帕卡使用了52,000个,但无论你有8个还是52,000个,都是一样的:代币化,面具化,仅仅在响应上计算损失.
+八个样本非常少，Stanford Alpaca 使用了 52,000 个。但无论有 8 个还是 52,000 个，机制都完全相同：词元化、应用掩码，只在回答上计算损失。
 
-### 步骤2:使用聊天模板标记
+### 第 2 步：使用聊天模板进行词元化
 
-将命令-响应对转换为用特殊角色标记的符号序列.标记告诉模型命令结束和响应开始的地方.
+用特殊角色标记把指令-回答对转换为词元序列。这些标记告诉模型指令在哪里结束、回答从哪里开始。
 
 ```python
 SPECIAL_TOKENS = {
@@ -284,11 +284,11 @@ def create_loss_mask(tokens):
     return mask
 ```
 
-输出面具是指令令令牌的零,响应令牌的零.`RESP_START`代币本身得到0的面具,因为它是界限器,而不是响应内容的一部分.
+指令词元对应的损失掩码全为零，回答词元全为一。`RESP_START` 词元本身的掩码是 0，因为它是分隔符，不属于回答内容。
 
-### 步骤3: 面具的交叉透损失
+### 第 3 步：带掩码的交叉熵损失
 
-标准的交叉缩,但乘以损失面具.
+使用标准交叉熵，但乘以损失掩码。只有回答词元参与梯度计算。
 
 ```python
 def masked_cross_entropy_loss(logits, targets, loss_mask):
@@ -313,11 +313,11 @@ def masked_cross_entropy_loss(logits, targets, loss_mask):
     return loss
 ```
 
-标题是`num_response_tokens`没有`seq_len`如果按全序列长度划分,长度指令会稀释梯度信号.通过响应代币数量划分,无论指令长度如何,每个响应代币的重量都保证相同.
+分母是 `num_response_tokens`，而不是 `seq_len`。若除以总序列长度，较长指令就会稀释梯度信号。除以回答词元数，可以确保无论指令多长，每个回答词元的权重都相同。
 
-### 步骤4:SFT训练循环
+### 第 4 步：SFT 训练循环
 
-训练循环几乎与预训练相同,但有指示格式化和隐藏损失.
+复用第 04 课的 MiniGPT。训练循环看起来几乎与预训练相同，只是增加了指令格式化与掩码损失。
 
 ```python
 import sys
@@ -388,11 +388,11 @@ def sft_train(model, dataset, num_epochs=2, lr=2e-5, seq_len=64):
     return model, losses
 ```
 
-学习率是2e-5,与Llama 2聊天相匹配.比较前训练中使用的3e-4--小15倍.梯度是隐藏的:指令令令令令产生零梯度.只有响应令令令令推重.
+学习率为 2e-5，与 Llama 2 Chat 相同。相比预训练使用的 3e-4，它小了 15 倍。梯度受掩码控制：指令词元产生零梯度，只有回答词元会推动权重更新。
 
-### 步骤5: 基因与SFT模型进行比较
+### 第 5 步：比较基础模型与 SFT 模型
 
-通过检查模型如何对命令格式输入进行响应而不是原始文本延续.
+SFT 的全部意义都在于改变行为。我们可以检查模型面对按指令格式组织的输入和原始文本续写时如何响应，以衡量这种变化。
 
 ```python
 def generate_response(model, prompt_tokens, max_new_tokens=50, temperature=0.8):
@@ -439,11 +439,11 @@ def evaluate_instruction_following(model, instructions):
         print()
 ```
 
-在一个小模型上,有8个例子,答案不会有意义.这是预期的.重要的是*结构*:模型学习在答案标记之后输出,而不是继续生成更多的指示.
+对只有 8 个样本的微型模型，不应期待回答具有实际意义。重要的是*结构*：模型会学习在回答标记后生成输出，而不是继续生成更多指令。
 
-### 第六步: 测量遗忘
+### 第 6 步：测量灾难性遗忘
 
-模型在SFT之前和之后的下一个代币预测能力进行比较.如果SFT损害了一般功能,原始文本的损失将增加.
+比较模型在 SFT 前后的下一词元预测能力。如果 SFT 损害了通用能力，原始文本上的损失就会上升。
 
 ```python
 def measure_forgetting(model, test_text, seq_len=64):
@@ -474,11 +474,11 @@ def measure_forgetting(model, test_text, seq_len=64):
     return total_loss / max(num_windows, 1)
 ```
 
-如果原始文本丢失增加了10-15%以上,你的SFT太激进了.降低学习速度或减少时代数量.
+在真实微调中，应在整个训练过程中持续跟踪这个指标。如果原始文本损失增加超过 10%～15%，说明 SFT 过于激进。应降低学习率或减少训练轮数。
 
-## 用它
+## 学以致用
 
-### 完整的SFT管道演示
+### 完整 SFT 流水线演示
 
 ```python
 if __name__ == "__main__":
@@ -566,39 +566,39 @@ The model learns to predict the next token given all previous tokens."""
             print(f"  Steps {i:3d}-{i + len(chunk) - 1:3d}: avg loss = {avg:.4f}")
 ```
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/prompt-sft-data-curator.md`根据目标能力 (代码生成,数学,对话),它产生了一个数据收集计划,包含格式规格,质量标准和多样性要求.
+本课会生成 `outputs/prompt-sft-data-curator.md`——一个帮助你设计和整理 SFT 指令数据集的提示词。给定目标能力（代码生成、数学、对话），它会生成包含格式规范、质量标准与多样性要求的数据收集计划。
 
-## 运动
+## 练习
 
-1. 添加系统快速支持. 修改`tokenize_instruction_pair`创建5个例子,使用不同的系统提示 ("你是诗人","你是数学教师") 并验证模型在训练中看到不同的系统提示.
+1. 添加系统提示支持。修改 `tokenize_instruction_pair`，让它接收一条系统消息并将其放在指令之前。创建 5 个带不同系统提示的样本（“You are a poet”“You are a math tutor”），确认模型在训练期间看到不同的系统提示。
 
-2. 实现数据混合.创建一个采用SFT数据集和原始文本体的函数,然后生成训练批次,其中5%的例子是原始文本 (没有掩盖) 和95%是指令对 (掩盖).运行3个时代,并将忘记指标与纯SFT训练进行比较.
+2. 实现数据混合。编写一个函数，接收 SFT 数据集与原始文本语料，再生成由 5% 原始文本样本（不应用掩码）和 95% 指令对（应用掩码）组成的训练批次。训练 3 轮，并与纯 SFT 训练的遗忘指标比较。
 
-3. 构建数据质量分数器.对于每个命令响应对,计算: (a) 代币中的响应长度, (b) 命令-响应比率, (c) 词汇多样性 (独特代币/总代币). 过出响应长度 < 10 代币或多样性 < 0.3 的例子. 显示过如何影响最终损失.
+3. 构建数据质量评分器。对每组指令-回答数据计算：（a）以词元计的回答长度；（b）指令与回答的比例；（c）词表多样性（唯一词元数/总词元数）。过滤回答长度 < 10 个词元或多样性 < 0.3 的样本，并展示过滤如何影响最终损失。
 
-4. 实现多轮对话训练.扩展代币化以处理3轮对话 (用户助理-用户助理-用户助理).损失面具应覆盖所有三轮助理.通过打印一个例子来验证代币-面具对齐的正确性.
+4. 实现多轮对话训练。扩展词元化流程，以处理三轮对话（用户-助手-用户-助手-用户-助手）。损失掩码应覆盖全部三次助手回复。打印一个样本的词元-掩码对齐结果，以验证掩码是否正确。
 
-5. 进行学习比较. 训练相同的模型三次 lr=1e-4, lr=2e-5,和 lr=1e-6. 绘制损失曲线. 1e-4运行应该显示出快速的初始下降,但最终损失更高 (过度). 1e-6运行几乎不能移动. 2e-5运行应该是甜点.
+5. 比较学习率。使用 lr=1e-4、lr=2e-5 和 lr=1e-6 分别训练同一个模型，并绘制损失曲线。1e-4 应表现出快速的初始下降，但最终损失较高（过拟合）；1e-6 应几乎没有变化；2e-5 应是最佳平衡点。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| SFT | "Fine-tuning on conversations" | Supervised Fine-Tuning: continuing training on (instruction, response) pairs with loss computed only on response tokens |
-| Instruction tuning | "Teaching the model to follow instructions" | Training on explicit instruction-response pairs so the base model learns the conversation pattern, not new knowledge |
-| Loss masking | "Ignoring the prompt" | Setting loss to zero for instruction tokens so gradients only flow from response token predictions |
-| ChatML | "Chat Markup Language" | A token format using `<\|im_start\|>` and `<\|im_end\|>` delimiters to mark speaker roles in conversation data |
-| Alpaca format | "Stanford's format" | A JSON format with instruction/input/output fields, used for 52K GPT-3.5-generated examples that cost $600 |
-| Catastrophic forgetting | "The model gets dumber" | Fine-tuning destroys pre-trained capabilities because gradient updates overwrite general knowledge with task-specific patterns |
-| Weight tying | "Shared embeddings" | Using the same matrix for input token embeddings and output prediction head, saving parameters and improving coherence |
-| Chat template | "How you format the prompt" | The specific token sequence (role markers, delimiters) that structures a conversation for the model |
+| SFT | “在对话上微调” | 监督微调：在（指令、回答）数据对上继续训练，而且只对回答词元计算损失 |
+| 指令微调 | “教模型遵循指令” | 在显式指令-回答对上训练，使基础模型学习对话模式，而不是新知识 |
+| 损失掩码 | “忽略提示词” | 把指令词元的损失设为零，使梯度只来自回答词元的预测 |
+| ChatML | “聊天标记语言” | 使用 `<\|im_start\|>` 与 `<\|im_end\|>` 分隔符标记对话中说话者角色的词元格式 |
+| Alpaca 格式 | “Stanford 的格式” | 包含 instruction/input/output 字段的 JSON 格式，用于 5.2 万个耗资 600 美元、由 GPT-3.5 生成的样本 |
+| 灾难性遗忘 | “模型变笨了” | 微调更新用任务特定模式覆盖通用知识，从而破坏预训练能力 |
+| 权重绑定 | “共享嵌入” | 输入词元嵌入与输出预测头使用同一个矩阵，既节省参数又提高一致性 |
+| 聊天模板 | “如何格式化提示词” | 把对话组织起来的特定词元序列（角色标记、分隔符）——因模型而异，必须匹配训练格式 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Ouyang et al., 2022 -- "Training language models to follow instructions with human feedback" (InstructGPT)](https://arxiv.org/abs/2203.02155)-- 引入了OpenAI的指令调整+RLHF的论文
-- [Taori et al., 2023 -- "Stanford Alpaca: An Instruction-following LLaMA Model"](https://github.com/tatsu-lab/stanford_alpaca)根据SFT的数据集,
-- [Touvron et al., 2023 -- "Llama 2: Open Foundation and Fine-Tuned Chat Models"](https://arxiv.org/abs/2307.09288)--Meta的SFT+RLHF管道,含有27K高质量的例子
-- [Chiang et al., 2023 -- "Vicuna: An Open-Source Chatbot Impressing GPT-4"](https://lmsys.org/blog/2023-03-30-vicuna/)-- 培训70K的分享GPT对话
-- [Zhou et al., 2023 -- "LIMA: Less Is More for Alignment"](https://arxiv.org/abs/2305.11206)-- 证明1000个精心策划的例子可以在更大的数据集上匹配SFT
+- [Ouyang 等，2022——“通过人类反馈训练语言模型遵循指令”（InstructGPT）](https://arxiv.org/abs/2203.02155)——OpenAI 引入指令微调 + RLHF 的论文
+- [Taori 等，2023——“Stanford Alpaca：遵循指令的 LLaMA 模型”](https://github.com/tatsu-lab/stanford_alpaca)——用 600 美元生成 5.2 万个指令样本，证明 SFT 可在小数据集上奏效
+- [Touvron 等，2023——“Llama 2：开放基础与微调聊天模型”](https://arxiv.org/abs/2307.09288)——Meta 使用 2.7 万个高质量样本的 SFT + RLHF 流水线
+- [Chiang 等，2023——“Vicuna：令 GPT-4 印象深刻的开源聊天机器人”](https://lmsys.org/blog/2023-03-30-vicuna/)——使用 7 万段 ShareGPT 对话训练
+- [Zhou 等，2023——“LIMA：对齐中的少即是多”](https://arxiv.org/abs/2305.11206)——证明 1000 个精心筛选的样本即可达到远大数据集上的 SFT 效果
