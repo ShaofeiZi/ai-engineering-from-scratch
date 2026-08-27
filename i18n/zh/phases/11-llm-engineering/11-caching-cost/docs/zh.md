@@ -1,50 +1,50 @@
-# 缓存,限制率和成本优化
+# 缓存、速率限制与成本优化
 
-> 大多数人工智能初创公司不会死于糟糕的模型.它们死于糟糕的单元经济学. 一个GPT-4o电话成本是百分之几.每天10次电话的10千用户仅需250美元的输入代币 - - 在你收取一个美元之前.幸存的公司是那些把每个API电话都视为金融交易,而不是函数电话.
+> 大多数 AI 初创公司并非死于模型太差，而是死于糟糕的单位经济模型。单次 GPT-4o 调用只需几分之一美分，但若有一万名用户每天各调用十次，仅输入词元就要花费 250 美元——这时你甚至还没有收取一美元。最终生存下来的公司，会把每次 API 调用视为一笔金融交易，而不只是一次函数调用。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 11 Lesson 09 (Function Calling)
-**Time:** ~45 minutes
-**Related:**阶段11·15 (即时缓存) 本课涵盖应用层缓存 (语义缓存,精确哈希缓存,模型路由).课程15涵盖提供商层即时缓存 (人类缓存_控制,OpenAI自动,双胞胎缓存内容).将这两者结合,可降低50-95%的成本.
+**Prerequisites:** 阶段 11 第 09 课（函数调用）
+**Time:** 约 45 分钟
+**Related:** 阶段 11 · 15（提示缓存）——本课介绍应用层缓存（语义缓存、精确哈希缓存、模型路由），第 15 课则介绍提供商层的提示缓存（Anthropic cache_control、OpenAI 自动缓存、Gemini CachedContent）。将两者结合，可以降低 50%～95% 的成本。
 
 ## 学习目标
 
-- 实现重复或类似的缓存查询,而不是进行新的API调用
-- 计算各供应商的每次请求成本,并实施对代币的意识率限制和预算警报
-- 建立一个成本优化层,即时压缩,模型路由 (昂贵而廉价),以及响应缓存
-- 设计一个层次缓存策略,使用不同查询类型的精确匹配,语义相似性和预写缓存
+- 实现语义缓存，让重复或相似查询直接使用缓存结果，不再发起新的 API 调用
+- 计算不同提供商的单次请求成本，并实现可感知词元数量的速率限制与预算警报
+- 构建包含提示词压缩、模型路由（昂贵模型与廉价模型）和响应缓存的成本优化层
+- 针对不同查询类型，使用精确匹配、语义相似度与前缀缓存设计分层缓存策略
 
 ## 问题
 
-你建立了一个RAG聊天机器人,它非常好运作.用户喜欢它.
+你构建了一个 RAG 聊天机器人，运行得非常出色，用户也很喜欢。
 
-然后收到账单.
+然后账单来了。
 
-GPT-5成本$5 per million input tokens and $产量为每百万产量15美元.$15 input / $双子座3 Pro的成本$1.25 input / $输出5个.$0.25/$2. 下面的价格说明; 总是查看提供商的当前价格页面.
+GPT-5 每百万输入词元收费 5 美元、每百万输出词元收费 15 美元。Claude Opus 4.7 的输入/输出价格分别为 15/75 美元。Gemini 3 Pro 为 1.25/5 美元，GPT-5-mini 为 0.25/2 美元。下文价格仅作示例；务必查看提供商当前的定价页面。
 
-这就是杀死初创公司的数学:
+下面这笔账足以压垮初创公司：
 
-- 每天有1万名活跃用户
-- 每日每用户10次查询
-- 每次查询的1000个输入代码 (系统提示+文本+用户消息)
-- 每个响应的输出代币500个
+- 每日活跃用户 10,000 名
+- 每位用户每天查询 10 次
+- 每次查询 1,000 个输入词元（系统提示词 + 上下文 + 用户消息）
+- 每次响应 500 个输出词元
 
-**Daily input cost:**它们是10万×10万×1000/1,000,000×$2.50 = **$平均每天250*
-**Daily output cost:**它们是10000x10x500 / 1,000,000x$10.00 = **$平均每天500*
-**Monthly total:** **$22,500/month**
+**每日输入成本：** 10,000 x 10 x 1,000 / 1,000,000 x $2.50 = **$250/天**
+**每日输出成本：** 10,000 x 10 x 500 / 1,000,000 x $10.00 = **$500/天**
+**每月总成本：****$22,500/月**
 
-现在,我们需要一个机器人,一个机器人,一个机器人,一个机器人,一个机器人,一个机器人.
+这还只是大语言模型的费用，再加上嵌入、向量数据库托管和基础设施，你会为一个聊天机器人支付每月 30,000 美元。
 
-残酷的部分:这些查询中,40%至60%几乎是重复的.用户用略有不同的词来问相同的问题.系统提示 - - 在每个请求中相同 - - 每次都会被收费. RAG 检索的文本文件在同一主题上重复使用者中.
+更残酷的是，其中 40%～60% 的查询高度重复。用户只是换了种措辞来问同一个问题。每次请求都要为完全相同的系统提示词付费；多个用户询问同一主题时，RAG 检索到的上下文文档也会重复。
 
-你为冗余的计算付出了全部代价.
+你正在为重复计算支付全价。
 
 ## 概念
 
-### 法律法师招聘的成本解剖学
+### 一次大语言模型调用的成本构成
 
-每次API调用都有五个成本组件.
+每次 API 调用都包含五项成本。
 
 ```mermaid
 graph LR
@@ -58,27 +58,27 @@ graph LR
     F --> G[Output Cost<br/>$10.00/1M tokens]
 ```
 
-系统提示是无声杀手,一个1500个代币的系统提示,$3.75 per million requests just for that prefix. At 100K requests per day, that is $375天,每月11,250美元,每次不变的文字.
+系统提示词是无声的成本杀手。每次请求都发送一个 1,500 词元的系统提示词，仅这段前缀在每百万次请求中就要花费 3.75 美元。每天 10 万次请求，就是每天 375 美元——每月 11,250 美元——而这段文本从不改变。
 
-### 提供商缓存:内置折扣
+### 提供商缓存：内置折扣
 
-两家主要供应商都在2026年提供供应商端即时缓存,但机制不同.
+到 2026 年，三家主流提供商都提供服务端提示缓存，但具体机制不同。深入讲解请参阅阶段 11 · 15。
 
-| Provider | Mechanism | Discount | Minimum | Cache Duration |
+| 提供商 | 机制 | 折扣 | 最低长度 | 缓存时长 |
 |----------|-----------|----------|---------|----------------|
-| Anthropic | Explicit cache_control markers | 90% on cache hits (pay 25% extra on write) | 1,024 tokens (Sonnet/Opus), 2,048 (Haiku) | 5 min default; 1h extended (2x write premium) |
-| OpenAI | Automatic prefix matching | 50% on cache hits | 1,024 tokens | Best-effort up to 1 hour |
-| Google Gemini | Explicit CachedContent API | ~75% reduction (plus storage) | 4,096 (Flash) / 32,768 (Pro) | User-configurable TTL |
+| Anthropic | 显式 cache_control 标记 | 命中时节省 90%（写入加收 25%） | 1,024 个词元（Sonnet/Opus），2,048 个（Haiku） | 默认 5 分钟；可延长至 1 小时（写入费用翻倍） |
+| OpenAI | 自动前缀匹配 | 命中时节省 50% | 1,024 个词元 | 尽力保留，最长 1 小时 |
+| Google Gemini | 显式 CachedContent API | 约降低 75%（另收存储费） | 4,096（Flash）/ 32,768（Pro） | 用户可配置 TTL |
 
-**Anthropic's approach**您将标记您的提示部分`cache_control: {"type": "ephemeral"}`首先,要付25%的写费,然后再用相同的预写字符,要获得90%的折扣.$0.005 normally costs $超过100,000个请求,节省了每天437.50美元.
+**Anthropic 的方案**是显式的。你需要在提示词相应部分添加 `cache_control: {"type": "ephemeral"}` 标记。第一次请求需额外支付 25% 的写入费用，之后具有相同前缀的请求可享受 90% 折扣。一个通常花费 $0.005 的 2,000 词元系统提示词，缓存命中时只需 $0.000625。按 10 万次请求计算，每天可节省 $437.50。
 
-**OpenAI's approach**任何与之前的请求相匹配的提示前置都会获得50%的折扣.不需要标记. 折扣:减少折扣,控制,但实现的努力是零.
+**OpenAI 的方案**是自动的。只要提示词前缀与之前的请求匹配，就能享受 50% 折扣，不需要任何标记。代价是折扣较低、控制较少，但完全没有实施成本。
 
-### 语义缓存:您的定制层
+### 语义缓存：自己的缓存层
 
-提供商缓存只适用于相同的预先文件.语义缓存处理更难的情况:相同意义的不同的查询.
+提供商缓存只适用于相同前缀。语义缓存用于处理更困难的情况：字符串不同，但含义相同的查询。
 
-"返回政策是什么?"和"我如何返回一个项目?"是不同的字符串,但意图相同.一个语义缓存嵌入了两个查询,计算了可西因相似性,并返回缓存的响应,如果相似性超过了门 (通常是0.92-0.95).
+“退货政策是什么？”和“如何退货？”字符串不同，意图却相同。语义缓存会嵌入两个查询、计算余弦相似度，并在相似度超过阈值（通常为 0.92～0.95）时返回缓存响应。
 
 ```mermaid
 flowchart TD
@@ -91,36 +91,36 @@ flowchart TD
     D --> G
 ```
 
-嵌入成本是微不足道的.OpenAI的文本嵌入3小程序每百万代币成本为0.02美元.与一个完整的LLM电话相比,检查缓存成本几乎没有什么.
+嵌入费用可以忽略不计。OpenAI 的 text-embedding-3-small 每百万词元只需 $0.02。与完整的大语言模型调用相比，查询缓存几乎不花钱。
 
-### 准确缓存:哈希和匹配
+### 精确缓存：哈希与匹配
 
-对于确定性调用 (温度=0,相同模型,相同提示),准确缓存更简单更快.
+对于确定性调用（temperature=0、相同模型、相同提示词），精确缓存更加简单、快速。对完整提示词计算哈希，检查缓存，有结果就直接返回。
 
-这对:
-- 系统提示+固定语境+相同的用户查询
-- 具有相同的工具定义的函数调用
-- 批量处理,其中相同的文件被处理多次
+它尤其适合：
+- 系统提示词 + 固定上下文 + 完全相同的用户查询
+- 使用相同工具定义的函数调用
+- 同一文档被重复处理的批处理流程
 
-### 限制费用:保护预算
+### 速率限制：保护预算
 
-限制率不仅仅是公平,
+速率限制不只是为了公平，更是为了生存。
 
-**Token bucket algorithm:**每个用户都会获得一个桶N代币,以每秒的速度R来充满.一个请求从桶中消耗代币.如果桶空,则请求被拒绝.这允许爆发 (同时使用整个桶) 执行平均率.
+**令牌桶算法：** 每位用户拥有一个容量为 N 个词元的桶，以每秒 R 个词元的速率补充。一次请求会消耗桶中的词元；桶空时，请求会被拒绝。它既允许突发流量（一次用完桶中全部额度），又能强制执行平均速率。
 
-**Per-user quotas:**设定每用户层每天/月的代币限制.
+**每用户配额：** 为不同用户等级设置每日/月度词元限制。
 
-| Tier | Daily Token Limit | Max Requests/min | Model Access |
-|------|------------------|------------------|-------------|
-| Free | 50,000 | 10 | GPT-4o-mini only |
-| Pro | 500,000 | 60 | GPT-4o, Claude Sonnet |
-| Enterprise | 5,000,000 | 300 | All models |
+| 等级 | 每日词元上限 | 每分钟最大请求数 | 可用模型 |
+|------|------------------|------------------|----------------|
+| 免费 | 50,000 | 10 | 仅 GPT-4o-mini |
+| 专业 | 500,000 | 60 | GPT-4o、Claude Sonnet |
+| 企业 | 5,000,000 | 300 | 所有模型 |
 
-### 模式路由:适合工作的正确模式
+### 模型路由：为任务选择合适的模型
 
-不是每一个查询都需要GPT-4o.
+并非每次查询都需要 GPT-4o。
 
-没有需要一个"什么时候关闭店?"$10/M-output model. GPT-4o-mini at $简单的分类器将廉价查询送到廉价模型,复杂查询送到昂贵模型.
+“商店几点关门？”不需要每百万输出词元 10 美元的模型。每百万输出词元 0.60 美元的 GPT-4o-mini 足以完美处理；每百万输出词元 1.25 美元的 Claude Haiku 也可以。一个简单的分类器会把简单查询路由给廉价模型，把复杂查询路由给昂贵模型。
 
 ```mermaid
 flowchart TD
@@ -130,86 +130,86 @@ flowchart TD
     B -->|Complex: reasoning, code| E[GPT-4o / Claude Opus<br/>$2.50/$10.00+]
 ```
 
-通过调节路由器,仅仅在模型成本上节省40-70%.
+调优良好的路由器，仅模型费用就能节省 40%～70%。
 
-### 追踪成本:知道资金去哪里
+### 成本跟踪：了解钱花在哪里
 
-您不能优化您不测量的内容.
+无法测量，就无法优化。记录每次 API 调用的以下信息：
 
-- 时间标签
+- 时间戳
 - 模型名称
-- 输入代码
-- 输出代码
-- 延迟 (ms)
-- 计算成本 ($)
-- 用户身份
-- 缓存中击/错失
-- 要求类别
+- 输入词元数
+- 输出词元数
+- 延迟（毫秒）
+- 计算出的成本（美元）
+- 用户 ID
+- 缓存命中/未命中
+- 请求类别
 
-这些数据显示哪些功能昂贵,哪些用户是重量消费者,哪些缓存有最大影响.
+这些数据会揭示哪些功能成本高、哪些用户消耗量大，以及在哪些地方使用缓存最有效。
 
-### 批量:大批折扣
+### 批处理：批量折扣
 
-开放AI的批量API以50%折扣处理异步请求.你提交一批多达50,000个请求,结果在24小时内返回.
+OpenAI Batch API 以 50% 折扣异步处理请求。你可以提交最多 50,000 个请求，并在 24 小时内获得结果。
 
-使用批量:
-- 晚间处理文件
+批处理适合：
+- 夜间文档处理
 - 批量分类
 - 评估运行
-- 数据丰富管道
+- 数据增强流水线
 
-对于:实时用户查询 (延迟问题).
+不适合实时面向用户的查询，因为这类查询对延迟敏感。
 
-### 预算警报和断路
+### 预算警报与熔断器
 
-没有一个,错误或滥用可以在几个小时内消耗你的月薪.
+达到限额时，熔断器会停止继续花钱。没有熔断器时，一个错误或一次滥用就可能在几小时内耗尽整月预算。
 
-设定三个门:
-1. **Warning**(预算的70%):发送警报
-2. **Throttle**只有更便宜的模型可转换
-3. **Stop**拒绝新请求,只返回缓存回复
+设置三个阈值：
+1. **警告**（预算的 70%）：发送警报
+2. **限流**（预算的 85%）：只允许切换到更便宜的模型
+3. **停止**（预算的 95%）：拒绝新请求，只返回缓存响应
 
-### 优化堆
+### 优化栈
 
-按照这些技术进行排序,每个层都与前层相结合.
+按顺序应用下列技术。每一层的收益都会与前几层叠加。
 
-| Layer | Technique | Typical Savings | Implementation Effort |
+| 层 | 技术 | 典型节省幅度 | 实施难度 |
 |-------|-----------|----------------|----------------------|
-| 1 | Provider prompt caching | 30-50% | Low (add cache markers) |
-| 2 | Exact caching | 10-20% | Low (hash + dict) |
-| 3 | Semantic caching | 15-30% | Medium (embeddings + similarity) |
-| 4 | Model routing | 40-70% | Medium (classifier) |
-| 5 | Rate limiting | Budget protection | Low (token bucket) |
-| 6 | Prompt compression | 10-30% | Medium (rewrite prompts) |
-| 7 | Batching | 50% on eligible | Low (batch API) |
+| 1 | 提供商提示缓存 | 30%～50% | 低（添加缓存标记） |
+| 2 | 精确缓存 | 10%～20% | 低（哈希 + 字典） |
+| 3 | 语义缓存 | 15%～30% | 中（嵌入 + 相似度） |
+| 4 | 模型路由 | 40%～70% | 中（分类器） |
+| 5 | 速率限制 | 保护预算 | 低（令牌桶） |
+| 6 | 提示词压缩 | 10%～30% | 中（重写提示词） |
+| 7 | 批处理 | 合格任务节省 50% | 低（Batch API） |
 
-应用1-5层通常降低成本$22,500/month to $燃烧跑道和建立企业的区别是这么多.
+一款应用第 1～5 层的 RAG 应用，通常能把月成本从 $22,500 降至 $4,000～6,000。这正是烧光现金与建立可持续业务之间的区别。
 
-### 实际储蓄:前后
+### 实际节省：优化前后
 
-这是一个为10万达达尔的RAG聊天机器人提供了真正的破解.
+下面是一款服务 10,000 名日活用户的 RAG 聊天机器人的实际成本拆分。
 
-| Metric | Before Optimization | After Optimization | Savings |
+| 指标 | 优化前 | 优化后 | 节省幅度 |
 |--------|--------------------|--------------------|---------|
-| Monthly LLM cost | $22,500 | $5,200 | 77% |
-| Avg cost per query | $0.0075 | $0.0017 | 77% |
-| Cache hit rate | 0% | 52% | -- |
-| Queries routed to mini | 0% | 65% | -- |
-| P95 latency | 2,800ms | 900ms (cache hits: 50ms) | 68% |
-| Monthly embedding cost | $0 | $180 | (new cost) |
-| Total monthly cost | $22,500 | $5,380 | 76% |
+| 每月大语言模型成本 | $22,500 | $5,200 | 77% |
+| 每次查询平均成本 | $0.0075 | $0.0017 | 77% |
+| 缓存命中率 | 0% | 52% | -- |
+| 路由到 mini 的查询 | 0% | 65% | -- |
+| P95 延迟 | 2,800ms | 900ms（缓存命中：50ms） | 68% |
+| 每月嵌入成本 | $0 | $180 | （新增成本） |
+| 每月总成本 | $22,500 | $5,380 | 76% |
 
-语义缓存的嵌入成本 (每月180美元) 在缓存访问的第一小时内自偿.
+语义缓存每月 180 美元的嵌入费用，在开始出现缓存命中后的第一个小时内就能收回。
 
 ```figure
 semantic-cache
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:成本计算器
+### 第 1 步：成本计算器
 
-建立一个代币成本计算器, 知道主要模型的当前价格.
+构建一个了解主流模型当前价格的词元成本计算器。
 
 ```python
 import hashlib
@@ -257,9 +257,9 @@ def calculate_cost(model, input_tokens, output_tokens, cached_input_tokens=0):
     }
 ```
 
-### 步骤2: 准确缓存
+### 第 2 步：精确缓存
 
-按全提示,返回相同请求的缓存响应.
+对完整提示词计算哈希，为完全相同的请求返回缓存响应。
 
 ```python
 class ExactCache:
@@ -312,9 +312,9 @@ class ExactCache:
         }
 ```
 
-### 步骤3:语义缓存
+### 第 3 步：语义缓存
 
-嵌入查询,并在相似度超过门时返回缓存的答案.
+嵌入查询，并在相似度超过阈值时返回缓存响应。
 
 ```python
 def simple_embed(text):
@@ -386,9 +386,9 @@ class SemanticCache:
         }
 ```
 
-### 步骤4: 率限制
+### 第 4 步：速率限制器
 
-标记桶率限制器,每用户配额.
+实现带每用户配额的令牌桶速率限制器。
 
 ```python
 class TokenBucketRateLimiter:
@@ -456,9 +456,9 @@ class TokenBucketRateLimiter:
         }
 ```
 
-### 步骤5: 成本追踪器
+### 第 5 步：成本跟踪器
 
-记录每一次电话,计算运行总数.
+记录每次调用并计算累计总额。
 
 ```python
 class CostTracker:
@@ -538,9 +538,9 @@ class CostTracker:
         }
 ```
 
-### 步骤 6: 路由器模型
+### 第 6 步：模型路由器
 
-导向最便宜的模型,可以处理它们.
+把查询路由给能够处理它的最便宜模型。
 
 ```python
 SIMPLE_KEYWORDS = ["what time", "hours", "address", "phone", "price", "return policy", "hello", "hi", "thanks", "yes", "no"]
@@ -567,7 +567,7 @@ def route_model(query, tier="pro"):
     return {"query": query, "complexity": complexity, "model": model, "tier": tier}
 ```
 
-### 步骤 7: 运行演示
+### 第 7 步：运行演示
 
 ```python
 def simulate_llm_call(model, query):
@@ -752,9 +752,9 @@ if __name__ == "__main__":
     run_demo()
 ```
 
-## 用它
+## 投入使用
 
-### 人类即时缓存
+### Anthropic 提示缓存
 
 ```python
 # import anthropic
@@ -779,9 +779,9 @@ if __name__ == "__main__":
 # print(f"Cache read tokens: {response.usage.cache_read_input_tokens}")
 ```
 
-首次调用时,将其写入缓存中 (25%的溢价).每次使用相同的系统提示前的接下来的调用都会从缓存中读取 (90%折扣).缓存持续5分钟,每次击中时,会重新设置计时器.
+第一次调用会写入缓存（额外支付 25%）；此后，具有相同系统提示词前缀的每次调用都会读取缓存（节省 90%）。缓存持续 5 分钟，并会在每次命中时重置计时器。
 
-### 开放AI自动缓存
+### OpenAI 自动缓存
 
 ```python
 # from openai import OpenAI
@@ -801,9 +801,9 @@ if __name__ == "__main__":
 # print(f"Completion tokens: {response.usage.completion_tokens}")
 ```
 
-任何与最近的请求相匹配的1024+代币的提示预先符号都获得50%的折扣.不需要更改代码 - 只需查看`prompt_tokens_details.cached_tokens`为了验证它是否有效.
+OpenAI 会自动缓存。只要一个不少于 1,024 个词元的提示词前缀与近期请求匹配，就能获得 50% 折扣。不需要修改代码——只要查看响应中的 `prompt_tokens_details.cached_tokens`，就能验证缓存是否生效。
 
-### 开放AI批量API
+### OpenAI Batch API
 
 ```python
 # import json
@@ -832,9 +832,9 @@ if __name__ == "__main__":
 # print(f"Batch ID: {batch.id}, Status: {batch.status}")
 ```
 
-批量API给所有代币提供50%折扣.结果到达24小时内. 非常适合非实时工作负载:评估,数据标签,批量总结.
+Batch API 对所有词元提供固定 50% 折扣，结果会在 24 小时内返回。它非常适合评估、数据标注和批量摘要等非实时工作负载。
 
-### 制作语义缓存与Redis
+### 使用 Redis 构建生产级语义缓存
 
 ```python
 # import redis
@@ -863,50 +863,50 @@ if __name__ == "__main__":
 #     return None
 ```
 
-在生产中,用向量索引 (Redis Vector Search,Pinecone,或pgvector) 取代线性扫描.线性扫描对<1,000条目工作.此外,使用ANN (近邻近) 搜索O(log n).
+生产环境中，应使用向量索引（Redis Vector Search、Pinecone 或 pgvector）替换线性扫描。线性扫描适合少于 1,000 条缓存项的情况；超过这个规模，就应使用近似最近邻（ANN），实现 O(log n) 查询。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/prompt-cost-optimizer.md`分析您的LLM申请,并建议您预计节省的具体成本优化.
+本课会产出 `outputs/prompt-cost-optimizer.md`——一个可复用提示词，用于分析大语言模型应用，并给出附带预计节省金额的具体成本优化建议。
 
-它还产生了`outputs/skill-cost-patterns.md`-- 选择合适的缓存策略,限制速度配置,以及适用于您的使用情况的路由规则的决策框架.
+本课还会产出 `outputs/skill-cost-patterns.md`——一套决策框架，用于根据具体使用场景选择合适的缓存策略、速率限制配置和模型路由规则。
 
-## 运动
+## 练习
 
-1. **Implement LRU eviction for the semantic cache.**取代最古老的首次驱逐出,用最不近期的驱逐出. 追踪每个输入的最后访问时间,并在缓存充满时驱逐出最古老的访问时间的输入. 比较两种策略之间的攻击率超过100个查询.
+1. **为语义缓存实现 LRU 淘汰。** 将“最旧优先”替换为“最近最少使用”。跟踪每个条目的最后访问时间，缓存已满时淘汰最后访问时间最早的条目。在 100 个查询上比较两种策略的命中率。
 
-2. **Build a cost projection tool.**根据API调用日志 (CostTracker日志),根据后期7天的平均值,预测月费. 计算周末/周末的模式. 如果预测月费超过预算20%.
+2. **构建成本预测工具。** 给定一份 API 调用日志（CostTracker 日志），根据最近 7 天的平均值预测月度成本，并考虑工作日/周末模式。如果预测月成本超出预算 20% 以上，则触发警报。
 
-3. **Implement tiered semantic caching.**使用两个类似性门:高信任率的击中为0.98 (立即返回) 和中等信任率的击中为0.90 (返回免责声明:"基于类似的前面问题..."). 追踪每个击中来自哪个层次,并测量用户满意度差异.
+3. **实现分层语义缓存。** 使用两个相似度阈值：高置信度命中使用 0.98（立即返回），中等置信度命中使用 0.90（附带免责声明：“根据之前一个相似问题……”）。跟踪每次命中所属的层级，并测量用户满意度差异。
 
-4. **Build a model routing classifier.**替换基于关键字的分类器,使用基于嵌入式的分类器.嵌入50个标记式查询 (简单/中等/复杂),然后通过找到最近的标记式示例来分类新查询.测量分类精度与20个查询的测试集.
+4. **构建模型路由分类器。** 用基于嵌入的分类器替换基于关键词的分类器。嵌入 50 个已标注查询（简单/中等/复杂），再通过查找最近的标注样本为新查询分类。在 20 个查询的测试集上测量分类准确率。
 
-5. **Implement a circuit breaker with degradation levels.**在70%的预算下,记录一个警告.在85%的预算下,自动将所有路由转换到最便宜的模型 (gpt-4o-mini).在95%的预算下,只提供缓存的响应,拒绝新的查询.通过模拟1000个请求与1.00美元的预算进行测试,并检查每个门的触发正确.
+5. **实现带降级级别的熔断器。** 达到预算的 70% 时记录警告；达到 85% 时自动把所有请求路由到最便宜的模型（gpt-4o-mini）；达到 95% 时只提供缓存响应，并拒绝新查询。以 1 美元预算模拟 1,000 次请求，验证每个阈值都会正确触发。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Prompt caching | "Cache the system prompt" | Provider-level caching where repeated prompt prefixes get a discount (90% Anthropic, 50% OpenAI) -- no code changes for OpenAI, explicit markers for Anthropic |
-| Semantic caching | "Smart caching" | Embedding the query, computing similarity to past queries, and returning the cached response if similarity exceeds a threshold -- catches paraphrases that exact matching misses |
-| Exact caching | "Hash caching" | Hashing the full prompt (model + messages + temperature) and returning the cached response for identical inputs -- only works for temperature=0 deterministic calls |
-| Token bucket | "Rate limiter" | An algorithm where each user has a bucket of N tokens that refills at rate R per second -- allows bursts up to N while enforcing an average rate of R |
-| Model routing | "Cheapskate routing" | Using a classifier to send simple queries to cheap models (GPT-4o-mini, Haiku) and complex queries to expensive models (GPT-4o, Opus) -- saves 40-70% on model costs |
-| Cost tracking | "Metering" | Logging every API call with model, tokens, latency, cost, and user ID so you know exactly where money goes and which features are expensive |
-| Circuit breaker | "Kill switch" | Automatically degrading service (cheaper models, cached-only) or stopping requests entirely when spending approaches the budget limit |
-| Batch API | "Bulk discount" | OpenAI's asynchronous processing at 50% discount -- submit up to 50,000 requests, get results within 24 hours |
-| Prompt compression | "Token diet" | Rewriting system prompts and context to use fewer tokens while preserving meaning -- shorter prompts cost less and often perform better |
-| Cache hit rate | "Cache efficiency" | The percentage of requests served from cache instead of calling the LLM -- 40-60% is typical for production chatbots, saves proportionally on cost |
+| 提示缓存 | “缓存系统提示词” | 提供商层缓存：重复的提示词前缀可以获得折扣（Anthropic 90%，OpenAI 50%）——OpenAI 无须修改代码，Anthropic 需要显式标记 |
+| 语义缓存 | “智能缓存” | 嵌入查询、计算其与历史查询的相似度；超过阈值时返回缓存响应——可捕获精确匹配遗漏的改写表达 |
+| 精确缓存 | “哈希缓存” | 对完整提示词（模型 + 消息 + 温度）计算哈希，并为相同输入返回缓存响应——只适用于 temperature=0 的确定性调用 |
+| 令牌桶 | “速率限制器” | 每位用户都有一个容量为 N 个词元、以每秒 R 个词元补充的桶——允许最多 N 的突发用量，同时强制执行平均速率 R |
+| 模型路由 | “省钱路由” | 使用分类器把简单查询交给廉价模型（GPT-4o-mini、Haiku），把复杂查询交给昂贵模型（GPT-4o、Opus）——可节省 40%～70% 的模型成本 |
+| 成本跟踪 | “计量” | 记录每次 API 调用的模型、词元、延迟、成本和用户 ID，从而明确钱花在哪里，以及哪些功能成本最高 |
+| 熔断器 | “紧急开关” | 当支出接近预算上限时，自动降级服务（廉价模型、仅缓存）或彻底停止请求 |
+| Batch API | “批量折扣” | OpenAI 提供的异步处理，享受 50% 折扣——最多提交 50,000 个请求，并在 24 小时内获得结果 |
+| 提示词压缩 | “词元节食” | 重写系统提示词和上下文，在保留含义的同时减少词元——更短的提示词成本更低，往往效果也更好 |
+| 缓存命中率 | “缓存效率” | 不调用大语言模型、而由缓存直接提供响应的请求比例——生产级聊天机器人通常为 40%～60%，成本按比例下降 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Anthropic Prompt Caching Guide](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)-- 对于安卓的明确缓存控制标记,定价和缓存寿命行为的官方文件
-- [OpenAI Prompt Caching](https://platform.openai.com/docs/guides/prompt-caching)-- OpenAI的自动缓存,如何通过使用字段验证缓存击中,以及最低预写长度
-- [OpenAI Batch API](https://platform.openai.com/docs/guides/batch)-- 50%的折扣,以异步处理,JSONL格式,24小时完成窗口,以及50K的请求限制
-- [GPTCache](https://github.com/zilliztech/GPTCache)-- 支持多个嵌入式后端,向量存储和驱逐政策的开源语义缓存库
-- [Martian Model Router](https://docs.withmartian.com)-- 生产模型路由,自动选择能够处理每个查询的最便宜模型
-- [Not Diamond](https://www.notdiamond.ai)--基于ML的路由器模型,从你的流量模式中学习,以优化提供商之间的成本/质量交易
-- [Helicone](https://www.helicone.ai)-- 具有成本跟踪,缓存,利率限制和预算警报的LLM可观测平台作为代理层
-- [Dean & Barroso, "The Tail at Scale" (CACM 2013)](https://research.google/pubs/the-tail-at-scale/)延迟,吞吐量,TTFT/TPOT百分比,以及对冲要求;
-- [Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention" (SOSP 2023)](https://arxiv.org/abs/2309.06180)由于"KV缓存"+连续批量超过了24倍的无辜服务器,
-- [Dao et al., "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning" (ICLR 2024)](https://arxiv.org/abs/2307.08691)根据本核级成本降低的指标, 提示缓存; 阅读与投机解码和GQA一起,
+- [Anthropic 提示缓存指南](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)——Anthropic 显式 cache_control 标记、定价与缓存生命周期行为的官方文档
+- [OpenAI 提示缓存](https://platform.openai.com/docs/guides/prompt-caching)——OpenAI 自动缓存、通过用量字段验证缓存命中，以及最小前缀长度
+- [OpenAI Batch API](https://platform.openai.com/docs/guides/batch)——异步处理享受 50% 折扣；介绍 JSONL 格式、24 小时完成窗口和 50K 请求上限
+- [GPTCache](https://github.com/zilliztech/GPTCache)——开源语义缓存库，支持多种嵌入后端、向量存储和淘汰策略
+- [Martian Model Router](https://docs.withmartian.com)——生产级模型路由，自动选择能够处理每个查询的最便宜模型
+- [Not Diamond](https://www.notdiamond.ai)——基于机器学习的模型路由器，从流量模式中学习，以优化不同提供商之间的成本/质量取舍
+- [Helicone](https://www.helicone.ai)——大语言模型可观测性平台，以代理层形式提供成本跟踪、缓存、速率限制和预算警报
+- [Dean 与 Barroso，“The Tail at Scale”（CACM 2013）](https://research.google/pubs/the-tail-at-scale/)——介绍延迟、吞吐量、TTFT/TPOT 百分位数和对冲请求；这是“选择仍能满足 P95 的最便宜模型”背后的成本模型。
+- [Kwon 等，“Efficient Memory Management for Large Language Model Serving with PagedAttention”（SOSP 2023）](https://arxiv.org/abs/2309.06180)——vLLM 论文；解释分页 KV 缓存与连续批处理为何比朴素服务器吞吐量高 24 倍，是“缓存与成本”之下的基础设施层。
+- [Dao 等，“FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning”（ICLR 2024）](https://arxiv.org/abs/2307.08691)——与提示缓存正交的内核级成本降低方法；应结合推测解码和 GQA 一起阅读，以获得完整的成本曲线认识。
