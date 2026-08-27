@@ -1,28 +1,28 @@
-# 卡普斯通17 个人人工智能导师 (适应性,多模特,具有内存)
+# 综合项目 17——个人人工智能导师（自适应、多模态、带记忆）
 
-> 米戈 (汗学院),杜林戈马克斯,教育谷歌学习LM/双胞胎,奇威letQ-聊天,和合成导师都在2026年提供了适应性多模式导师. 常见的形式是苏格拉底政策 (永远不要只是抛弃答案),学习者模型每次交互后都会更新 (贝叶斯知识追踪风格),语音+文字+照片数学输入,课程图图检索,间隔重复计划和适合年龄的安全过器. 终点是向专科的导师 (K-12代数或Python引入),与10名学习者进行两周的有效性研究,并通过内容安全审计.
+> 到 2026 年，Khanmigo（Khan Academy）、Duolingo Max、Google LearnLM / Gemini for Education、Quizlet Q-Chat 和 Synthesis Tutor 都已实现大规模自适应多模态辅导。它们采用相似的结构：以苏格拉底式策略引导学生，而不是直接给出答案；维护每次互动后都会更新的学习者模型，通常基于贝叶斯知识追踪；支持语音、文本和数学题照片输入；通过课程图谱检索内容；安排间隔重复；并严格过滤不适合相应年龄的内容。本综合项目要交付一套面向特定学科的导师系统，可以选择 K-12 代数或 Python 入门；随后用 10 名学习者开展两周效果研究，并通过内容安全审计。
 
-**Type:** Capstone
-**Languages:** Python (backend, learner model), TypeScript (web app), SQL (curriculum graph via Postgres + Neo4j)
-**Prerequisites:** Phase 5 (NLP), Phase 6 (speech), Phase 11 (LLM engineering), Phase 12 (multimodal), Phase 14 (agents), Phase 17 (infrastructure), Phase 18 (safety)
-**Phases exercised:**五·六·十一·十二·十四·十七·十八
-**Time:** 30 hours
+**Type:** 综合项目
+**Languages:** Python（后端、学习者模型）、TypeScript（Web 应用）、SQL（通过 Postgres + Neo4j 实现课程图谱）
+**Prerequisites:** 第 5 阶段（NLP）、第 6 阶段（语音）、第 11 阶段（LLM 工程）、第 12 阶段（多模态）、第 14 阶段（智能体）、第 17 阶段（基础设施）、第 18 阶段（安全）
+**Phases exercised:** P5 · P6 · P11 · P12 · P14 · P17 · P18
+**Time:** 30 小时
 
 ## 问题
 
-适应教学曾经是科技研究领域的位. 到2026年,它将成为消费品. 美国大多数学校都部署了Khanmigo. 杜灵戈马克斯打了数亿的MAU. 谷歌的学习LM/双子座教育功能在谷歌课堂教学. 问卷Q-Chat坐在卡片旁边. 导师与导师为好奇的孩子们的传播. 共同的元素:多模式输入 (类型,讲话,摄影方程),苏格拉底教学 (先问,后解释),每次互动后更新的学习模型,以及严格的适合年龄的安全.
+自适应辅导过去只是教育科技研究中的小众方向，到 2026 年已经成为消费级产品。Khanmigo 已部署到美国大多数学区；Duolingo Max 达到数千万月活跃用户；Google LearnLM / Gemini for Education 为 Google Classroom 提供辅导能力；Quizlet Q-Chat 与单词卡配合使用；Synthesis Tutor 则以“面向好奇儿童的导师”走红。它们有几个共性：支持打字、语音和拍照识别方程等多模态输入；采用先提问、后解释的苏格拉底式教学；每次互动后更新学习者模型；严格过滤不适合相应年龄的内容。
 
-测量是实际有效性研究:测试前和测试后两周的成绩,包括10名学习者.语音循环必须感觉自然 (Capstone 03子堆).记忆必须尊重隐私.安全过器必须通过Coppa意识的红队K-12.
+本综合项目的验收标准不是“做出一个演示”，而是真正开展效果研究：让 10 名学习者参与两周实验，并进行前测和后测。语音交互必须自然，可复用综合项目 03 的语音子栈。记忆系统必须保护隐私，安全过滤器则必须通过面向 K-12、符合 COPPA 要求的红队测试。
 
 ## 概念
 
-它们有四个组成部分.**Tutor policy**学生问答时,政策提出一个主要问题;当他们正确地理解时,它转向下一个概念;当他们陷入困境时,它提供了一个架的提示. **Learner model**是贝叶斯知识追踪 (或简单的变体) 每次交互后更新每一个课程节点的掌握概率. **Curriculum graph**对于一个概念的定义,该概念的定义是:**Memory**是一个节目式+语义存储 (代理记忆式) 包含过去的互动,错误和偏好.
+系统由四个核心部件构成。**导师策略（Tutor policy）**采用苏格拉底式循环：学习者直接索要答案时，系统改为提出引导性问题；回答正确时，进入下一个概念；卡住时，提供分层提示。**学习者模型（Learner model）**使用贝叶斯知识追踪或简化变体，在每次互动后更新各课程节点的掌握概率。**课程图谱（Curriculum graph）**是一张 Neo4j 图，节点代表概念，边表示先修关系；导师策略在图上选择接下来要学的概念。**记忆（Memory）**采用类似 agentmemory 的情景记忆与语义记忆存储，保存过往互动、常见错误和个人偏好。
 
-通过Dots.ocr或PaliGemma进行数学问题的照片输入.通过Cartesia Sonic-2进行语音输出.安全使用Llama Guard 4加上年龄适当的过器 (阻止成人内容,暴力,自伤) 和COPPA意识的记忆保留政策.
+交互层必须支持多种模态。文本用于键盘作答；语音输入可通过 LiveKit + Whisper 实现，直接复用综合项目 03；数学题照片由 dots.ocr 或 PaliGemma 2 识别；语音输出使用 Cartesia Sonic-2。安全侧接入 Llama Guard 4，再叠加适龄过滤器，阻断成人内容、暴力和自伤；同时实现符合 COPPA 的记忆保留策略。
 
-效率研究是可交付的. 10名学习者,试验前和试验后,两周.报告学习增长的特拉和信心间隔.与非适应的基线 (不需要导师政策的线性内容) 进行比较.
+真正的交付物是效果研究：10 名学习者参与两周实验，完成前测和后测，并报告学习增益和置信区间。还要设置非自适应基线作为对照，即以固定顺序提供相同内容，不启用导师策略。
 
-## 建筑
+## 架构
 
 ```
 learner device
@@ -60,43 +60,43 @@ learner device
     memory access guarded by learner ID scope
 ```
 
-## 堆
+## 技术栈
 
-- 选择主题:K-12代数或Python介绍 (选择一个深度)
-- 导师政策:LangGraph与Claude Sonnet 4.7 (即时缓存)
-- 学习者模型:贝耶斯知识追踪 (经典) 或FSRS用于间隔
-- 课程图:概念的新4j+先决条件边缘+OER内容
-- 记忆:代理记忆式持久向量+剧情+语义存储
-- 声音:LiveKit代理 1.0 +卡特西亚索尼克-2 (重复使用的底石03子堆)
-- 图形数学:dots.ocr或PaliGemma 2用于识别方程
-- 安全:Llama Guard 4+适合年龄的定制过器
-- 率:率问题生成,测试前/后使用,有效性研究工具
+- 学科选择：K-12 代数或 Python 入门，二选一，重在深度而非广度
+- 导师策略：基于 Claude Sonnet 4.7 的 LangGraph，并启用提示缓存
+- 学习者模型：经典贝叶斯知识追踪，或使用 FSRS 安排间隔重复
+- 课程图谱：Neo4j，保存概念节点、先修关系边和 OER 内容
+- 记忆：agentmemory 风格的持久化向量、情景记忆和语义记忆存储
+- 语音：LiveKit Agents 1.0 + Cartesia Sonic-2，复用综合项目 03 的子栈
+- 拍照识题：dots.ocr 或 PaliGemma 2，负责识别方程
+- 安全：Llama Guard 4 + 自定义适龄过滤器
+- 评估：按 Bloom 认知层级生成题目、前后测框架与效果研究工具
 
 ```figure
 cf-tutor-loop
 ```
 
-## 建立它
+## 动手构建
 
-1. **Curriculum graph.**构建一个由50-150个概念节点组成的Neo4j (例如,从"数线"到"方程公式"的K-12代数) 具有先决条件边缘. 附加每个节点的OER内容 (Open Textbook, OpenStax).
+1. **构建课程图谱。** 建一张包含 50～150 个概念节点的 Neo4j 图。例如 K-12 代数可以从“数轴”一路覆盖到“二次方程求根公式”；边表示先修关系。每个节点都绑定 OER 内容，例如 Open Textbook 或 OpenStax。
 
-2. **Learner model.**开始使用先例来追踪贝耶斯知识:猜测,滑动,学习速度. 每次交互后更新每个概念的掌握. 持续每个学习者.
+2. **实现学习者模型。** 初始化贝叶斯知识追踪的先验参数，例如猜测概率、失误概率和学习转移概率。每次互动后更新对应概念的掌握概率，并按学习者分别持久化。
 
-3. **Tutor policy.**带节点的长图: `read_signal`(学习者的答案是否正确/部分/固?),`select_concept`(步行课程图选择最优先概念),`scaffold`现在,我们需要一个人来帮助我们.`update_mastery`现在,我们要去.
+3. **实现导师策略。** 用 LangGraph 搭建明确的节点图，至少包括：`read_signal`（判断学习者回答是正确、部分正确还是卡住）、`select_concept`（从课程图谱中选择优先级最高的概念）、`scaffold`（生成苏格拉底式提示）和 `update_mastery`。
 
-4. **Memory.**任何交互都会写到一个剧情商店. 错误和偏好促进语义记忆. COPPA 意识到保留政策:自动删除1年后,可以访问父母.
+4. **实现记忆。** 每次互动都写入情景记忆存储。错误模式和偏好经过提炼后进入语义记忆。保留策略必须符合 COPPA：默认一年后自动删除，并允许家长访问和删除数据。
 
-5. **Voice path.**通过Whisper-v3-turbo.TTS通过Cartesia Sonic-2. 支持轮 (重复使用 capstone 03 机械).
+5. **实现语音路径。** 把 LiveKit Agents 工作进程接到导师策略。ASR 使用 Whisper-v3-turbo，TTS 使用 Cartesia Sonic-2，并支持插话，复用综合项目 03 的机制。
 
-6. **Photo-math path.**运行dots.ocr或PaliGemma 2以识别方程; 输送给导师作为结构化输入.
+6. **实现拍照数学路径。** 允许上传或拍摄图片，用 dots.ocr 或 PaliGemma 2 识别方程，再把结果作为结构化输入传给导师系统。
 
-7. **Safety.**每个模型输出都通过了Llama Guard 4 + 适合年龄的过器 (阻止自伤,成人内容,暴力).学习者ID的内存访问范围;删除的父母访问表面.
+7. **落实安全控制。** 所有模型输出都必须经过 Llama Guard 4 和适龄过滤器，阻断自伤、成人内容和暴力内容。记忆访问必须限定在学习者 ID 范围内，并提供供家长删除数据的界面。
 
-8. **Efficacy study.**10名学习者,预测 (30个标准问题基础),两周的导师互动 (3个会议/周),测试后.
+8. **开展效果研究。** 招募 10 名学习者，先完成一份标准化 30 题前测；随后与导师系统互动两周，每周 3 次；最后完成后测。再与一组同样为 10 人的非自适应基线组比较：学习内容相同，但不启用自适应导师策略。
 
-9. **Weekly progress reports.**根据学习者,自动生成已探讨的主题,掌握轨迹和建议的下一步的PDF总结.
+9. **生成每周进度报告。** 为每位学习者自动生成 PDF 周报，总结已练习主题、掌握程度变化和下一步建议。
 
-## 用它
+## 运行示例
 
 ```
 learner: "I don't understand why 3x + 6 = 12 means x = 2"
@@ -110,50 +110,50 @@ learner: "6"
 [scaffold] "great. now what is 3x / 3 equal to?"
 ```
 
-## 运送它
+## 交付成果
 
-`outputs/skill-ai-tutor.md`具有多模式输入,学习模型,记忆,安全性和测量效率的专科特定适应教师.
+`outputs/skill-ai-tutor.md` 是本课交付物：一个面向特定学科的自适应导师系统，具备多模态输入、学习者模型、记忆和安全机制，并经过学习效果实测。
 
-| Weight | Criterion | How it is measured |
+| 权重 | 评判标准 | 衡量方式 |
 |:-:|---|---|
-| 25 | Learning gain delta | Pre/post-test delta in a 10-learner two-week study |
-| 20 | Socratic fidelity | Rubric score on transcript samples |
-| 20 | Multimodal UX | Voice + photo + text coherence end to end |
-| 20 | Safety + privacy posture | Llama Guard 4 pass rate + COPPA-aware retention |
-| 15 | Curriculum breadth and graph quality | Concept coverage + prerequisite graph consistency |
+| 25 | 学习增益 | 10 名学习者参与的两周研究中，前测与后测的差值 |
+| 20 | 苏格拉底式教学保真度 | 对话文本样本的量表评分 |
+| 20 | 多模态体验 | 语音、照片与文本的端到端一致性 |
+| 20 | 安全与隐私保障 | Llama Guard 4 通过率与符合 COPPA 的留存策略 |
+| 15 | 课程广度与图谱质量 | 概念覆盖度与先修关系图的一致性 |
 | **100** | | |
 
-## 运动
+## 练习
 
-1. 运行有效性研究,无论是没有适应性学习者模型 (随机概念顺序).报告 delta. 预计适应性赢得,但大小是有趣的数字.
+1. 运行两轮效果研究：一轮启用自适应学习者模型，另一轮随机排列概念顺序。报告两者差值。通常自适应方案会更好，但真正有价值的是量化它领先多少。
 
-2. 添加多模特探测器:相同的概念问题作为文字,声音和照片. 测量学习者是否更快地与他们喜欢的模式相结合.
+2. 增加多模态对照测试：同一道概念题分别通过文本、语音和照片呈现，测量学习者使用自己偏好的模态时是否掌握得更快。
 
-3. 建立一个主题仪表板:练习的主题,掌握轨迹,即将推出的概念,安全事件 (任何防护车道.
+3. 构建家长仪表板，显示已练习主题、掌握程度变化、即将学习的概念和安全事件，例如护栏命中。整体必须符合 COPPA。
 
-4. 增加语言交换模式:导师接受西班牙语输入,并以西班牙语教学.
+4. 增加语言切换模式：接受西班牙语输入，并使用西班牙语教学。测量 X-Guard 在这个场景下的覆盖情况。
 
-5. 强调记忆隐私:验证学习者A即使通过语音录像重新摄入攻击,也无法看到学习者B的数据.记录访问尝试和警报.
+5. 专门压测记忆隐私：验证学习者 A 即使发起重新摄取语音片段的攻击，也不能看到学习者 B 的数据。所有访问尝试都必须记录并告警。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|-----------------|------------------------|
-| Socratic policy | "Ask, do not dump" | Tutor asks a leading question rather than giving the answer |
-| Bayesian knowledge tracing | "BKT" | Classic learner-model equations for mastery probability per concept |
-| FSRS | "Free Spaced Repetition Scheduler" | 2024 spaced-repetition scheduler, better than SM-2 |
-| Curriculum graph | "Concept DAG" | Neo4j of concepts with prerequisite edges |
-| Episodic memory | "Per-interaction log" | Every interaction stored for later retrieval |
-| Semantic memory | "Learned pattern store" | Compacted mistakes and preferences promoted from episodic |
-| COPPA | "Kids privacy law" | US law restricting data collection from children under 13 |
+| 苏格拉底式策略 | “提问，不灌输” | 导师通过引导性提问教学，而不是直接给答案 |
+| 贝叶斯知识追踪 | “BKT” | 用于估计各概念掌握概率的经典学习者模型方程 |
+| FSRS | “Free Spaced Repetition Scheduler” | 2024 年的间隔重复调度器，优于 SM-2 |
+| 课程图谱 | “概念 DAG” | 用 Neo4j 表示的概念图，边表示先修关系 |
+| 情景记忆 | “逐次互动日志” | 保存每次互动，供之后检索 |
+| 语义记忆 | “学习到的模式库” | 从情景记忆中提炼并转入长期存储的错误模式与偏好 |
+| COPPA | “儿童隐私法” | 限制收集美国 13 岁以下儿童数据的法律 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Khanmigo (Khan Academy)](https://www.khanmigo.ai)参考消费者K-12教师
-- [Duolingo Max](https://blog.duolingo.com/duolingo-max/)参考语言学习教师
-- [Google LearnLM / Gemini for Education](https://blog.google/technology/google-deepmind/learnlm)托管的参考模型
-- [Quizlet Q-Chat](https://quizlet.com)替代参考
-- [Synthesis Tutor](https://www.synthesis.com)创业参考
-- [FSRS algorithm](https://github.com/open-spaced-repetition/fsrs4anki)间隔重复时间表
-- [Bayesian Knowledge Tracing](https://en.wikipedia.org/wiki/Bayesian_knowledge_tracing)学习者模型经典
-- [LiveKit Agents](https://github.com/livekit/agents)语音堆
+- [Khanmigo (Khan Academy)](https://www.khanmigo.ai) — 面向消费者的 K-12 导师参考产品
+- [Duolingo Max](https://blog.duolingo.com/duolingo-max/) — 语言学习导师参考产品
+- [Google LearnLM / Gemini for Education](https://blog.google/technology/google-deepmind/learnlm) — 托管式参考模型
+- [Quizlet Q-Chat](https://quizlet.com) — 另一种参考产品
+- [Synthesis Tutor](https://www.synthesis.com) — 初创公司参考产品
+- [FSRS algorithm](https://github.com/open-spaced-repetition/fsrs4anki) — 间隔重复调度器
+- [Bayesian Knowledge Tracing](https://en.wikipedia.org/wiki/Bayesian_knowledge_tracing) — 学习者模型中的经典方法
+- [LiveKit Agents](https://github.com/livekit/agents) — 语音技术栈
