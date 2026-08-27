@@ -1,41 +1,41 @@
 # 序列到序列模型
 
-> 两名RNN假装是翻译者. 他们遇到的瓶是人们的关注的原因.
+> 两个 RNN 扮演翻译器。它们遇到的瓶颈，正是注意力机制存在的原因。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 5 · 08 (CNNs + RNNs for Text), Phase 3 · 11 (PyTorch Intro)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 5 · 08（用于文本的 CNN + RNN）、阶段 3 · 11（PyTorch 入门）
+**Time:** 约 75 分钟
 
 ## 问题
 
-类别将变量长度序列映射到单个标签上. 翻译将变量长度序列映射到另一个变量长度序列上. 输入和输出在不同的词汇库中,可能是不同的语言,没有保证长度平衡.
+分类把一个变长序列映射为单一标签，翻译则把一个变长序列映射为另一个变长序列。输入和输出位于不同词表中，甚至可能属于不同语言，长度也不保证一致。
 
-后2seq架构 (Sutskever,Vinyals,Le,2014) 用一个简单的食谱来解解开这个问题.两个RNN.一个读取源句子并产生一个固体尺寸的语境向量.另一个读取该向量并生成目标句子代币.同一个代码你为08课写的,粘合在一起以不同的方式.
+序列到序列架构（Sutskever、Vinyals、Le，2014）用一套刻意保持简单的方法解决了这个问题：两个 RNN。一个读取源句子并生成定长上下文向量，另一个读取该向量并逐词元生成目标句子。它们就是你在第 08 课中写过的代码，只是以不同方式组合在一起。
 
-首先,文本向量瓶是NLP中最具教学效益的失败.它激励了注意力和变压器擅长的一切.第二,培训配方 (教师强迫,计划采样,线束搜索在推断) 仍然适用于包括LLM在内的每个现代生成系统.
+学习它有两个原因。首先，上下文向量瓶颈是自然语言处理中最具教学价值的失败案例，它解释了注意力机制和 Transformer 所有优势的由来。其次，这套训练方法（教师强制、计划采样、推理时的束搜索）仍然适用于包括大语言模型在内的每一种现代生成系统。
 
 ## 概念
 
-**Encoder.**读取源句子的RNN. 它的最后隐藏状态是**context vector**总结整个输入的总结. 据说除了源头之外,没有什么丢失.
+**编码器。** 一个读取源句子的 RNN。它最后的隐藏状态就是**上下文向量**——整个输入的定长摘要。据称除了源句子外，什么都没有丢失。
 
-**Decoder.**另一个RNN从文本向量初始化.在每个步骤中,它将先前生成的代币作为输入,并产生目标词汇中的分布. 样本或 argmax来选择下一个代币. 输入它.重复直到一个`<EOS>`标志产生的或最大长度被击中.
+**解码器。** 另一个用上下文向量初始化的 RNN。每一步都以上一个生成的词元作为输入，并输出目标词表上的概率分布。通过采样或 argmax 选择下一个词元，再把它送回模型。重复这一过程，直到生成 `<EOS>` 词元或达到最大长度。
 
-**Training:**通过两个网络,通过时间进行标准的背后支持.
+**训练：** 在解码器的每个步骤计算交叉熵损失，再沿序列求和。通过两个网络执行标准的随时间反向传播。
 
-**Teacher forcing.**在训练过程中,解码器的输入步骤`t`是位置上的*真实地图*符号`t-1`没有它,早期错误会发生,模型永远不会学习.在推断时,你必须使用模型的预测,所以总是存在火车/推理分布差距.这个差距被称为**exposure bias**现在,我们要去.
+**教师强制。** 训练时，解码器在步骤 `t` 的输入是位置 `t-1` 上的*真实*词元，而不是解码器自己上一步的预测。这样可以稳定训练；如果不这样做，早期错误会层层累积，模型始终无法学会。推理时必须使用模型自己的预测，因此训练分布与推理分布之间始终存在差距。这种差距称为**暴露偏差**。
 
-**The bottleneck.**编码器学到关于源的所有信息都必须挤进一个文本向量中.长短句子会失去细节.罕见的词语会模糊.重排 (聊天黑与黑猫) 必须记忆,而不是计算.
+**瓶颈。** 编码器从源文本学到的一切，都必须挤进唯一一个上下文向量。长句会丢失细节，罕见词会变得模糊，语序重排（chat noir 与 black cat）也只能靠记忆，而不能现场计算。
 
-注意力 (课 10) 通过让解码器查看 *每一个*编码器的隐藏状态,而不仅仅是最后一个.
+注意力机制（第 10 课）允许解码器查看编码器的*每一个*隐藏状态，而不只是最后一个，从而解决这个问题。这就是它的核心主张。
 
 ```figure
 lstm-gates
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:编码器
+### 第 1 步：编码器
 
 ```python
 import torch
@@ -54,9 +54,9 @@ class Encoder(nn.Module):
         return outputs, hidden
 ```
 
-`outputs`具有形状`[batch, seq_len, hidden_dim]`每一个输入位置一个隐藏状态.`hidden`具有形状`[1, batch, hidden_dim]`最后一步. 第08课说"分类输出".在这里我们将最后一个隐藏状态作为文本向量,并忽略每一步输出.
+`outputs` 的形状为 `[batch, seq_len, hidden_dim]`——输入的每个位置对应一个隐藏状态。`hidden` 的形状为 `[1, batch, hidden_dim]`——最后一个时间步的状态。第 08 课说过“用于分类时，在 outputs 上执行池化”。这里则把最后的隐藏状态保留为上下文向量，忽略逐时间步输出。
 
-### 步骤 2: 解码器
+### 第 2 步：解码器
 
 ```python
 class Decoder(nn.Module):
@@ -73,9 +73,9 @@ class Decoder(nn.Module):
         return logits, hidden
 ```
 
-输入:单个代币的批量和当前隐藏状态.输出:下一个代币和更新的隐藏状态的词汇记录.
+解码器每次只调用一步。输入是一批单词元和当前隐藏状态；输出是下一个词元的词表 logits 与更新后的隐藏状态。
 
-### 步骤3:教师强迫的训练循环
+### 第 3 步：采用教师强制的训练循环
 
 ```python
 def train_batch(encoder, decoder, src, tgt, bos_id, optimizer, teacher_forcing_ratio=0.9):
@@ -101,9 +101,9 @@ def train_batch(encoder, decoder, src, tgt, bos_id, optimizer, teacher_forcing_r
     return loss.item() / tgt_len
 ```
 
-两个值得命名的.`ignore_index=0`置代币的损失.`teacher_forcing_ratio`根据模型的预测,在每一步使用真符号的概率.从1.0开始 (完全强迫教师) 并在训练中降至0.5以缩小暴露偏差.
+这里有两个值得点明的参数。`ignore_index=0` 会跳过填充词元上的损失。`teacher_forcing_ratio` 是每一步使用真实词元而非模型预测的概率。可以从 1.0（完全教师强制）开始训练，再逐渐退火到约 0.5，以缩小暴露偏差。
 
-### 步骤4:推断循环 (贪)
+### 第 4 步：推理循环（贪心）
 
 ```python
 @torch.no_grad()
@@ -122,11 +122,11 @@ def greedy_decode(encoder, decoder, src, bos_id, eos_id, max_len=50):
     return torch.cat(output_ids, dim=1)
 ```
 
-贪的解码会在每一步都选择最有可能的代币. 它可以走开:一旦你承诺一个代币,**Beam search**保持了顶部...`k`部分序列活着,最后选择最高分的完整序列.
+贪心解码每一步都选择概率最高的词元，因此可能走入歧途：一旦选定某个词元，就无法收回。**束搜索**会保留得分最高的 `k` 个部分序列，最后再选出得分最高的完整序列。束宽通常设为 3～5。
 
-### 步骤5:瓶,已证明
+### 第 5 步：直观展示瓶颈
 
-训练模型做玩具复制任务:来源 `[a, b, c, d, e]`目标`[a, b, c, d, e]`增加序列长度,观察准确性.
+在玩具复制任务上训练模型：源序列为 `[a, b, c, d, e]`，目标序列同样为 `[a, b, c, d, e]`。逐渐增加序列长度并观察准确率。
 
 ```
 seq_len=5   copy accuracy: 98%
@@ -135,11 +135,11 @@ seq_len=20  copy accuracy: 62%
 seq_len=40  copy accuracy: 23%
 ```
 
-单个GRU隐藏状态不能无损地记住40代码输入.信息在每个编码器步骤上都存在,但解码器只能看到最后一个状态.注意力直接解决这一问题.
+单个 GRU 隐藏状态无法无损记住包含 40 个词元的输入。信息原本存在于编码器的每个时间步，但解码器只能看到最后一个状态。注意力机制会直接解决这个问题。
 
-## 用它
+## 学以致用
 
-皮托奇已经`nn.Transformer`其他`nn.LSTM`基于"接着"的模板.`transformers`库运输了大量的代码器和解码器模型 (BART,T5, mBART,NLLB),
+PyTorch 提供 `nn.Transformer` 和基于 `nn.LSTM` 的序列到序列模板。Hugging Face 的 `transformers` 库则提供在数十亿词元上训练的完整编码器—解码器模型（BART、T5、mBART、NLLB）。
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -152,27 +152,27 @@ out = model.generate(**src, max_new_tokens=50, num_beams=4)
 print(tok.decode(out[0], skip_special_tokens=True))
 ```
 
-现代编码解码器将RNN用于变压器.高层形状 (编码器,解码器,生成代币-按代币) 与2014年 seq2seq纸相同.每个区块内部的机制是不同的.
+现代编码器—解码器已经用 Transformer 取代 RNN。其高层形态（编码器、解码器、逐词元生成）与 2014 年的序列到序列论文完全相同，只是每个块内部的机制不同。
 
-### 什么时候还可以找到基于RNN的seq2seq
+### 何时仍应选择基于 RNN 的序列到序列模型
 
-对于新项目来说,几乎从来没有.
+对于新项目，几乎永远不应选择。具体例外包括：
 
-- 流媒体翻译,其中你一次输入一个代币,
-- 在设备上发送文字,变压器内存成本是极高的.
-- 了解编码和解码瓶是最快的方法来了解变压器为什么赢了.
+- 流式翻译：一次读取一个输入词元，并保持有界内存。
+- 设备端文本生成：Transformer 的内存成本高得无法承受。
+- 教学。理解编码器—解码器瓶颈，是理解 Transformer 为何胜出的最快途径。
 
-### 暴露偏见及其减轻
+### 暴露偏差及其缓解方法
 
-- **Scheduled sampling.**训练期间的教师强迫比率,使得模型学会从自己的错误中恢复.
-- **Minimum risk training.**训练用语句级蓝色分数而不是代币级交叉,更接近你真正想要的.
-- **Reinforcement learning fine-tuning.**奖励序列生成器用一个指标.
+- **计划采样。** 在训练期间逐步降低教师强制比例，让模型学会从自己的错误中恢复。
+- **最小风险训练。** 使用句子级 BLEU 分数而非词元级交叉熵进行训练，更接近真正的目标。
+- **强化学习微调。** 用指标奖励序列生成器，现代大语言模型的 RLHF 也采用这种思路。
 
-它们都适用于变压器发电.
+这三种方法同样适用于基于 Transformer 的生成。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/prompt-seq2seq-design.md`其他:
+保存为 `outputs/prompt-seq2seq-design.md`：
 
 ```markdown
 ---
@@ -192,26 +192,26 @@ Given a task (translation, summarization, paraphrase, question rewrite), output:
 Refuse to recommend training a seq2seq from scratch for under a million parallel examples. Flag any pipeline that uses greedy decoding for user-facing content as fragile (greedy repeats and loops).
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**执行玩具复制任务. 训练一个GRU seq2seq在输出输入对等目标的源. 测量精度在长度 5, 10, 20. 复制瓶.
-2. **Medium.**添加光束搜索解码. 3. 测量蓝色在一个小平行体上,以抵制贪. 光束搜索获胜的文件 (通常是最后的代币),并且它没有区别.
-3. **Hard.**精细调节`facebook/bart-base`根据10k对对对法拉斯数据集,比较细调模型的光束-4输出与基本模型的持久输入.报告BLEU,选择10个质量例子.
+1. **简单。** 实现玩具复制任务。在目标等于源序列的输入—输出对上训练 GRU 序列到序列模型，测量长度为 5、10、20 时的准确率，并复现瓶颈。
+2. **中等。** 增加束宽为 3 的束搜索解码。在小型平行语料库上测量相对于贪心解码的 BLEU，记录束搜索在哪些位置胜出（通常是最后几个词元），以及在哪些位置没有差异。
+3. **困难。** 在包含 1 万个样本对的释义数据集上微调 `facebook/bart-base`。比较微调模型与基础模型在留出输入上的 beam-4 输出，报告 BLEU，并挑选 10 个定性示例。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Encoder | Input RNN | Reads source. Produces per-step hidden states and a final context vector. |
-| Decoder | Output RNN | Initialized from context vector. Generates target tokens one at a time. |
-| Context vector | The summary | Final encoder hidden state. Fixed size. The bottleneck attention solves. |
-| Teacher forcing | Use true tokens | Feed the ground-truth previous token at training time. Stabilizes learning. |
-| Exposure bias | Train/test gap | Model trained on true tokens never practiced recovering from its own mistakes. |
-| Beam search | Better decoding | Keep top-k partial sequences alive at each step instead of committing greedily. |
+| 编码器 | 输入 RNN | 读取源序列，生成逐时间步隐藏状态和最终上下文向量。 |
+| 解码器 | 输出 RNN | 由上下文向量初始化，每次生成一个目标词元。 |
+| 上下文向量 | 摘要 | 编码器最终的隐藏状态，大小固定，也是注意力机制要解决的瓶颈。 |
+| 教师强制 | 使用真实词元 | 训练时输入上一个真实词元，可以稳定学习。 |
+| 暴露偏差 | 训练/测试差距 | 模型只在真实词元上训练，从未练习如何从自己的错误中恢复。 |
+| 束搜索 | 更好的解码 | 每一步保留得分最高的 k 个部分序列，而不是贪心地立即作出不可逆选择。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Sutskever, Vinyals, Le (2014). Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215)原始的"后二后二"纸.
-- [Cho et al. (2014). Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078)引入了GRU和编码器-解码器框架.
-- [Bahdanau, Cho, Bengio (2014). Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473)注意力论文. 课后立即阅读.
-- [PyTorch NLP from Scratch tutorial](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)可构建的seq2seq+注意码.
+- [Sutskever、Vinyals、Le（2014），使用神经网络进行序列到序列学习](https://arxiv.org/abs/1409.3215)——原始 seq2seq 论文，只有四页。
+- [Cho 等（2014），使用 RNN 编码器—解码器学习统计机器翻译的短语表示](https://arxiv.org/abs/1406.1078)——提出 GRU 和编码器—解码器框架。
+- [Bahdanau、Cho、Bengio（2014），通过联合学习对齐和翻译实现神经机器翻译](https://arxiv.org/abs/1409.0473)——注意力机制论文，请在本课之后立即阅读。
+- [PyTorch 从零开始学习 NLP 教程](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)——可以实际构建的 seq2seq + 注意力代码。
