@@ -1,24 +1,24 @@
-# 终端到终端的分发培训
+# 端到端分布式训练
 
-> 课程76到80每个构建一个件.这是组装:一个小型的GPT训练在4个模拟列表中使用DDP进行梯度同步,ZRO-1用于优化状态分化,并在半路标志上进行分化检查点.演示程序运行20步骤,自动结束,打印损失曲线加上存储配置文件,并写出可重复的检查点.
+> 第 76 至 80 课分别构建了一个组件。本课将它们组装起来：在 4 个模拟 rank 上训练一个微型 GPT，使用 DDP 同步梯度、使用 ZeRO-1 对优化器状态分片，并在训练中点保存分片检查点。演示程序运行 20 步后自行终止，打印损失曲线与内存概况，并写出可恢复的检查点。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 Track C lessons 42-49
-**Time:** ~90 min
+**Prerequisites:** 阶段 19 路线 C 第 42–49 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 组建DDP (课77) 加上ZRO-1 (课78) 加上分断检查站 (课80) 成为一个训练循环.
-- 在一个小型合成体内训练一个2层变压器语言模型,
-- 打印每步输失表,每级内存配置文件,以及一个检查点表,
-- 捍卫作文:每一首作品在早期课程中都可以独立测试,
+- 把 DDP（第 77 课）、ZeRO-1（第 78 课）与分片检查点（第 80 课）组合进同一个训练循环。
+- 在 4 个模拟 rank 上，用小型合成语料训练一个双层 Transformer 语言模型，共运行 20 步。
+- 打印逐步损失表、逐 rank 内存概况，以及能够在相同 world size 下恢复且字节完全一致的检查点清单。
+- 论证这种组合：前面各课已经分别验证每个组件，而本课证明它们能够协同工作。
 
 ## 问题
 
-石头是证明这些碎片合适的证据. 第76课 实施集体 课77将他们包裹在DPD. 课程 78 缩小_散射的优化状态. 分析了管道. 第80课拯救了一个破碎的检查站. 每个课程都有自己的考验. 如果组合错误,损失会偏离,检查点拒绝恢复,或者每级记忆量会增加,当它应该缩小时.
+综合项目的意义在于证明各个组件能够组合。第 76 课实现集合通信，第 77 课把它们封装成 DDP，第 78 课使用 reduce_scatter 对优化器状态进行分片，第 79 课分析流水线，第 80 课保存分片检查点。每一课都能独立运行并拥有自己的测试。真实训练则会同时使用所有原语；如果组合有误，损失会发散、检查点无法恢复，或者本应下降的逐 rank 内存反而增长。
 
-本课程进行了端到端演示,验证了四种不变: (a) 漂浮噪音的20个步骤中损失单调减少, (b) 每个级别在每一步都保持相同的参数标准, (c) 每级优化器内存等于 ZeRO-1公式12P/N字节, (d) 步骤10的检查点重装字节等于重启. 演示自动结束:20步,单次命令,出口0.
+本课会运行端到端演示，并验证四项不变量：（a）在浮点噪声范围内，损失在 20 个步骤中单调下降；（b）每个 rank 在每一步都持有相同的参数范数；（c）每个 rank 的优化器内存等于 ZeRO-1 公式 12P/N 字节；（d）第 10 步的检查点在重启后能够以逐字节相同的方式重新加载。演示会自行终止：20 步、单条命令、退出码为 0。
 
 ## 概念
 
@@ -32,94 +32,94 @@ flowchart TB
   F --> G[memory profile + resume verify + exit 0]
 ```
 
-### 迷你GPT
+### 微型 GPT
 
-模型是小的: 2个变压器块,嵌入式 32, 4个注意力头,词汇 64,序列长度 16,批量 4. 几千个参数. 足够大,可以执行每个线程决定 (多头注意力运行标准的掩盖路径;LayerNorm有重量进行同步;LM头是单独的线性投影回语音). 足够小,使4个CPU的20步数在几秒钟内完成.
+模型刻意保持很小：2 个 Transformer 块、嵌入维度 32、4 个注意力头、词表大小 64、序列长度 16、批次大小 4，总计数千个参数。它足够大，可以覆盖每项连线决策（多头注意力采用标准掩码路径；LayerNorm 有需要同步的权重；LM head 是一个单独映射回词表的线性投影）。它又足够小，可以让 4 个 CPU rank 上的 20 步训练在数秒内完成。
 
-### 组成规则
+### 组合规则
 
-| Lesson piece | What it owns | What it leaves to the loop |
+| 课程组件 | 负责内容 | 留给循环的内容 |
 |--------------|--------------|----------------------------|
-| DDP broadcast | Initial parameter sync | One call at construct time |
-| ZeRO-1 step | Gradient sync, master copy update, parameter broadcast | One call per step replacing optimiser.step |
-| Sharded checkpoint | Persist per-rank state, manifest with sha256 | Called on rank 0 with state collected via allgather |
-| Training loop | Forward, backward, loss logging | Calls the three above in order |
+| DDP 广播 | 初始参数同步 | 构造时调用一次 |
+| ZeRO-1 步骤 | 梯度同步、主副本更新、参数广播 | 每步调用一次，取代 optimiser.step |
+| 分片检查点 | 持久化逐 rank 状态、保存带 sha256 的清单 | 在 rank 0 上使用通过 allgather 收集的状态调用 |
+| 训练循环 | 前向传播、反向传播、损失记录 | 按顺序调用上述三个组件 |
 
-循环不知道 reduce_scatter 或 rendezvous 文件. ZeRO 和检查点模块暴露了循环构成的狭窄界面.
+循环不需要知道 reduce_scatter 或会合文件的细节。ZeRO 与检查点模块公开狭窄接口，供循环组合。
 
-### 为什么一个小的GPT而不是一个MLP
+### 为什么使用微型 GPT，而不只是 MLP
 
-课程77的MLP足以验证梯度同步. 一个小 GPT 增加了三个东西:一个单独的 LM 头在词汇上 (在这个课程中,解开为了清晰度; 完整的 GPT 通常将头绑定到代币嵌入), 软max+跨作为损失 (比MSE更多的数值边缘案例), 和一个不对称的前进 (嵌入,然后注意,然后每层MLP). 粘贴一个MLP的顶石将隐藏是否组合处理LayerNorm或嵌入层的格拉格形状正确.
+第 77 课的 MLP 已足以验证梯度同步。微型 GPT 额外带来三点：面向词表的独立 LM head（本课为清晰起见不与 token embedding 绑定；完整 GPT 通常会绑定二者）、作为损失函数的 softmax + 交叉熵（数值边界情况比 MSE 更多），以及非对称前向过程（嵌入，然后每层依次经过注意力与 MLP）。如果综合项目仍只使用 MLP，就无法暴露组合过程是否正确处理 LayerNorm 或嵌入层梯度形状。
 
-### 自动终止的意思是出口0
+### 自行终止意味着以 0 退出
 
-循环运行一个固定的20步,然后出门.`while True`没有人干预,没有外部状态的恢复.一个终点石,你可以让它运行不受监督,并在完成时找到一个完整的日志,这是一个证明系统是正确的线程.如果任何块局,演示器永远不会回来,测试平台抓住它.
+循环固定运行 20 步后退出。没有 `while True`，不需要人工干预，也不依赖外部状态恢复。一项能够无人看管地运行，并在结束时留下完整日志的综合项目，才能证明系统连线正确。如果任何组件发生死锁，演示就不会返回，测试装置会捕捉到它。
 
 ```figure
 ci-distributed-assembly
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现：
 
-- `MiniGPT`面具自警器和单独的LM头.
-- `make_corpus(seed, total_tokens)`预测数据:
-- `_train_worker`:每级发出;播出 init参数,运行循环,调用 ZeRO步骤,在步骤10上写下分断的检查点.
-- `verify_resume`: 在主运行后,在过程中重新加载步骤-10检查点,并表示保存的主分片与内存快照相匹配.
-- `main`编辑整个演示,打印损失表,内存配置文件和验证结果.
+- `MiniGPT`：带掩码自注意力与独立 LM head 的双层 Transformer。
+- `make_corpus(seed, total_tokens)`：生成确定性的下一 token 预测数据。
+- `_train_worker`：每个 rank 启动一个；广播初始参数、运行循环、调用 ZeRO 步骤，并在第 10 步写入分片检查点。
+- `verify_resume`：主运行结束后，在进程内重新加载第 10 步检查点，并断言保存的主分片与内存快照逐字节相同。
+- `main`：编排整个演示，打印损失表、内存概况与验证结果。
 
-运行它:
+运行：
 
 ```bash
 python3 code/main.py
 ```
 
-输出:一个20行损失表,一个每排的4行内存配置文件,一个检查点明示,以及成功的"回复验证"行.
+输出包括：20 行损失表、4 行逐 rank 内存概况、一份检查点清单，以及成功时的一行“RESUME VERIFIED”。
 
-## 野生生产模式
+## 生产环境中的常见模式
 
-对于真正的跑步,三种模式完成了构成.
+真实训练通常采用三种模式来完成这套组合。
 
-**Checkpoint every K minutes, not every K steps.**步骤时间与次数长度和微分数量不同.一个10分钟的检查点序列不论模型大小如何都能捕获相同的计算.课程使用步骤为简单;生产使用墙钟为基础.
+**每 K 分钟保存检查点，而不是每 K 步。** 步骤耗时会随序列长度与微批次数量变化。每 10 分钟保存一次检查点，无论模型大小如何，都能覆盖相同的计算量。本课为了简化而按步骤保存，生产环境则按实际时间保存。
 
-**Detect divergence early.**生产运行后添加一个后退的NAN保护器和损失峰值探测器;如果损失在一步中跳出超过2倍,然后滚回前检查点,而不是让优化者进入退化状态.课程的损失曲线是平滑的,因此保护器没有使用,但子仍然存在.
+**尽早检测发散。** 生产训练会在反向传播后增加 NaN 防护与损失突增检测器；如果损失在一步内增长超过 2 倍，就回滚到上一个检查点，而不是让优化器继续进入退化状态。本课的损失曲线很平滑，因此不会触发该防护，但接口仍保留。
 
-**Aggregate the memory profile across ranks.**每级记忆在实运行中因级别而异 (最大管道阶段的级别具有更多激活).生产记录了数组中最大的数量加上平均值;课程打印了每级别,以显示公式匹配.
+**跨 rank 汇总内存概况。** 真实训练中的逐 rank 内存并不相同（持有最大流水线阶段的 rank 会保存更多激活值）。生产系统会记录所有 rank 的最大值与平均值；本课则打印每个 rank，以显示结果符合公式。
 
-## 用它
+## 实际应用
 
-生产模式:
+生产模式：
 
-- **DeepSpeed.**组合DDP+ZeRO+管道+激活检查点在一个配置下.课程的组成是微型的DeepSpeed形状.
-- **PyTorch FSDP.**它们是原生的.`FullyShardedDataParallel`随着`ShardingStrategy.SHARD_GRAD_OP`现在,我们要做什么?
-- **NeMo and Megatron-LM.**加入非常大的模型的子平行;否则,组合是相同的形状.
+- **DeepSpeed。** 通过一份配置组合 DDP + ZeRO + 流水线 + 激活检查点。本课展示的是 DeepSpeed 架构的微型版本。
+- **PyTorch FSDP。** 原生等价方案。`FullyShardedDataParallel` 使用 `ShardingStrategy.SHARD_GRAD_OP` 时对应 ZeRO-2。
+- **NeMo 与 Megatron-LM。** 为最大规模模型加入张量并行；除此之外，组合形态相同。
 
-## 运送它
+## 交付成果
 
-整个轨道在这里结束.这六个课程是真正的团队在采用DeepSpeed之前建立的分布式训练子系统;抽象已经被证明与 gloo相反,失败模式已经被运行.第17阶段 (基础设施和生产) 是将这些运行到一个真正的集群的地点.
+完整路线到此结束。六节课程共同组成了真实团队在采用 DeepSpeed 前会构建的分布式训练子系统；该抽象已经在 gloo 上验证，相关失败模式也已经过演练。阶段 17（基础设施与生产）会把这套组合带到真实集群。
 
-## 运动
+## 练习
 
-1. 加入注意力头的子平行分区,验证损失匹配单级基线.两个排列:每排列的头半,全部减少注意力输出.
-2. 增加4微分钟的梯度积累,证明梯度等于一个大批量的梯度.
-3. 加入从步骤10开始的简历,实际上继续训练到步骤20,
-4. 添加出口指标 (损失,分级标准,步骤时间) 到JSONL,以便在事实之后可视化运行.
-5. 加入一个在损失点上回滚到前一个检查点的NAN保护器,并用一步LR乘法强制一个点来执行回滚.
+1. 对注意力头添加张量并行拆分，并验证损失与单 rank 基线一致。使用两个 rank：每个 rank 负责一半注意力头，并对注意力输出执行 allreduce。
+2. 添加跨 4 个微批次的梯度累积，证明结果梯度等于一个大批次的梯度。
+3. 添加从第 10 步实际恢复的路径，继续训练到第 20 步，并得到与原始运行相同的最终损失。
+4. 把指标（损失、梯度范数、步骤耗时）导出到 JSONL，让运行结束后能够可视化。
+5. 添加 NaN 防护，使系统在损失突增时回滚到前一个检查点；通过单步学习率倍增器强制制造一次突增，以演练回滚。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|------------------------|
-| End-to-end | "Wire it all up" | One run composes every piece, not a unit test per piece |
-| Memory profile | "GB per rank" | Bytes held on each rank for params, grads, optimiser state |
-| Resume contract | "Save and load" | Per-rank state byte-equal after a checkpoint round-trip |
-| Self-terminating | "Bounded run" | Fixed step count, exit 0 on completion, no human in the loop |
+| 端到端 | “全部连起来” | 一次运行组合全部组件，而不是每个组件各做一次单元测试 |
+| 内存概况 | “每个 rank 占多少 GB” | 每个 rank 为参数、梯度与优化器状态持有的字节数 |
+| 恢复契约 | “保存与加载” | 检查点往返后，每个 rank 的状态逐字节相同 |
+| 自行终止 | “有界运行” | 固定步骤数、完成后以 0 退出、过程中无需人工介入 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [DeepSpeed end-to-end training tutorial](https://www.deepspeed.ai/getting-started/)
-- [PyTorch FSDP advanced tutorial](https://pytorch.org/tutorials/intermediate/FSDP_advanced_tutorial.html)
-- [Megatron-LM training script reference](https://github.com/NVIDIA/Megatron-LM)
-- 第十九阶段 第七六至八十课 - - 每一段课程都包含
-- 第17阶段 - 将组合转移到一个真正的集群
+- [DeepSpeed 端到端训练教程](https://www.deepspeed.ai/getting-started/)
+- [PyTorch FSDP 高级教程](https://pytorch.org/tutorials/intermediate/FSDP_advanced_tutorial.html)
+- [Megatron-LM 训练脚本参考](https://github.com/NVIDIA/Megatron-LM)
+- 阶段 19 第 76–80 课——本课组合的各个组件
+- 阶段 17——把这套组合迁移到真实集群
