@@ -1,30 +1,30 @@
-# 关键点检测和姿势估计
+# 关键点检测与姿态估计
 
-> 姿势是一个排序的关键点.一个关键点探测器是热图回归器. 其他的都是会计.
+> 姿态是一组有顺序的关键点，关键点检测器则是一个热力图回归器，其余只是簿记工作。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 4 Lesson 06 (Detection), Phase 4 Lesson 07 (U-Net)
-**Time:** ~45 minutes
+**Prerequisites:** 第 4 阶段第 06 课（目标检测）、第 4 阶段第 07 课（U-Net）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 区分上下和下上姿势估计,并说明每一个姿势是什么时候使用的
-- 对于K键点的回归热图,以每键点的高斯目标,并在推断时提取键点坐标
-- 解释部分亲密性字段 (PAF) 以及下向上管道如何将关键点将分为实例
-- 使用MediaPipe Pose或MMPose来估算生产关键点,并了解其输出格式
+- 区分自顶向下与自底向上的姿态估计，并说明各自适用的场景
+- 使用每个关键点对应一个高斯目标的方式，回归 K 张关键点热力图，并在推理时提取关键点坐标
+- 解释肢体亲和场（PAF），以及自底向上流水线如何把关键点关联成不同实例
+- 使用 MediaPipe Pose 或 MMPose 进行生产级关键点估计，并理解其输出格式
 
-## 问题
+## 问题所在
 
-关键任务隐藏在许多名字下:人姿 (17 个身体关节),面部标志 (68 或 478 个点),手 (21 个点),动物姿势,机器人物体姿势,医学解剖学标志.它们每个都具有相同的结构:检测对象上的K分离点并输出它们的 (x, y) 坐标.
+关键点任务隐藏在许多名称背后：人体姿态（17 个身体关节）、面部关键点（68 或 478 个点）、手部姿态（21 个点）、动物姿态、机器人物体姿态，以及医学解剖标志点。它们都具有相同结构：检测物体上的 K 个离散点，并输出各点的 (x, y) 坐标。
 
-姿势估计是运动捕捉,健身应用,体育分析,手势控制,动画,AR试验和机器人抓取的基础. 2D 案例已经成熟; 3D 姿势 (从单个摄像头来估计世界坐标中的联合位置) 是当前的研究界限.
+姿态估计是动作捕捉、健身应用、体育分析、手势控制、动画、AR 试穿和机器人抓取的基础。二维姿态已经达到成熟生产水平；从单个相机估计世界坐标中的关节位置，也就是三维姿态，仍处于当前研究前沿。
 
-工程问题是规模.一个单个图像,一个人姿势是一个20ms的问题.在人群中30fps的多人姿势是一个不同的问题,不同架构.
+工程上的核心问题是规模。单张图像中的单人姿态只需 20 ms；拥挤场景中以 30 fps 处理多人姿态，则是另一个需要不同架构的问题。
 
-## 概念
+## 核心概念
 
-### 向上和下
+### 自顶向下与自底向上
 
 ```mermaid
 flowchart LR
@@ -41,30 +41,30 @@ flowchart LR
     style BU fill:#fef3c7,stroke:#d97706
 ```
 
-- **Top-down**首先检测到人,然后在每种作物上运行一个人均关键点模型.
-- **Bottom-up**一个前进传输预测所有关键点加上一个关键字段;组组它们.不论群众规模如何,持续时间.
+- **自顶向下**——先检测人物，再对每个人物裁剪区域运行关键点模型。准确率最高，但成本随人数线性增长。
+- **自底向上**——一次前向传播预测所有关键点和一个关联场，再把关键点分组。无论场景中有多少人，耗时基本恒定。
 
-顶部 (HRNet,ViTPose) 是精度领导者;下部 (OpenPose,HigherHRNet) 是拥挤场景的吞吐量领导者.
+自顶向下模型（HRNet、ViTPose）是准确率领先者；自底向上模型（OpenPose、HigherHRNet）则是拥挤场景中的吞吐量领先者。
 
-### 热图回归
+### 热力图回归
 
-没有退缩`(x, y)`直接预测一个`H x W`热地图每一个键点,一个位于真实位置的高斯斑点.
+模型不直接回归 `(x, y)`，而是为每个关键点预测一张 `H x W` 热力图，真实位置周围以高斯斑点表示。
 
 ```
 target[k, y, x] = exp(-((x - cx_k)^2 + (y - cy_k)^2) / (2 sigma^2))
 ```
 
-在推断时,每个热图的 argmax 是预测的关键点位置.
+推理时，每张热力图的 Argmax 就是预测关键点位置。
 
-为什么热图比直接回归更有效:网络的空间结构 (conv功能地图) 与空间输出自然一致.高斯目标也规范一个小的定位错误会产生小损失,而不是零.
+热力图优于直接回归，是因为网络的空间结构，也就是卷积特征图，可以自然对齐空间输出。高斯目标也具有正则化效果：很小的定位误差只会产生很小的损失，而不是直接归零。
 
 ### 亚像素定位
 
-为了获得子像素精度,通过将抛物线与 argmax 和其邻居相连,或使用已知的偏移来精炼.`(dx, dy) = 0.25 * (heatmap[y, x+1] - heatmap[y, x-1], ...)`方向.
+Argmax 只能给出整数坐标。若要获得亚像素精度，可以用 Argmax 及其邻居拟合抛物线，或者使用经典偏移方向 `(dx, dy) = 0.25 * (heatmap[y, x+1] - heatmap[y, x-1], ...)` 进行细化。
 
-### 部分亲密性领域 (PAF)
+### 肢体亲和场（PAF）
 
-开放Pose的俩用于下方上方关联.对于每个连接关键点的对 (例如左肩到左肘),预测一个2通道的领域,编码从一个向另一个指向的单元向量.将肩膀与肘部关联,将PAF整合在连接候选对的线路上;具有最高整体的对匹配.
+这是 OpenPose 用于自底向上关联的技巧。对于每对相连的关键点，例如左肩与左肘，预测一个双通道场，编码从一个点指向另一个点的单位向量。要把肩部与肘部联系起来，可以沿候选点对之间的直线积分 PAF，积分值最高的一对就会匹配。
 
 ```
 For each connection (limb):
@@ -73,27 +73,27 @@ For each connection (limb):
   Higher integral = stronger match
 ```
 
-优雅,可达到任意的群众规模,
+这个方法很优雅，而且无需针对每个人分别裁剪，就能扩展到任意拥挤程度。
 
-### COCO关键点
+### COCO 关键点
 
-标准的体位数据集:每个人17个关键点,PCK (正确关键点的百分比) 和OKS (对象关键点相似性) 作为指标.OKS是IoU的关键点模拟器,这是COCO mAP@OKS报告的.
+这是标准人体姿态数据集，每个人包含 17 个关键点，使用 PCK（正确关键点百分比）和 OKS（目标关键点相似度）作为指标。OKS 相当于关键点版本的 IoU，也是 COCO mAP@OKS 报告的指标。
 
-### 两维对三维
+### 二维与三维
 
-- **2D pose**图像坐标;在生产质量下解决 (MediaPipe,HRNet,ViTPose).
-- **3D pose**世界/摄像机坐标;仍在进行研究.
-  - 通过一个小的MLP (VideoPose3D) 将2D预测转换为3D.
-  - 直接3D回归从图像 (PyMAF, MHFormer).
-  - 为了地上的真相,设置多视图 (CMU Panoptic).
+- **二维姿态**——图像坐标，已经达到生产级质量（MediaPipe、HRNet、ViTPose）。
+- **三维姿态**——世界/相机坐标，仍是活跃研究方向。常见方法包括：
+  - 使用小型 MLP 把二维预测提升到三维（VideoPose3D）。
+  - 直接从图像回归三维坐标（PyMAF、MHFormer）。
+  - 使用多视角系统（CMU Panoptic）生成真值。
 
 ```figure
 cv3-pose-heatmap
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:高斯热图目标
+### 第 1 步：高斯热力图目标
 
 ```python
 import numpy as np
@@ -107,11 +107,11 @@ hm = gaussian_heatmap(64, 32, 32, sigma=2.0)
 print(f"peak: {hm.max():.3f} at ({hm.argmax() % 64}, {hm.argmax() // 64})")
 ```
 
-按键点的热图沿着一个道轴堆叠,提供了全部目标子.
+把每个关键点的热力图沿通道轴堆叠，就得到完整目标张量。
 
-### 步骤2: 小键点头
+### 第 2 步：微型关键点 Head
 
-通过U-Net的模型,输出K热图频道.
+下面是一个 U-Net 风格模型，输出 K 个热力图通道。
 
 ```python
 import torch.nn as nn
@@ -134,9 +134,9 @@ class TinyKeypointNet(nn.Module):
         return self.up2(u1)
 ```
 
-输入`(N, 3, H, W)`产量`(N, K, H, W)`损失是每像素的MSE对高斯目标.
+输入形状为 `(N, 3, H, W)`，输出形状为 `(N, K, H, W)`。损失是在高斯目标上计算的逐像素 MSE。
 
-### 步骤3: 推理 提取键点坐标
+### 第 3 步：推理——提取关键点坐标
 
 ```python
 def heatmap_to_coords(heatmaps):
@@ -155,11 +155,11 @@ coords = heatmap_to_coords(torch.randn(2, 4, 32, 32))
 print(f"coords: {coords.shape}")  # (2, 4, 2)
 ```
 
-为了提高子精度,在 argmax 周围插入.
+推理时只需一行。若要进行亚像素细化，可以在 Argmax 周围插值。
 
-### 步骤4:合成键点数据集
+### 第 4 步：合成关键点数据集
 
-简单:画出四个点在白色的画布上,
+任务很简单：在白色画布上绘制四个点，并让模型学会预测它们。
 
 ```python
 def make_synthetic_sample(size=64):
@@ -172,9 +172,9 @@ def make_synthetic_sample(size=64):
     return img, hms, kps
 ```
 
-很容易让一个小模型在一分钟内学会.
+这个任务足够简单，微型模型一分钟内就能学会。
 
-### 五步:培训
+### 第 5 步：训练
 
 ```python
 model = TinyKeypointNet(num_keypoints=4)
@@ -191,42 +191,42 @@ for step in range(200):
     opt.zero_grad(); loss.backward(); opt.step()
 ```
 
-## 用它
+## 实际应用
 
-- **MediaPipe Pose**谷歌的生产姿势估计器; 运输 WebGL + 手机运行时间低于10ms延迟.
-- **MMPose**综合研究代码库;每一个SOTA架构都具有预训练的权重.
-- **YOLOv8-pose**最快的实时多人姿势,只有一个前进的传球.
-- **transformers HumanDPT / PoseAnything**对开放词汇姿势 (任何对象,任何关键点集合) 的新视觉语言方法.
+- **MediaPipe Pose**——Google 的生产级姿态估计器，提供 WebGL 与移动端运行时，延迟低于 10 ms。
+- **MMPose**（OpenMMLab）——完整的研究代码库，包含各种当前最佳架构及预训练权重。
+- **YOLOv8-pose**——最快的实时多人姿态估计方案，只需一次前向传播。
+- **transformers HumanDPT / PoseAnything**——面向开放词汇姿态的新型视觉语言方法，可以处理任意物体和任意关键点集合。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-pose-stack-picker.md`一个提示,以视频/YOLOv8-pose/HRNet/ViTPose为期,群众规模和2D对3D需求.
-- `outputs/skill-heatmap-to-coords.md`写出每个生产姿势模型使用的子像素热地图到协调程序的技能.
+- `outputs/prompt-pose-stack-picker.md`——根据延迟、拥挤程度和二维/三维需求，在 MediaPipe / YOLOv8-pose / HRNet / ViTPose 中作出选择的提示词。
+- `outputs/skill-heatmap-to-coords.md`——编写每个生产级姿态模型都使用的亚像素热力图到坐标转换程序的技能。
 
-## 运动
+## 练习
 
-1. **(Easy)**报告平均值在预测和真实的关键点之间错误L2200步后.
-2. **(Medium)**添加子像素精炼:鉴于 argmax 位置,将一个 1D 抛物线沿 x 和 y 连接到邻近的像素. 报告准确度增长与整数 argmax.
-3. **(Hard)**构建一个2人合成数据集,每个图像显示4键点模式的两个实例.使用PAF预测哪个键点属于哪个实例的下游管道,并评估OKS.
+1. **（简单）** 在合成四点数据集上训练微型关键点模型，报告 200 步后预测关键点与真实关键点之间的平均 L2 误差。
+2. **（中等）** 加入亚像素细化：给定 Argmax 位置，使用相邻像素分别沿 x 和 y 拟合一维抛物线。报告相对于整数 Argmax 的精度提升。
+3. **（困难）** 构建双人合成数据集，每张图像包含两个四关键点实例。训练一个使用 PAF 的自底向上流水线，预测每个关键点属于哪个实例，并使用 OKS 评估。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Keypoint | "A landmark" | A specific ordered point on an object (joint, corner, feature) |
-| Pose | "The skeleton" | An ordered set of keypoints belonging to one instance |
-| Top-down | "Detect then pose" | Two-stage pipeline: person detector + per-crop keypoint model; highest accuracy |
-| Bottom-up | "Pose first, group later" | Single-pass all-keypoint prediction + grouping; constant time in crowd size |
-| Heatmap | "Gaussian target" | H x W tensor per keypoint with peak at the true location; the preferred regression target |
-| PAF | "Part Affinity Field" | 2-channel unit vector field encoding limb directions; used to group keypoints into instances |
-| OKS | "Keypoint IoU" | Object Keypoint Similarity; the COCO metric for pose |
-| HRNet | "High-Resolution Net" | The dominant top-down keypoint architecture; preserves high-res features throughout |
+| 关键点 | “标志点” | 物体上一个具有特定顺序的点，例如关节、角点或特征点 |
+| 姿态 | “骨架” | 属于同一个实例的一组有序关键点 |
+| 自顶向下 | “先检测，再估计姿态” | 两阶段流水线：人物检测器 + 逐裁剪关键点模型，准确率最高 |
+| 自底向上 | “先估计姿态，再分组” | 单次前向传播预测所有关键点，再进行分组；耗时不随人群规模增长 |
+| 热力图 | “高斯目标” | 每个关键点对应一张 H x W 张量，峰值位于真实位置，是首选回归目标 |
+| PAF | “肢体亲和场” | 编码肢体方向的双通道单位向量场，用于把关键点组合成实例 |
+| OKS | “关键点 IoU” | 目标关键点相似度，是 COCO 使用的姿态指标 |
+| HRNet | “高分辨率网络” | 主流自顶向下关键点架构，在整个网络中始终保留高分辨率特征 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [OpenPose (Cao et al., 2017)](https://arxiv.org/abs/1812.08008) 低至上的PAF;仍然是方法的最佳写作
-- [HRNet (Sun et al., 2019)](https://arxiv.org/abs/1902.09212)上下引用架构
-- [ViTPose (Xu et al., 2022)](https://arxiv.org/abs/2204.12484)简单的ViT作为一个姿势的脊柱;在许多基准上,目前的SOTA
-- [MediaPipe Pose](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker)实时生产姿势;2026年部署最快的堆
+- [《OpenPose》（Cao 等，2017）](https://arxiv.org/abs/1812.08008)——使用 PAF 的自底向上方法，至今仍是该方案最好的讲解
+- [《HRNet》（Sun 等，2019）](https://arxiv.org/abs/1902.09212)——自顶向下参考架构
+- [《ViTPose》（Xu 等，2022）](https://arxiv.org/abs/2204.12484)——使用普通 ViT 作为姿态骨干网络，在许多基准上处于当前最佳水平
+- [MediaPipe Pose](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker)——生产级实时姿态估计，是 2026 年部署速度最快的技术栈
