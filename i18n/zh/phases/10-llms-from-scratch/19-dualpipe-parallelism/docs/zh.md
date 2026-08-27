@@ -1,63 +1,63 @@
-# 双管平行
+# DualPipe 并行
 
-> 通过2 048个H800GPU训练, 跨节点专家的通讯成本为每一个GPU计算的1个GPU-小时. 半个时间,GPU都置. 双管 (DeepSeek,Dec 2024) 是一个双向管道,它与它们触发的通讯互联网重叠前后计算. 由于专家平行主义已经在各个行列中传播专家, 泡下降,吞吐量上升, 这一课是学习类型的, 了解双实际上做什么,以及海人工智能实验室的双V精炼为什么会降低2倍的参数成本,
+> DeepSeek-V3 使用 2,048 张 H800 GPU 训练，MoE 专家分散在不同节点上。跨节点专家全对全通信每消耗 1 个 GPU 小时的计算，就要再消耗 1 个 GPU 小时的通信，GPU 有一半时间处于空闲状态。DualPipe（DeepSeek，2024 年 12 月）是一种双向流水线，它把前向和反向计算与二者触发的全对全通信重叠起来。气泡减少、吞吐量提高；而一旦专家并行已经把专家分散到多个进程，保留两份模型参数副本（名称中“Dual”的由来）的成本也并不高。本课以学习型方式讲解 DualPipe 的实际工作原理，以及 Sea AI Lab 的 DualPipeV 改进如何以略紧张一些的气泡为代价，消除两倍参数成本。
 
-**Type:** Learn
-**Languages:** Python (stdlib, schedule simulator)
-**Prerequisites:** Phase 10 · 05 (distributed training, FSDP, DeepSpeed), Phase 10 · 14 (open-model architectures and MoE)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库，调度模拟器）
+**Prerequisites:** 阶段 10 · 05（分布式训练、FSDP、DeepSpeed）、阶段 10 · 14（开放模型架构与 MoE）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 两管前后面的四个组件,以及为什么每个组件都有自己的窗口.
-- 解释了管道泡问题,以及"无泡"在实践中与营销中意味着什么.
-- 通过手动追踪双管的时间表,为8个PP级和16个微批量,并确认前向和反向流填补彼此的空.
-- 声明DualPipeV (Sea AI Lab, 2025) 所做的交易:在专家平行性不活跃时,以稍大泡的成本降低2倍参数复制.
+- 说出 DualPipe 前向-反向块的四个组成部分，并解释为什么每一部分都拥有自己的重叠窗口。
+- 解释大规模流水线气泡问题，以及“无气泡”在实践和营销话语中分别意味着什么。
+- 手工追踪 8 个流水线并行进程、16 个微批次的 DualPipe 调度，确认正向流与反向流会填补彼此的空闲槽位。
+- 说明 DualPipeV（Sea AI Lab，2025）的取舍：当专家并行未启用时，它以稍大的气泡为代价，消除两倍参数复制。
 
 ## 问题
 
-在2KH800GPU上训练671BMoE模型,
+在 2,000 张 H800 GPU 上训练 671B MoE 模型，会遇到三个相互叠加的瓶颈：
 
-1. **Memory pressure.**每个GPU都包含一个模型的片段. 激活内存在8k序列上,在128个头上,在61层上是巨大的.
-2. **Pipeline bubbles.**传统的管道平行 (GPipe, 1F1B) 让GPU在等待阶段输入或梯度时停滞不前.在8个阶段,即使是1F1B计划,大约12%的GPU时间也可以泡.
-3. **Cross-node all-to-all.**通过专家平行化,MoE将专家分散在节点之间.每一个前进通行都会触发一个全通向向专家发送代币,另一个将代币结合起来.在2kGPU时,这很容易成为1:1计算与通信比率.
+1. **内存压力。** 每张 GPU 保存模型的一部分。在 61 层、128 个头、8k 序列长度下，激活内存极其庞大。
+2. **流水线气泡。** 传统流水线并行（GPipe、1F1B）会让 GPU 在等待本阶段的输入或梯度时空闲。即使采用 1F1B 调度，在 8 个阶段下仍可能有约 12% 的 GPU 时间浪费在气泡中。
+3. **跨节点全对全通信。** 使用专家并行的 MoE 会把专家分散到多个节点。每次前向传播都要执行一次全对全通信，把词元分发给相应专家，再执行一次以汇总结果。在 2,000 张 GPU 的规模上，计算与通信的耗时比很容易达到 1:1。
 
-每个解决方案都有不同的解决方案:对内存的梯度检查,对管道泡的零泡 (海人工智能实验室, 2023) 双的做法是让他们一起玩. 时间表在一个前后回的部分内覆盖计算和通信,同时从管道的两端注入微批量,并使用结果的时间表在计算窗口内隐藏所有内容.
+每个问题都有独立的解决方案：梯度检查点缓解内存压力；Zero Bubble（Sea AI Lab，2023）减少流水线气泡；专家并行通信内核优化全对全通信。DualPipe 所做的是让这些方案协同工作。它在同一个前向-反向块中重叠计算与通信，同时从流水线两端注入微批次，再利用生成的调度把全对全通信隐藏在计算窗口内。
 
-报告结果:近乎消除了管道泡, 在DeepSeek-V3的14.8T代币训练中使用了超过95%的GPU.
+报告结果是：流水线气泡接近消除，DeepSeek-V3 的 14.8T 词元训练中，GPU 利用率超过 95%。
 
 ## 概念
 
-### 管道平行性更新
+### 流水线并行回顾
 
-通过P设备分开一个N层模型.`i`保持层次`i * N/P .. (i+1) * N/P - 1`微批流通过设备0向P-1,然后从P-1向0向后流动.每种设备只能在前端设备发出输出时启动前端阶段,而下端设备发出上游梯度时才可以向后流动.
+把一个 N 层模型拆到 P 台设备上。设备 `i` 保存第 `i * N/P .. (i+1) * N/P - 1` 层。微批次先从设备 0 到 P-1 依次向前流动，再从 P-1 到 0 反向传播。每台设备只有在前一台设备发送输出后才能开始自己的前向阶段，也只有在下游设备发回上游梯度后才能开始反向阶段。
 
-GPipe (Huang等人,2019) 每次安排一个微批次,这浪费了大部分GPU时间. 通过1F1B (Narayanan等,2021年) 进行多个微批次的前后和后后传. 零泡 (Qi等, 2023) 将后退通道分为两个部分 (后退输入 (B) 和后退输入 (W) ,并安排它们填满泡. 气泡后,管道几乎紧张.
+GPipe（Huang 等，2019）一次只调度一个微批次，大部分 GPU 时间因而被浪费。1F1B（Narayanan 等，2021）交错执行多个微批次的前向与反向传播。Zero Bubble（Qi 等，2023）把反向传播拆成两部分——输入梯度反向传播（B）与权重梯度反向传播（W）——再调度它们来填补气泡。采用 Zero Bubble 后，流水线已经几乎没有空隙。
 
-双管是下一步,它增加了两个想法:
+DualPipe 是下一步，在此基础上增加两个想法：
 
-### 想法1:碎片分解
+### 思路 1：块分解
 
-每个前面的部分分为四个组成部分:
+每个前向块被拆成四个组成部分：
 
-- **Attention.**预测,注意力,输出预测.
-- **All-to-all dispatch.**交叉节点通信,向他们的专家发送代币.
-- **MLP.**电脑专家计算.
-- **All-to-all combine.**通过节点交通信,使专家输出回来.
+- **注意力。** Q/K/V 投影、注意力、输出投影。
+- **全对全分发。** 把词元发送到其专家所在节点的跨节点通信。
+- **MLP。** MoE 专家计算。
+- **全对全汇总。** 把专家输出送回来的跨节点通信。
 
-一个倒退的部分添加了每个这些版本的梯度版本.双管将它们安排,使所有到所有的发送与下一个部分的注意力计算并行,而所有到所有的组合与下一个部分的MLP计算并行.
+DualPipe 的调度方式是：让全对全分发与下一个块的注意力计算并行，让全对全汇总与再下一个块的 MLP 计算并行。反向块也会加入每一部分对应的梯度版本。
 
-### 两方向安排
+### 思路 2：双向调度
 
-大多数管道计划从0阶段注入微批量,并向P1阶段流动.双管从两端注入微批量.0阶段看到来自那里的前微批量;P1阶段看到来自那里的前微批量.两个流在中间相遇.
+大多数流水线调度从阶段 0 注入微批次，再让其流向阶段 P-1。DualPipe 则从*两端*同时注入微批次。阶段 0 会看到从这一端出发的前向微批次，阶段 P-1 也会看到从另一端出发的前向微批次。两股数据流在中间相遇。
 
-为了使这起作用,设备`i`必须保持早期管道层的两者都`i`并且是后期管道层.`P - 1 - i`这就是DualPipe的"双重"部分:每个设备都保留需要服务的模型层的两个副本 (每个方向都需要一个).在DeepSeek-V3的规模上,这是一项2倍的参数复制成本.这是负担得起的,因为专家平行已经分散了MoE专家,这么薄,复制非专家层两次是小子.
+要实现这一点，设备 `i` 必须同时保存流水线前端的第 `i` 层，以及后端的第 `P - 1 - i` 层。这就是 DualPipe 中“Dual”的含义：每台设备都保留自己为两个方向服务所需的两份模型层。在 DeepSeek-V3 的规模上，这会产生两倍参数复制成本。但专家并行已经把 MoE 专家高度分散到各进程，所以再复制一次非专家层只是很小的代价。
 
-重要的是,向前流向的方向和向后流向的方向相叠加,
+关键在于，一个方向的前向流与另一个方向的反向流，恰好会在单向调度产生气泡的位置重叠。气泡由此消失。
 
-### 一个手动追踪的时间表
+### 手工追踪调度
 
-考虑P=4个行,8个微批,分为4个前进/4个倒车.时间从左到右移动;行是设备行.
+考虑 P = 4 个进程、8 个微批次，分成 4 个正向批次与 4 个反向批次。时间从左向右推进，每一行代表一个设备进程。
 
 ```
            Time →
@@ -67,101 +67,101 @@ rank 2:        F1 F2  F3/F5R F4/F6R    B1 ...
 rank 3:           F1  F2/F5R F3/F6R    ...
 ```
 
-读取"F4/F5R"标记:排名1在同一时间段前行于微批4 (在管道中从左到右) 和微批5 (从右到左) 前行.
+“F4/F5R”表示：进程 1 在同一个时间槽中，既执行微批次 4 沿流水线从左到右的前向传播，也执行微批次 5 从右到左的前向传播。这就是“双向”在实际运行中的含义。
 
-在排名2的交叉流更早重叠,在排名0和P-1的交叉流最晚重叠.在时间表的稳定的中期,每个排名都在X方向前面和Y方向后面重叠.计算繁忙.前进通行的全通发送器隐藏在后退计算中.全通组合隐藏在前进计算中.泡被挤出.
+在进程 2 上，两股流更早重叠；在进程 0 与 P-1 上则最晚重叠。在调度的稳定中间阶段，每个进程都把 X 方向的前向传播与 Y 方向的反向传播重叠起来。计算单元保持繁忙，前向传播的全对全分发隐藏在反向计算中，全对全汇总则隐藏在前向计算中，气泡被挤出。
 
-### 泡会计
+### 气泡核算
 
-标准1F1B管道泡 (每级浪费时间):
+标准 1F1B 流水线气泡（每个进程浪费的时间）为：
 
 ```
 bubble_1F1B = (P - 1) * forward_chunk_time
 ```
 
-双管,在稳定的阶段,如果微批次数是可乘以管道深度的2倍的零泡.在稳定的阶段 (加热和冷却) 外,有一些泡,但它不会随着微批次数而增长.
+Zero Bubble 改进会将其降低，却无法真正归零。在稳定阶段，如果微批次数可以被流水线深度的两倍整除，DualPipe 的气泡为零。稳定阶段之外（预热与冷却）仍有少量气泡，但不会随微批次数增长——这是论文强调的关键性质。
 
-在营销方面: "无泡".在技术方面:泡不会随着微批次数而生长.海人工智能实验室的后续分析 (DualPipeV / Cut-in-half) 显示只有当专家平行主义不是瓶时才会完全零泡;在以 EP为导向的全至全的情况下,总是存在一些安排妥协.
+营销语言称其“无气泡”；准确的技术说法是：气泡不会随微批次数增长。Sea AI Lab 的后续分析（DualPipeV / Cut-in-half）表明，只有当专家并行不是瓶颈时，才能实现完全零气泡；在专家并行驱动的全对全通信下，总要做出一定的调度取舍。
 
-###       
+### DualPipeV——改进版本
 
-海洋AI实验室 (2025) 观察到,当EP通信重叠不是重点时, 2x参数复制是浪费的. 它们的双PipeV计划将双向注射折叠成一个"V形"计划, 泡比双管大一点,但存储量相当大. 果公司在其开源DualPipe实现中采用了DualPipeV作为EP-off模式.
+Sea AI Lab（2025）指出，当重点不在于重叠专家并行通信时，两倍参数复制是一种浪费。他们的 DualPipeV 调度把双向注入折叠成“V 形”调度，只使用一份参数副本。气泡比 DualPipe 稍大，但节省的内存十分可观。DeepSeek 在开源 DualPipe 实现中，把 DualPipeV 用作关闭专家并行时的模式。
 
-交易:
+具体取舍如下：
 
-| Feature | DualPipe | DualPipeV | 1F1B | Zero Bubble |
+| 特性 | DualPipe | DualPipeV | 1F1B | Zero Bubble |
 |---------|---------|-----------|------|------------|
-| Param copies per device | 2 | 1 | 1 | 1 |
-| Bubble vs micro-batches | constant | small growth | grows | grows |
-| Compute-comm overlap | full | partial | minimal | partial |
-| Use when | EP-heavy MoE | dense or EP-light | baseline | any pipeline |
+| 每台设备的参数副本数 | 2 | 1 | 1 | 1 |
+| 气泡随微批次数的变化 | 恒定 | 小幅增长 | 增长 | 增长 |
+| 计算-通信重叠 | 完整 | 部分 | 最少 | 部分 |
+| 适用场景 | 专家并行密集型 MoE | 稠密模型或轻量专家并行 | 基线 | 任意流水线 |
 
-### 这意味着 14,8T的代币运行
+### 对 14.8T 词元训练意味着什么
 
-在大约2.8亿GPU小时内, DeepSeek-V3的预训练用了2.048个H800GPU上的14.8T代币. 如果1F1B是天真的,他们会失去12-15%的管道泡340-420KGPU-小时,足以训练一个完整的70B模型. 双管检索了大部分. 直接量化贡献是很难的,没有内部日志,但论文中的说法是超过95%的GPU使用率在培训中平均.
+DeepSeek-V3 的预训练在 2,048 张 H800 GPU 上处理 14.8T 个词元，共消耗约 280 万 GPU 小时。若使用朴素 1F1B，其中 12%～15% 会浪费在流水线气泡上——相当于 34 万～42 万 GPU 小时，足够完整训练一个 70B 模型。DualPipe 收回了其中大部分时间。没有内部日志，很难精确量化其单独贡献，但论文声称整个训练期间的平均 GPU 利用率超过 95%。
 
-对于较小的运行 (低于1kGPU),DualPipe是过度的管道泡较小相对于总成本,密集型训练很少达到全方位瓶.对于跨界MoE训练在数千GPU规模,它是有效的要求.
+对于少于 1,000 张 GPU 的小规模训练，DualPipe 属于过度设计——流水线气泡相对于总成本更小，稠密模型训练也很少触及全对全通信瓶颈。对于使用数千张 GPU 的前沿 MoE 训练，它实际上不可或缺。
 
-### 在堆里.
+### 它位于技术栈的什么位置
 
-- 补充**FSDP**(阶段10 · 05).FSDP将模型参数分为数列;DualPipe将数列计算时间表.
-- 适合**ZeRO-3**两副本复制的账户需要与ZERO的碎片梯度合作.
-- 需要**custom all-to-all kernels**根据 DeepSeek 的开源核心,
+- 与 **FSDP**（阶段 10 · 05）互补。FSDP 在进程之间分片模型参数，DualPipe 在进程之间调度计算，两者可以组合。
+- 与 **ZeRO-3** 梯度分片兼容。双副本的记录逻辑需要与 ZeRO 的分片梯度配合。
+- 需要针对具体集群拓扑优化的**自定义全对全内核**。DeepSeek 的开源内核是参考实现。
 
 ```figure
 expert-capacity
 ```
 
-## 用它
+## 学以致用
 
-`code/main.py`需要一个模拟器.`(P, n_micro_batches, schedule)`它们是指数与论文中的质量要求相匹配,而不是指量生产速度的要求.
+`code/main.py` 是流水线调度模拟器。它接收 `(P, n_micro_batches, schedule)`，并打印 1F1B、Zero Bubble、DualPipe 与 DualPipeV 各自稳定阶段的利用率。它是教学工具——数值符合论文中的定性结论，但不声称等同于生产实测加速。
 
-模拟器的值:用不同的P和微批数运行,看看泡分数如何增长1F1B,但不是DualPipe.
+这个模拟器的价值在于：用不同的 P 与微批次数运行，就能观察 1F1B 的气泡比例如何增长，而 DualPipe 不会。
 
-实质培训的整合考虑因素:
+真实训练任务中的集成注意事项：
 
-- 选择一个平行深度, 清晰地分为微批次数.
-- 确保你的专家并行网支持双向的通用.
-- 预计第一次会耗费一周的时间调试时间.
-- 双的好处来自于紧缩拖延器.
+- 选择能够整除微批次数的流水线并行深度。
+- 确保专家并行网格支持双向全对全通信。DeepSeek 的内核是参考实现。
+- 首次接入时，预计要花一周调试调度本身。记录逻辑很繁琐。
+- 监控每个进程的 GPU 利用率，而不只是汇总值。DualPipe 的收益来自缩小最慢进程造成的拖尾。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-dualpipe-planner.md`鉴于训练集群规格 (GPU数量,拓学,互联网,模型形状),它建议采用管道平行化策略,使用的规划算法以及预期的泡分数在目标规模上.
+本课会生成 `outputs/skill-dualpipe-planner.md`。给定训练集群规范（GPU 数量、拓扑、互连、模型形状），它会推荐流水线并行策略、应采用的调度算法，以及目标规模下的预期气泡比例。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`现在`(P=8, micro_batches=16, schedule=dualpipe)`其他`(P=8, micro_batches=16, schedule=1f1b)`计算GPU使用率差异,并以每百万训练代币的GPU-小时计算.
+1. 运行 `code/main.py`，分别使用 `(P=8, micro_batches=16, schedule=dualpipe)` 和 `(P=8, micro_batches=16, schedule=1f1b)`。计算 GPU 利用率差异，并换算为每训练一百万个词元收回的 GPU 小时。
 
-2. 绘制时间表`(P=4, micro_batches=8, schedule=dualpipe)`标记每一个时间区块,用微批次的ID和方向. 确定泡缺失的第一个时间区块.
+2. 手工画出 `(P=4, micro_batches=8, schedule=dualpipe)` 的调度表，在每个时间槽中标记微批次 ID 与方向，并找出第一个没有气泡的时间槽。
 
-3. 阅读深度搜索-V3技术报告的5个图 (arXiv:2412.19437). 确定双管前部件内部的全向发送的重叠窗口.解释计算时间表如何隐藏它.
+3. 阅读 DeepSeek-V3 技术报告（arXiv:2412.19437）图 5，找出 DualPipe 前向块内全对全分发的重叠窗口，并解释计算调度如何隐藏这段通信。
 
-4. 计算双管的2倍参数上费用,用于70B密集型型号,P=8管道阶段和671BMoE模型,P=16管道阶段. 显示为什么MoE外费用比较小 (大多数参数是专家,分为大型EP组).
+4. 分别计算流水线阶段 P=8 的 70B 稠密模型，以及流水线阶段 P=16 的 671B MoE 模型采用 DualPipe 时的两倍参数开销。说明为什么 MoE 场景中的相对开销更小：大多数参数属于专家，并在大型专家并行组中分片。
 
-5. 根据该文件的3.4节,确定双管没有的两个特定属性.
+5. 将 DualPipe 与 Chimera（2021 年提出的竞争性双向调度器）比较。以论文第 3.4 节为依据，找出 DualPipe 新增而 Chimera 不具备的两项具体性质。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|------------------------|
-| Pipeline bubble | "Idle time per rank" | GPU cycles wasted because a pipeline stage is waiting for its input or gradient |
-| 1F1B | "Default pipeline schedule" | One forward / one backward interleaved scheduling; the baseline DualPipe beats |
-| Zero Bubble | "Sea AI Lab 2023" | Splits backward into B (input gradient) and W (weight gradient); almost fully tightens the pipeline |
-| DualPipe | "DeepSeek-V3 schedule" | Bidirectional pipeline + compute-comm overlap; bubbles do not grow with micro-batch count |
-| DualPipeV | "Cut-in-half" | V-shape refinement that drops the 2x parameter replication at the cost of slightly larger bubbles |
-| Chunk | "Unit of pipeline work" | A forward or backward pass of one micro-batch through one pipeline stage |
-| All-to-all dispatch | "Send tokens to experts" | Cross-node comm that routes tokens to their assigned MoE experts |
-| All-to-all combine | "Bring expert outputs back" | Cross-node comm that gathers expert outputs after the MLP |
-| Expert Parallelism (EP) | "Experts across GPUs" | Shards MoE experts across ranks so different GPUs hold different experts |
-| Pipeline Parallelism (PP) | "Layers across GPUs" | Shards model layers across ranks; the dimension DualPipe schedules |
-| Bubble fraction | "Wasted GPU time" | (bubble_time / total_time); the fraction DualPipe drives toward zero |
+| 流水线气泡 | “每个进程的空闲时间” | 流水线阶段因等待输入或梯度而浪费的 GPU 周期 |
+| 1F1B | “默认流水线调度” | 一次前向/一次反向的交错调度；DualPipe 所击败的基线 |
+| Zero Bubble | “Sea AI Lab 2023” | 把反向传播拆成 B（输入梯度）与 W（权重梯度）；几乎完全收紧流水线 |
+| DualPipe | “DeepSeek-V3 调度” | 双向流水线 + 计算通信重叠；气泡不会随微批次数增长 |
+| DualPipeV | “对半切分” | V 形改进方案，以略大的气泡为代价，消除两倍参数复制 |
+| 块 | “流水线工作单元” | 一个微批次通过一个流水线阶段的一次前向或反向传播 |
+| 全对全分发 | “把词元发给专家” | 将词元路由到指定 MoE 专家的跨节点通信 |
+| 全对全汇总 | “把专家输出带回来” | 在 MLP 后收集专家输出的跨节点通信 |
+| 专家并行（EP） | “把专家分布到多张 GPU” | 在不同进程上分片 MoE 专家，使不同 GPU 保存不同专家 |
+| 流水线并行（PP） | “把层分布到多张 GPU” | 在不同进程上分片模型层；DualPipe 所调度的维度 |
+| 气泡比例 | “浪费的 GPU 时间” | bubble_time / total_time；DualPipe 会推动它趋近于零 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [DeepSeek-AI — DeepSeek-V3 Technical Report (arXiv:2412.19437), Section 3.3.2 and Figure 5](https://arxiv.org/abs/2412.19437)主要的双管参考
-- [DeepSeek — DualPipe GitHub repository](https://github.com/deepseek-ai/DualPipe)开源参考实现,包括双PipeV (切断半) 模式
-- [Qi et al. — Zero Bubble Pipeline Parallelism (arXiv:2401.10241, Sea AI Lab 2023)](https://arxiv.org/abs/2401.10241)零泡前身
-- [Sea AI Lab — DualPipe could be better without the Dual](https://sail.sea.com/blog/articles/63) 分析了DeepSeek的EP-off模式
-- [Narayanan et al. — PipeDream / 1F1B (arXiv:1806.03377, 2018-2021)](https://arxiv.org/abs/1806.03377)1F1B计划对双管相比
-- [Huang et al. — GPipe (arXiv:1811.06965, 2018)](https://arxiv.org/abs/1811.06965)原始的管道平行性纸和泡问题
+- [DeepSeek-AI——DeepSeek-V3 技术报告（arXiv:2412.19437），第 3.3.2 节与图 5](https://arxiv.org/abs/2412.19437)——DualPipe 的第一手资料
+- [DeepSeek——DualPipe GitHub 仓库](https://github.com/deepseek-ai/DualPipe)——开源参考实现，包括 DualPipeV（Cut-in-half）模式
+- [Qi 等——Zero Bubble 流水线并行（arXiv:2401.10241，Sea AI Lab 2023）](https://arxiv.org/abs/2401.10241)——Zero Bubble 前身
+- [Sea AI Lab——DualPipe：少即是多，V 形调度优于双流水线](https://sail.sea.com/blog/articles/63)——启发 DeepSeek 关闭专家并行模式的 DualPipeV 分析
+- [Narayanan 等——PipeDream / 1F1B（arXiv:1806.03377，2018～2021）](https://arxiv.org/abs/1806.03377)——DualPipe 对比的 1F1B 调度
+- [Huang 等——GPipe（arXiv:1811.06965，2018）](https://arxiv.org/abs/1811.06965)——最初的流水线并行论文与气泡问题
