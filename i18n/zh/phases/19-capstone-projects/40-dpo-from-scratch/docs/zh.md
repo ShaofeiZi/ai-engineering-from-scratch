@@ -1,62 +1,62 @@
-# 石40课:从零开始直接优化偏好
+# 从零实现 Direct Preference Optimization
 
-> 奖励模型和PPO是经典的RLHF堆. 投资者将这些积分分分成一个监督损失, 这一课从奖励差异身份中提取了DPO损失,运输了一个工作参考模型加上政策模型,计算每个代币日志概率,并训练一个小变压器在选择和拒绝完成的偏好固定. 测试将损失数学和梯度方向固定在脚本上,
+> Reward models 和 PPO 构成了经典 RLHF 堆栈。DPO 则把这套流程压缩成一个单独的监督式 loss，直接在 preference pair 上拟合 policy。本课会从 reward-difference identity 推导 DPO loss，交付一个可运行的 reference model 与 policy model，计算逐 token 的 log-probability，并在一份由 chosen completion 和 rejected completion 组成的偏好 fixture 上训练一个小型 transformer。测试会把 loss 数学、梯度方向和 reference 不变性钉死，确保实现和论文一致。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python (torch, numpy)
-**Prerequisites:** Phase 19 lessons 30-37 (NLP LLM track: tokenizer, embedding table, attention block, transformer body, pre-training loop, checkpointing, generation, perplexity)
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段第 30 到 37 课（NLP LLM 路线：分词器、嵌入表、注意力模块、Transformer 主体、预训练循环、检查点、生成与困惑度）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 根据"日志比分差异"的标志性,将DPO损失推移到隐含的奖励.
-- 建立一个参考模型+政策模型对,包括一个结的参考和一个可训练的政策.
-- 在两种模型中计算序列级日志概率,掩盖提示令牌.
-- 培训政策`(prompt, chosen, rejected)`随着这个过程,我们可以看到,
-- 记行为与损失数学,梯度标志和参考不变的测试.
+- 把 DPO loss 推导成一个对缩放后 log-ratio difference 取 sigmoid 的形式，并理解它和隐式 reward 的关系。
+- 构建 reference model + policy model 这一对模型，其中 reference 冻结、policy 可训练。
+- 在两个模型下计算序列级 log-probability，并对 prompt token 做 mask。
+- 在 `(prompt, chosen, rejected)` 三元组上训练 policy，并观察 chosen log-prob 相对 rejected 上升。
+- 用测试固定住 loss 数学、gradient sign 和 reference invariance。
 
 ## 问题
 
-你有一个SFT模型.它遵循指示,但它的输出不均;一些完成是清晰的,有些是字面或错误的.你还有一个小的数据集的偏好对:为相同的提示,一个人类标记了一个完成作为选择和另一个作为拒绝.
+你已经有一个 SFT model。它会按指令回答问题，但输出质量并不均匀；有些 completion 清晰，有些却啰嗦或者错误。你手里还有一份小型 preference pair 数据集：针对同一个 prompt，人类在两个 completion 之间选了一个 chosen，另一个则是 rejected。
 
-经典的RLHF答案是一个两阶段的管道. 训练一个奖励模型根据偏好. 优化与奖励的政策与PPO. 这有所效果,但昂贵:PPO期间记忆中的两个模型,KL控制保持政策接近参考,奖励模型脆弱时奖励黑客.
+经典 RLHF 的答案，是一个两阶段流水线。先根据偏好训练 reward model，再用 PPO 让 policy 朝 reward 更高的方向优化。这套做法有效，但成本很高：PPO 期间显存里要同时摆两个模型，要用 KL control 把 policy 约束在 reference 附近，而且一旦 reward model 很脆弱，就容易出现 reward hacking。
 
-报价模式从未明确存在.政策直接训练在偏好对,与明确的KL处罚对SFT参考.相同的最佳解决方案在布拉德利-特里偏好模型下,更少的代码.
+DPO 把这两步合并成了一个监督式 loss。reward model 不再显式存在。policy 直接在 preference pair 上训练，同时通过朝 SFT reference 收缩的 KL 结构保持稳定。在 Bradley-Terry preference model 下，它与 RLHF 共享同一个最优解，但代码量小得多。
 
 ## 概念
 
-开始从布拉德利-特里模型.`x`两次完成`y_w`选择`y_l`现在,我们需要一个人来看看.`y_w`是
+从 Bradley-Terry model 出发。给定一个 prompt `x`，以及两个 completion，`y_w` 表示 chosen，`y_l` 表示 rejected，那么人类偏好 `y_w` 的概率是：
 
 ```text
 P(y_w > y_l | x) = sigmoid( r(x, y_w) - r(x, y_l) )
 ```
 
-在哪里`r`的是隐藏的奖励函数.`r`根据偏好,然后培训一个政策`pi`实现最大限度`r`配有 KL :
+这里的 `r` 是某个潜在 reward function。RLHF 先从偏好里拟合 `r`，然后训练一个 policy `pi` 去最大化 `r`，同时用 KL 项把它锚定在 reference 上：
 
 ```text
 max_pi   E_{x, y~pi} [ r(x, y) ] - beta * KL(pi || pi_ref)
 ```
 
-根据DPO衍生法,最佳政策`pi*`根据本目标, 已关闭形式`r`其他:
+DPO 的关键观察是：在这个目标下，最优 policy `pi*` 可以直接写成 `r` 的 closed form：
 
 ```text
 pi*(y | x) = (1/Z(x)) * pi_ref(y | x) * exp( r(x, y) / beta )
 ```
 
-重新安排`r`其他:
+把这个式子反解回 `r`：
 
 ```text
 r(x, y) = beta * ( log pi*(y | x) - log pi_ref(y | x) ) + beta * log Z(x)
 ```
 
-其他`log Z(x)`两个词是相同的`y_w`其他`y_l`(这取决于`x`没有`y`),因此在计算偏好差异时,它会取消:
+其中 `log Z(x)` 对 `y_w` 和 `y_l` 来说是一样的，因为它只依赖 `x`，不依赖 `y`。所以当你计算 preference difference 时，这一项会被抵消掉：
 
 ```text
 r(x, y_w) - r(x, y_l) = beta * ( log pi_theta(y_w|x) - log pi_ref(y_w|x)
                                 - log pi_theta(y_l|x) + log pi_ref(y_l|x) )
 ```
 
-替换为布拉德利-特里的西格莫ид,并取消对优先对的负记录概率:
+把这个结果代回 Bradley-Terry 的 sigmoid，再对 preference pair 取 negative log likelihood，就得到：
 
 ```text
 L_DPO(theta) = - E_{(x, y_w, y_l)} [
@@ -65,7 +65,7 @@ L_DPO(theta) = - E_{(x, y_w, y_l)} [
 ]
 ```
 
-这就是损失.它是一个单个尺度上的sigmoid,例如,由四个日记概率计算.没有单独的奖励模型.没有PPO.没有KL术语在损失中;KL约束被烤成闭式衍生.
+这就是 DPO loss。它对每个样本只计算一个标量，这个标量来自四个 log-probability，然后过一次 sigmoid。没有单独的 reward model，没有 PPO，loss 里也没有显式 KL 项；KL 约束已经被烘进 closed-form 推导里。
 
 ```mermaid
 flowchart LR
@@ -83,41 +83,41 @@ flowchart LR
   Sig --> NLL[- log sigmoid]
 ```
 
-## 渐变的标志
+## 梯度方向
 
-炼前,请检查智力.`log pi_theta(y_w | x)`其他:
+训练前可以先做一个很有价值的 sanity check。对 `log pi_theta(y_w | x)` 求梯度：
 
 ```text
 d L_DPO / d log pi_theta(y_w | x) = - beta * (1 - sigmoid(z))
 ```
 
-在哪里`z`对于所有人来说,这是负的.`z`增加政策的选择完成的日志概率,减少损失.`log pi_theta(y_l | x)`培训推动选民上升和被拒绝下降. 参考是结的,它不会移动.
+其中 `z` 是 sigmoid 的输入。这个值对所有 `z` 都是负的。这意味着：提高 policy 对 chosen completion 的 log-probability，会降低 loss。对称地，`log pi_theta(y_l | x)` 的梯度是正的，所以提高 rejected completion 的 log-probability 会增大 loss。训练的方向，就是把 chosen 往上推，把 rejected 往下压。reference 是冻结的，它不会动。
 
 ## 数据
 
-两个偏好三倍的船,每个是`(prompt, chosen, rejected)`选择的完成是短暂的和精确的.被拒绝的是单词的,非主题的,或错误的.对涵盖相同的任务家庭的课程39 (资本,算术,列表),所以一个从SFT基础开始的政策有一个合理的起点.
+课程内置了 12 个 preference triple。每条都是 `(prompt, chosen, rejected)`。chosen completion 短而准确；rejected completion 则冗长、跑题或错误。这些 pair 覆盖的任务家族和 lesson 39 类似，比如 capital、arithmetic、list，因此一个从 SFT base 出发的 policy 会有一个合理起点。
 
-设置是故意小的.DPO在生产中的数万对上工作;这里,问题是,损失数学和循环在一个小数据集上运行端到端,而选与拒绝的日志检查差距明显增加.
+这个 fixture 故意很小。生产环境中的 DPO 往往会处理成千上万条 pair；而本课只关心一件事：让 loss 数学和训练循环在一个微型数据集上端到端跑起来，并且让 chosen-versus-rejected 的 log-prob 差距能明显变大。
 
-## 参考不变
+## 参考模型不变性
 
-执行DPO必须仔细处理参考模型.参考模型是固定的SFT模型.必须具有三个特性:
+DPO 实现必须非常小心地处理 reference model。reference 是冻结在原地的 SFT model。下面三个性质必须始终成立：
 
-- 参考参数从来没有收到梯度.
-- 参考日志的概率从来没有在时代之间变化.
-- 政策从与参考的权重相同.`theta`是参考文献加上已知更新;将政策作为参考文献的副本启动是明确的开始.)
+- reference 参数永远不会收到梯度。
+- reference 的 log-probability 在不同 epoch 之间永远不变。
+- policy 的初始权重必须和 reference 一模一样。（最优的 `theta` 可以看成 reference 加上一段学习到的更新，所以把 policy 初始化成 reference 的副本，才是定义清晰的起点。）
 
-执行通过:
+实现里会通过下面三条来保证这些性质：
 
-- 封装参考文献`torch.no_grad()`在前进的通行过程中.
-- 设置`requires_grad=False`在每个参考参数上.
-- 通过`policy.load_state_dict(reference.state_dict())`在参考文件的构建之后.
+- 在 reference 的 forward pass 周围包上 `torch.no_grad()`。
+- 把每个 reference 参数的 `requires_grad=False`。
+- 在 reference 构建完成后，通过 `policy.load_state_dict(reference.state_dict())` 初始化 policy。
 
 ```figure
 cap-dpo-preference
 ```
 
-## 建筑
+## 架构
 
 ```mermaid
 flowchart TD
@@ -134,30 +134,30 @@ flowchart TD
   Bwd --> Opt[Adam optimiser]
 ```
 
-模型是39课中使用的TinyGPT (仅用于解码,因果,字节标记).参考和政策共享架构;政策的权重从训练中的参考中漂移,而参考保持固定.
+模型仍然使用 lesson 39 里的 TinyGPT：decoder-only、causal、byte tokeniser。reference 和 policy 共享同一套架构；训练时，policy 的权重会逐渐偏离 reference，而 reference 始终保持固定。
 
-## 你会建造什么
+## 你将构建什么
 
-实施是一个`main.py`另外还有一些检查.
+实现由一个 `main.py` 和测试组成。
 
-1. `InstructionTokenizer`字节标记器`INST`其他`RESP`特殊的东西,与39课一样.
-2. `TinyGPT`只有解码器变压器. 同样的形状,就像第39课,所以即使你跳过第39课,课程是自主.
-3. `make_preferences`返回12个`(prompt, chosen, rejected)`两倍.
-4. `sequence_log_prob`: 给模型,一个快速预写和一个完成,返回了完成后的下一个代码日志概率的总和 (没有快速位置贡献).
-5. `dpo_loss`根据四个记录概率,`beta`返回每例损失数和记录的隐含奖励三角形.
-6. `train_dpo`根据政策和参考计算选项和拒绝日志测试,应用损失,并步骤亚当.
-7. `evaluate_margins`:在任何时候返回该政策中所选的平均拒绝日志概率差距.
-8. `run_demo`根据预训练的小量,从一个小的预训练中构建参考和政策,复制重量,30步的列车,打印每步的损失和利率,并从零出发成功.
+1. `InstructionTokenizer`：带 `INST` 和 `RESP` special token 的 byte tokeniser。接口形状与 lesson 39 一致。
+2. `TinyGPT`：decoder-only transformer。形状和 lesson 39 相同，所以即使你跳过了 39，这一课也能自包含运行。
+3. `make_preferences`：返回 12 个 `(prompt, chosen, rejected)` 三元组。
+4. `sequence_log_prob`：给定模型、prompt prefix 和 completion，返回 completion 上 next-token log-probability 的总和，不包含 prompt 位置的贡献。
+5. `dpo_loss`：接收四个 log-probability 和 `beta`，返回逐样本 loss tensor，以及一个用于日志输出的隐式 reward delta。
+6. `train_dpo`：按 epoch 运行，分别计算 policy 和 reference 下 chosen / rejected 的 log-prob，应用 loss，然后用 Adam 更新。
+7. `evaluate_margins`：在任意时刻返回 policy 下 chosen-rejected log-probability margin 的平均值。
+8. `run_demo`：先做一个小型 warm-up pretrain，再构建 reference 和 policy，复制权重，训练 30 步，打印每一步的 loss 和 margin，并在成功时零退出。
 
-## 为什么DPO工作
+## 为什么 DPO 有效
 
-根据布拉德利-特里偏好模型,DPO在数学上相当于RLHF,直到奖励的参数化.`r(x, y) = beta * (log pi(y|x) - log pi_ref(y|x))`能从偏好到函数来识别`x`关闭形式政策允许您跳过明确的奖励模式.`pi`其他`pi_ref`度是你的安全网. 度是你的安全网.
+在 Bradley-Terry preference model 下，DPO 在数学上等价于 RLHF，只不过 reward 被换成了隐式参数化。这个隐式 reward 写成 `r(x, y) = beta * (log pi(y|x) - log pi_ref(y|x))`。它可以从 preference 中被识别出来，但只精确到一个关于 `x` 的函数；而这一项在 preference difference 里会被抵消。由于 closed-form policy 的存在，你可以跳过显式 reward model。KL 约束则通过结构本身来实现：任何 `pi` 相对 `pi_ref` 的偏离，都会让 log-ratio 变大，而 sigmoid 会逐渐饱和，这会在 policy 走得太远时自动抑制梯度。reference 就是你的安全绳。
 
-## 实现目标
+## 延伸练习
 
-- 添加长度正常化到日志概率总数:按完成长度划分.长度偏差是已知的DPO故障模式,模型优先选择更短的完成,因为其日志概率在绝对数目中更大.
-- 增加IPO变量损失:将sigmoid + log替换为 `(z - 1)^2`测量器的相似性.
-- 添加一个标签滑滑参数,该参数将硬选择的拒绝标签与统一的0.5之间进行交互.
-- 取代参考模型以更小的更便宜的模型 (知识蒸味).
+- 给 log-probability 的求和增加长度归一化：除以 completion 长度。长度偏置是 DPO 的已知失效模式之一，模型会偏好更短的 completion，因为它们的 log-probability 绝对值往往更大。
+- 加入 IPO 版本的 loss：把 sigmoid + log 改成 `(z - 1)^2`，比较它在这份 fixture 上的收敛表现。
+- 增加一个 label-smoothing 参数，在硬性的 chosen-rejected 标签与均匀 0.5 之间做插值。
+- 把 reference 换成更小、更便宜的模型，做一点 knowledge distillation 风格的实验。
 
-运行给你输出,参考不变,训练循环.数学是课程.代码使数学具体.
+这份实现会把 loss、reference invariance 和训练循环都交给你。数学本身就是这课的主体；代码只是把这些数学变成可运行的事实。
