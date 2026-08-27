@@ -1,159 +1,159 @@
-# 代理经济,代币激励,声誉
+# 智能体经济、代币激励与声誉
 
-> 长远自主代理 (METR的1小时到8小时工作曲线) 需要经济代理.**5-layer stack**是: **DePIN**物理计算**Identity**其他类型的资本**Cognition**子,子,子,子,子,子**Settlement**总结:**Governance**生产代理激励网络包括:**Bittensor**(TAO子网络奖励任务特定模型),**Fetch.ai / ASI Alliance**(ASI-1 Mini LLM + FET代币),以及**Gonka**学术工作:AAMAS 2025的分散式LAMAS使用 **Shapley-value credit attribution**为了公平地奖励贡献者;谷歌研究提出"大型语言模型机制设计"**token auctions**这一课程建立了一个最小的代理市场,将Shapley值的信用归因应应用于多代理管道,并进行了第二价格代币拍卖,以便游戏理论机器具体地落地.
+> 长时程自主智能体（METR 的 1 小时至 8 小时工作曲线）需要经济行动能力。正在形成的**五层技术栈**是：**DePIN**（物理算力）→ **身份**（W3C DID + 声誉资本）→ **认知**（RAG + MCP）→ **结算**（账户抽象）→ **治理**（智能体 DAO）。生产级智能体激励网络包括：**Bittensor**（TAO 子网奖励特定任务模型）、**Fetch.ai / ASI Alliance**（ASI-1 Mini LLM + FET 代币）和 **Gonka**（基于 Transformer 的工作量证明，把算力重新分配给有产出的 AI 任务）。学术研究方面，AAMAS 2025 的去中心化 LaMAS 使用 **Shapley 值信用归因**，公平奖励作出贡献的智能体；Google Research 的“大语言模型机制设计”提出在单调聚合下采用二价支付的**代币拍卖**。本课会构建一个最小智能体市场，把 Shapley 值信用归因应用到多智能体流水线，并运行二价代币拍卖，让博弈论机制具体落地。
 
-**Type:** Learn
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 16 · 16 (Negotiation and Bargaining), Phase 16 · 09 (Parallel Swarm Networks)
-**Time:** ~75 minutes
+**Type:** 学习
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 16 · 16（协商与讨价还价），阶段 16 · 09（并行群体网络）
+**Time:** 约 75 分钟
 
 ## 问题
 
-经纪人共同创造价值,但需要单独奖励时,多代理系统变得复杂. 经典机制 平等的分开,最后的贡献者取一切 是不公平的或可玩的. 通过Shapley价值观,基于联盟的奖励是公平的, 根据"中国经济发展"的指导,
+当多个智能体共同创造价值、却需要分别获得奖励时，多智能体系统就会变得复杂。平均分配、最后贡献者获得一切等经典机制，要么不公平，要么容易被操纵。基于联盟、通过 Shapley 值分配奖励，在公理意义上是公平的，但计算成本很高。2025–2026 年的研究提出了实用近似方案：Shapley 采样、单调聚合拍卖，以及从已确认贡献中累积的链上声誉。
 
-超越信用归因,该领域转向了实际的经济代理:Bittensor TAO奖励挖矿计算来调整子网特定模型,Fetch.ai/ASI奖励ASI-1迷你LLM使用FET代币,Gonka重新分配转former证明工作到生产人工智能任务.
+除信用归因外，该领域还开始研究真正具备经济行为能力的智能体：Bittensor 用 TAO 奖励用于微调子网特定模型的挖矿算力；Fetch.ai/ASI 使用 FET 代币奖励 ASI-1 Mini LLM 的使用；Gonka 则把 Transformer 工作量证明重新定向到有产出的 AI 任务。能够自主交易的智能体如今已经存在，问题在于如何让激励保持一致。
 
-这一课将代理经济作为一个特定的问题家庭 信用归因,机制设计和声誉 ,并构建每个与最小的数学,
+本课把智能体经济视为一个具体问题族——信用归因、机制设计和声誉——并使用最少量的数学分别构建它们，以便真正理解这些概念。
 
 ## 概念
 
-### 五层的代理经济堆
+### 智能体经济的五层技术栈
 
-1. **DePIN (physical compute).**分散的基础设施,租用GPU,存储,带宽,比特ensor子网络,Render网络,Akash. 不是特征者,特征者使用它.
-2. **Identity.**据W3C分离式识别器 (DID) 显示,每个代理都具有独立于任何平台的持久身份. 声誉来自于DID. 代理网络协议 (ANP) 使用DID作为发现层.
-3. **Cognition.**其他阶段的构建就是这样.
-4. **Settlement.**账户抽象 (ERC-4337) 允许代理人从自己的余额支付天然气,而无需持有ETH. 代理人可以为服务支付,相互支付或计算.
-5. **Governance.**代理DAO:由人类和代理人投票对协议变更的治理结构,投票权与声誉有关.
+1. **DePIN（物理算力）。** 出租 GPU、存储与带宽的去中心化基础设施，例如 Bittensor 子网、Render Network、Akash。它并非智能体专属，但智能体可以使用。
+2. **身份。** W3C 去中心化标识符（DID）为每个智能体提供独立于任何平台的持久 ID。声誉会累积到 DID 上。Agent Network Protocol（ANP）使用 DID 作为发现层。
+3. **认知。** 智能体的推理循环：LLM + RAG + MCP。其他阶段构建的正是这一层。
+4. **结算。** 账户抽象（ERC-4337）让智能体无需持有 ETH，也能用自己的余额支付 gas。智能体可以为服务、其他智能体或算力付费。
+5. **治理。** 智能体 DAO：由人类*和*智能体共同投票决定协议变更的治理结构，投票权与声誉绑定。
 
-不是每个生产系统都使用五个.Bittensor使用1,2,部分3,部分4,没有一个.OpenAI代理除了3个,都没有使用.
+并非每个生产系统都使用全部五层。Bittensor 使用第 1、2 层，部分使用第 3、4 层，不使用第 5 层；OpenAI 智能体除了第 3 层外均不使用。这套技术栈是一张参考地图，不是硬性要求。
 
-### ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+### Bittensor、Fetch.ai、Gonka——实际运行的系统
 
-**Bittensor (TAO).**矿工提交模型输出.验证器将它们排名;权重分数分配了TAO奖励.每个子网都有自己的评估.经济课程:为特定任务的输出质量付费,而不是使用的计算.
+**Bittensor（TAO）。** 子网对应专门任务，例如语言建模、图像生成与预测。矿工提交模型输出，验证者对其排名，再由质押加权评分分配 TAO 奖励。每个子网都有自己的评估方法。经济层面的启示是：应根据特定任务的输出质量付费，而不是根据使用的算力付费。
 
-**Fetch.ai / ASI Alliance.**作为一个"FET"的代理,FET.ai的代理可以在FET中调用另一个任务,并支付FET.
+**Fetch.ai / ASI Alliance。** ASI-1 Mini LLM 运行在 Fetch.ai 网络上，用户用 FET 代币支付推理费用。这里“智能体互为对等方”的特征更明显：Fetch 上的智能体可以调用另一个智能体执行任务，并用 FET 支付。
 
-**Gonka.**变压器证明工作:"工作"是变压器的前进通行.矿工通过运行已知正确输出 (从训练数据) 的推断任务来获得收入.资源生产的PoW而不是基于哈希的PoW.
+**Gonka。** Transformer 工作量证明：其中的“工作”是执行 Transformer 前向传播。矿工通过运行具有已知正确输出（来自训练数据）的推理任务来获得收益。它使用能产生资源价值的 PoW，而不是基于哈希的 PoW。
 
-截至2026年4月,所有三种产品均为生产级. 付款分布不同. 比特器对子网验证器的质量进行了奖励; 通过付费用户测量的Fetch奖励实用性; Gonka奖励可验证的推断工作.
+截至 2026 年 4 月，三者都已经达到生产级。收益分配方式各不相同：Bittensor 根据子网验证者评定的相对质量奖励；Fetch 根据付费用户衡量的效用奖励；Gonka 奖励可验证的推理工作。
 
-### 石灰值信用归因
+### Shapley 值信用归因
 
-现在,我们有三位代理人合作, 输出率为0.8.
+三个智能体合作完成一项任务，输出得分为 0.8。每个智能体贡献了多少？
 
-石普利值:满足四个定理 (效率,对称性,线性,零) 的独特信用分配.`i`其他:
+Shapley 值是满足四项公理（效率、对称性、线性、零贡献者）的唯一信用分配方式。对于智能体 `i`：
 
 ```
 shapley(i) = (1/N!) * sum over all orderings O of (v(S_i_O ∪ {i}) - v(S_i_O))
 ```
 
-在哪里`S_i_O`是之前的代理群`i`在顺序中`O`实际上:列出所有变量,记录每个变量中的每个代理的边际贡献,平均.
+其中，`S_i_O` 是位于 `i` 之前的智能体集合，这里的排列记为 `O`。实际计算时，要枚举所有排列、记录每个智能体在每种排列中的边际贡献，再取平均值。
 
-对于N=3的代理,有6个变量.对于N=10,3.6M ,所以实际上你采样排序而不是编写.
+N=3 个智能体时，共有 6 种排列；N=10 时则有 360 万种，因此实际系统会采样排列，而不是全部枚举。
 
-### 集成二价拍卖
+### 用于聚合的二价拍卖
 
-谷歌研究 ("大型语言模型机制设计") 为集成LLM产品提出了二价代币拍卖. 设置:N代理人每一个提出完成;每个有个别的值被选中. 拍卖商选择了最高价值的提案,并支付了第二最高价值. 在单调的聚合下 (价值取决于选择哪个提案,而不是多少投标),这是真实的 代理投标他们的真实价值.
+Google Research 的“大语言模型机制设计”提出使用二价代币拍卖来聚合 LLM 输出。设定是：N 个智能体分别提出一个补全结果，而且每个智能体对自己的方案被选中有一个私有价值。拍卖者选择价值最高的方案，并支付*第二高*的价值。在单调聚合条件下——价值取决于选择哪个方案，而不是提交了多少出价——这种机制具备真实性，智能体有动力报告真实价值。
 
-为什么这对LLM系统很重要:你可以将完成任务外包给多个代理商,价格不同;拍卖会选择最好的 + 公平的报酬,代理商没有动机报告错误.
+这对 LLM 系统很重要：你可以把补全任务外包给定价不同的多个智能体；拍卖会选出最佳方案并公平支付，而且智能体没有虚报价值的动机。
 
 ### 声誉资本
 
-根据证实贡献,获得了DID相关的声誉分数.
+绑定到 DID 的声誉分数会根据已确认贡献逐渐累积。一项简单的更新规则是：
 
 ```
 rep(i, t+1) = alpha * rep(i, t) + (1 - alpha) * contribution_quality(i, t)
 ```
 
-具有衰变因素`alpha`接近 1. 声誉:
+衰减因子 `alpha` 接近 1。声誉具有以下性质：
 
-- 对于路由决策来说,阅读便宜 ("将艰难任务发送给高代表代理").
-- 造成本高昂 (随着时间的推移积累,与DID相关).
-- 可减小:未能验证的贡献减小.
+- 路由决策读取成本低（“把困难任务交给高声誉智能体”）。
+- 伪造成本高（需要随时间累积，并绑定到 DID）。
+- 可以削减：验证失败的贡献会扣分。
 
-### 亚马斯2025分散式拉马斯
+### AAMAS 2025 去中心化 LaMAS
 
-拉马斯提案 (AAMAS 2025) 结合了:DID身份,Shapley值信用归因和简单的拍卖机制.关键要求:分散信用归因步骤使系统可审计并不受单点操纵的影响.
+LaMAS 提案（AAMAS 2025）结合了 DID 身份、Shapley 值信用归因与一种简单拍卖机制。其核心主张是：去中心化信用归因步骤，可以让系统具备可审计性，并免受单点操纵。
 
-### 经济在哪里崩
+### 经济机制会在哪里崩溃
 
-- **Price oracle manipulation.**如果可以玩信用函数,代理人会玩它.
-- **Sybil attacks.**一个运营商把N个假代理起来,以膨胀自己的贡献.
-- **Verification cost.**如果验证是便宜的 (小型的法定律师),它可以被玩弄;如果昂贵 (人群),系统不会扩展.
-- **Regulatory overhang.**代理经济与金融监管交叉. 比特森索,费奇和冈卡都在2026年开始在某些司法管辖区的法律灰色区域运营.
+- **价格预言机操纵。** 如果信用函数可以被利用，智能体一定会利用它。每种机制都需要对抗测试。
+- **女巫攻击。** 一个运营方创建 N 个虚假智能体，以放大自己的贡献。DID 只能减缓而无法阻止这种攻击；缓解方式是提高声誉的伪造成本。
+- **验证成本。** 信用归因的公平程度取决于验证器。如果验证便宜（小型 LLM），就容易被利用；如果验证昂贵（人类评审小组），系统就无法扩展。
+- **监管阴影。** 智能体经济会与金融监管交叉。截至 2026 年，Bittensor、Fetch 与 Gonka 在一些司法辖区都处于法律灰色地带。
 
-### 当代理经济有意义时
+### 智能体经济何时合理
 
-- **Open networks with heterogeneous operators.**没有一个团队控制所有的代理人.
-- **Verifiable outputs.**没有验证,信贷归因是猜测.
-- **Long-horizon workflows.**一次任务不会从声誉积累中受益.
-- **Tokenized payments are legally viable**在您的管辖范围内.
+- **由异构运营方构成的开放网络。** 没有一个团队控制所有智能体。
+- **输出可验证。** 没有验证，信用归因就只能靠猜测。
+- **长时程工作流。** 一次性任务无法从声誉积累中获益。
+- **代币化支付在你的司法辖区合法可行。**
 
-在封闭的企业系统中,经济学更容易分配 (管理人员分配工作,指标是内部的).经济学文献主要适用于开放网络.
+在封闭的企业系统中，经济机制通常会让位于更简单的分配方式（管理者分配工作，指标只在内部使用）。经济学研究主要适用于开放网络。
 
 ```figure
 swarm-auction
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现：
 
-- `shapley(value_fn, agents)`精确的Shapley计算通过小N的编号.
-- `second_price_auction(bids)`真实机制; 获奖者是第二位最高的.
-- `Reputation`                                                                                                                                                                                                                                                              
-- 演示1:三名代理合作,恰恰是莎普利的信用.
-- 五个代理人投标一个任务槽;第二价拍卖选中赢家 + 付款.
-- 演示 3:100轮任务分配给异质代表的代理人; 代表权重的路由跳动随机.
+- `shapley(value_fn, agents)`——针对小规模 N，通过枚举精确计算 Shapley 值。
+- `second_price_auction(bids)`——真实机制；获胜者支付第二高价。
+- `Reputation`——与 DID 绑定、使用指数衰减和削减机制的声誉。
+- 演示 1：三个智能体合作，由精确 Shapley 计算归因信用。
+- 演示 2：五个智能体竞拍一个任务席位；二价拍卖选出获胜者与支付额。
+- 演示 3：向不同声誉的智能体分配 100 轮任务；预热后，声誉加权路由优于随机路由。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-预期产量:每个代理的Shapley值;拍卖结果显示出真实报价平衡;重复路由显示在加热后随机增长10%到20%的质量.
+预期输出：每个智能体的 Shapley 值；展示真实出价均衡的拍卖结果；经过预热后，声誉加权路由的质量比随机路由高 10%–20%。
 
-## 用它
+## 实际使用
 
-`outputs/skill-economy-designer.md`设计一个最小代理经济:身份层的选择,信用归因机制,支付机制,声誉规则.
+`outputs/skill-economy-designer.md` 用于设计最小智能体经济：选择身份层、信用归因机制、支付机制与声誉规则。
 
-## 运送它
+## 交付成果
 
-管理2026年的代理经济:
+在 2026 年运行智能体经济时：
 
-- **Start with reputation, not tokens.**凭借代币,人们的声誉便宜,而且仅仅是有价值的.
-- **Verify before you reward.**没有独立的验证步骤,永远不要分配信用.
-- **Shapley-sample, not Shapley-exact.**样本100-1000次;精确的清单不计量.
-- **Cap decay factor and floor reputation.**无限的腐蚀会抹去合法贡献者;过度缓慢的腐蚀会奖励过时的高反应剂.
-- **Audit mechanisms adversarially.**在打开网络之前,运行红队场景. 每个机制都有游戏理论;你想找到洞穴,而不是攻击者.
+- **从声誉开始，而不是代币。** 声誉实现成本低，单独使用也有价值；代币会增加法律与经济复杂度。
+- **先验证，再奖励。** 没有独立验证步骤，绝不能分配信用。自报质量会滋生女巫博弈。
+- **采样 Shapley，而不是精确计算 Shapley。** 采样 100–1,000 种排列；精确枚举无法扩展。
+- **限制衰减因子，并为声誉设置下限。** 无界衰减会抹去合法贡献者；衰减太慢则会奖励已经过时的高声誉智能体。
+- **以对抗方式审计机制。** 开放网络前先运行红队场景。每种机制都包含一套博弈论；漏洞应由你先发现，而不是由攻击者发现。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认Shapley值总值到总值 (效率定理).改变值函数;Shapley分配是否改变预期方向?
-2. 运用Shapley *样本* (Monte Carlo对K序列).K如何影响近似准确性?比较为精确为N=4.
-3. 在拍卖之前,实施联盟形成步骤:代理人可以合并成团队并作为一个单位进行竞标.哪些联盟形成?结果比个人竞标更好吗?
-4. 读一读Google研究机制设计文章. 确定一个假设,如果被违反,会破坏真相.在LLM设置中,失败模式是什么样子?
-5. 阅读AAMAS 2025分散的LAMAS论文. 执行他们的Shapley步骤超过10个代理人在合成任务. 精确计算需要多长时间? 抽样得到了多近100抽奖?
+1. 运行 `code/main.py`，确认 Shapley 值总和等于总价值（效率公理）。修改价值函数后，Shapley 分配是否按预期方向变化？
+2. 实现 Shapley *采样*（对 K 种排列执行蒙特卡洛）。K 如何影响近似准确率？在 N=4 时与精确结果比较。
+3. 在拍卖前实现联盟形成步骤：智能体可以组成团队，并以一个整体出价。会形成哪些联盟？结果是否比个体竞价实现了 Pareto 改善？
+4. 阅读 Google Research 的机制设计博文。找出一个一旦不成立就会破坏真实性的假设。该失败模式在 LLM 场景中是什么样？
+5. 阅读 AAMAS 2025 去中心化 LaMAS 论文。在包含 10 个智能体的合成任务上实现其 Shapley 步骤。精确计算需要多长时间？采样 100 次能逼近到什么程度？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|------------------------|
-| DePIN | "Decentralized physical infrastructure" | Token-incentivized compute/storage/bandwidth. Bittensor, Akash, Render. |
-| DID | "Decentralized identifier" | W3C spec for portable IDs. Agent reputation binds to DID, not to a platform. |
-| ERC-4337 | "Account abstraction" | Contract accounts that can sponsor gas, enabling agent payments. |
-| Shapley value | "Fair credit attribution" | Unique allocation satisfying efficiency, symmetry, linearity, null. |
-| Second-price auction | "Vickrey auction" | Truthful mechanism: winner pays second-highest bid. Monotone aggregation compatible. |
-| Reputation capital | "Accumulated quality score" | DID-bound score from confirmed contributions; decays over time. |
-| Agentic DAO | "Agents + humans govern" | DAO with agent voters as first-class, voting power tied to reputation. |
-| TAO / FET / GPU credits | "Token denominations" | Bittensor TAO, Fetch.ai FET, various DePIN tokens. |
+| DePIN | “去中心化物理基础设施” | 使用代币激励的算力、存储与带宽。Bittensor、Akash、Render。 |
+| DID | “去中心化标识符” | W3C 可移植 ID 规范。智能体声誉绑定到 DID，而不是平台。 |
+| ERC-4337 | “账户抽象” | 可以代付 gas 的合约账户，从而支持智能体支付。 |
+| Shapley 值 | “公平信用归因” | 满足效率、对称性、线性与零贡献者公理的唯一分配方式。 |
+| 二价拍卖 | “Vickrey 拍卖” | 真实机制：获胜者支付第二高出价；与单调聚合兼容。 |
+| 声誉资本 | “累积质量分数” | 由已确认贡献形成、与 DID 绑定并随时间衰减的分数。 |
+| 智能体 DAO | “智能体 + 人类共同治理” | 把智能体作为一等投票者、投票权与声誉绑定的 DAO。 |
+| TAO / FET / GPU credits | “代币计价单位” | Bittensor TAO、Fetch.ai FET 与各种 DePIN 代币。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [The Agent Economy](https://arxiv.org/abs/2602.14219) 2026年5层代理经济堆调查
-- [Google Research — Mechanism design for large language models](https://research.google/blog/mechanism-design-for-large-language-models/)单调聚合的代币拍卖
-- [AAMAS 2025 — decentralized LaMAS](https://www.ifaamas.org/Proceedings/aamas2025/pdfs/p2896.pdf) 石灰值信用归类
-- [Bittensor TAO documentation](https://docs.bittensor.com/)子网结构和奖励分配
-- [Fetch.ai / ASI Alliance](https://fetch.ai/)ASI-1迷你法学和FET代币
-- [W3C Decentralized Identifiers (DIDs) spec](https://www.w3.org/TR/did-core/)身份基础
+- [智能体经济](https://arxiv.org/abs/2602.14219)——2026 年智能体经济五层技术栈综述
+- [Google Research——大语言模型机制设计](https://research.google/blog/mechanism-design-for-large-language-models/)——采用单调聚合的代币拍卖
+- [AAMAS 2025——去中心化 LaMAS](https://www.ifaamas.org/Proceedings/aamas2025/pdfs/p2896.pdf)——Shapley 值信用归因
+- [Bittensor TAO 文档](https://docs.bittensor.com/)——子网结构与奖励分配
+- [Fetch.ai / ASI Alliance](https://fetch.ai/)——ASI-1 Mini LLM 与 FET 代币
+- [W3C 去中心化标识符（DID）规范](https://www.w3.org/TR/did-core/)——身份基础
