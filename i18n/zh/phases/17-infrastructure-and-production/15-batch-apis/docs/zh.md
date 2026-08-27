@@ -1,121 +1,121 @@
-# 批量API 50%折扣作为行业标准
+# Batch APIs：50% 折扣已成行业标准
 
-> 每个主要供应商都会发送一个非同步的批量API, 开放AI,人类,谷歌和大多数推断平台 (火灾工程批次,联合批次) 都实施了相同的模式. 随着快速缓存的堆积批量和一夜之间管道降至同步未存储成本的10% 规则非常简单:如果它不是互动的, 内容生成管道,文件分类,数据提取,报告生成,批量标签,目录标签 任何容忍24小时延迟的东西都是剩下的钱,直到它转移到批量. 2026年生产模式是将每一个新的LLM工作负载分为三个行程:互动 (与缓存同步),半互动 (与倒退无步排队),批量 (过夜,缓存输入堆). 工作负载假装是互动性的,但容忍数分钟的延迟浪费最多.
+> 几乎所有主要供应商都提供了异步 batch API，统一特点是 50% 折扣和大约 24 小时周转时间。OpenAI、Anthropic、Google，以及大多数推理平台（Fireworks batch tier、Together batch）都采用了同一模式。把 batch 和 prompt caching 叠起来后，夜间 pipeline 的成本通常能降到同步未缓存方案的约 10%。规则简单得近乎粗暴：只要它不是交互式任务，就应该进 batch。内容生成流水线、文档分类、数据提取、报告生成、批量打标、目录标注，只要能容忍 24 小时延迟，不进 batch 就是在白白烧钱。2026 年的生产实践，是把每个新的 LLM 工作负载先分到三条车道里：interactive（同步 + 缓存）、semi-interactive（异步队列 + fallback）、batch（过夜运行 + cached input 叠加）。那些“假装实时”、但其实可以容忍几分钟延迟的任务，浪费最严重。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy batch-vs-sync cost simulator)
-**Prerequisites:** Phase 17 · 14 (Prompt & Semantic Caching)
-**Time:** ~45 minutes
+**Type:** 学习
+**Languages:** Python（标准库，玩具级批处理与同步调用成本模拟器）
+**Prerequisites:** 阶段 17 · 14（提示词缓存与语义缓存）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 举个供应商批量API (OpenAI,Anthropic,Google) 和共同的50%折扣+24小时回报保证.
-- 计算一夜间分类工作负载上堆叠批量+缓存输入的成本,并与同步未存储的基线进行比较.
-- 按分组分一个工作负载成交互式/半交互式/批量,并证明行径是正确的.
-- 举个两个陷:部分互动性 (用户预计更快于24h) 和输出方案漂移 (按供应商不同批量文件格式).
+- 说出三类主要 provider batch APIs（OpenAI、Anthropic、Google），以及它们共同的 50% 折扣 + 24h turnaround 保证。
+- 计算一个夜间分类工作负载在叠加 batch + cached-input 后的成本，并与同步未缓存基线比较。
+- 把一个工作负载分到 interactive / semi-interactive / batch 中，并说明为什么这样分。
+- 说出两个常见陷阱：partial interactivity（用户对 24h 之外还有更快预期）和 output-schema drift（不同 provider 的 batch 文件格式不一样）。
 
 ## 问题
 
-你的团队每晚发送一个报告生成管道. 50,000 份文件,总结每份文件,集结总结,编写执行简报.同步运行需要4个小时,每晚2000美元.
+你的团队上线了一条 nightly report generation pipeline。50,000 份文档，每份先做总结，再把总结聚类，最后写一份高管简报。同步跑完整条流程要 4 小时，每晚花费 $2,000。然后你听说了 batch APIs。
 
-按一下,您可以在系统提示器上进行即时缓存 (共享所有50k通话). 按一下,账单下降到180美元/夜.
+只开 batch，就能先省掉 50%。如果你再把 system prompt 的 prompt caching 打开，因为这段 prompt 会在全部 50k 调用里共享，叠加后账单可以降到每晚 $180，也就是基线的约 9%。同一条 pipeline，只改三处配置。
 
-批量是LLM成本工具包中最便宜的杆,没有人抽出.原因主要是组织性:团队认为"实时"当SLA实际上是"早上".
+Batch 是整个 LLM 成本工具箱里最便宜、却最少团队会主动去拉的杠杆。原因通常不是技术，而是组织认知：团队脑子里想的是“实时”，而真实 SLA 其实只是“明天早上之前”。这节课要解决的，就是不要把 90% 的费用继续留在桌上。
 
 ## 概念
 
-### 三个批次的API
+### 三种 batch API
 
-**OpenAI Batch API**预约24小时的转换 (通常在实践中是2-8小时). 50%的输入和输出代币折扣. `/v1/batches`预存可入的输入也得到了预存输入的定价.
+**OpenAI Batch API**：通过 JSONL 文件上传一组请求。承诺 24 小时内返回，实际常见是 2-8 小时。输入和输出 tokens 都打 50% 折扣。入口是 `/v1/batches`。如果输入本身又满足缓存条件，还能继续叠加 cached-input pricing。
 
-**Anthropic Message Batches**随时运行,50%折扣,支持`cache_control`缓存写字是明确的,读音在批量内自动发生.
+**Anthropic Message Batches**：同样是 JSONL 上传。24 小时 turnaround。50% 折扣。支持 `cache_control`，也就是说 cache write 需要显式标记，而 reads 会在 batch 内自动发生。
 
-**Google Vertex AI Batch Prediction**双子座的50%折扣. 集成到 Vertex 管道.
+**Google Vertex AI Batch Prediction**：输入来源可以是 BigQuery 或 GCS。Gemini 也有类似的 50% 折扣，并且天然能和 Vertex pipelines 集成。
 
-### 语义:异步,不是缓慢
+### 语义上是异步，不代表它很慢
 
-典型的P50是2-6小时.提供商在高峰窗口之外安排你的批量,当GPU库存未充分使用时.
+Batch 的意思是“我承诺 24 小时内返回”，不是“它一定要跑 24 小时”。典型 P50 通常只有 2-6 小时。provider 会把 batch 调度到离峰时段，以便利用空闲 GPU 库存。
 
-### 存储存储
+### 与缓存叠加
 
-通过同一个4K代码系统提示,
+假设你有一条 50k-document summarization 任务，而且所有请求共享同一个 4K-token system prompt：
 
-- 交时未存储:50000 × ($input × 4000 + $输出 × 200) 完全速率.
-- 同步缓存:系统提示在第一次写完后被缓存;剩下的49999得到10倍便宜的输入.
-- 存储存储:上述所有内容加上 50% 的阅读和写作折扣.
+- Synchronous uncached：50000 × ($input × 4000 + $output × 200)，全部按原价计算。
+- Synchronous cached：system prompt 在第一次 write 之后被缓存，剩余 49999 次请求获得 10 倍更便宜的输入价格。
+- Batch cached：在以上基础上，再给 read 和 write 都加上 50% 的 batch 折扣。
 
-堆:批量+缓存 = 交代未缓存账单的10%左右.任何一夜运行且具有共享系统提示的工作负载都应该使用此.
+结论就是：batch + cache 叠加后，成本大约只有 sync uncached 的 10%。只要一个工作负载会过夜运行，并且 system prompt 是共享的，就应该这样做。
 
-### 工作负载分类
+### 工作负载分流
 
-**Interactive**用户等待响应.TTFT重要.同步调用,即时缓存.不能批量.
+**Interactive**：用户在等待响应。TTFT 是关键。应走同步调用，并配合 prompt caching。不能用 batch。
 
-**Semi-interactive**用户提交任务,在几分钟内检查回来. 随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随时随的随时随时随时随时随时随时随时随的随时随时随时随时随时随的随时随时随时随时随时随的随时随时随的随时随时随时随的随时随时随时随的随时随时随的随时随时随的随时随时随的随时随的随时随的随时随的随时随时随的随的随的随的随时随的.
+**Semi-interactive**：用户提交任务，几分钟后回来查看。应走异步队列；如果 batch 不可用，再 fallback 到同步调用。中等规模的 RAG indexing 就是典型例子。
 
-**Batch**用户预计"早上"或"下一个小时"的结果. 内容管道,规模分类,离线分析.
+**Batch**：用户期望的是“明早给我”或者“下一小时给我”。内容流水线、大规模分类、离线分析，都属于这一类。总原则是：能 batch 就 batch，且要叠加 cache。
 
-常见错误:将所有东西归类为互动,因为管道是生产.生产不是延迟规范.
+最常见的错误，是因为这个 pipeline 属于生产环境，就把它强行归为 interactive。生产不是延迟要求，SLA 才是。
 
-### 部分互动性陷
+### 部分交互性陷阱
 
-一些功能看起来是互动性的,但可以容忍5到10分钟. 例如:每晚的客户健康报告,按"刷新"按.用户点击刷新;等10分钟是可以的.团队将其作为同步的运输.50次同时刷新成本是批量和通过电子邮件交付成本的10倍.
+有些功能看起来是交互式，但其实完全能容忍 5-10 分钟。例如一份 nightly customer health report 上加了一个“refresh”按钮。用户点了刷新，等 10 分钟其实完全可以接受。可团队却把它按同步接口来做。结果 50 个并发刷新，成本是“batch 后通过邮件回送”的 10 倍。
 
-如果答案是"他们不会注意到",那么请按一下.
+真正该问的问题是：“对这个用户来说，24 小时意味着什么？”如果答案是“他们根本不会察觉”，那就应该进 batch。
 
-### 输出方案陷
+### 输出 schema 陷阱
 
-批量文件格式因供应商而异:
+不同 provider 的 batch 文件格式并不统一：
 
-- 开放AI:JSONL,每行一个请求.
-- 人类:JSONL,每行一个消息;嵌入式响应格式.
-- 垂直:BigQuery表或GCS前,并使用TFRecord.
+- OpenAI：JSONL，每行一个 request。
+- Anthropic：JSONL，每行一个 message，响应格式直接嵌在消息里。
+- Vertex：BigQuery table 或 GCS prefix，配合 TFRecord。
 
-通过提供商中写"一批客户端"意味着每个提供商的适配器代码.广告多提供商批量 (Portkey, LiteLLM某些层次) 的门户仍然薄包装原始格式.
+所以你要写一个“跨 provider 的统一 batch client”，本质上还是得为每个 provider 单独写 adapter code。那些宣传自己支持 multi-provider batch 的 gateway（例如某些层级的 Portkey、LiteLLM），本质上也只是对底层原始格式做了一层薄封装。
 
-### 你应该记住的数字
+### 你需要记住的数字
 
-- 供应商之间批量折扣:输入+输出均为50%.
-- 转换SLA:24小时保证,2-6小时典型的P50.
-- 堆叠的批量+缓存输入: -10%的同步未缓存成本.
-- 工作负载分类规则:如果24小时延迟是可接受的,总是批量.
+- 各 provider 的 batch 折扣：输入 + 输出统一 50%。
+- Turnaround SLA：保证 24 小时内返回；典型 P50 是 2-6 小时。
+- Stacked batch + cached input：约等于 sync uncached 成本的 10%。
+- Workload triage rule：如果 24h 延迟可以接受，就始终应该进 batch。
 
 ```figure
 batch-lane-triage
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`计算50万份文件工作负载的同步,同步+缓存,批量和批量+缓存成本. 报告以$和百分比节省.
+`code/main.py` 会计算一条 50k-document 工作负载在 sync、sync+cache、batch、batch+cache 四种模式下的成本，并以美元和百分比形式展示节省幅度。
 
-## 运送它
+## 产出
 
-这一课产生了`outputs/skill-batch-triager.md`鉴于工作负载特征,分为互动/半/批量,并估计节省.
+这一课会产出 `outputs/skill-batch-triager.md`。给定工作负载特征，它会把任务分到 interactive / semi / batch，并估算节省空间。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`对于一个100kdoc管道,有3K代币系统提示和500代币输出,计算全堆积 (批量+缓存) 的节省与同步基线.
-2. 选择你熟悉的真实产品中的三个功能,
-3. 报告需要3个小时的时间,这是一个错误的批量排序,还是一个合法的互动?
-4. 您的批量API返回SLA是24h,但P99是20h. 如何向用户传达这个?
-5. 计算平衡:在哪个共享前长度下,批量+缓存比在您自己的预留GPU上一夜运行更便宜?
+1. 运行 `code/main.py`。对一条包含 100k documents、3K-token system prompt 和 500-token output 的 pipeline，计算 full stack（batch + cache）相对于 sync baseline 的节省。
+2. 从一个真实产品里挑三个你熟悉的功能，分别把它们分到 interactive / semi / batch。
+3. 用户抱怨一份报告花了 3 小时才生成出来。这是 batch 误分流，还是合法的 interactive？请写出你的判定标准。
+4. 如果你的 batch API 返回 SLA 是 24h，但 P99 是 20 小时，你要如何向用户沟通？边界情况时，下游系统应当怎么处理？
+5. 计算 break-even：共享前缀长度达到多少后，batch + cache 会比在你自己的保留 GPU 上过夜运行更便宜？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Batch API | "async discount" | 50% off with 24h turnaround |
-| JSONL | "batch format" | One JSON request per line; OpenAI/Anthropic standard |
-| Message Batches | "Anthropic batch" | Anthropic's batch API product name |
-| Batch prediction | "Vertex batch" | Vertex AI's batch API product |
-| Turnaround SLA | "24h promise" | Guarantee, not typical; typical is 2-6h |
-| Workload triage | "interactivity decision" | Interactive / semi / batch routing decision |
-| Output schema | "response format" | Per-provider JSONL layout; not portable |
-| Stacked discount | "batch + cache" | ~10% of uncached sync bill when both apply |
+| 术语 | 人们常说 | 实际含义 |
+|------|----------|----------|
+| Batch API | “异步折扣” | 以 24h 周转换取 50% 折扣 |
+| JSONL | “批处理格式” | 每行一个 JSON 请求；OpenAI/Anthropic 的标准格式 |
+| Message Batches | “Anthropic batch” | Anthropic 的 batch API 产品名 |
+| Batch prediction | “Vertex batch” | Vertex AI 的 batch API 产品 |
+| Turnaround SLA | “24 小时承诺” | 保证上限，不是典型耗时；典型是 2-6h |
+| Workload triage | “交互性决策” | interactive / semi / batch 的分流决策 |
+| Output schema | “响应格式” | 各 provider 自己的 JSONL 或表结构；不可直接通用 |
+| Stacked discount | “批处理 + 缓存” | 两者叠加后，成本约为 sync uncached 的 10% |
 
-## 进一步阅读
+## 延伸阅读
 
-- [OpenAI Batch API](https://platform.openai.com/docs/guides/batch) JSONL格式和`/v1/batches`它们是什么意思?
-- [Anthropic Message Batches](https://docs.anthropic.com/en/docs/build-with-claude/batch-processing)批量格式和`cache_control`互动.
-- [Vertex AI Batch Prediction](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/batch-prediction-gemini)双子座的批量语义.
+- [OpenAI Batch API](https://platform.openai.com/docs/guides/batch) — JSONL 格式与 `/v1/batches` 语义。
+- [Anthropic Message Batches](https://docs.anthropic.com/en/docs/build-with-claude/batch-processing) — batch 格式与 `cache_control` 的交互方式。
+- [Vertex AI Batch Prediction](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/batch-prediction-gemini) — Gemini 的 batch 语义。
 - [Finout — OpenAI vs Anthropic API Pricing 2026](https://www.finout.io/blog/openai-vs-anthropic-api-pricing-comparison)
 - [Zen Van Riel — LLM API Cost Comparison 2026](https://zenvanriel.com/ai-engineer-blog/llm-api-cost-comparison-2026/)
