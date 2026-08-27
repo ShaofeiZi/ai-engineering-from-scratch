@@ -1,38 +1,38 @@
-# 短暂的时间,思想链,思想树
+# 少样本、思维链与思维树
 
-> 告诉模型该做什么是促使. 展示它如何思考是工程. 在同一模型,同一任务,相同数据上,78%到91%的准确度之间的差距不是更好的模型.
+> 告诉模型做什么，只是提示；向它展示如何思考，才是工程。同一个模型、同一个任务、同一份数据，准确率从 78% 提升到 91%，靠的不是更好的模型，而是更好的推理策略。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Lesson 11.01 (Prompt Engineering)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 11 第 01 课（提示工程）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 通过选择和格式化最大限度地完成任务准确性的示例,实现少数拍摄提示
-- 应用链思维 (CoT) 推理,以提高多步骤问题上的准确性,如数学词题
-- 建立一个思考树提示,探索多种推理路径,选择最好的
-- 测量从零射击对少数射击对CoT的准确性提高,根据标准基准
+- 选择并格式化能够最大化任务准确率的示例，实施少样本提示
+- 使用思维链（CoT）推理，提高数学应用题等多步问题的准确率
+- 构建思维树提示，探索多条推理路径并选出最佳路径
+- 在标准基准上测量零样本、少样本与 CoT 的准确率提升
 
 ## 问题
 
-你建立了一个数学教学应用程序.你的提示是"解决这个词问题".GPT-5在GSM8K上得到了94%的时间,这是标准的小学数学基准.你认为你已经达到顶峰.你没有思想链仍然增加3-4分.
+假设你要构建一个数学辅导应用，提示词写的是：“解答这道应用题。”GPT-5 在标准小学数学基准 GSM8K 上能答对 94%。你可能以为已经到达上限，其实没有——思维链仍能再提高 3～4 个百分点。
 
-添加五个单词, "让我们一步一步思考" - - 精度跳到91%.添加几种工作的例子,它达到95%.同样的模型.同样的温度.同样的API成本.唯一的区别是你给了模型的草纸.
+只需加上五个单词——“Let's think step by step”——准确率就能升至 91%；再加入几个带完整解法的示例，则可达到 95%。模型相同、温度相同、API 成本相同，唯一差别是你给了模型一张草稿纸。
 
-这不是一个黑客.这是推理工作的方式.人类不会在一个心理跳跃中解决多步骤的问题.转变器也不会.当你迫使模型生成中间代币时,这些代币成为下一个代币的背景的一部分.每一步推理都能给下一个代币提供食物.模型字面上计算到答案.
+这不是技巧，而是推理本来的工作方式。人类不会只靠一次思维跳跃解决多步问题，Transformer 也不会。当你要求模型生成中间词元时，这些词元会成为下一个词元的上下文。每个推理步骤都为下一步提供输入，模型确实是在一步步计算出答案。
 
-但"一步一步思考"是开始,而不是结束.如果你采用五种推理方法,并获得多数票,你会怎么样?如果你让模型探索一个可能性树,评估和剪枝?如果你将推理与工具的使用交织在一起呢?这些不是假设.它们是有测量改进的发表技术,你将在这个课程中构建它们.
+但“逐步思考”只是起点，不是终点。如果采样五条推理路径，再对最终答案进行多数投票呢？如果让模型探索一棵可能性树，边评估边剪枝呢？如果把推理与工具使用交错起来呢？这些都不是假设，而是有实测改进的已发表技术。本课会逐一构建。
 
 ## 概念
 
-### 零射击与少射击:当例子击败指令时
+### 零样本与少样本：示例何时胜过指令
 
-零射击提示给模型一个任务,而没有其他任务. 少数射击提示首先给它举例.
+零样本提示只给模型任务，不提供任何其他内容；少样本提示则先提供示例。
 
-微等人 (2022) 在8个基准中测量了这一点.对于像情感分类这样的简单任务,零射击和少射击在彼此的2%内执行.对于多步数学和象征性推理这样的复杂任务,少射击提高了10-25%的准确性.
+Wei 等人（2022）在 8 项基准上测量了二者差异。对于情感分类等简单任务，零样本与少样本的表现差距不到 2%；对于多步算术和符号推理等复杂任务，少样本会把准确率提高 10%～25%。
 
-直觉:例子是压缩的指令.你不描述输出格式,而是显示它.你不解释推理过程,而是展示它.模型模式比解释抽象指令更可靠地匹配例子.
+直觉是：示例就是压缩后的指令。与其描述输出格式，不如直接展示；与其解释推理过程，不如实际演示。相比解释抽象指令，模型对示例进行模式匹配更加可靠。
 
 ```mermaid
 graph TD
@@ -48,23 +48,23 @@ graph TD
     style F fill:#1a1a2e,stroke:#51cf66,color:#fff
 ```
 
-**When few-shot wins:**对于格式敏感任务,分类,结构化提取,特定领域的语,任何模型需要匹配特定模式的任务.
+**少样本更占优的场景：** 对格式敏感的任务、分类、结构化提取、领域专用术语，以及任何需要模型匹配特定模式的任务。
 
-**When zero-shot wins:**简单的事实问题,创意任务,例子限制创造力,找到好的例子比写好说明更难的任务.
+**零样本更占优的场景：** 简单事实问题、示例会限制创造力的创意任务，以及找到好示例比写清指令更困难的任务。
 
-### 选择例子:类似的击球随机
+### 示例选择：相似优于随机
 
-不是所有例子都是相同的.选择类似于目标输入的例子在分类任务上比随机选择5-15%更好 (Liu等人, 2022).三个原则:
+并非所有示例都同等有效。在分类任务上，选择与目标输入相似的示例，比随机选择准确率高 5%～15%（Liu 等，2022）。有三条原则：
 
-1. **Semantic similarity**: 选择最接近输入空间的例子
-2. **Label diversity**: 涵盖您的示例中的所有输出类别
-3. **Difficulty matching**根据目标问题的复杂性水平
+1. **语义相似性：** 选择嵌入空间中最接近输入的示例
+2. **标签多样性：** 示例应覆盖所有输出类别
+3. **难度匹配：** 让示例的复杂程度与目标问题相当
 
-在3下,模型没有足够的信号来提取模式.在5上,你会击中减少回报和浪费文本窗口代币.对于许多标签的分类,请使用每个标签的一个例子.
+对大多数任务而言，最佳示例数是 3～5 个。少于 3 个，模型没有足够信号来提取模式；超过 5 个，收益开始递减，还会浪费上下文窗口。对于标签较多的分类任务，每个标签提供一个示例。
 
-### 思想链:提供模特的草纸
+### 思维链：给模型一张草稿纸
 
-推出了"链思维" (CoT) 提示,由微等人 (2022) 在谷歌大脑上推出. 这个想法很简单:而不是仅仅要求模型回答,请它先显示其推理步骤.
+思维链（CoT）提示由 Google Brain 的 Wei 等人于 2022 年提出。思想很简单：不要只要求模型给出答案，而要让它先展示推理步骤。
 
 ```mermaid
 graph LR
@@ -83,33 +83,33 @@ graph LR
     style A2 fill:#1a1a2e,stroke:#51cf66,color:#fff
 ```
 
-由于这种方法是机械的,变压器生成的每个代币都会成为下一个代币的背景.没有CoT,模型必须将所有推理压缩到单个前进传递的隐藏状态中.
+它为什么能从机制上奏效？Transformer 生成的每个词元都会成为下一个词元的上下文。没有 CoT 时，模型必须在单次前向传播的隐藏状态中压缩全部推理；使用 CoT 后，模型会把中间计算外化为词元。每个推理词元都会延长有效计算深度。
 
-**GSM8K benchmarks (grade-school math, 8.5K problems):**
+**GSM8K 基准（小学数学，8500 道题）：**
 
-| Model | Zero-Shot | Zero-Shot CoT | Few-Shot CoT |
+| 模型 | 零样本 | 零样本 CoT | 少样本 CoT |
 |-------|-----------|---------------|--------------|
 | GPT-4o | 78% | 91% | 95% |
 | GPT-5 | 94% | 97% | 98% |
-| o4-mini (reasoning) | 97% | — | — |
+| o4-mini（推理） | 97% | — | — |
 | Claude Opus 4.7 | 93% | 97% | 98% |
 | Gemini 3 Pro | 92% | 96% | 98% |
 | Llama 4 70B | 80% | 89% | 94% |
 | DeepSeek-V3.1 | 89% | 94% | 96% |
 
-**Note on reasoning models.**开放AI的o系列 (o3,o4-mini) 和DeepSeek-R1等模型在发出答案之前内部运行思想链.在推理模型中添加"让我们一步一步思考"是冗余的,有时是反效的.
+**关于推理模型。** OpenAI o 系列（o3、o4-mini）和 DeepSeek-R1 等模型会在输出答案前于内部运行思维链。为推理模型额外添加“Let's think step by step”既重复，有时还会适得其反——它们已经这样做了。
 
-两种风味:
+CoT 有两种形式：
 
-**Zero-shot CoT**没有需要举例.科吉马等人 (2022) 表明,这个单一句子在算术,常识和象征性推理任务中提高了准确性.
+**零样本 CoT：** 在提示词末尾加入“Let's think step by step”，不需要示例。Kojima 等人（2022）证明，仅这一句话就能提高算术、常识与符号推理任务的准确率。
 
-**Few-shot CoT**模型可以看到你预期的正确的推理格式,因此比零射击CoT更有效.
+**少样本 CoT：** 提供包含推理步骤的示例。它比零样本 CoT 更有效，因为模型可以看到你期望的确切推理格式。
 
-**When CoT hurts**简单的事实回忆 ("法国的首都是什么?"),单步分类,速度比精确性更重要的工作.
+**CoT 适得其反的场景：** 简单事实回忆（“法国的首都是哪里？”）、单步分类，以及速度比准确率更重要的任务。CoT 每次查询会增加 50～200 个推理词元。对于高吞吐、低复杂度任务，这些都是浪费的成本。
 
-### 统一: 抽取许多人,一次投票
+### 自洽性：多次采样，一次投票
 
-等人 (2023) 引入了自相一致性. 洞察:单个CoT路径可能包含推理错误. 但如果你采用N独立推理路径 (使用温度>0) 并对最终答案获得多数票,错误会被取消.
+Wang 等人（2023）提出自洽性。其洞见是：单条 CoT 路径可能包含推理错误；但如果以大于 0 的温度采样 N 条独立推理路径，再对最终答案进行多数投票，错误就会相互抵消。
 
 ```mermaid
 graph TD
@@ -136,13 +136,13 @@ graph TD
     style V fill:#1a1a2e,stroke:#51cf66,color:#fff
 ```
 
-自律性提高了GSM8K精度,从56.5% (单次CoT) 提高到74.4%,在最初的PaLM 540B实验中N=40 在GPT-5上,改善很小 (97%至98%) 因为基准已经和. 这种技术最能在60-85%的基准CT模型上发挥作用. 单路错误经常发生,但并非系统. 对于推理模型 (o系列,R1) 的自相一致性由内置的内部采样进行.
+PaLM 540B 的原始实验中，自洽性把 GSM8K 准确率从 56.5%（单条 CoT）提高到 N=40 时的 74.4%。GPT-5 上的提升较小（97% 到 98%），因为基础准确率已经饱和。该技术最适合基础 CoT 准确率为 60%～85% 的模型——单路径错误较为常见，却不是系统性的。对于推理模型（o 系列、R1），自洽性已经包含在内置的内部采样中。
 
-交易:N样本意味着Nx API成本和延迟.实际上,N=5占据了大部分的好处.N=3是有意义的投票的最低值.N>10对大多数任务的回报率下降.
+代价是：N 个样本意味着 N 倍 API 成本与延迟。实践中，N=5 已能获得大部分收益，N=3 是形成有效投票的最低值；对于多数任务，N > 10 后收益会递减。
 
-### 思想树:分支探索
+### 思维树：分支式探索
 
-等人 (2023) 引入了思维树 (ToT).在CT遵循一个线性推理路径时,ToT在继续之前探索多个分支并评估最有前途的.
+Yao 等人（2023）提出思维树（ToT）。CoT 只沿一条线性推理路径前进，而 ToT 会探索多个分支，在继续前评估哪些分支最有希望。
 
 ```mermaid
 graph TD
@@ -183,19 +183,19 @@ graph TD
     style E4 fill:#1a1a2e,stroke:#808080,color:#fff
 ```
 
-托特有三个组成部分:
+ToT 包含三个组成部分：
 
-1. **Thought generation**: 产生多个候选人下一步
-2. **State evaluation**:每位候选人都能获得分数 (可以作为评估者使用LLM本身)
-3. **Search algorithm**: BFS或 DFS 穿过树木,切割低分分分的枝
+1. **思路生成：** 产生多个候选下一步
+2. **状态评估：** 为每个候选评分（可以让大语言模型自身担任评估器）
+3. **搜索算法：** 通过 BFS 或 DFS 搜索树，并剪除低分分支
 
-在24任务游戏中 (通过算法结合4个数字,使24),GPT-4与标准提示解决7.3%的问题.在CoT中,4.0% (CoT实际上在这里很痛苦,因为搜索空间很宽).在ToT中,74%.
+在“24 点”任务中（用算术运算组合 4 个数字得到 24），GPT-4 使用标准提示时只能解决 7.3% 的问题；使用 CoT 时为 4.0%（CoT 在这里反而有害，因为搜索空间很宽）；使用 ToT 时则达到 74%。
 
-树中的每个节点都需要一个LLM调用.一个分分数3和深度3的树需要高达39个LLM调用.只用于搜索空间很大但可评估的问题 - 规划,解题,创造性解决问题,但有限制.
+ToT 成本很高，树中的每个节点都需要一次大语言模型调用。分支因子为 3、深度为 3 的树最多需要 39 次调用。只应把它用于搜索空间较大但可以评估的问题，例如规划、谜题求解和受约束的创意问题。
 
-### 反应:思考+行动
+### ReAct：思考 + 行动
 
-雅奥等人 (2022) 将推理的痕迹与行动结合在一起.该模型在思考 (产生推理) 和行动 (调用工具,搜索,计算) 之间交替.
+Yao 等人（2022）把推理轨迹与行动结合起来。模型在思考（生成推理）与行动（调用工具、搜索、计算）之间交替。
 
 ```mermaid
 graph LR
@@ -222,15 +222,15 @@ graph LR
     style F fill:#1a1a2e,stroke:#51cf66,color:#fff
 ```
 
-在知识密集任务中,ReAct 优于纯粹的CoT,因为它可以将其推理基于真实的数据.在HotpotQA (多跳答题),ReAct 与GPT-4实现了35.1%的精确匹配,而仅仅为CoT而言,达到29.4%的精确匹配.真正的力量是,推理错误通过观察得到纠正 - 模型可以在执行中更新计划.
+ReAct 在知识密集型任务上优于纯 CoT，因为它能用真实数据为推理提供依据。在 HotpotQA（多跳问答）上，使用 GPT-4 的 ReAct 精确匹配率为 35.1%，而单独 CoT 只有 29.4%。它真正强大的地方在于，观测可以纠正推理错误——模型能够在执行过程中更新计划。
 
-反应是现代人工智能代理的基础.每个代理框架 (长链, CrewAI,自动生成) 实现了思考-行动-观察循环的某种变化.你将在第14阶段构建完整的代理.
+ReAct 是现代 AI 智能体的基础。每种智能体框架（LangChain、CrewAI、AutoGen）都会实现某种“思考-行动-观测”循环。阶段 14 将构建完整智能体，本课只介绍提示模式。
 
-### 结构化提示:XML标签,界限符,标题
+### 结构化提示：XML 标签、分隔符与标题
 
-随着提示变得复杂,结构可以防止模型混乱的部分.
+随着提示词变得复杂，结构可以防止模型混淆不同部分。常见方法有三种：
 
-**XML tags**(与克劳德最好,在任何地方都很坚固):
+**XML 标签**（Claude 上效果最佳，在其他模型上也很稳）：
 ```
 <context>
 You are reviewing a pull request.
@@ -250,7 +250,7 @@ List each issue with: file, line, severity (critical/warning/info), description.
 </output_format>
 ```
 
-**Markdown headers**(普遍):
+**Markdown 标题**（通用）：
 ```
 ## Role
 Senior security engineer at a fintech company.
@@ -267,7 +267,7 @@ Analyze this API endpoint for vulnerabilities.
 - Include remediation steps
 ```
 
-**Delimiters**(最小但有效):
+**分隔符**（简洁而有效）：
 ```
 ---INPUT---
 {user_text}
@@ -278,9 +278,9 @@ Summarize the above in 3 bullet points.
 ---END INSTRUCTIONS---
 ```
 
-### 快速链接:序列分解
+### 提示链：顺序分解
 
-一些任务对于一个提示来说太复杂了. 提示链将它们分成步骤,其中一个提示的输出成为下一个提示的输入.
+有些任务过于复杂，无法用单条提示完成。提示链会把它们拆成多个步骤，前一条提示的输出成为下一条提示的输入。
 
 ```mermaid
 graph LR
@@ -300,41 +300,41 @@ graph LR
     style F fill:#1a1a2e,stroke:#51cf66,color:#fff
 ```
 
-链接跳动单次,原因是三个:
+提示链优于单条提示词，原因有三：
 
-1. **Each step is simpler**:模型处理一个集中任务,而不是道所有事情
-2. **Intermediate outputs are inspectable**您可以在步骤之间验证和纠正
-3. **Different steps can use different models**采用便宜的模型来提取,而昂贵的模型来推理
+1. **每一步更简单：** 模型一次只处理一个聚焦任务，而不必同时兼顾所有内容
+2. **中间输出可以检查：** 可以在步骤之间验证和修正
+3. **不同步骤可以使用不同模型：** 提取使用便宜模型，推理使用昂贵模型
 
-### 性能比较
+### 性能对比
 
-| Technique | Best For | GSM8K Accuracy (GPT-5) | API Calls | Token Overhead | Complexity |
+| 技术 | 最适用场景 | GSM8K 准确率（GPT-5） | API 调用次数 | 词元开销 | 复杂度 |
 |-----------|----------|------------------------|-----------|----------------|------------|
-| Zero-Shot | Simple tasks | 94% | 1 | None | Trivial |
-| Few-Shot | Format matching | 96% | 1 | 200-500 tokens | Low |
-| Zero-Shot CoT | Quick reasoning boost | 97% | 1 | 50-200 tokens | Trivial |
-| Few-Shot CoT | Maximum single-call accuracy | 98% | 1 | 300-600 tokens | Low |
-| Self-Consistency (N=5) | High-stakes reasoning | 98.5% | 5 | 5x token cost | Medium |
-| Reasoning model (o4-mini) | Drop-in CoT replacement | 97% | 1 | hidden (2-10x internal) | Trivial |
-| Tree-of-Thought | Search/planning problems | N/A (74% on Game of 24) | 10-40+ | 10-40x token cost | High |
-| ReAct | Knowledge-grounded reasoning | N/A (35.1% on HotpotQA) | 3-10+ | Variable | High |
-| Prompt Chaining | Complex multi-step tasks | 96% (pipeline) | 2-5 | 2-5x token cost | Medium |
+| 零样本 | 简单任务 | 94% | 1 | 无 | 极低 |
+| 少样本 | 格式匹配 | 96% | 1 | 200～500 个词元 | 低 |
+| 零样本 CoT | 快速提升推理表现 | 97% | 1 | 50～200 个词元 | 极低 |
+| 少样本 CoT | 单次调用准确率最高 | 98% | 1 | 300～600 个词元 | 低 |
+| 自洽性（N=5） | 高风险推理 | 98.5% | 5 | 5 倍词元成本 | 中 |
+| 推理模型（o4-mini） | 直接替代 CoT | 97% | 1 | 隐藏开销（内部 2～10 倍） | 极低 |
+| 思维树 | 搜索/规划问题 | 不适用（24 点任务为 74%） | 10～40 次以上 | 10～40 倍词元成本 | 高 |
+| ReAct | 有知识依据的推理 | 不适用（HotpotQA 为 35.1%） | 3～10 次以上 | 可变 | 高 |
+| 提示链 | 复杂多步任务 | 96%（流水线） | 2～5 | 2～5 倍词元成本 | 中 |
 
-对于大多数生产系统,只有3个样本自相一致性倒退的少量COT覆盖90%的使用情况.
+正确技术取决于三个因素：准确率要求、延迟预算和成本容忍度。对大多数生产系统而言，少样本 CoT 加上 3 次采样的自洽性回退，可以覆盖 90% 的使用场景。
 
 ```figure
 few-shot-curve
 ```
 
-## 建立它
+## 动手构建
 
-我们将构建一个数学问题解决方案,将短暂的提示,链条思维推理和自律投票结合成一个管道.
+我们将构建一个数学题求解器，把少样本提示、思维链推理和自洽性投票组合成一条流水线，再为困难问题加入思维树。
 
-全面实施在`code/advanced_prompting.py`它们是主要的组成部分.
+完整实现位于 `code/advanced_prompting.py`。以下是关键组件。
 
-### 步骤1:少拍的例子商店
+### 第 1 步：少样本示例库
 
-第一个组件管理了少数镜头的例子,并选择了对特定问题的最相关的例子.
+第一个组件负责管理少样本示例，并为给定问题选择最相关的示例。
 
 ```python
 GSM8K_EXAMPLES = [
@@ -347,11 +347,11 @@ GSM8K_EXAMPLES = [
 ]
 ```
 
-每个例子都有三个部分:问题,推理链和最终答案.推理链是将一个普通的几次例子转化为一个CoT的几次例子.
+每个示例包含三部分：问题、推理链和最终答案。正是推理链把普通少样本示例变成了 CoT 少样本示例。
 
-### 第二步: 构建思想链的提示
+### 第 2 步：思维链提示构建器
 
-提示构造器将系统信息,一些投影例子与推理链,以及目标问题组合成一个提示.
+提示构建器把系统消息、带推理链的少样本示例和目标问题组装为一条提示词。
 
 ```python
 def build_cot_prompt(question, examples, num_examples=3):
@@ -371,11 +371,11 @@ def build_cot_prompt(question, examples, num_examples=3):
     return system, user
 ```
 
-格式限制 ("答案是[数]") 很重要.没有它,自相一致性无法从样本中提取和比较答案.
+格式约束（“The answer is [number]”）至关重要。没有它，自洽性就无法从多个样本中提取答案并进行比较。
 
-### 步骤3:自主投票
+### 第 3 步：自洽性投票
 
-采用N推理方式,并取多数答案.
+采样 N 条推理路径，再选择多数答案。
 
 ```python
 def self_consistency_solve(question, examples, client, model, n_samples=5):
@@ -405,11 +405,11 @@ def self_consistency_solve(question, examples, client, model, n_samples=5):
     return best_answer, confidence, reasonings, vote_counts
 ```
 
-温度是0.7很重要.在温度是0.0,所有N样本都会相同,从而打败目的.你需要足够的随机性来进行不同的推理方式,但不是那么多,模型产生语.
+温度 0.7 很重要。若温度为 0.0，全部 N 个样本都会完全相同，自洽性也就失去了意义。既要有足够随机性来产生不同推理路径，又不能高到让模型输出乱码。
 
-### 第四步:思考树的解决方法
+### 第 4 步：思维树求解器
 
-在线性推理失败的问题上,ToT探讨多种方法,并评估哪个方向最有前途.
+对于线性推理无法解决的问题，ToT 会探索多种方法，并评估哪个方向最有希望。
 
 ```python
 def tree_of_thought_solve(question, client, model, breadth=3, depth=3):
@@ -430,11 +430,11 @@ def tree_of_thought_solve(question, client, model, breadth=3, depth=3):
     return extract_answer(best_thought), best_thought
 ```
 
-评估者本身就是一个LLM. 你问模型:"在0.0到1.0的尺度上,这个推理方法如何解决问题?"这是ToT的关键见解 - - 模型评估自己的部分解决方案.
+评估器本身也是一次大语言模型调用。你会问模型：“从 0.0 到 1.0，这条推理路径对于解决问题有多大希望？”这就是 ToT 的关键洞见——让模型评估自己的部分解答。
 
-### 步骤5: 完整的管道
+### 第 5 步：完整流水线
 
-管道将所有技术与升级战略结合在一起.
+这条流水线通过升级策略组合所有技术。
 
 ```python
 def solve_with_escalation(question, examples, client, model):
@@ -453,13 +453,13 @@ def solve_with_escalation(question, examples, client, model):
     return tot_answer, "tree_of_thought", None
 ```
 
-升级逻辑:首先尝试便宜的 (单个CT).如果自相一致性信心低于0.8 (五个样本中有4个不赞成),升级到ToT. 这平衡了成本和精度 - - 大多数问题是便宜地解决的,
+升级逻辑是：先尝试成本低的单条 CoT。如果自洽性置信度低于 0.8（5 个样本中同意的少于 4 个），就升级为 ToT。这样可以平衡成本与准确率——多数问题以低成本解决，困难问题则获得更多计算资源。
 
-## 用它
+## 学以致用
 
-### 基于模板的几次拍摄提示
+### 模板驱动的少样本提示
 
-兰格链为快速模板和输出解析提供内置支持,简化了少量拍摄和CoT模式:
+LangChain 内置提示模板与输出解析支持，可简化少样本和 CoT 模式：
 
 ```python
 from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
@@ -482,7 +482,7 @@ chain = few_shot_prompt | llm
 result = chain.invoke({"input": "If a train travels 120 km in 2 hours..."})
 ```
 
-长链也有了`ExampleSelector`语义相似性选择类:
+LangChain 还提供 `ExampleSelector` 类，用于按语义相似性选择示例：
 
 ```python
 from langchain_core.example_selectors import SemanticSimilarityExampleSelector
@@ -495,9 +495,9 @@ selector = SemanticSimilarityExampleSelector.from_examples(
 )
 ```
 
-### 编译的提示
+### 编译式提示词
 
-作为一个可优化模块,DSPy将提示策略视为可优化模块.
+DSPy 把提示策略视为可优化模块。无需手工制作 CoT 提示，只需定义签名，再让 DSPy 优化提示：
 
 ```python
 import dspy
@@ -515,7 +515,7 @@ solver = MathSolver()
 result = solver(question="Janet's ducks lay 16 eggs per day...")
 ```
 
-鱼的鱼`ChainOfThought`它们可以自动增加推理的痕迹.`dspy.majority`实现自律性:
+DSPy 的 `ChainOfThought` 会自动加入推理轨迹，`dspy.majority` 则实现自洽性：
 
 ```python
 result = dspy.majority(
@@ -524,57 +524,57 @@ result = dspy.majority(
 )
 ```
 
-### 比较:从零到框架
+### 从零实现与框架对比
 
-| Feature | From-Scratch (this lesson) | LangChain | DSPy |
+| 特性 | 从零实现（本课） | LangChain | DSPy |
 |---------|--------------------------|-----------|------|
-| Control over prompt format | Full | Template-based | Automatic |
-| Self-consistency | Manual voting | Manual | Built-in (`dspy.majority`) |
-| Example selection | Custom logic | `ExampleSelector` | `dspy.BootstrapFewShot` |
-| Tree-of-Thought | Custom tree search | Community chains | Not built-in |
-| Prompt optimization | Manual iteration | Manual | Automatic compilation |
-| Best for | Learning, custom pipelines | Standard workflows | Research, optimization |
+| 对提示格式的控制 | 完全控制 | 基于模板 | 自动 |
+| 自洽性 | 手工投票 | 手工 | 内置（`dspy.majority`） |
+| 示例选择 | 自定义逻辑 | `ExampleSelector` | `dspy.BootstrapFewShot` |
+| 思维树 | 自定义树搜索 | 社区链 | 未内置 |
+| 提示优化 | 手工迭代 | 手工 | 自动编译 |
+| 最适用场景 | 学习、自定义流水线 | 标准工作流 | 研究、优化 |
 
-## 运送它
+## 交付成果
 
-这一课产生了两个文物.
+本课会生成两个制品。
 
-**1. Reasoning Chain Prompt**(`outputs/prompt-reasoning-chain.md`):为自行一致的短拍CT即可生产的提示模板. 插入您的例子和问题域.
+**1. 推理链提示词**（`outputs/prompt-reasoning-chain.md`）：一份可用于生产的少样本 CoT + 自洽性提示模板。填入示例和问题领域即可使用。
 
-**2. CoT Pattern Selection Skill**(`outputs/skill-cot-patterns.md`):根据任务类型,准确性要求和成本限制,选择正确推理技术的决策框架.
+**2. CoT 模式选择技能**（`outputs/skill-cot-patterns.md`）：根据任务类型、准确率要求与成本限制选择合适推理技术的决策框架。
 
-## 运动
+## 练习
 
-1. **Measure the gap**根据GSM8K的10个问题,每一个问题都用零射,少射,零射,和少射的 CoT来解决.
+1. **测量差距：** 选取 10 道 GSM8K 题目，分别使用零样本、少样本、零样本 CoT 与少样本 CoT 求解并记录准确率。哪一种技术为你的模型带来最大提升？
 
-2. **Example selection experiment**对于相同的10个问题,比较随机的例子选择与手动选择的类似例子.测量精度差异.在哪个时候,示例质量比示例数量更重要?
+2. **示例选择实验：** 对相同 10 道题，比较随机选择示例与手工选择相似示例的效果，并测量准确率差异。从什么时候开始，示例质量比示例数量更重要？
 
-3. **Self-consistency cost curve**运行自行一致性与N=1,3,5,7,10在20GSM8K问题.图谱精度与成本 (总代币).您的模型曲线的膝盖在哪里?
+3. **自洽性成本曲线：** 对 20 道 GSM8K 题目，分别以 N=1、3、5、7、10 运行自洽性。绘制准确率与成本（总词元数）的关系。对你的模型而言，曲线拐点在哪里？
 
-4. **Build a ReAct loop**通过计算器工具扩展管道.当模型生成数学表达式时,用Python执行它.`eval()`测量是否基于工具的推理比纯粹的CoT更有效.
+4. **构建 ReAct 循环：** 为流水线添加计算器工具。当模型生成数学表达式时，在沙箱中用 Python 的 `eval()` 执行，并把结果反馈给模型。测量工具支撑的推理是否优于纯 CoT。
 
-5. **ToT for creative tasks**根据"创意写作任务"的方法,可以使用"创意写作"的方法.
+5. **将 ToT 用于创意任务：** 调整思维树求解器，使其处理创意写作任务：“写一个既好笑又悲伤的六字故事。”使用大语言模型作为评估器。相比单次生成，分支式探索能否产生更好的创意输出？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| Few-shot prompting | "Give it some examples" | Including input-output demonstrations in the prompt to anchor the model's output format and behavior |
-| Chain-of-Thought | "Make it think step by step" | Eliciting intermediate reasoning tokens that extend the model's effective computation before producing a final answer |
-| Self-Consistency | "Run it multiple times" | Sampling N diverse reasoning paths at temperature > 0 and selecting the most common final answer by majority vote |
-| Tree-of-Thought | "Let it explore options" | Structured search over reasoning branches where each partial solution is evaluated and only promising paths are expanded |
-| ReAct | "Thinking + tool use" | Interleaving reasoning traces with external actions (search, compute, API calls) in a Thought-Action-Observation loop |
-| Prompt chaining | "Break it into steps" | Decomposing a complex task into sequential prompts where each output feeds the next input |
-| Zero-shot CoT | "Just add 'think step by step'" | Appending a reasoning trigger phrase to a prompt without any examples, relying on the model's latent reasoning capability |
+| 少样本提示 | “给它一些示例” | 在提示词中加入输入-输出示范，无须微调即可锚定模型的输出格式与行为 |
+| 思维链 | “让它逐步思考” | 引出中间推理词元，在最终回答前延长模型的有效计算，可使数学、逻辑和多步问题准确率提升 10%～40% |
+| 自洽性 | “多运行几次” | 以大于 0 的温度采样 N 条不同推理路径，再通过多数投票选出最常见的最终答案 |
+| 思维树 | “让它探索选项” | 对推理分支进行结构化搜索，评估每个部分解答，只扩展有希望的路径 |
+| ReAct | “思考 + 工具使用” | 在“思考-行动-观测”循环中交错推理轨迹与外部动作（搜索、计算、API 调用） |
+| 提示链 | “拆成多个步骤” | 把复杂任务分解成顺序提示，每一步的输出成为下一步的输入 |
+| 零样本 CoT | “只需加上‘逐步思考’” | 在没有示例的提示词后添加推理触发语，利用模型潜在的推理能力 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903)谷歌脑部的原始COT论文.
-- [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171)张等同.2023年.自律论文.表1有你需要的所有数字.
-- [Tree of Thoughts: Deliberate Problem Solving with Large Language Models](https://arxiv.org/abs/2305.10601)和其他2023年. 关于24场比赛的结果在第4节是最突出的.
-- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)现在,我们在研究人工智能的基础上,我们将在研究中发现,
-- [Large Language Models are Zero-Shot Reasoners](https://arxiv.org/abs/2205.11916)让我们一步一步思考"的论文. 对于它的简单性来说,这令人惊地有效.
-- [DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines](https://arxiv.org/abs/2310.03714)哈塔布等2023年. 处理提示作为编译问题.
-- [OpenAI — Reasoning models guide](https://platform.openai.com/docs/guides/reasoning)供应商指导, 思考链是什么时候成为一个内部的,价格为每代币的"推理"模式,
-- [Lightman et al., "Let's Verify Step by Step" (2023)](https://arxiv.org/abs/2305.20050)-- 过程奖励模型 (PRM) 评分链中的每一步; 推理监督信号,
-- [Snell et al., "Scaling LLM Test-Time Compute Optimally" (2024)](https://arxiv.org/abs/2408.03314)-- 系统研究CoT长度,自相一致性样本采集,以及MCTS; "一步一步思考"是什么时候的,
+- [思维链提示激发大型语言模型的推理能力](https://arxiv.org/abs/2201.11903)——Wei 等，2022。Google Brain 的原始 CoT 论文；第 2～3 节包含核心结果。
+- [自洽性改进语言模型中的思维链推理](https://arxiv.org/abs/2203.11171)——Wang 等，2023。自洽性论文；表 1 包含所需的全部数字。
+- [思维树：使用大型语言模型进行审慎问题求解](https://arxiv.org/abs/2305.10601)——Yao 等，2023。ToT 论文；第 4 节的 24 点结果是重点。
+- [ReAct：在语言模型中协同推理与行动](https://arxiv.org/abs/2210.03629)——Yao 等，2022。现代 AI 智能体的基础；第 3 节解释“思考-行动-观测”循环。
+- [大型语言模型是零样本推理器](https://arxiv.org/abs/2205.11916)——Kojima 等，2022。“Let's think step by step”论文；方法虽简单，效果却出人意料。
+- [DSPy：把声明式语言模型调用编译为自我改进流水线](https://arxiv.org/abs/2310.03714)——Khattab 等，2023。把提示视为编译问题；适合希望超越手工提示工程时阅读。
+- [OpenAI——推理模型指南](https://platform.openai.com/docs/guides/reasoning)——关于思维链何时成为内部的、按词元计费的“推理”模式，而不是提示级技巧的供应商指南。
+- [Lightman 等，“让我们逐步验证”（2023）](https://arxiv.org/abs/2305.20050)——为思维链每个步骤评分的过程奖励模型（PRM）；在结果奖励之外有效的推理监督信号。
+- [Snell 等，“最优扩展大语言模型测试时计算”（2024）](https://arxiv.org/abs/2408.03314)——系统研究 CoT 长度、自洽性采样与 MCTS；展示当准确率比延迟更重要时，“逐步思考”会如何发展。
