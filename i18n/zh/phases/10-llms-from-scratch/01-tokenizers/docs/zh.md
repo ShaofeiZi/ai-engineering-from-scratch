@@ -1,42 +1,42 @@
-# 标记:BPE,WordPiece,SentencePiece
+# 词元化器：BPE、WordPiece 与 SentencePiece
 
-> 您的LLM不读英语,它读整数. 代币器决定这些整数是否具有意义或浪费.
+> 大语言模型读不懂英语，它读取的是整数。词元化器决定这些整数承载的是有效信息，还是无谓浪费。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 05 (NLP Foundations)
-**Time:** ~90 minutes
+**Prerequisites:** 阶段 05（自然语言处理基础）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 从零开始实施BPE,WordPiece和Unigram代码代码化算法,并比较它们的合并策略
-- 解释词汇大小如何影响模型效率:太小就会产生长序列,太大的废物会嵌入参数
-- 分析跨语言和代码的代币化文物,确定特定代币化器在哪里分解
-- 使用TikTok和句子图库来标记文字,并检查结果的标记ID
+- 从零实现 BPE、WordPiece 与 Unigram 词元化算法，并比较它们的合并策略
+- 解释词表大小如何影响模型效率：太小会产生长序列，太大则会浪费嵌入参数
+- 分析不同语言和代码中的词元化瑕疵，找出具体词元化器容易失效的场景
+- 使用 tiktoken 与 sentencepiece 库对文本进行词元化，并检查得到的词元 ID
 
 ## 问题
 
-你的法师不会读英语,不会读任何语言,只会读数字.
+大语言模型读不懂英语，也读不懂任何语言。它读取的是数字。
 
-对于"世界好!"和"世界好!"之间的差距是代号符号.模型可以处理之前,每一个词,每一个空间,每一个分分符号都必须转换为整数.这种转换不是中立的.它将假设变成模型,之后不能撤销.
+“Hello, world!”与 [15496, 11, 995, 0] 之间的桥梁就是词元化器。每个单词、空格和标点符号都必须先转换为整数，模型才能处理。这种转换并非中立，它会把某些假设固化进模型，而且之后无法撤销。
 
-错误的模型将浪费了编码的能力. "不幸的是"变成了四个代币,而不是一个. 你的128K文本窗口只会缩小75%因为文本重于多字母字母. 让它正确,同样的文本窗口含有两倍的含义. "这个模型处理代码很好"和"这个模型窒息在Python"之间的区别通常归结于代币器如何训练.
+这一步做错了，模型就会浪费容量，用多个词元编码常见单词。“unfortunately”原本可以是一个词元，却被拆成四个。对于充斥多音节单词的文本，128K 上下文窗口实际上缩小了 75%。如果做对了，同一个上下文窗口就能容纳两倍的语义信息。“这个模型很擅长处理代码”与“这个模型一遇到 Python 就卡住”的差别，往往取决于词元化器如何训练。
 
-每次你向GPT-4或Claude打出的API通话都以每个代币为价格.每一个代币你模型生成的代币都会计算成本.出口所需的代币越少,端到端推断就越快.代币化不是预处理.它是架构.
+你对 GPT-4 或 Claude 发起的每次 API 调用都按词元计费，模型生成的每个词元都消耗计算资源。表示输出所需的词元越少，端到端推理就越快。词元化不是预处理，而是架构的一部分。
 
 ## 概念
 
-### 三种失败的方法 (一种赢得的方法)
+### 三种失败的方案（以及一种胜出的方案）
 
-转换文字为数字的三种方法,其中两个方法不适用于尺度.
+把文本转换为数字有三种显而易见的方法，其中两种无法规模化。
 
-**Word-level tokenization**它们分为空间和分字符. "猫坐了"变成了 ["The", "cat", "sat"].简单.但是"代码化"怎么样?或者"GPT-4o"?或者一个德国复合词,比如"Geschwindigkeitsbegrenzung"?字层需要一个巨大的词汇来涵盖每个语言的每一个词.错过一个词,你会得到可怕的`[UNK]`单独的英语有超过100万个单词形式. 添加代码,URL,科学符号,以及100种其他语言,你需要无限的词汇库.
+**词级词元化**按空格和标点切分。“The cat sat”会变成 [“The”, “cat”, “sat”]。这很简单，但“tokenization”怎么办？“GPT-4o”怎么办？像德语复合词“Geschwindigkeitsbegrenzung”又怎么办？词级方法需要庞大的词表，才能覆盖每种语言中的每个单词。只要漏掉一个词，就会得到可怕的 `[UNK]` 词元——模型借此表示“我完全不知道这是什么”。仅英语就有一百多万种词形；再加入代码、URL、科学计数法和另外 100 种语言，词表将趋于无限。
 
-**Character-level tokenization**语文库很小 (几百个字符). 没有未知的代号. 但序列变得非常长. 一句句话是10个字符级代号变成50个字符级代号. 模型必须学到"t","h","e"一起意味着"the" - - 燃烧注意力能力在一个人学到3岁时的事情.
+**字符级词元化**走向另一个极端。“hello”会变成 [“h”, “e”, “l”, “l”, “o”]。词表很小，只有几百个字符，也永远不会产生未知词元。但序列会变得极长：词级方法只需 10 个词元的句子，字符级方法可能需要 50 个。模型还必须学习“t”“h”“e”连在一起表示“the”——把注意力容量浪费在人类三岁就能掌握的事情上。
 
-**Subword tokenization**找出甜点.常见的单词保持整体: "the"是一个标志.罕见的单词分解成有意义的部分:"不快乐"变成 ["un","happy","ness"].词汇保持可管理 (30K到128K标志).序列保持短.未知的标志基本上消失,因为任何单词都可以从子词的部分构建.
+**子词词元化**找到了平衡点。常见单词保持完整：“the”是一个词元；罕见单词则拆成有意义的部分：“unhappiness”变为 [“un”, “happi”, “ness”]。词表规模保持可控（3 万到 12.8 万个词元），序列不会太长，而且任何单词都能由子词片段组成，因此未知词元几乎消失。
 
-每个现代的LLM都使用子词代号化.GPT-2,GPT-4,BERT,Llama3,Claude.
+所有现代大语言模型都使用子词词元化，包括 GPT-2、GPT-4、BERT、Llama 3 和 Claude。真正的问题是选择哪一种算法。
 
 ```mermaid
 graph TD
@@ -50,17 +50,17 @@ graph TD
     style E fill:#51cf66,color:#fff
 ```
 
-### 字节对编码
+### BPE：字节对编码
 
-果是一个贪的压缩算法, 为了代码化, 这个想法是足够简单的,
+BPE 原本是一种贪心压缩算法，后来被重新用于词元化。它的思想简单到一张索引卡就能写下。
 
-开始单个字符,计算训练组中的每一个相邻的对,将最频繁的对合并到一个新的代币,重复直到你达到目标词汇尺寸.
+从单个字符开始，统计训练语料中每一对相邻字符，将出现最频繁的一对合并成新词元。重复这个过程，直到达到目标词表大小。
 
 ```figure
 tokenizer-bpe
 ```
 
-这里是BPE在一个小的体积上运行的"低","低"和"最新"的单词:
+下面展示 BPE 如何处理一个只包含“lower”“lowest”和“newest”的微型语料库：
 
 ```
 Corpus (with word frequencies):
@@ -106,7 +106,7 @@ Step 4 -- Merge (wes,t) -> "west":
 ...continue until target vocab size reached.
 ```
 
-合并表是代码符号.为了编码新文本,应用合并按照学习的顺序.培训组确定哪些合并存在,而这种选择永久地塑造模型看到的东西.
+这张合并表就是词元化器。编码新文本时，要按学习到的顺序应用合并操作。训练语料决定了哪些合并会存在，这项选择将永久塑造模型看到的内容。
 
 ```mermaid
 graph LR
@@ -121,49 +121,49 @@ graph LR
     end
 ```
 
-### 字节级BPE (GPT-2,GPT-3,GPT-4)
+### 字节级 BPE（GPT-2、GPT-3、GPT-4）
 
-标准BPE使用Unicode字符.字节级BPE使用原始字节 (0-255).这为您提供了精确的256个基础词汇,处理任何语言或编码,从来没有产生未知的代币.
+标准 BPE 操作 Unicode 字符，字节级 BPE 则操作原始字节（0～255）。因此它的基础词表恰好包含 256 项，可以处理任何语言或编码，而且永远不会产生未知词元。
 
-基词库涵盖每一个可能的字节.BPE 融合在此基础上.OpenAI的TikToken库使用以下字节级BPE实现:
+GPT-2 首先引入了这种方法。基础词表覆盖所有可能的字节，BPE 合并则建立在其上。OpenAI 的 tiktoken 库实现了字节级 BPE，对应词表大小如下：
 
-- 其他: 其他: 其他:
-- 基因代码 (GPT-3.5/GPT-4: ~100,256个代码 (cl100k_base编码)
-- 其他类型: 子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子
+- GPT-2：50,257 个词元
+- GPT-3.5/GPT-4：约 100,256 个词元（cl100k_base 编码）
+- GPT-4o：200,019 个词元（o200k_base 编码）
 
-### 字体 (BERT)
+### WordPiece（BERT）
 
-虽然WordPiece与BPE相似,但选择的融合不同.
+WordPiece 看起来与 BPE 相似，但选择合并项的方式不同。它不看原始频次，而是最大化训练数据的似然：
 
 ```
 BPE merge criterion:      count(A, B)
 WordPiece merge criterion: count(AB) / (count(A) * count(B))
 ```
 
-语:BPE问:"哪个对出现最频繁?"WordPiece问:"哪个对出现在一起比你偶然想象的更频繁?"这种微妙的差异产生不同的词汇.WordPiece喜欢合并,而不是只是频繁的合并.
+BPE 问的是：“哪一对出现得最频繁？”WordPiece 问的是：“哪一对共同出现的频率高于随机情况下的预期？”这一细微差异会产生不同的词表。WordPiece 偏爱共现关系出人意料的组合，而不只是频繁组合。
 
-字体Piece也使用"##"前为延续子词:
+WordPiece 还使用“##”前缀标记续接子词：
 
 ```
 "unhappiness" -> ["un", "##happi", "##ness"]
 "embedding"   -> ["em", "##bed", "##ding"]
 ```
 
-首尾号"##"告诉你,这个部分继续前一个代币.BERT使用WordPiece,其词汇总数为30522代币.每一个BERT变体--DistilBERT,RoBERTa的代币符号实际上是BPE,但BERT本身是WordPiece.
+“##”前缀表示这个片段延续前一个词元。BERT 使用包含 30,522 个词元的 WordPiece。每个 BERT 变体都与此有关——DistilBERT 也是如此；RoBERTa 的词元化器实际上采用 BPE，但 BERT 本身使用 WordPiece。
 
-### 句子 (拉马,T5)
+### SentencePiece（Llama、T5）
 
-语句Piece将输入作为包括白色空间在内的单元码字符的原始流.没有预代码化步骤.没有语言特定的语文规则关于词界限.这使其真正的语言无知 - 它在中文,日本,泰语和其他语言上运行,空间不分离单词.
+SentencePiece 把输入视为包含空白字符的原始 Unicode 字符流。它没有预词元化步骤，也没有针对词边界的语言特定规则。因此它真正与语言无关——即使面对中文、日文、泰文等不使用空格分隔单词的语言，也能正常工作。
 
-语句Piece支持两个算法:
-- **BPE mode**:与标准BPE相同的融合逻辑,适用于原始字符序列
-- **Unigram mode**开始用大量的词汇,并反复删除影响总体概率最小的代币.
+SentencePiece 支持两种算法：
+- **BPE 模式**：与标准 BPE 使用相同的合并逻辑，但直接应用于原始字符序列
+- **Unigram 模式**：从大型词表开始，迭代删除对总体似然影响最小的词元。它与 BPE 方向相反——不是合并，而是剪枝。
 
-拉马2使用SentencePiece BPE,其词汇总数为32,000个代币.T5使用SentencePiece Unigram,其代币数为32,000个.注:拉马3转换为基于TikTok的字节级BPE代币,其代币数为128,256.
+Llama 2 使用词表大小为 32,000 的 SentencePiece BPE，T5 使用词表大小为 32,000 的 SentencePiece Unigram。注意：Llama 3 已切换为基于 tiktoken、词表大小为 128,256 的字节级 BPE 词元化器。
 
-### 词汇尺寸交易
+### 词表大小的权衡
 
-这是一个真正的工程决定,
+这是一项会带来可测量后果的真实工程决策。
 
 ```mermaid
 graph LR
@@ -181,36 +181,36 @@ graph LR
     end
 ```
 
-具体数字.对于一个128K词汇库,包含4,096维嵌入,嵌入矩阵本身是128,000 x4,096 =52400万参数.对于一个32K词汇库,它是13100万参数.这仅仅是代币选择的400M参数差异.
+看一组具体数字。对于词表大小为 128K、嵌入维度为 4,096 的模型，仅嵌入矩阵就有 128,000 × 4,096 = 5.24 亿个参数。词表为 32K 时，则有 1.31 亿个参数。仅仅因为词元化器的选择，参数量就相差 4 亿。
 
-但更大的词汇库更积极地压缩文本.同一个英语段落需要100个代币,32K的词汇库可能需要70个代币,128K的词汇库.这意味着在生成过程中 30%的前进传递减少.对于一个服务于数百万请求的模型,这是直接降低计算成本.
+但更大的词表能更积极地压缩文本。同一段英语，用 32K 词表需要 100 个词元，用 128K 词表可能只需 70 个。这意味着生成时少做 30% 的前向传播。对于每天服务数百万请求的模型，这会直接降低计算成本。
 
-趋势很明显:词汇规模正在增加.GPT-2使用了50.257.GPT-4使用了100K.Llama 3使用了128K.GPT-4o使用了200K.
+趋势很明确：词表正在变大。GPT-2 使用 50,257 个词元，GPT-4 约为 100K，Llama 3 为 128K，GPT-4o 则为 200K。
 
-| Model | Vocab Size | Tokenizer Type | Avg Tokens per English Word |
+| 模型 | 词表大小 | 词元化器类型 | 每个英文单词的平均词元数 |
 |-------|-----------|----------------|---------------------------|
-| BERT | 30,522 | WordPiece | ~1.4 |
-| GPT-2 | 50,257 | Byte-level BPE | ~1.3 |
-| Llama 2 | 32,000 | SentencePiece BPE | ~1.4 |
-| GPT-4 | ~100,256 | Byte-level BPE | ~1.2 |
-| Llama 3 | 128,256 | Byte-level BPE (tiktoken) | ~1.1 |
-| GPT-4o | 200,019 | Byte-level BPE | ~1.0 |
+| BERT | 30,522 | WordPiece | 约 1.4 |
+| GPT-2 | 50,257 | 字节级 BPE | 约 1.3 |
+| Llama 2 | 32,000 | SentencePiece BPE | 约 1.4 |
+| GPT-4 | 约 100,256 | 字节级 BPE | 约 1.2 |
+| Llama 3 | 128,256 | 字节级 BPE（tiktoken） | 约 1.1 |
+| GPT-4o | 200,019 | 字节级 BPE | 约 1.0 |
 
 ### 多语言税
 
-韩国语的语文在GPT-2的语文中平均每字有2-3个代币.中国语可能更糟糕. 这意味着韩国用户实际上有一个背景窗口,大小是英语用户的一半 - - 支付相同的价格,以减少信息密度.
+主要使用英语训练的词元化器，对其他语言非常不友好。韩语文本在 GPT-2 词元化器中平均每个词需要 2～3 个词元，中文可能更糟。这意味着，韩语用户实际获得的上下文窗口只有英语用户的一半——支付相同费用，能够承载的信息密度却更低。
 
-这就是为什么Llama 3从32K增加到128K的词汇库.更多的代币用于非英语脚本意味着语言之间的压缩更公平.
+这正是 Llama 3 把词表从 32K 扩大四倍至 128K 的原因。为非英语文字系统分配更多词元，可以让不同语言之间的压缩率更加公平。
 
 ```figure
 tokenizer-tradeoff
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:字符级标记器
+### 第 1 步：字符级词元化器
 
-开始从基础上.一个字符级代码符号将每个字符映射到其Unicode代码点.没有培训.没有未知的代码.只是直接映射.
+从基础开始。字符级词元化器把每个字符映射为其 Unicode 码位。不需要训练，也不会产生未知词元，只做直接映射。
 
 ```python
 class CharTokenizer:
@@ -221,11 +221,11 @@ class CharTokenizer:
         return "".join(chr(t) for t in tokens)
 ```
 
-每个字符都是自己的符号.这是我们改进的基线.
+“hello”会变成 [104, 101, 108, 108, 111]。每个字符都是一个词元。这就是我们要改进的基线。
 
-### 步骤 2:从零开始的BPE标记器
+### 第 2 步：从零实现 BPE 词元化器
 
-我们训练在原始字节 (如GPT-2),数对,合并最频繁的,并记录每个合并顺序.合并表是代币.
+下面是真正的实现。我们像 GPT-2 一样在原始字节上训练，统计相邻对，合并最常见的一对，并按顺序记录每次合并。合并表就是词元化器。
 
 ```python
 from collections import Counter
@@ -280,13 +280,13 @@ class BPETokenizer:
         return byte_sequence.decode("utf-8", errors="replace")
 ```
 
-训练循环是BPE的核心:数对,合并赢家,重复.每次合并都减少了全部代币数量.`num_merges`字母数量从256个 (基字节) 增加到256个+数_合并.
+训练循环就是 BPE 的核心：统计相邻对，合并胜出者，不断重复。每次合并都会减少词元总数。经过 `num_merges` 轮后，词表会从 256 项（基础字节）增长到 256 + num_merges。
 
-编码应用合并在它们所学到的确切顺序中.这很重要.如果合并1创建"th"并合并5创建"the",编码必须首先应用合并1以便"the"可以从"th" +"e"在合并5中形成.
+编码时，要严格按照合并操作的学习顺序应用它们，这一点非常重要。假设第 1 次合并产生了“th”，第 5 次产生了“the”，编码时必须先执行第 1 次合并，第 5 次才能用“th”+“e”组成“the”。
 
-解码是相反的:查看词汇中的每个代币ID,连接字节,解码到UTF-8.
+解码则是逆过程：在词表中查找每个词元 ID，拼接字节，再解码为 UTF-8。
 
-### 步骤3: 编码和解码回路
+### 第 3 步：编码与解码往返
 
 ```python
 corpus = (
@@ -317,9 +317,9 @@ for sentence in test_sentences:
     print(f"  Roundtrip: {'PASS' if decoded == sentence else 'FAIL'}")
 ```
 
-压缩比告诉你代币器是多有效的. 标记符将文字压缩到原始字节的半个标记. 低点更好. 在训练中,比率将是好的. 在未发行的文本上,例如"不快乐" (它不出现在体内), 比率会更糟糕 - - 代币器回归于字符级编码,
+压缩率反映词元化器的效率。0.50 表示词元化器把文本压缩到原始字节数的一半；越低越好。在训练语料上，压缩率会很好。对于语料中没有出现的“unhappiness”等分布外文本，压缩率会变差——面对没见过的模式，词元化器会回退到字符级编码。
 
-### 步骤 4:与TikTok进行比较
+### 第 4 步：与 tiktoken 比较
 
 ```python
 import tiktoken
@@ -343,9 +343,9 @@ for text in texts:
     print(f"  tiktoken:  {len(tiktoken_tokens)} tokens -> {tiktoken_pieces}")
 ```
 
-tiktoken 使用相同的算法,但在100,000次合并中训练了数百个千兆字节的文本.算法是相同的.区别在于训练数据和合并数量.你的代币器训练在40次合并的段落上不能与 tiktoken的100K合并在一个巨大的体积上竞争.但机制是一样的.
+tiktoken 使用完全相同的算法，但它在数百 GB 文本上进行了 10 万次合并训练。算法完全相同，差别只在训练数据和合并次数。你的词元化器只在一个段落上进行了 40 次合并，当然无法与海量语料上经过 10 万次合并的 tiktoken 竞争，但二者机制一致。
 
-### 步骤5:词汇分析
+### 第 5 步：词表分析
 
 ```python
 def analyze_vocabulary(tokenizer, test_texts):
@@ -375,13 +375,13 @@ def analyze_vocabulary(tokenizer, test_texts):
     print(f"\nUnused tokens: {len(unused)} out of {len(tokenizer.vocab)}")
 ```
 
-这显示了你的词汇中的Zipf分布.几个代币占主导地位 (空间,"the","e").大多数代币很少被使用.生产代币器优化这种分布 - - 常见模式得到了短代币ID,罕见模式得到了更长的表示.
+这段分析会揭示词表中的齐普夫分布：少数词元占据绝大多数用量（空格、“the”、“e”），大多数词元都很少使用。生产级词元化器会针对这种分布优化——常见模式获得较短的词元 ID，罕见模式则采用较长表示。
 
-## 用它
+## 学以致用
 
-你的子BPE工作了.现在看看生产工具是什么样子.
+你从零实现的 BPE 已经可以工作。现在来看看生产工具是什么样子。
 
-### 投资者
+### tiktoken（OpenAI）
 
 ```python
 import tiktoken
@@ -395,9 +395,9 @@ print(f"Pieces: {[enc.decode([t]) for t in tokens]}")
 print(f"Roundtrip: {enc.decode(tokens)}")
 ```
 
-标用Python绑定编写了Rust. 它每秒编码数百万个代币. 同样的BPE算法,工业强度实现.
+tiktoken 使用 Rust 编写，并提供 Python 绑定。它每秒可以编码数百万个词元。算法仍是同一个 BPE，只是实现达到了工业级强度。
 
-### 拥抱脸标记器
+### Hugging Face tokenizers
 
 ```python
 from tokenizers import Tokenizer
@@ -416,9 +416,9 @@ print(f"Tokens: {output.tokens}")
 print(f"IDs: {output.ids}")
 ```
 
-抱脸代币库也是Rust下帽子. 它在几秒钟内训练BPE在千兆尺度的体体.
+Hugging Face tokenizers 底层同样使用 Rust。它能在数秒内用 GB 级语料训练 BPE。训练自己的模型时，就应使用这个工具。
 
-### 装载拉马的标记器
+### 加载 Llama 的词元化器
 
 ```python
 from transformers import AutoTokenizer
@@ -437,42 +437,42 @@ for text in multilingual:
     print(f"'{text}' -> {len(ids)} tokens")
 ```
 
-拉马3的128K词汇库压缩了非英语文本,比GPT-2的50K词汇库要好得多.你可以自己验证这一点,
+Llama 3 的 128K 词表压缩非英语文本的效果明显优于 GPT-2 的 50K 词表。你可以亲自验证——用多个语言编码同一句话，再比较词元数量。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/prompt-tokenizer-analyzer.md`-- 一个可重复使用的提示,分析任何文本和模型组合的代币化效率. 给它一个文本样本,它告诉你哪个模型的代币化器处理它最好.
+本课会生成 `outputs/prompt-tokenizer-analyzer.md`——一个可复用提示词，用于分析任意文本与模型组合的词元化效率。向它提供文本样本，它会告诉你哪个模型的词元化器处理得最好。
 
-## 运动
+## 练习
 
-1. 修改BPE标记器以在每个 merge步骤中打印词汇.观察"t" + "h"如何成为"th",然后"th" + "e"成为"the".追踪普通英语词汇如何逐步组装.
+1. 修改 BPE 词元化器，让它在每个合并步骤打印词表。观察“t”+“h”如何变成“th”，再观察“th”+“e”如何变成“the”。跟踪常见英语单词怎样逐片组装起来。
 
-2. 添加特殊代币 (`<pad>`现在`<eos>`现在`<unk>`) 给BPE代币器. 赋予他们0 ,1,2的ID,并相应地移动所有其他代币. 在运行BPE之前,执行预代币化步骤,在白空间上分开.
+2. 为 BPE 词元化器添加特殊词元（`<pad>`、`<eos>`、`<unk>`）。依次分配 ID 0、1、2，并相应平移其他所有词元的 ID。实现预词元化步骤，在运行 BPE 前先按空白字符切分。
 
-3. 执行WordPiece合并标准 (概率比率而不是频率).训练BPE和WordPiece在同一组合中使用相同数量的合并.比较结果的词汇库 - 哪个产生更有语言意义的子词?
+3. 实现 WordPiece 合并准则（似然比，而非频次）。使用相同语料和相同合并次数训练 BPE 与 WordPiece。比较得到的词表——哪一种会生成更多符合语言学意义的子词？
 
-4. 建立一个多语言代币器效率基准.用英语,西班牙语,中国,韩语和阿拉伯语进行10句子.用Tik Token (cl100k_base) 代币每个字符,并测量每字符的平均代币.量化每个语言的"多语言税".
+4. 构建多语言词元化效率基准。分别选取英语、西班牙语、中文、韩语和阿拉伯语的 10 个句子，使用 tiktoken（cl100k_base）进行词元化，并测量平均每字符词元数。量化每种语言的“多语言税”。
 
-5. 训练你的BPE标记器在更大的体积上 (下载维基百科文章).调整合并数量以达到相同文本上的10%的压缩比率.这迫使你了解体积,合并数量和压缩质量之间的关系.
+5. 在更大的语料库上训练 BPE 词元化器（下载一篇维基百科文章）。调整合并次数，使它在同一文本上的压缩率达到与 tiktoken 相差 10% 以内。这个练习会迫使你理解语料规模、合并次数和压缩质量之间的关系。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| Token | "A word" | A unit in the model's vocabulary -- could be a character, subword, word, or multi-word chunk |
-| BPE | "Some compression thing" | Byte Pair Encoding -- iteratively merge the most frequent adjacent pair of tokens until the target vocabulary size is reached |
-| WordPiece | "BERT's tokenizer" | Like BPE but merges maximize the likelihood ratio count(AB)/(count(A)*count(B)) instead of raw frequency |
-| SentencePiece | "A tokenizer library" | A language-agnostic tokenizer that operates on raw Unicode without pre-tokenization, supporting BPE and Unigram algorithms |
-| Vocabulary size | "How many words it knows" | The total number of unique tokens: GPT-2 has 50,257, BERT has 30,522, Llama 3 has 128,256 |
-| Fertility | "Not a tokenizer term" | Average number of tokens per word -- measures tokenizer efficiency across languages (1.0 is perfect, 3.0 means the model works three times harder) |
-| Byte-level BPE | "GPT's tokenizer" | BPE operating on raw bytes (0-255) instead of Unicode characters, guaranteeing no unknown tokens for any input |
-| Merge table | "The tokenizer file" | Ordered list of pair merges learned during training -- this IS the tokenizer, and order matters |
-| Pre-tokenization | "Splitting on spaces" | Rules applied before subword tokenization: whitespace splitting, digit separation, punctuation handling |
-| Compression ratio | "How efficient the tokenizer is" | Tokens produced divided by input bytes -- lower means better compression and faster inference |
+| 词元 | “一个单词” | 模型词表中的一个单位——可以是字符、子词、单词或多词片段 |
+| BPE | “某种压缩技术” | 字节对编码——不断合并出现最频繁的相邻词元对，直到达到目标词表大小 |
+| WordPiece | “BERT 的词元化器” | 与 BPE 类似，但合并时最大化似然比 count(AB)/(count(A)*count(B))，而非原始频次 |
+| SentencePiece | “一个词元化器库” | 与语言无关的词元化器，直接处理未经预词元化的原始 Unicode，并支持 BPE 与 Unigram 算法 |
+| 词表大小 | “它认识多少单词” | 唯一词元总数：GPT-2 有 50,257 个，BERT 有 30,522 个，Llama 3 有 128,256 个 |
+| 切分率 | “不像词元化术语” | 每个单词的平均词元数——衡量不同语言的词元化效率（1.0 表示完美，3.0 表示模型要多做三倍工作） |
+| 字节级 BPE | “GPT 的词元化器” | 操作原始字节（0～255）而非 Unicode 字符的 BPE，保证任何输入都不会产生未知词元 |
+| 合并表 | “词元化器文件” | 训练期间学习到的有序词元对合并列表——它就是词元化器，而且顺序至关重要 |
+| 预词元化 | “按空格切分” | 在子词词元化前应用的规则：空白切分、数字分隔、标点处理 |
+| 压缩率 | “词元化器的效率” | 生成的词元数除以输入字节数——越低，压缩越好，推理越快 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Sennrich et al., 2016 -- "Neural Machine Translation of Rare Words with Subword Units"](https://arxiv.org/abs/1508.07909)-- 引入了BPE为NLP的论文,将1994年的压缩算法变成现代代币化的基础
-- [Kudo & Richardson, 2018 -- "SentencePiece: A simple and language independent subword tokenizer"](https://arxiv.org/abs/1808.06226)--使多语言模型成为实用的语言认知标记
-- [OpenAI tiktoken repository](https://github.com/openai/tiktoken)--生产BPE实现在Rust with Python绑定中,使用GPT-3.5/4/4o
-- [Hugging Face Tokenizers documentation](https://huggingface.co/docs/tokenizers)-- 具有性性能的生产级代币器培训
+- [Sennrich 等，2016——“使用子词单元处理神经机器翻译中的罕见词”](https://arxiv.org/abs/1508.07909)——把 1994 年的压缩算法变成现代词元化基础的 BPE 论文
+- [Kudo 与 Richardson，2018——“SentencePiece：一种简单且与语言无关的子词词元化器”](https://arxiv.org/abs/1808.06226)——让多语言模型成为现实的语言无关词元化方法
+- [OpenAI tiktoken 仓库](https://github.com/openai/tiktoken)——使用 Rust 编写并提供 Python 绑定的生产级 BPE 实现，供 GPT-3.5/4/4o 使用
+- [Hugging Face Tokenizers 文档](https://huggingface.co/docs/tokenizers)——具有 Rust 性能的生产级词元化器训练工具
