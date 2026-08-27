@@ -1,140 +1,140 @@
-# 简素Pro:单元多模模型的离合编码器
+# Janus-Pro：统一多模态模型的解耦编码器
 
-> 统一多动态模型具有不可避免的紧张性. 了解需要语义特性 SigLIP或DINOv2输出向量富含概念级信息. 代人想要重建友好的代码, VQ代码, 两个目标在一个编码器中不能兼容. 詹努斯 (DeepSeek,2024年10月) 和詹努斯-普罗 (DeepSeek,2025年1月) 认为解决方案是停止尝试:分离两个编码器. 通过SIGLIP进行转换器体的分类,但通过VQ代码器生成路径理解. 在7B,Janus-Pro在Geneval上击败了DALL-E3,同时与MMMU上的LLaVA相匹配. 这一课解释了为什么两个编码器在一个失败的情况下工作.
+> 统一多模态模型存在一种不可避免的张力。理解任务需要语义特征——SigLIP 或 DINOv2 会输出富含概念级信息的向量；生成任务需要便于重建的编码——可以重新组合为清晰像素的 VQ 词元。一个编码器无法同时兼顾这两个目标。Janus（DeepSeek，2024 年 10 月）与 Janus-Pro（DeepSeek，2025 年 1 月）认为，解决办法是不再勉强统一：将两个编码器解耦。任务之间共享 Transformer 主干，但理解通过 SigLIP 路由，生成通过 VQ 分词器路由。7B 参数的 Janus-Pro 在 GenEval 上击败 DALL-E 3，同时在 MMMU 上追平 LLaVA。本课会分析为什么两个编码器能在单个编码器失败的地方取得成功。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python (stdlib, dual-encoder routing + shared-body signal)
-**Prerequisites:** Phase 12 · 13 (Transfusion), Phase 12 · 14 (Show-o)
-**Time:** ~120 minutes
+**Prerequisites:** 第 12 阶段 · 第 13 课（Transfusion）、第 12 阶段 · 第 14 课（Show-o）
+**Time:** 约 120 分钟
 
 ## 学习目标
 
-- 解释为什么单个共享编码器会损害理解或生成质量.
-- 描述Janus-Pro的路由:输入侧面的SigLIP功能用于理解,输入和输出对VQ代币进行生成.
-- 追踪数据混合规模,使得Janus-Pro在Janus没有成功的地方.
-- 进行离合式 (Janus-Pro),连续式 (Transfusion) 和离合式 (Show-o) 架构的比较.
+- 解释为什么单个共享编码器必然会牺牲理解质量或生成质量。
+- 描述 Janus-Pro 的路由方式：理解任务的输入侧使用 SigLIP 特征，生成任务的输入与输出都使用 VQ 词元。
+- 追踪让 Janus-Pro 在 Janus 失败之处取得成功的数据混合扩展过程。
+- 比较解耦式（Janus-Pro）、耦合连续式（Transfusion）和耦合离散式（Show-o）架构。
 
 ## 问题
 
-统一模型在理解和生成中共享一个变体.之前的尝试 (Chameleon, Show-o, Transfusion) 都使用一个视觉代币器用于两方向.
+统一模型会在理解与生成任务之间共享 Transformer 主干。此前的方案（Chameleon、Show-o、Transfusion）都使用同一个视觉分词器处理两个方向，而这个分词器本身就是一种妥协：
 
-- 优化用于重建 (生成):VQ-VAE捕获细粒度的像素细节,但产生具有较弱的语义一致性的代币.
-- 优化用于语义 (理解):SigLIP嵌入式组 "猫"图像在"猫"代币附近,但不允许良好的重建.
+- 为重建（生成）优化：VQ-VAE 能捕捉细粒度像素细节，但生成的词元语义连贯性较弱。
+- 为语义（理解）优化：SigLIP 嵌入会把“猫”的图像聚集在“猫”的文本词元附近，却无法提供良好的重建效果。
 
-为了实现这一目标,Show-o和Transfusion在一个方向上支付可见的质量税.
+Show-o 与 Transfusion 都因此在其中一个方向承担明显的质量损失。Janus-Pro 提出：既然任务需求不同，为什么还要强迫它们使用同一个分词器？
 
 ## 概念
 
-### 离合视觉编码
+### 解耦视觉编码
 
-简斯-普罗的架构分开了两个编码器:
+Janus-Pro 架构将两个编码器分离：
 
-- 了解路径.输入图像 → SigLIP-SO400m → 2层MLP →变体体.
-- 生成路径.输入图像 (如果在现有图像上定制) → VQ代码符号化器 →代码ID →变压器体.
-- 输出生成. 变压器 → VQ解码器 → 像素预测的图像代币.
+- 理解路径。输入图像 → SigLIP-SO400m → 两层 MLP → Transformer 主干。
+- 生成路径。输入图像（以现有图像为条件时）→ VQ 分词器 → 词元 ID → Transformer 主干。
+- 输出生成。Transformer 预测图像词元 → VQ 解码器 → 像素。
 
-变体体是共享的, 身体的上下下下都是具体的任务.
+Transformer 主干是共享的，主干上游和下游的所有部分则针对任务分别设置。
 
-输入以提示格式解读:a `<understand>`通过SigLIP标签路线;`<generate>`通过VQ路线,或者路线是从任务中隐含的.
+输入通过提示词格式消除歧义：`<understand>` 标签路由到 SigLIP，`<generate>` 路由到 VQ；也可以根据任务隐式路由。
 
-### 为什么这能有效
+### 为什么有效
 
-了解损失得到了SigLIP功能,Clip式预训练已经调整为语义相似性.该模型的感知基准比Show-o/Transfusion更好,因为输入功能更适合任务.
+理解损失得到的是 SigLIP 特征，而 CLIP 风格预训练已经针对语义相似度优化了这些特征。由于输入特征更适合任务，模型在感知基准上优于 Show-o / Transfusion。
 
-输出输出得到VQ代币,这些代币被调整为重建.图像质量在Show-o上提高,因为VQ代码清洁地复制到像素.
+生成损失得到的是 VQ 词元，分词器已经针对重建优化这些词元。由于 VQ 编码可以干净地还原成像素，图像质量优于 Show-o。
 
-共享变压器体会看到两个输入分布 (SigLIP和VQ) 并学习使用两者. 声称:足够的数据+足够的参数,身体吸收了开关.
+共享 Transformer 主干会看到两种输入分布（SigLIP 与 VQ），并学习同时处理二者。其主张是：只要数据足够多、参数足够大，主干就能吸收这种切换。
 
-### 数据扩展  Janus vs Janus-Pro
+### 数据扩展——Janus 与 Janus-Pro
 
-简素 (原始, arXiv 2410.13848) 引入了脱,但在小规模 (1.3B参数,数据有限).
+原始 Janus（arXiv 2410.13848）提出了解耦方案，但规模较小（13 亿参数、数据有限）。Janus-Pro（arXiv 2501.17811）扩大了规模：
 
-- 根据第7B条 (vs1.3B)
-- 对于第1阶段 (排列) 起 90M图像-文本对,从 72M.
-- 对于第二阶段 (统一) 起 72M,从 26M起.
-- 增加了200万个图像生成指令样本,
+- 70 亿参数（原来为 13 亿）。
+- 阶段 1（对齐）使用 9000 万个图文对，原来为 7200 万。
+- 阶段 2（统一训练）使用 7200 万个样本，原来为 2600 万。
+- 阶段 3 新增 20 万个图像生成指令样本。
 
-结果:Janus-Pro-7B与MMMU (60.3对 ~ 58) 的LLaVA相匹配,并且在GenEval (0.80对 0.67) 上击败了DALL-E 3 .
+结果是：Janus-Pro-7B 在 MMMU 上追平 LLaVA（60.3 对约 58），在 GenEval 上击败 DALL-E 3（0.80 对 0.67）。一个开放模型，在统一能力谱的理解与生成两端都具备竞争力。
 
-### 斯流 正调流变体
+### JanusFlow——整流流变体
 
-简斯流 (arXiv 2411.07975) 将VQ生成路径换成直流生成路径 (连续). 分裂成为SigLIP-for-understanding + rectified-flow-for-generation.质量天花板进一步升高.架构仍然是脱的编码器-共享体.
+JanusFlow（arXiv 2411.07975）把 VQ 生成路径替换为整流流生成路径（连续表示）。于是分工变成：理解使用 SigLIP，生成使用整流流。质量上限进一步提高，架构仍然是解耦编码器 + 共享主干。
 
-### 共同体的工作
+### 共享主干的职责
 
-变压器机器处理一个统一的序列,但有两个输入分布.
+Transformer 主干处理统一序列，但会接收两种输入分布。它的职责是：
 
-- 为了理解:使用SigLIP功能 + 文字代币 → 发出自动下降的文字.
-- 为了生成:消耗文字代币+ (可选图像VQ代币) →自动排放图像VQ代币.
+- 理解任务：接收 SigLIP 特征 + 文本词元 → 自回归输出文本。
+- 生成任务：接收文本词元 +（可选的图像 VQ 词元）→ 自回归输出图像 VQ 词元。
 
-机器的每块都没有特定的重量,这是你预计在Qwen或Llama内找到的文字式变压器,加上两个输入适配器.
+主干的每个块都没有模态专用权重。它就是 Qwen 或 Llama 内部常见的文本式 Transformer，只是配有两个输入适配器。
 
-很有趣的是,这意味着Janus-Pro的身体可以从预训练的LLM开始.Janus-Pro确实从DeepSeek-MoE-7B开始.
+有趣的是，这意味着 Janus-Pro 的主干可以由预训练大语言模型初始化。Janus-Pro 确实从 DeepSeek-MoE-7B 初始化。这项选择非常重要：大语言模型带来的推理能力，是从零训练的纯统一模型难以达到的。
 
-### 与国际体育大学相比
+### 与 InternVL-U 对比
 
-课程是2026年的后续课程.
+InternVL-U（第 12.10 课）是 2026 年的后继方案，结合了：
 
-- 产生的多模式预训练 (InternVL3脊柱).
-- 离合编码路由 (SigLIP进入,VQ+扩散开头).
-- 统一理解+生成+编辑.
+- 原生多模态预训练（InternVL3 骨干）。
+- 解耦编码器路由（输入使用 SigLIP，输出使用 VQ + 扩散头）。
+- 统一的理解 + 生成 + 编辑能力。
 
-国际通用电脑系统 (InternVL-U) 将Janus-Pro的建筑选择纳入更大的框架.分离码码的想法现在是规模统一模型的默认.
+InternVL-U 把 Janus-Pro 的架构选择吸收到更大的框架中。解耦编码器思路如今已成为大规模统一模型的默认方案。
 
-### 限制
+### 局限
 
-脱码器增加了建筑复杂性.两个代币器进行训练,两个输入路径进行维护,两个设置故障模式.对于不需要生成的产品,Janus-Pro是过度工程的.
+解耦编码器会增加架构复杂度：需要训练两个分词器、维护两条输入路径，并处理两组失效模式。对于不需要生成的产品，Janus-Pro 属于过度设计——应选择 LLaVA 家族的理解模型。
 
-对于不需要了解的产品,Janus- Pro过度合格 选择稳定散3/流动模型.
+对于不需要理解的产品，Janus-Pro 又大材小用——应选择 Stable Diffusion 3 / Flux 模型。
 
-对于需要两者都的产品, 努斯-普罗现在是参考的开放架构.
+对于同时需要二者的产品，Janus-Pro 如今是开放架构的参考方案。
 
 ```figure
 l5-janus-decouple
 ```
 
-## 用它
+## 投入使用
 
-`code/main.py`模拟了Janus-Pro路由:
+`code/main.py` 模拟 Janus-Pro 路由：
 
-- 两个假编码器:类似SigLIP (产生256维的语义向量) 和类似VQ (产生整数码).
-- 根据任务标签选择编码器的提示路由器.
-- 共同体 (stand-in) 处理代币序列,不管编码器是哪个编码器生成它们.
-- 从第1阶段 (调整) 转向第3阶段 (指示调整) 的权重样本时间表.
+- 两个模拟编码器：类似 SigLIP 的编码器（生成 256 维语义向量）和类似 VQ 的编码器（生成整数编码）。
+- 根据任务标签选择编码器的提示词路由器。
+- 无论词元序列来自哪个编码器，都能处理的共享主干（替代实现）。
+- 从阶段 1（对齐）切换到阶段 3（指令微调）的加权采样调度。
 
-打印3个示例的路径:图像QA,T2I,图像编辑.
+打印三个示例的路由路径：图像问答、文本生成图像、图像编辑。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-decoupled-encoder-picker.md`由于需要统一的产品+在边界质量上理解,它选择了Janus-Pro,JanusFlow或InternVL-U,并提出了具体的数据规模建议.
+本课会产出 `outputs/skill-decoupled-encoder-picker.md`。给定一个希望以接近前沿水平的质量统一生成与理解的产品，它会在 Janus-Pro、JanusFlow 与 InternVL-U 之间做出选择，并给出具体的数据规模建议。
 
-## 运动
+## 练习
 
-1. 解释为什么一个7B开放型号在生成上可以匹配一个边界专有型号,但在理解上不能.
+1. Janus-Pro-7B 在 GenEval 上击败 DALL-E 3。解释为什么一个 7B 开放模型可以在生成上追平前沿专有模型，却无法在理解上做到同样的事。
 
-2. 执行路由器函数:给出提示文本,分类为 `understand`或`generate`你怎么处理模糊的提示,比如"描述然后绘制"?
+2. 实现一个路由函数：给定提示文本，将其分类为 `understand` 或 `generate`。如何处理“描述后再画出来”等有歧义的提示？
 
-3. 变压器机体现在输出了什么,损失发生了什么变化?
+3. JanusFlow 用整流流替换 VQ 路径。Transformer 主干此时输出什么？损失会发生什么变化？
 
-4. 提出一个第四个任务,Janus-Pro架构可以使用一个更离合的编码器处理.
+4. 提出 Janus-Pro 架构可通过再增加一个解耦编码器来处理的第四种任务。例如：图像分割（DINO 风格）、深度估计（MiDaS 风格）。
 
-5. 阅读Janus-Pro 4.2节关于数据扩展. 哪个数据阶段最为促进T2I质量增长与Janus?
+5. 阅读 Janus-Pro 第 4.2 节关于数据扩展的内容。相比 Janus，哪个数据阶段对 T2I 质量提升贡献最大？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|-----------------|------------------------|
-| Decoupled encoding | "Two visual encoders" | Separate tokenizer or encoder per direction: semantic for understanding, reconstruction for generation |
-| Shared body | "One transformer" | Single transformer processes either encoder's output; no modality-specific weights |
-| SigLIP for understanding | "Semantic features" | CLIP-family vision tower providing rich conceptual features but poor reconstruction |
-| VQ for generation | "Reconstruction codes" | Vector-quantized tokens that decode cleanly back to pixels |
-| JanusFlow | "Rectified-flow variant" | Janus-Pro with a continuous flow-matching generation head instead of VQ |
-| Routing tag | "Task tag" | Prompt marker (`<understand>` / `<generate>`) that picks the input encoder |
+| 解耦编码 | “两个视觉编码器” | 为每个方向使用独立的分词器或编码器：理解使用语义编码器，生成使用重建编码器 |
+| 共享主干 | “一个 Transformer” | 同一个 Transformer 处理任意编码器的输出；没有模态专用权重 |
+| 理解用 SigLIP | “语义特征” | CLIP 家族视觉塔，提供丰富的概念特征，但重建效果很差 |
+| 生成用 VQ | “重建编码” | 可以干净解码回像素的向量量化词元 |
+| JanusFlow | “整流流变体” | 使用连续流匹配生成头取代 VQ 的 Janus-Pro |
+| 路由标签 | “任务标签” | 用于选择输入编码器的提示标记（`<understand>` / `<generate>`） |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Wu et al. — Janus (arXiv:2410.13848)](https://arxiv.org/abs/2410.13848)
-- [Chen et al. — Janus-Pro (arXiv:2501.17811)](https://arxiv.org/abs/2501.17811)
-- [Ma et al. — JanusFlow (arXiv:2411.07975)](https://arxiv.org/abs/2411.07975)
-- [InternVL-U (arXiv:2603.09877)](https://arxiv.org/abs/2603.09877)
-- [Dong et al. — DreamLLM (arXiv:2309.11499)](https://arxiv.org/abs/2309.11499)
+- [Wu 等——Janus（arXiv:2410.13848）](https://arxiv.org/abs/2410.13848)
+- [Chen 等——Janus-Pro（arXiv:2501.17811）](https://arxiv.org/abs/2501.17811)
+- [Ma 等——JanusFlow（arXiv:2411.07975）](https://arxiv.org/abs/2411.07975)
+- [InternVL-U（arXiv:2603.09877）](https://arxiv.org/abs/2603.09877)
+- [Dong 等——DreamLLM（arXiv:2309.11499）](https://arxiv.org/abs/2309.11499)
