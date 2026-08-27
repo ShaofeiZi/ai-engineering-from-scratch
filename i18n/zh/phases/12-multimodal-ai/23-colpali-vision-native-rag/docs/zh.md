@@ -1,157 +1,157 @@
-# 科尔帕利和视觉原生文件RAG
+# ColPali 与视觉原生文档 RAG
 
-> 传统的RAG将PDF解析成文本,分成块,嵌入块,存储向量. 每一步都会失去信号:OCR丢掉图表数据,碎碎表行,文字嵌入式忽略数字. 科尔帕利 (Faysse等,2024年7月) 提出了一个更简单的问题:为什么要提取文本? 直接通过PaliGemma嵌入页面图像,使用ColBERT式的晚间交互来检索,并保留文件所载的所有布局,数字,字体和格式化信号. 发表的基准标准:视觉丰富的文档的端到端准确度比文本RAG要高20-40%.  ColQwen2, ColSmol 和 VisRAG 扩大了这种模式. 这一课读出了视觉原生RAG论文,
+> 传统 RAG 会把 PDF 解析成文本，再切分成块、嵌入各块并存储向量。每一步都会损失信号：OCR 会遗漏图表数据，分块会拆散表格行，文本嵌入则会忽略图形。ColPali（Faysse 等，2024 年 7 月）提出了一个更简单的问题：为什么一定要抽取文本？直接用 PaliGemma 嵌入页面图像，使用 ColBERT 风格的后期交互进行检索，就能保留文档中的版式、图形、字体与格式信号。公开基准显示，在视觉信息丰富的文档上，其端到端准确率比文本 RAG 高 20%～40%。ColQwen2、ColSmol 与 VisRAG 随后扩展了这一模式。本课会解读视觉原生 RAG 的核心观点，并构建一个微型 ColPali 风格索引器。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python (stdlib, multi-vector indexer + MaxSim scorer)
-**Prerequisites:** Phase 11 (LLM Engineering — RAG basics), Phase 12 · 05 (LLaVA)
-**Time:** ~180 minutes
+**Prerequisites:** 第 11 阶段（LLM 工程——RAG 基础）、第 12 阶段 · 第 05 课（LLaVA）
+**Time:** 约 180 分钟
 
 ## 学习目标
 
-- 解释双编码检索 (每文档一个向量) 和晚交互检索 (每文档许多向量) 的区别.
-- 描述ColBERT的MaxSim操作以及ColPali如何将其从文字代币到图像补丁来概括.
-- 建立一个像 ColPali 的小索引:页面 →补丁嵌入 → 查询术语嵌入 → top-k页面.
-- 在发票/财务报告使用情况上,比较ColPali + Qwen2.5VL发电机与文字RAG + GPT-4.
+- 解释双编码器检索（每篇文档一个向量）与后期交互检索（每篇文档多个向量）的区别。
+- 描述 ColBERT 的 MaxSim 运算，以及 ColPali 如何把它从文本词元推广到图像块。
+- 构建微型 ColPali 风格索引器：页面 → 图像块嵌入 → 查询词项嵌入上的 MaxSim → top-k 页面。
+- 在发票/财务报告场景中，比较 ColPali + Qwen2.5-VL 生成器与文本 RAG + GPT-4。
 
 ## 问题
 
-文件中的文字-RAG会丢弃大部分文件.财务报告的第三季度收入增长通常是在图表中;医疗报告的发现在注释图像中;法律合同的签名区块是布局事实,而不是文本事实.
+对 PDF 使用文本 RAG，会丢掉文档中的大部分信息。财务报告的第三季度营收增长通常位于图表中；医疗报告的检查结果位于带标注图像中；法律合同的签字栏属于版式事实，而不是文本事实。
 
-文字-RAG管道:
+文本 RAG 流水线如下：
 
-1. 通过OCR/pdftotext来使用PDF →文本.
-2. 文字 → 300-500个代币.
-3. 部分 → 双编码嵌入 (一个向量).
-4. 用户查询 →嵌入 → 合数相似 → 顶级k块.
-5. 士+查询 →法学士.
+1. PDF → 通过 OCR / pdftotext 转为文本。
+2. 文本 → 切成 300～500 词元的块。
+3. 文本块 → 双编码器嵌入（一个向量）。
+4. 用户查询 → 嵌入 → 余弦相似度 → top-k 文本块。
+5. 文本块 + 查询 → 大语言模型。
 
-五个失败步骤,图表未被捕获,表格被分成块,多列布局平坦化,图形注释消失.
+五个有损步骤。图表无法捕获，表格会被跨块拆开，多栏版式会被展平，图形标注也会消失。
 
- ColPali 的解决方案:跳过 OCR,直接嵌入页面图像. 使用 ColBERT 式的晚间交互来检索,以便模型可以在查询时处理细粒度的补丁.
+ColPali 的解决方案是：跳过 OCR，直接嵌入页面图像。使用 ColBERT 风格的后期交互进行检索，让模型在查询时能够关注细粒度图像块。
 
 ## 概念
 
-### 科尔伯特 (2020)
+### ColBERT（2020）
 
-科尔伯特 (Khattab & Zaharia, arXiv:2004.12832) 是一个文本检索方法.它每文档的向量不是一个,而是每代币产生一个向量.
+ColBERT（Khattab 与 Zaharia，arXiv:2004.12832）是一种文本检索方法。它不是每篇文档只生成一个向量，而是为每个词元生成一个向量。查询时：
 
-- 查询代币得到自己的嵌入 (N_q向量).
-- 文件代币得到嵌入 (N_d向量,通常缓存).
-- 积分 = 查询代币的总数max对文件代币的共数相似性: Σ_i max_j cos(q_i, d_j).
+- 查询词元各自得到嵌入（N_q 个向量）。
+- 文档词元得到嵌入（N_d 个向量，通常已缓存）。
+- 分数 = 对每个查询词元，取它与所有文档词元余弦相似度的最大值，再求和：Σ_i max_j cos(q_i, d_j)。
 
-现在,我们要做什么?
+这就是 MaxSim 运算。每个查询词元都会“选择”与自己最匹配的文档词元，最终分数是这些最大值之和。
 
-优点:强大的回忆,处理术语级语义. 缺点:每文档的N_d向量,存储成本昂贵.
+优点：召回率高，能够处理词项级语义。缺点：每篇文档需要存储 N_d 个向量，存储成本很高。
 
-### 鱼
+### ColPali
 
-科尔帕利 (Faysse等人, arXiv:2407.01449) 应用了科尔伯特模式到图像.
+ColPali（Faysse 等，arXiv:2407.01449）把 ColBERT 模式应用到图像上。
 
-- 每页面都通过PaliGemma (ViT+语言) 编码成补丁嵌入式:每页的N_p向量.
-- 每个用户查询 (文本) 都被编码成查询标志嵌入式:N_q向量.
-- 评分 = Σ_i max_j cos(q_i, p_j),即 MaxSim对查询文本标记和页面图像补丁.
-- 根据总分数,查看最好的页面.
+- 每个页面由 PaliGemma（ViT + 语言模型）编码为图像块嵌入：每页 N_p 个向量。
+- 每条用户查询（文本）编码为查询词元嵌入：N_q 个向量。
+- 分数 = Σ_i max_j cos(q_i, p_j)，即查询文本词元与页面图像块之间的 MaxSim。
+- 按总分检索 top-k 页面。
 
-在文件吞时:将每页都使用PaliGemma嵌入,存储所有补丁嵌入.在查询时:嵌入查询代码,计算MaxSim与所有存储的页面嵌入,返回顶级k页面.
+摄取文档时，使用 PaliGemma 嵌入每一页，并存储全部图像块嵌入。查询时，嵌入查询词元，对所有已存页面嵌入计算 MaxSim，再返回 top-k 页面。
 
-优点:在视觉丰富的文档上,端到端比文字RAG20-40%更好.每个补丁向量捕捉到本地布局和内容.
+优点：在视觉信息丰富的文档上，端到端结果比文本 RAG 高 20%～40%。每个图像块向量都能捕捉局部版式与内容。
 
-缺点:每页的N_p补丁 × 4 字节浮动 × D dim 矢量 = 存储速度增长快.
+缺点：每页 N_p 个图像块 × 4 字节浮点数 × D 维向量，存储量会迅速增长。可以通过 PQ / OPQ 量化缓解。
 
-### 素2和素
+### ColQwen2 与 ColSmol
 
-文2 (伊利科技, 2024-2025) 换了PaliGemma为Qwen2-VL. 更好的基底编码器,更好的检索.
+ColQwen2（illuin-tech，2024～2025）用 Qwen2-VL 替换 PaliGemma。基础编码器更强，检索效果也更好。
 
- ColSmol 是用于本地/边缘使用的较小规模变体.
+ColSmol 是面向本地/边缘设备的小型变体。约 1B 参数的 ColSmol 检索器可以在消费级 GPU 上运行。
 
-### 皮
+### VisRAG
 
-维斯RAG (Yu et al., arXiv:2410.10594) 是一个不同的变体:取而代之的是MaxSim在补丁上,将每个页面集成成一个单个向量,然后使用VLM检索双码码.更快的索引 +更小的存储,更弱的回忆.
+VisRAG（Yu 等，arXiv:2410.10594）采用另一种变体：不对图像块执行 MaxSim，而是使用 VLM 将每页池化为单个向量，再通过双编码器检索。索引速度更快、存储更小，但召回率较弱。
 
-质量与成本的折衷:质量是ColPali,规模是VISRAG.
+质量与成本之间的取舍是：质量优先选择 ColPali，规模优先选择 VisRAG。
 
-### 其他类型
+### M3DocRAG
 
-M3DocRAG (Cho et al., arXiv:2411.04952) 将多模索取扩展到多页多文档推理.
+M3DocRAG（Cho 等，arXiv:2411.04952）把多模态检索扩展到跨页面、跨文档推理。它从多份文档中检索页面，再为 VLM 组合多页面上下文。
 
-### 基准指数
+### ViDoRe——基准
 
-视觉文件检索评估.任务包括财务报告,科学论文,行政文件,医疗记录,手册.
+ViDoRe 是 ColPali 的配套基准，全称 Visual Document Retrieval Evaluation。任务涵盖财务报告、科学论文、行政文档、医疗记录与手册，指标为 nDCG@5。
 
-在 ViDoRe 上, ColPali-v1 获得了80%的 nDCG@5;在相同文件上,文本-RAG 获得了50%-60%.
+ColPali-v1 在 ViDoRe 上约为 80% nDCG@5，同一批文档上的文本 RAG 约为 50%～60%。
 
-### 终端到终端的RAG管道
+### 端到端 RAG 流水线
 
-对于视力原生RAG:
+视觉原生 RAG 的流程如下：
 
-1. 摄入: PDF → 页面图像 → PaliGemma编码 → 存储所有补丁嵌入式.
-2. 查询:用户文本 →查询标志嵌入 → MaxSim对所有索引页面 → top-k页面.
-3. 生成:顶级页面图像+查询 → VLM (Qwen2.5-VL或Claude) →答案.
+1. 摄取：PDF → 页面图像 → PaliGemma 编码 → 存储全部图像块嵌入。
+2. 查询：用户文本 → 查询词元嵌入 → 对全部已索引页面执行 MaxSim → top-k 页面。
+3. 生成：top-k 页面图像 + 查询 → VLM（Qwen2.5-VL 或 Claude）→ 答案。
 
-没有任何OCR,图形,图形,字体,布局都流入答案.
+整个过程完全不需要 OCR。图形、图表、字体和版式都会流入最终答案。
 
-### 存储数量
+### 存储量计算
 
-财务报告50页,每页有729个补丁,并包含128个维度的嵌入式:
+一份 50 页的财务报告，每页 729 个图像块，嵌入维度为 128：
 
--  ColPali: 50 * 729 * 128 * 4 字节 = ~ 18 MB 原始, PQ 后的 ~ 4 MB.
-- 文字-RAG:50块 * 768-dim * 4字节 = ~150kB.
+- ColPali：50 * 729 * 128 * 4 字节 = 原始约 18 MB，经 PQ 后约 4 MB。
+- 文本 RAG：50 个文本块 * 768 维 * 4 字节 = 约 150 kB。
 
-文件存储量为每份文件的30倍.在规模上,OPQ/PQ将其降至5-10倍,通常是可以容忍的.
+ColPali 每份文档的存储量约为文本 RAG 的 30 倍。大规模使用 OPQ / PQ 后，可以降至约 5～10 倍，通常仍可接受。
 
-### 当短信RAG仍然赢得
+### 文本 RAG 仍然胜出的场景
 
-- 文本文本是简单的,存储成本更低.
-- 存储占据成本的数百万页档案.
-- 严格的监管要求除了检索之外,还需要提取可转录的文本.
+- 没有版式信号的纯文本文档（Wiki 文章、聊天日志）。文本 RAG 更简单，存储成本也更低。
+- 存储成本占主导的数百万页面档案库。
+- 严格监管要求，必须在检索结果之外提供可抽取的 OCR 文本。
 
-其他2026年 财务报告,科学论文,法律合同,医疗记录,UX文档 视觉原生RAG获胜.
+对于 2026 年的其他场景——财务报告、科学论文、法律合同、医疗记录、用户体验文档——视觉原生 RAG 更有优势。
 
 ```figure
 mm-maxsim
 ```
 
-## 用它
+## 投入使用
 
-`code/main.py`其他:
+`code/main.py` 会：
 
-- 玩具补丁编码器:将"页面" (特征向量小格式) 映射到一个组补丁嵌入式.
--  MaxSim 评分器:计算查询代币嵌入集和页面补丁集之间的ColBERT式评分.
-- 索引5页玩具,执行3个查询,返回最高的K,
+- 实现玩具图像块编码器：把一个“页面”（由特征向量组成的小型网格）映射为图像块嵌入数组。
+- 实现 MaxSim 评分器：计算查询词元嵌入集合与页面图像块集合之间的 ColBERT 风格分数。
+- 为 5 个玩具页面建立索引，运行 3 条查询，并返回带分数的 top-k 结果。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-vision-rag-designer.md`根据文件RAG项目,选择 ColPali / ColQwen2 / VisRAG / text-RAG,并将存储量量量缩小.
+本课会产出 `outputs/skill-vision-rag-designer.md`。给定一个文档 RAG 项目，它会在 ColPali / ColQwen2 / VisRAG / 文本 RAG 之间做出选择，并估算存储规模。
 
-## 运动
+## 练习
 
-1. 报告每页有729个补丁,128维嵌入式,4字节的浮动.计算原料存储和PQ压缩存储 (8x).
+1. 一份 200 页的年度报告，每页 729 个图像块，嵌入维度为 128，浮点数占 4 字节。计算原始存储量与经 PQ 压缩 8 倍后的存储量。
 
-2. 什么是这个总和捕捉一个简单的平均相似性没有?
+2. MaxSim 为 Σ_i max_j cos(q_i, p_j)。与简单平均相似度相比，这个求和捕捉了什么？
 
-3.  ColPali 将页面索引为补丁组.如果我们以词级索引 (如ColBERT所做的) 为替代,会发生什么变化?
+3. ColPali 把页面索引为图像块集合。如果改为按词语建立索引（像 ColBERT），会发生什么变化？有哪些取舍？
 
-4. 设计一个1M页的体积的端到端管道,每个查询的延迟预算为500ms. 选择 ColQwen2 / VisRAG,并证明.
+4. 为包含 100 万页、每次查询延迟预算为 500 毫秒的语料库设计端到端流水线。选择 ColQwen2 或 VisRAG，并说明理由。
 
-5. 阅读M3DocRAG (arXiv:2411.04952). 描述多页的注意力模式,以及它与单页的ColPali检索如何不同.
+5. 阅读 M3DocRAG（arXiv:2411.04952）。描述其多页面注意力模式，以及它与 ColPali 单页检索的区别。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|-----------------|------------------------|
-| Late interaction | "ColBERT-style" | Retrieval using per-token or per-patch embeddings + MaxSim, not a single doc vector |
-| MaxSim | "Max-over-patches" | For each query token, pick the highest-similarity document token; sum across query |
-| Bi-encoder | "Single-vector" | One vector per document; faster but loses granularity |
-| Multi-vector | "Many-vectors-per-doc" | Store N_p vectors per document / page; storage cost grows but recall improves |
-| Patch embedding | "Page feature" | One vector per image patch from a VLM encoder, cached per page |
-| ViDoRe | "Vision doc bench" | ColPali's benchmark suite for visual document retrieval |
-| PQ quantization | "Product quantization" | Compression that maintains vector similarity while shrinking storage ~8x |
+| 后期交互 | “ColBERT 风格” | 使用逐词元或逐图像块嵌入 + MaxSim 进行检索，而不是使用单个文档向量 |
+| MaxSim | “对图像块取最大值” | 对每个查询词元，选取相似度最高的文档词元，再对全部查询求和 |
+| 双编码器 | “单向量” | 每篇文档一个向量；速度更快，但会丢失细粒度信息 |
+| 多向量 | “每篇文档多个向量” | 每篇文档/页面存储 N_p 个向量；存储成本提高，但召回率改善 |
+| 图像块嵌入 | “页面特征” | VLM 编码器为每个图像块生成的一个向量，按页缓存 |
+| ViDoRe | “视觉文档基准” | ColPali 用于视觉文档检索的基准套件 |
+| PQ 量化 | “乘积量化” | 在维持向量相似度的同时，将存储量缩小约 8 倍的压缩方法 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Faysse et al. — ColPali (arXiv:2407.01449)](https://arxiv.org/abs/2407.01449)
-- [Khattab & Zaharia — ColBERT (arXiv:2004.12832)](https://arxiv.org/abs/2004.12832)
-- [Yu et al. — VisRAG (arXiv:2410.10594)](https://arxiv.org/abs/2410.10594)
-- [Cho et al. — M3DocRAG (arXiv:2411.04952)](https://arxiv.org/abs/2411.04952)
+- [Faysse 等——ColPali（arXiv:2407.01449）](https://arxiv.org/abs/2407.01449)
+- [Khattab 与 Zaharia——ColBERT（arXiv:2004.12832）](https://arxiv.org/abs/2004.12832)
+- [Yu 等——VisRAG（arXiv:2410.10594）](https://arxiv.org/abs/2410.10594)
+- [Cho 等——M3DocRAG（arXiv:2411.04952）](https://arxiv.org/abs/2411.04952)
 - [illuin-tech/colpali GitHub](https://github.com/illuin-tech/colpali)
