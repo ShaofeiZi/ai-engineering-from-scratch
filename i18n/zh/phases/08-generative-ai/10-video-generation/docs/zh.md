@@ -1,74 +1,74 @@
 # 视频生成
 
-> 图像是2D子.视频是3D子.理论是相同的;计算是10-100倍更难.OpenAI的Sora (2024年2月) 证明这是可能的.到2026年,Veo 2,Kling 1.5,跑道Gen-3,Pika 2.0和WAN 2.2的船产视频从文字在1080p 和开放权重堆 (CogVideoX,HunyuanVideo,Mochi-1,WAN 2.2) 落后了12个月.
+> 图像是二维张量，视频则是三维张量。理论相同，计算难度却高出 10～100 倍。OpenAI 的 Sora（2024 年 2 月）证明了这条路可行。到 2026 年，Veo 2、Kling 1.5、Runway Gen-3、Pika 2.0 和 WAN 2.2 已能根据文本生成可用于生产的 1080p 视频，而开放权重技术栈（CogVideoX、HunyuanVideo、Mochi-1、WAN 2.2）大约落后 12 个月。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 8 · 07 (Latent Diffusion), Phase 7 · 09 (ViT), Phase 8 · 06 (DDPM)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 8 · 07（潜在扩散）、阶段 7 · 09（ViT）、阶段 8 · 06（DDPM）
+**Time:** 约 45 分钟
 
 ## 问题
 
-像像素的速度为10秒 1080p视频,24fps,是240个图片的 1920×1080×3像素.这相当于每片的原始数据约1.5GB.像素空间的扩散是不可能的.你需要:
+一段 10 秒、24fps 的 1080p 视频包含 240 帧，每帧有 1920×1080×3 个像素。每个片段约有 1.5 GB 原始数据，因而不可能在像素空间中做扩散。你需要：
 
-1. **Spatiotemporal compression.**编码视频,而不是框架,
-2. **Temporal coherence.**框架需要分秒分享内容,照明和物体身份.
-3. **Compute budget.**视频训练比像相等尺寸的图像10-100倍昂贵.
-4. **Conditioning.**文字,图像 (第一片),音频或其他视频.
+1. **时空压缩。** 使用一个编码视频而非单帧的 VAE，将视频转换成时空图块序列。
+2. **时间一致性。** 各帧需要在数秒内保持内容、光照和物体身份一致。网络必须对运动建模。
+3. **计算预算。** 在模型大小相同的情况下，视频训练的成本是图像训练的 10～100 倍。
+4. **条件输入。** 文本、图像（首帧）、音频或另一段视频。大多数生产模型都接受这四类输入。
 
-解决这个问题的架构是**Diffusion Transformer (DiT)**它们是用于空间时间补丁,训练在巨大的数据集 (即时,字幕,视频).与06课程相同的扩散损失.
+解决这一问题的架构，是应用于时空图块的**扩散 Transformer（DiT）**，它在海量（提示词、描述、视频）数据集上训练，使用与第 06 课相同的扩散损失。
 
 ## 概念
 
-![Video diffusion: patchify, DiT, decode](../assets/video-generation.svg)
+![视频扩散：切分图块、DiT、解码](../assets/video-generation.svg)
 
-### 缩
+### 切分图块
 
-通过3DVAE编码视频 (学习空间时间压缩).`[T_latent, H_latent, W_latent, C_latent]`分成小块`[t_p, h_p, w_p]`对于索拉风格的模型来说,`t_p = 1`(每补丁) 或`t_p = 2`一个10秒的1080p视频将压缩到20,000到100,000个补丁.
+使用 3D VAE（学习得到的时空压缩）编码视频。潜变量的形状为 `[T_latent, H_latent, W_latent, C_latent]`，再将其切成大小为 `[t_p, h_p, w_p]` 的图块。Sora 风格模型采用 `t_p = 1`（逐帧图块）或 `t_p = 2`（每两帧一个图块）。一段 10 秒的 1080p 视频压缩后约含 2 万～10 万个图块。
 
-### 时间空间
+### 时空 DiT
 
-变压器处理了平坦的补丁序列.每个补丁都有3D定位嵌入 (时间 + y + x).注意力通常是因子化:
+Transformer 处理展平后的图块序列。每个图块都带有三维位置嵌入（时间 + y + x）。注意力通常按以下方式分解：
 
-- **Spatial attention**在每个框架的补丁中.
-- **Temporal attention**在同一空间位置的框架上.
-- **Full 3D attention**价格高于16-100倍;仅在低分辨率或研究中使用.
+- **空间注意力：** 在每一帧的图块之间计算。
+- **时间注意力：** 在相同空间位置的各帧之间计算。
+- **完整三维注意力：** 计算成本高出 16～100 倍，只在低分辨率或研究场景中使用。
 
-### 文字调节
+### 文本条件
 
-交叉注意力与一个大的文本编码器 (T5-XXL为索拉,CogVideoX-5B使用T5-XXL).长时间提示问题索拉的训练集有GPT生成的密集重写字幕平均每片的200个代币.
+通过交叉注意力接入大型文本编码器（Sora 使用 T5-XXL，CogVideoX-5B 也使用 T5-XXL）。长提示词非常重要——Sora 的训练集使用 GPT 生成的密集重描述，每个片段平均约有 200 个词元。
 
-### 培训
+### 训练
 
-空间及时间隐藏的标准扩散损失 (ε或v预测).数据:网络视频+~100M编辑片段+合成文本标题.计算:即使是小型研究运行,也需要10,000+GPU小时;索拉规模为100,000+.
+在时空潜变量上使用标准扩散损失（预测 ε 或 v）。数据包括网络视频、约 1 亿个精选片段和合成文本描述。计算量方面，即使是小型研究训练也需要超过 1 万 GPU 小时；Sora 规模则超过 10 万 GPU 小时。
 
-## 2026年生产景观
+## 2026 年生产格局
 
-| Model | Date | Max duration | Max res | Open weights? | Notable |
+| 模型 | 日期 | 最长时长 | 最高分辨率 | 开放权重？ | 特点 |
 |-------|------|--------------|---------|---------------|---------|
-| Sora (OpenAI) | 2024-02 | 60s | 1080p | No | First model to show world simulator properties at scale |
-| Sora Turbo | 2024-12 | 20s | 1080p | No | Production Sora at 5x faster inference |
-| Veo 2 (Google) | 2024-12 | 8s | 4K | No | Highest quality + physics in 2025 |
-| Veo 3 | 2025 Q3 | 15s | 4K | No | Native audio and stronger camera control |
-| Kling 1.5 / 2.1 (Kuaishou) | 2024-2025 | 10s | 1080p | No | Best human motion in 2025 Q1 |
-| Runway Gen-3 Alpha | 2024-06 | 10s | 768p | No | Professional video tools on top |
-| Pika 2.0 | 2024-10 | 5s | 1080p | No | Strongest character consistency |
-| CogVideoX (THUDM) | 2024 | 10s | 720p | Yes (2B, 5B) | First open 5B-scale video |
-| HunyuanVideo (Tencent) | 2024-12 | 5s | 720p | Yes (13B) | Open SOTA late 2024 |
-| Mochi-1 (Genmo) | 2024-10 | 5.4s | 480p | Yes (10B) | Most permissively licensed |
-| WAN 2.2 (Alibaba) | 2025-07 | 5s | 720p | Yes | Strongest open model mid-2025 |
+| Sora（OpenAI） | 2024-02 | 60s | 1080p | 否 | 首个大规模展现世界模拟器特性的模型 |
+| Sora Turbo | 2024-12 | 20s | 1080p | 否 | 生产版 Sora，推理快 5 倍 |
+| Veo 2（Google） | 2024-12 | 8s | 4K | 否 | 2025 年画质与物理表现最佳 |
+| Veo 3 | 2025 Q3 | 15s | 4K | 否 | 原生音频与更强的镜头控制 |
+| Kling 1.5 / 2.1（快手） | 2024-2025 | 10s | 1080p | 否 | 2025 年第一季度人体运动表现最佳 |
+| Runway Gen-3 Alpha | 2024-06 | 10s | 768p | 否 | 在模型之上提供专业视频工具 |
+| Pika 2.0 | 2024-10 | 5s | 1080p | 否 | 角色一致性最强 |
+| CogVideoX（THUDM） | 2024 | 10s | 720p | 是（2B、5B） | 首个开放的 5B 规模视频模型 |
+| HunyuanVideo（腾讯） | 2024-12 | 5s | 720p | 是（13B） | 2024 年末开放模型最佳水平 |
+| Mochi-1（Genmo） | 2024-10 | 5.4s | 480p | 是（10B） | 许可证最宽松 |
+| WAN 2.2（阿里巴巴） | 2025-07 | 5s | 720p | 是 | 2025 年中最强开放模型 |
 
-开放权重比图像空间更快地缩小了差距: 源视频+WAN 2.2 LoRA 已经在2026年中期为大多数开源工作流提供了动力.
+开放权重模型缩小差距的速度比图像领域更快：到 2026 年中，HunyuanVideo + WAN 2.2 LoRA 已支撑大多数开源工作流。
 
 ```figure
 video-diffusion-denoise
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`模拟了核心空间时间的DT想法:补丁一个小的合成视频,添加一个每补丁位置嵌入,并用变压器式的注意力在补丁上标明整个序列.没有 numpy;纯 Python.我们表明,当相邻的框架补丁共享一个标明和位置嵌入时,即使在1D中也出现时间一致性.
+`code/main.py` 模拟时空 DiT 的核心思路：把一段小型合成视频切分成图块，为每个图块添加位置嵌入，再使用在图块上执行 Transformer 风格注意力的模型为整个序列去噪。代码不使用 numpy，只使用纯 Python。我们将看到，即使在一维场景中，只要相邻帧的图块共享去噪器和位置嵌入，也会出现时间一致性。
 
-### 步骤1:修补一个合成1D视频
+### 第 1 步：切分一段合成的一维“视频”
 
 ```python
 def make_video(T_frames=8, rng=None):
@@ -77,82 +77,82 @@ def make_video(T_frames=8, rng=None):
     return [base + 0.3 * t + rng.gauss(0, 0.1) for t in range(T_frames)]
 ```
 
-### 步骤2:每架位置嵌入
+### 第 2 步：每帧的位置嵌入
 
 ```python
 def pos_embed(t, dim):
     return sinusoidal(t, dim)
 ```
 
-### 步骤3:指标器看到整个序列
+### 第 3 步：让去噪器看到整个序列
 
-而不是独立地揭示每个框架,我们的小网连接了所有框架值+它们的位置嵌入,并预测了所有框架的噪音.
+我们的微型网络不会独立为每一帧去噪，而是拼接所有帧的值及其位置嵌入，并联合预测所有帧的噪声。
 
-### 步骤4:时间一致性测试
+### 第 4 步：测试时间一致性
 
-训练后,取样视频.测量框架到框架的三角形. 如果模型已经了解了时间结构,三角形将保持比独立取样每一个框架更小.
+训练后采样一段视频，并测量相邻帧之间的差值。如果模型学会了时间结构，这些差值就会小于逐帧独立采样时的结果。
 
-## 陷
+## 陷阱
 
-- **Independent per-frame sampling = flicker.**如果在每个图片单独运行图像扩散,输出闪,因为每个图片的噪音是独立的.视频扩散通过通过关注或共享噪音将图片连接起来来解决这一问题.
-- **Naive 3D attention = OOM.**完全3D的注意力在10秒的1080p隐藏的数以亿计的操作.
-- **Data captioning matters more than size.**索拉在之前的工作中的主要升级是对大约10倍更详细的字幕 (GPT-4重新标记的剪辑) 的培训.
-- **First-frame conditioning.**大多数生产模型也接受图像作为第一框.这是"图像到视频"模式;培训包括这种变体.
-- **Physics drift.**长片 (>10秒) 积累微妙的不一致性.滑动窗口生成+键盘固有助.
+- **逐帧独立采样 = 闪烁。** 如果对每一帧分别运行图像扩散，输出就会闪烁，因为各帧的噪声彼此独立。视频扩散通过注意力或共享噪声耦合各帧，从而解决这个问题。
+- **朴素三维注意力 = 内存溢出。** 对 10 秒 1080p 潜变量执行完整三维注意力，需要数千亿次运算。应将其分解为空间注意力 + 时间注意力。
+- **数据描述质量比规模更重要。** 相比此前工作，Sora 最主要的改进是采用了详细程度约高 10 倍的描述（由 GPT-4 为片段重新标注）。OpenAI 的技术报告对此有明确说明。
+- **首帧条件。** 大多数生产模型还接受一张图像作为首帧。这就是“图生视频”模式；训练中也包含这种变体。
+- **物理规律漂移。** 长片段（>10s）会逐渐累积细微的不一致。滑动窗口生成 + 关键帧锚定可以缓解这一问题。
 
-## 用它
+## 学以致用
 
-| Use case | 2026 pick |
+| 使用场景 | 2026 年选择 |
 |----------|-----------|
-| Highest-quality text-to-video, hosted | Veo 3 or Sora |
-| Camera-controlled cinematic | Runway Gen-3 with motion brushes |
-| Character consistency across clips | Pika 2.0 or Kling 2.1 |
-| Open weights, fast fine-tune | WAN 2.2 + LoRA |
-| Image-to-video | WAN 2.2-I2V, Kling 2.1 I2V, or Runway |
-| Audio-to-video lip sync | Veo 3 (native audio) or a dedicated lip-sync model |
-| Video editing | Runway Act-Two, Kling Motion Brush, Flux-Kontext (still-frame) |
+| 最高质量的托管文生视频 | Veo 3 或 Sora |
+| 可控制镜头的电影级视频 | 带运动笔刷的 Runway Gen-3 |
+| 跨片段角色一致性 | Pika 2.0 或 Kling 2.1 |
+| 开放权重、快速微调 | WAN 2.2 + LoRA |
+| 图生视频 | WAN 2.2-I2V、Kling 2.1 I2V 或 Runway |
+| 音频驱动的视频口型同步 | Veo 3（原生音频）或专用口型同步模型 |
+| 视频编辑 | Runway Act-Two、Kling Motion Brush、Flux-Kontext（静态帧） |
 
-在2024年至2026年间,视频的质量均的成本每秒下降了20倍.
+在画质相当的前提下，每秒视频的成本从 2024 年到 2026 年下降了 20 倍。
 
-## 运送它
+## 交付成果
 
-保存`outputs/skill-video-brief.md`技能采用视频简介 (时间,视角比率,风格,摄像头计划,主题一致性,音频) 和输出:模型+托管,即时架构 (摄像头语言,主题描述,运动描述符),种子+可复制性协议以及级QA检查清单.
+保存 `outputs/skill-video-brief.md`。该技能接收一份视频需求说明（时长、宽高比、风格、镜头方案、主体一致性、音频），并输出：模型与托管方式、提示词脚手架（镜头语言、主体描述、运动描述词）、随机种子与可复现协议，以及逐帧 QA 检查清单。
 
-## 运动
+## 练习
 
-1. **Easy.**在`code/main.py`根据该报告,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个框架的数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据,每一个数据.
-2. **Medium.**添加一个第一框条件:框0到给定的值,然后样本剩下的.测量值如何传播.
-3. **Hard.**使用 HuggingFace 扩散器在本地 GPU 上运行 CogVideoX-2B. 时间 20 推断步骤在 720p 时 6 秒的剪辑. 配置空间时间注意力以确定瓶.
+1. **简单。** 在 `code/main.py` 中比较以下两种方式的相邻帧差值：（a）逐帧独立采样；（b）联合序列采样。报告差值的均值与方差。
+2. **中等。** 添加首帧条件：把第 0 帧固定为给定值，再采样其余帧。测量这个固定值如何向后传播。
+3. **困难。** 使用 HuggingFace diffusers 在本地 GPU 上运行 CogVideoX-2B。对一段 6 秒 720p 视频的 20 个推理步骤计时，并分析时空注意力以定位瓶颈。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Video VAE | "3-D VAE" | Encoder that compresses `(T, H, W, C)` → spatiotemporal latent. |
-| Patches | "The tokens" | Fixed-size 3-D blocks of the latent; input to the DiT. |
-| Factorized attention | "Spatial + temporal" | Run attention over space, then over time; skip full 3-D attention. |
-| Image-to-video (I2V) | "Animate this photo" | Model takes an image + text, outputs a video that starts from it. |
-| Keyframe conditioning | "Anchor frames" | Pin specific frames to control the video's arc. |
-| Motion brush | "Directional hint" | UI input where the user paints motion vectors onto the image. |
-| Re-captioning | "Dense captions" | Using an LLM to re-label training clips with detailed prompts. |
-| Flicker | "Temporal artifact" | Frame-to-frame inconsistency; fixed with coupled denoising. |
+| 视频 VAE | “3D VAE” | 将 `(T, H, W, C)` 压缩为时空潜变量的编码器。 |
+| 图块 | “词元” | 固定大小的潜变量三维块；作为 DiT 的输入。 |
+| 分解注意力 | “空间 + 时间” | 先在空间上运行注意力，再沿时间运行；跳过完整三维注意力。 |
+| 图生视频（I2V） | “让这张照片动起来” | 模型接收图像 + 文本，并输出从该图像开始的视频。 |
+| 关键帧条件 | “锚定帧” | 固定特定帧，从而控制视频的发展轨迹。 |
+| 运动笔刷 | “方向提示” | 用户在图像上绘制运动向量的界面输入。 |
+| 重新描述 | “密集描述” | 使用大语言模型，以详细提示词重新标注训练片段。 |
+| 闪烁 | “时间伪影” | 相邻帧之间不一致；通过耦合去噪修复。 |
 
-## 产品注:视频隐藏是存储带宽问题
+## 生产说明：视频潜变量受内存带宽限制
 
-通过4×视频VAE压缩 (VAE) 进行,可在24fps的10秒 1080p剪辑中获得240个 × 1920 × 1080 × 3 ≈1.5GB原始像素.`2 × spatial × 2 × temporal`通过一个空间时间的DIT进行30步的运行,你将通过HBM 内存带宽,而不是FLOPs,移动3GB/步.
+一段 10 秒、24 fps 的 1080p 视频包含 240 帧 × 1920 × 1080 × 3 ≈ 1.5 GB 原始像素。经 4 倍视频 VAE 压缩（`2 × spatial × 2 × temporal`）后，每个请求的潜变量约为 100 MB。让它以批大小 1 在时空 DiT 中运行 30 步，每一步都要通过 HBM 搬运约 3 GB 数据——瓶颈是内存带宽，而不是 FLOP。
 
-直接从生产推理文学推理章中得到的三个生产:
+生产系统有三个调节旋钮，全都直接来自生产推理资料的推理章节：
 
-- **TP across the DiT.**文字到视频模型通常是10B参数. 4H100的TP=4是标准的; 405B类模型的PP=2 ×TP=2.每步延迟大致在线性下降,TP达到全减墙.
-- **Frame batching = continuous batching.**在生成时,视频概念上是一个由注意力连接的框架.`t+1`在框架中`t-1`如果模型架构允许滑窗生成,则将返回.
-- **Clip-level prefill cache.**对于图像到视频,第一框调节类似于LLM的快速预填:计算一次,重复使用时间解码器. 这实际上是视频的KV缓存.
+- **在 DiT 上使用 TP。** 文生视频模型通常拥有 ≥10B 参数。标准配置是在 4 张 H100 上使用 TP=4；对于 405B 级模型则使用 PP=2 × TP=2。在触及全归约瓶颈前，每步延迟会随 TP 大致线性下降。
+- **帧批处理 = 连续批处理。** 生成时，可以把视频理解为一批通过注意力连接起来的帧。连续批处理（动态调度）同样适用：如果模型架构支持滑动窗口生成，就开始渲染第 `t+1` 帧，同时返回第 `t-1` 帧。
+- **片段级预填充缓存。** 对图生视频而言，首帧条件类似大语言模型提示词的预填充：计算一次，再在各次时间解码器传播中复用。它实际上就是视频的 KV 缓存。
 
-## 进一步阅读
+## 延伸阅读
 
-- [Brooks et al. (2024). Video generation models as world simulators](https://openai.com/index/video-generation-models-as-world-simulators/)索拉技术报告.
-- [Yang et al. (2024). CogVideoX: Text-to-Video Diffusion Models with An Expert Transformer](https://arxiv.org/abs/2408.06072)      
-- [Kong et al. (2024). HunyuanVideo: A Systematic Framework for Large Video Generative Models](https://arxiv.org/abs/2412.03603)    视频
-- [Genmo (2024). Mochi-1 Technical Report](https://www.genmo.ai/blog/mochi)莫奇-1.
-- [Alibaba (2025). WAN 2.2](https://wanvideo.io/)2025年中期开放SOTA.
-- [Ho, Salimans, Gritsenko et al. (2022). Video Diffusion Models](https://arxiv.org/abs/2204.03458)视频传播纸.
-- [Blattmann et al. (2023). Align your Latents (Video LDM)](https://arxiv.org/abs/2304.08818) 稳定视频传播的祖先.
+- [Brooks 等（2024），作为世界模拟器的视频生成模型](https://openai.com/index/video-generation-models-as-world-simulators/)——Sora 技术报告。
+- [Yang 等（2024），CogVideoX：采用专家 Transformer 的文生视频扩散模型](https://arxiv.org/abs/2408.06072)——CogVideoX。
+- [Kong 等（2024），HunyuanVideo：大型视频生成模型的系统框架](https://arxiv.org/abs/2412.03603)——HunyuanVideo。
+- [Genmo（2024），Mochi-1 技术报告](https://www.genmo.ai/blog/mochi)——Mochi-1。
+- [Alibaba（2025），WAN 2.2](https://wanvideo.io/)——2025 年中开放模型最佳水平。
+- [Ho、Salimans、Gritsenko 等（2022），视频扩散模型](https://arxiv.org/abs/2204.03458)——奠基性视频扩散论文。
+- [Blattmann 等（2023），对齐潜变量（Video LDM）](https://arxiv.org/abs/2304.08818)——Stable Video Diffusion 的前身。
