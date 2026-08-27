@@ -1,32 +1,32 @@
-# 从零开始进行3D高斯式光
+# 从零实现 3D Gaussian Splatting
 
-> 一个场景是数百万的3D高斯人云. 每个场景都有位置,方向,尺度,度,以及一种颜色,取决于视角方向.
+> 场景由数百万个三维高斯组成。每个高斯都有位置、方向、尺度、不透明度，以及随观察方向变化的颜色。将它们光栅化，再让梯度穿过光栅化过程反向传播，就完成了。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 4 Lesson 13 (3D Vision & NeRF), Phase 1 Lesson 12 (Tensor Operations), Phase 4 Lesson 10 (Diffusion basics optional)
-**Time:** ~90 minutes
+**Prerequisites:** 第 4 阶段第 13 课（3D 视觉与 NeRF）、第 1 阶段第 12 课（张量运算）、第 4 阶段第 10 课（扩散基础，可选）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 解释为什么3D高斯斯派特替代了NeRF作为2026年光现实3D重建的生产默认
-- 说明每高斯参数的六个参数 (位置,旋转四旋翼,尺度,度,球状和色,可选特征) 以及每个浮动的数量
-- 通过使用2D高斯式光光器从零开始`alpha`编译,然后显示3D案例如何向同一循环投影
-- 使用`nerfstudio`现在`gsplat`其他`SuperSplat`为了从20-50张照片中重建一个场景,`KHR_gaussian_splatting`扩展GLTF或OpenUSD 26.03 `UsdVolParticleField3DGaussianSplat`方案
+- 解释到 2026 年，3D Gaussian Splatting 为何取代 NeRF，成为照片级真实感三维重建的生产默认方案
+- 说出每个高斯的六类参数（位置、旋转四元数、尺度、不透明度、球谐颜色、可选特征），以及每类参数贡献多少个浮点数
+- 使用 `alpha` 合成从零实现二维 Gaussian Splatting 光栅化器，再说明三维情况如何投影到同一个循环
+- 使用 `nerfstudio`、`gsplat` 或 `SuperSplat` 从 20–50 张照片重建场景，并导出到 glTF 的 `KHR_gaussian_splatting` 扩展，或 OpenUSD 26.03 的 `UsdVolParticleField3DGaussianSplat` Schema
 
-## 问题
+## 问题所在
 
-一个NeRF存储一个场景作为一个MLP的权重.每一个染的像素都是数百个MLP查询沿线射线.训练需要几个小时,染需要几秒,并且权重不能编辑.如果你想在场景内移动椅子,你必须重新训练.
+NeRF 把场景存储在 MLP 的权重中。渲染每个像素，都需要沿一条射线查询 MLP 数百次。训练需要数小时，每张图像渲染需要数秒，而且权重无法直接编辑——如果想移动场景中的椅子，就必须重新训练。
 
-现在,我们已经开始使用了3D高斯式分光 (Kerbl,Kopanas,Leimkühler,Drettakis,SIGGRAPH 2023) 一个场景是3D高斯人. 转像是GPU缩速度100+fps. 训练需要几分钟. 编辑是直接的:翻译一个小组的高西人,你已经移动了椅子. 到2026年,克罗诺斯集团批准了高斯斯地块的GLTF扩展,OpenUSD 26.03将一个高斯地块方案发送,Zillow和 Apartments.com将房地产带入,大多数关于3D重建的新研究论文都是3DGS核心想法的变体.
+3D Gaussian Splatting（Kerbl、Kopanas、Leimkühler、Drettakis，SIGGRAPH 2023）取代了这一切。场景由一组显式三维高斯表示；渲染是能以 100 fps 以上运行的 GPU 光栅化；训练只需数分钟；编辑则十分直接，平移一组高斯就相当于移动了椅子。到 2026 年，Khronos Group 已批准 Gaussian Splat 的 glTF 扩展，OpenUSD 26.03 提供 Gaussian Splat Schema，Zillow 与 Apartments.com 用它渲染房地产，大多数三维重建新论文也都是核心 3DGS 思想的变体。
 
-心理模型很简单,数学有足够的移动部分,大多数介绍都从化开始,然后跳过投影和球状和.这个课程首先构建了整个东西 2D版本,然后是3D扩展.
+思维模型很简单，但数学细节足够繁多，以至于多数介绍都从光栅化开始，直接略过投影与球谐函数。本课会完整构建全部过程——先实现二维版本，再扩展到三维。
 
-## 概念
+## 核心概念
 
-### 盖斯人带着什么
+### 一个高斯携带哪些信息
 
-一个3D高斯人是空间中的一个参数点,
+一个三维高斯是空间中的参数化斑点，具有以下属性：
 
 ```
 position         mu         (3,)    centre in world coordinates
@@ -36,11 +36,11 @@ opacity          alpha      (1,)    post-sigmoid opacity [0, 1]
 SH coefficients  c_lm       (3 * (L+1)^2,)   view-dependent colour
 ```
 
-转换+尺度构建3x3的共变性: `Sigma = R S S^T R^T`球状和使颜色变化,视角方向镜亮点,微妙的光,视角依赖的光,而不需要存储视角纹理.在SH级3时,每种颜色道均为16个系数,仅仅为颜色,每种颜色均为48个浮动.
+旋转与尺度会构造一个 3x3 协方差矩阵：`Sigma = R S S^T R^T`，它定义了高斯在三维空间中的形状。球谐函数允许颜色随观察方向变化，从而无需存储逐视角纹理，也能表示镜面高光、细微光泽和视角相关辉光。球谐阶数为 3 时，每个颜色通道有 16 个系数，单是颜色就需要每个高斯保存 48 个浮点数。
 
-一场场景通常有1-500万个高斯人.每个场景都存储约60个浮动 (3 + 4 + 3 + 1 + 48 + 混合).这为5百万个高斯人场景的240MB,远小于每个点纹理的等级点云,并且大小量小于NeRF的MLP重量,高分辨率重新呈现.
+一个场景通常包含 100 万到 500 万个高斯。每个高斯大约保存 60 个浮点数，也就是 3 + 4 + 3 + 1 + 48 + 其他信息。一个包含 500 万个高斯的场景约占 240 MB，远小于具有逐点纹理的等价点云，也比需要重新高分辨率渲染的 NeRF MLP 权重小一个数量级。
 
-### 化,而不是射线行驶
+### 光栅化，而非射线步进
 
 ```mermaid
 flowchart LR
@@ -55,11 +55,11 @@ flowchart LR
     style PIX fill:#dcfce7,stroke:#16a34a
 ```
 
-五步,所有 GPU 兼容,每像素没有 MLP 查询. 一个 RTX 3080 Ti 能在 147 fps 提供600 万个位置.
+共五个步骤，而且全部适合 GPU。无需为每个像素查询 MLP；单张 RTX 3080 Ti 就能以 147 fps 渲染 600 万个 Splat。
 
 ### 投影步骤
 
-现在,我们在世界位置上.`mu`具有3D共变性`Sigma`投影机在屏幕位置上`mu'`具有2D共变性`Sigma'`其他:
+世界坐标中位置为 `mu`、三维协方差为 `Sigma` 的三维高斯，会投影成屏幕位置为 `mu'`、二维协方差为 `Sigma'` 的二维高斯：
 
 ```
 mu' = project(mu)
@@ -69,11 +69,11 @@ W = viewing transform (rotation + translation of camera)
 J = Jacobian of the perspective projection at mu'
 ```
 
-两维高斯人的足迹是一个圆,其轴是`Sigma'`每个圆的内部的像素都得到了高斯人的贡献,`exp(-0.5 * (p - mu')^T Sigma'^-1 (p - mu'))`现在,我们要去.
+二维高斯的覆盖范围是一个椭圆，其轴方向由 `Sigma'` 的特征向量决定。椭圆内的每个像素都会接收该高斯的贡献，权重为 `exp(-0.5 * (p - mu')^T Sigma'^-1 (p - mu'))`。
 
-### 组的规则
+### Alpha 合成规则
 
-对于一个像素,它覆盖的高西式被排序为前向 (或以逆式相等于前向后向).颜色由80年代以来的每种半透明的纹器相同的方程组成:
+对于一个像素，先把覆盖它的高斯从后向前排序；也可以使用逆公式从前向后。颜色通过自 1980 年代以来所有半透明光栅化器都使用的同一方程合成：
 
 ```
 C_pixel = sum_i alpha_i * T_i * c_i
@@ -83,27 +83,27 @@ alpha_i = opacity_i * exp(-0.5 * d^T Sigma'^-1 d)   local contribution
 c_i = eval_SH(SH_i, view_direction)    view-dependent colour
 ```
 
-这是**the same equation as NeRF's volumetric render**由于这种身份,所以染质量与NeRF相匹配,它们都整合了相同的辐射场方程.
+这与 NeRF 的体渲染使用的是**同一个方程**，区别只在于：这里沿射线处理的是显式稀疏高斯集合，而不是稠密采样点。正因为二者积分的是同一条辐射场方程，渲染质量才能与 NeRF 相当。
 
-### 为什么这可以区分
+### 为什么它可微
 
-根据高斯的参数,每个步骤都可对其进行分化. 鉴于真相图像,计算呈现的像素损失,通过拉斯特里斯器进行后置,更新所有`(mu, q, s, alpha, c_lm)`通过梯度下降. 超过3万次的代,高斯人找到正确的位置,尺度和颜色.
+每一个步骤——投影、图块分配、Alpha 合成、球谐函数求值——都可以相对于高斯参数求导。给定真实图像后，计算渲染像素损失，让梯度穿过光栅化器反向传播，再使用梯度下降更新全部 `(mu, q, s, alpha, c_lm)`。经过约 30,000 次迭代，高斯会找到合适的位置、尺度和颜色。
 
-### 密集和切割
+### 增密与剪枝
 
-一组固定的高斯人不能覆盖一个复杂的场景.
+固定数量的高斯无法覆盖复杂场景，因此训练过程包含两种自适应机制：
 
-- **Clone**现在的位置是高斯的,但它的尺度很小.
-- **Split**高梯度时,一个大高梯度太平滑,不能适合该区域.
-- **Prune**光率下降到值以下的高斯人,
+- 当某个高斯的梯度幅度较高但尺度较小时，在当前位置**克隆**它——这里的重建需要更多细节。
+- 当一个大尺度高斯的梯度较高时，把它**拆分**成两个更小的高斯——单个大高斯过于平滑，无法拟合该区域。
+- **剪除**不透明度降到阈值以下的高斯——它们没有贡献。
 
-密度运行每次N代.一个场景通常从100k初始高斯人 (从SfM点种植) 增长到训练结束时的1-5M.
+增密每隔 N 次迭代执行一次。一个场景通常从运动恢复结构点初始化的约 10 万个高斯开始，在训练结束时增长到 100 万至 500 万个。
 
-### 圆形和在一个段落中
+### 一段话理解球谐函数
 
-视图依赖的颜色是函数`c(direction)`球体和是球体的福利尔基.`L`你会得到`(L+1)^2`根据一个频道的基本函数.对新视图的颜色进行评估是学习的SH系数和在视图方向评估的基础之间的点分数. 度0 =一个系数 = 常态颜色. 度3 = 16系数 = 足以捕捉兰伯特色,镜像和轻微反射. SD Gaussian Splatting 论文默认使用3 度.
+视角相关颜色是单位球面上的函数 `c(direction)`。球谐函数是球面上的傅里叶基。截断到阶数 `L` 后，每个通道会有 `(L+1)^2` 个基函数。渲染新视角时，只需把已学习的球谐系数，与在当前观察方向上求值得到的基函数进行点积，即可得到颜色。阶数 0 表示一个系数，也就是恒定颜色；阶数 3 表示 16 个系数，足以捕捉朗伯着色、镜面反射和轻微反射。3D Gaussian Splatting 论文默认使用阶数 3。
 
-### 2026年生产堆
+### 2026 年的生产技术栈
 
 ```
 1. Capture         smartphone / DJI drone / handheld scanner
@@ -114,21 +114,21 @@ c_i = eval_SH(SH_i, view_direction)    view-dependent colour
 6. View            Cesium / Unreal / Babylon.js / Three.js / Vision Pro
 ```
 
-### 4D和生成型变体
+### 四维与生成式变体
 
-- **4D Gaussian Splatting**高西人是时间的函数;用于体积视频 (超人2026年,A$AP罗基的"直升机").
-- **Generative splats**文字到片模型 (世界实验室的理石) 幻觉整个场景.
-- **3D Gaussian Unscented Transform**NVIDIA NuRec的自动驾驶模拟版本.
+- **4D Gaussian Splatting**——高斯会随时间变化，用于体积视频（Superman 2026、A$AP Rocky 的“Helicopter”）。
+- **生成式 Splat**——文生 Splat 模型，例如 World Labs 的 Marble，可以凭空生成完整场景。
+- **3D Gaussian Unscented Transform**——NVIDIA NuRec 面向自动驾驶仿真的变体。
 
 ```figure
 cv3-gaussian-splat
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:一个2D高斯人
+### 第 1 步：二维高斯
 
-我们首先建造一个2D的纹器,然后在投影后,3D的缩到它.
+先构建二维光栅化器。三维情况在投影之后会归结为同一个问题。
 
 ```python
 import torch
@@ -153,11 +153,11 @@ def eval_2d_gaussian(means, covs, points):
     return density.view(G, H, W)
 ```
 
-`einsum`方形形状是什么?`diff^T Sigma^-1 diff`对于每一个 (高斯,像素) 双.
+`einsum` 会为每个（高斯，像素）对计算二次型 `diff^T Sigma^-1 diff`。
 
-### 步骤2: 2D 喷式片
+### 第 2 步：二维 Splatting 光栅化器
 
-两维的深度是无意义的,所以我们使用了学到的每高斯人的尺度来来排序.
+从前向后进行 Alpha 合成。二维空间中的深度没有实际含义，因此使用每个高斯一个可学习标量来确定顺序。
 
 ```python
 def rasterise_2d(means, covs, colours, opacities, depths, image_size):
@@ -195,9 +195,9 @@ def rasterise_2d(means, covs, colours, opacities, depths, image_size):
     return out
 ```
 
-实际的实现不快,使用基 CUDA ,但正确的数学和完全可分化.
+它并不快——真正实现会使用基于图块的 CUDA 内核——但数学完全正确，而且整体可微。
 
-### 步骤3:可训练的2D喷场景
+### 第 3 步：可训练二维 Splat 场景
 
 ```python
 class Splats2D(nn.Module):
@@ -229,9 +229,9 @@ class Splats2D(nn.Module):
         return rasterise_2d(self.means, covs, colours, opacities, self.depth, image_size)
 ```
 
-`log_scale`现在`opacity_logit`其他`colour_logits`通过正确的激活在染时间,所有不受限制的参数都被映射出来.这是每个3DGS实现的标准模式.
+`log_scale`、`opacity_logit` 和 `colour_logits` 都是不受约束的参数，只在渲染时通过正确激活函数映射。这是每种 3DGS 实现都会采用的标准模式。
 
-### 步骤4:将2D高西安器与目标图像相匹配
+### 第 4 步：让二维高斯拟合目标图像
 
 ```python
 import math
@@ -261,23 +261,23 @@ for step in range(200):
         print(f"step {step:3d}  mse {loss.item():.4f}")
 ```
 
-通过200个步骤,64个高斯人定居在两个形状中.这是整个观念.
+经过 200 步，64 个高斯会逐渐落到两个形状之中。这就是全部核心思想：对显式几何原语执行梯度下降。
 
-### 步骤5:从2D到3D
+### 第 5 步：从二维扩展到三维
 
-现在,我们需要一个新的系统,
+三维扩展沿用同一个循环，只增加以下内容：
 
-1. 转换为一个角,而不是一个角.
-2. 性是`R S S^T R^T`随着`R`基于四旋翼和`S = diag(exp(log_scale))`现在,我们要去.
-3. 投影`(mu, Sigma) -> (mu', Sigma')`通过使用相机外观和视角投影的雅可比安`mu`现在,我们要去.
-4. 颜色成为一个球状和的扩展;在观测方向评估它.
-5. 根据实际的相机空间,而不是学习的尺度.
+1. 每个高斯的旋转不再是一个角度，而是四元数。
+2. 协方差为 `R S S^T R^T`，其中 `R` 由四元数构造，`S = diag(exp(log_scale))`。
+3. 投影 `(mu, Sigma) -> (mu', Sigma')` 使用相机外参与在 `mu` 处计算的透视投影 Jacobian。
+4. 颜色变为球谐展开；在观察方向上求值。
+5. 深度排序使用相机空间中的真实 z，而不是可学习标量。
 
-每个生产实施 (`gsplat`现在`inria/gaussian-splatting`现在`nerfstudio`) 在基于的CUDA核的GPU上做了这么做.
+每种生产实现（`gsplat`、`inria/gaussian-splatting`、`nerfstudio`）都会使用基于图块的 CUDA 内核，在 GPU 上完成完全相同的过程。
 
-### 步骤 6: 球形和评价
+### 第 6 步：球谐函数求值
 
-标准标准为3级,每频道有16个条件.
+最高阶数为 3 的球谐基，每个通道包含 16 项。求值过程如下：
 
 ```python
 def eval_sh_degree_3(sh_coeffs, dirs):
@@ -310,11 +310,11 @@ def eval_sh_degree_3(sh_coeffs, dirs):
     return result
 ```
 
-学习`sh_coeffs`在转换时,你将其对当前的视图方向进行评估,并得到3向量 RGB.
+学习得到的 `sh_coeffs` 保存该高斯“在每个方向上的颜色”。渲染时，根据当前观察方向对它求值，得到一个三维 RGB 向量。
 
-## 用它
+## 实际应用
 
-对于真正的3DGS工作,使用`gsplat`其他地方`nerfstudio`其他:
+真实 3DGS 项目可以使用 `gsplat`（Meta）或 `nerfstudio`：
 
 ```bash
 pip install nerfstudio gsplat
@@ -322,48 +322,48 @@ ns-download-data example
 ns-train splatfacto --data path/to/data
 ```
 
-`splatfacto`运行时间在RTX 4090上需要10-30分钟,
+`splatfacto` 是 nerfstudio 的 3DGS 训练器。一个典型场景在 RTX 4090 上需要 10–30 分钟训练。
 
-2026年重要的出口选择:
+到 2026 年，重要的导出选项包括：
 
-- `.ply`原始的高斯云 (可载,最大的文件).
-- `.splat` 播放卡通/超级平板量化格式.
-- 鱼`KHR_gaussian_splatting` 克罗诺斯标准,可通过观众传输 (Feb 2026 RC).
-- 开通美元`UsdVolParticleField3DGaussianSplat` 美国元原产品,用于NVIDIA Omniverse和Vision Pro管道.
+- `.ply`——原始高斯点云，兼容性好，文件最大。
+- `.splat`——PlayCanvas / SuperSplat 的量化格式。
+- glTF `KHR_gaussian_splatting`——Khronos 标准，可在不同查看器间移植（2026 年 2 月 RC）。
+- OpenUSD `UsdVolParticleField3DGaussianSplat`——USD 原生格式，适用于 NVIDIA Omniverse 与 Vision Pro 流水线。
 
-对于4D/动态场景,`4DGS`其他`Deformable-3DGS`延伸相同的机器,使用不同的时间和不透明度.
+对于四维/动态场景，`4DGS` 和 `Deformable-3DGS` 会用随时间变化的均值与不透明度扩展同一套机制。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-3dgs-capture-planner.md`一个提示,为特定场景类型计划拍摄会话 (照片数量,摄像头路径,照明).
-- `outputs/skill-3dgs-export-router.md`选择合适的出口格式的技能 (`.ply`现在,`.splat`视频显示器或发动机.
+- `outputs/prompt-3dgs-capture-planner.md`——针对给定场景类型规划拍摄过程，包括照片数量、相机路径和光照的提示词。
+- `outputs/skill-3dgs-export-router.md`——根据下游查看器或引擎，在 `.ply` / `.splat` / glTF / USD 中选择正确导出格式的技能。
 
-## 运动
+## 练习
 
-1. **(Easy)**运行上面的2D光训练器,以不同的合成图像.`num_splats`在`[16, 64, 256]`确定降低回报的点.
-2. **(Medium)**扩展2D纹器以支持每高斯式RGB颜色,这些颜色依赖于一个尺度"视角"通过2度和. 训练一对目标图像,并验证模型重建两者.
-3. **(Hard)**克隆`nerfstudio`列车`splatfacto`您的任何场景 (桌子,植物,面部,房间) 拍摄的20张照片.`KHR_gaussian_splatting`打开一个视频器 (Three.js `GaussianSplats3D`报告训练时间,高斯人数量,和转载的fps.
+1. **（简单）** 在另一张合成图像上运行上述二维 Splat 训练器。让 `num_splats` 分别取 `[16, 64, 256]`，绘制每种设置下 MSE 随步骤变化的曲线，并找出收益开始递减的位置。
+2. **（中等）** 扩展二维光栅化器，使每个高斯的 RGB 颜色可以通过二阶谐波随标量“观察角度”变化。在一对目标图像上训练，并验证模型能够重建两者。
+3. **（困难）** 克隆 `nerfstudio`，使用你拍摄的任意场景（桌面、植物、人脸、房间）的 20 张照片训练 `splatfacto`。导出为 glTF `KHR_gaussian_splatting`，并在查看器（Three.js `GaussianSplats3D`、SuperSplat、Babylon.js V9）中打开。报告训练时间、高斯数量和渲染 fps。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| 3DGS | "Gaussian splats" | Explicit scene representation as millions of 3D Gaussians with per-Gaussian position, rotation, scale, opacity, SH colour |
-| Covariance | "Shape of the Gaussian" | `Sigma = R S S^T R^T`; orientation and anisotropic scale of one Gaussian |
-| Alpha compositing | "Back-to-front blend" | Same equation as NeRF's volumetric render, now over an explicit sparse set |
-| Densification | "Clone and split" | Adaptive addition of new Gaussians where reconstruction is under-fit |
-| Pruning | "Delete low-opacity" | Remove Gaussians that have collapsed to near-zero opacity during training |
-| Spherical harmonics | "View-dependent colour" | Fourier basis on the sphere; stores colour as a function of viewing direction |
-| Splatfacto | "nerfstudio's 3DGS" | The easiest path to training 3DGS in 2026 |
-| `KHR_gaussian_splatting` | "glTF standard" | Khronos 2026 extension that makes 3DGS portable across viewers and engines |
+| 3DGS | “Gaussian Splats” | 由数百万个三维高斯组成的显式场景表示，每个高斯包含位置、旋转、尺度、不透明度和球谐颜色 |
+| 协方差 | “高斯的形状” | `Sigma = R S S^T R^T`；表示一个高斯的方向与各向异性尺度 |
+| Alpha 合成 | “从后向前混合” | 与 NeRF 体渲染相同的方程，只是作用于显式稀疏集合 |
+| 增密 | “克隆与拆分” | 在重建拟合不足的位置自适应增加新高斯 |
+| 剪枝 | “删除低不透明度高斯” | 移除训练期间不透明度坍缩到接近零的高斯 |
+| 球谐函数 | “视角相关颜色” | 球面上的傅里叶基，把颜色存储为观察方向的函数 |
+| Splatfacto | “nerfstudio 的 3DGS” | 2026 年训练 3DGS 最简单的路径 |
+| `KHR_gaussian_splatting` | “glTF 标准” | Khronos 于 2026 年推出的扩展，使 3DGS 能够跨查看器与引擎移植 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [3D Gaussian Splatting for Real-Time Radiance Field Rendering (Kerbl et al., SIGGRAPH 2023)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)原始纸
-- [gsplat (Meta/nerfstudio)](https://github.com/nerfstudio-project/gsplat)生产质量的CUDA粉丝
-- [nerfstudio Splatfacto](https://docs.nerf.studio/nerfology/methods/splat.html)参考培训配方
-- [Khronos KHR_gaussian_splatting extension](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_gaussian_splatting/README.md)2026年可移植格式
-- [OpenUSD 26.03 release notes](https://openusd.org/release/) `UsdVolParticleField3DGaussianSplat`方案
-- [THE FUTURE 3D State of Gaussian Splatting 2026](https://www.thefuture3d.com/blog-0/2026/4/4/state-of-gaussian-splatting-2026)行业概述
+- [《3D Gaussian Splatting for Real-Time Radiance Field Rendering》（Kerbl 等，SIGGRAPH 2023）](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/)——原始论文
+- [gsplat（Meta/nerfstudio）](https://github.com/nerfstudio-project/gsplat)——生产级 CUDA 光栅化器
+- [nerfstudio Splatfacto](https://docs.nerf.studio/nerfology/methods/splat.html)——参考训练方案
+- [Khronos KHR_gaussian_splatting 扩展](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_gaussian_splatting/README.md)——2026 年可移植格式
+- [OpenUSD 26.03 发布说明](https://openusd.org/release/)——`UsdVolParticleField3DGaussianSplat` Schema
+- [THE FUTURE 3D：State of Gaussian Splatting 2026](https://www.thefuture3d.com/blog-0/2026/4/4/state-of-gaussian-splatting-2026)——行业概览
