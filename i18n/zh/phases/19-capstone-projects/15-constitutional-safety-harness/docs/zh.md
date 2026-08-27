@@ -1,30 +1,30 @@
-# 宪法安全套+红队范围
+# 综合项目 15——宪法式安全护栏与红队演练场
 
-> 对于多语言覆盖,Anthropic的宪法分类器,Meta的Llama Guard4,谷歌的ShieldGemma-2,NVIDIA的Nemotron 3内容安全,以及X-Guard定义了2026年安全分类器堆. 格拉克,Pyrit,NVIDIA Aegis和 promptfoo成为标准的对抗评估工具. 尼莫防护车的0.12将它们连接到生产管道. 这块顶石将所有这些东西结合在一起:一个围绕目标应用程序的层次安全带,一个自主的红团队代理运行6多个攻击家庭,
+> 到 2026 年，安全分类器技术栈已经基本成型：Anthropic Constitutional Classifiers、Meta Llama Guard 4、Google ShieldGemma-2、NVIDIA Nemotron 3 Content Safety，以及负责多语言覆盖的 X-Guard。garak、PyRIT、NVIDIA Aegis 和 promptfoo 则成为常用的对抗评估工具。NeMo Guardrails v0.12 可以把这些组件接入生产流水线。本综合项目要把整套体系真正落地：围绕目标应用搭建分层安全护栏，让自主红队智能体运行 6 类以上攻击，再执行一次宪法式自我批评训练，最终给出可量化的无害性变化。
 
-**Type:** Capstone
-**Languages:** Python (safety pipeline, red team), YAML (policy configs)
-**Prerequisites:** Phase 10 (LLMs from scratch), Phase 11 (LLM engineering), Phase 13 (tools), Phase 14 (agents), Phase 18 (ethics, safety, alignment)
-**Phases exercised:**子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子
-**Time:** 25 hours
+**Type:** 综合项目
+**Languages:** Python（安全流水线、红队）、YAML（策略配置）
+**Prerequisites:** 第 10 阶段（从零构建 LLM）、第 11 阶段（LLM 工程）、第 13 阶段（工具）、第 14 阶段（智能体）、第 18 阶段（伦理、安全、对齐）
+**Phases exercised:** P10 · P11 · P13 · P14 · P18
+**Time:** 25 小时
 
 ## 问题
 
-2026年LLM安全的边界不是分类器是否工作 (大概是这样做的),而是如何在生产应用程序周围正确地编译它们, 拉马卫队4处理英国政策违规行为. 据悉,在此期间, 根据图像,ShieldGemma-2可以捕获即时注射. 公司的内容安全性 类的宪法分类器是训练而不是服务期间使用的单独方法.
+2026 年 LLM 安全的难点已经不再是“分类器能不能用”，而是怎样把它们正确组合在生产应用外围，既避免过度拒绝，又不留下明显漏洞。Llama Guard 4 负责检测英文内容是否违反策略；X-Guard 覆盖 132 种语言的越狱攻击；ShieldGemma-2 用于拦截图像中的提示词注入；NVIDIA Nemotron 3 Content Safety 覆盖企业场景常见的安全类别。Anthropic Constitutional Classifiers 走的是另一条路线，主要用于训练阶段，而不是服务阶段。
 
-攻击进化也很重要. PAIR 和 TAP 自动化了 jailbreak 发现. GCG 运行基于梯度的后音攻击.多转和代码交换攻击利用了代理记忆.任何部署的LLM 需要红队范围.
+攻击方式也在演化。PAIR 和 TAP 可以自动发现越狱路径，GCG 会生成基于梯度的对抗性后缀，多轮对话和语码转换攻击则会利用智能体记忆。任何真正部署的 LLM 都需要一套红队演练场；garak 和 PyRIT 是这类体系的常用驱动器。每个成功攻击还必须附上成文的缓解方案和 CVSS 评分。
 
-您将硬化目标应用程序 (要么是8B指令调整的模型,要么是其他顶点的RAG聊天机器人之一),对此运行6+攻击家庭,并进行前后无害度测量.
+你要加固一个目标应用，可以选用 8B 指令微调模型，也可以复用其他综合项目中的 RAG 聊天机器人；然后对它运行 6 类以上攻击，并量化加固前后的无害性变化。
 
 ## 概念
 
-安全管道是五层.**Input sanitize**解码的基本64/rot13字符,规范 Unicode.**Policy layer**:NeMo Guardrails v0.12轨道 (域外,毒性,PII提取). **Classifier gate**,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,**Model**目标法定士**Output filter**关4号号, 检查, 报名执行, 应有的情况.**HITL tier**标记高风险的输出进入 Slack 队列.
+整个安全流水线分为五层。**输入清理（Input sanitize）**：去除零宽字符，解码 base64/rot13，规范化 Unicode。**策略层（Policy layer）**：使用 NeMo Guardrails v0.12 的规则处理越界主题、毒性内容和个人身份信息提取。**分类器门控（Classifier gate）**：输入侧使用 Llama Guard 4，非英文场景使用 X-Guard，图像输入使用 ShieldGemma-2。**模型层（Model）**：目标 LLM 本体。**输出过滤（Output filter）**：输出再次经过 Llama Guard 4、Presidio 个人身份信息清理，并在适用时强制检查引用。**人工介入层（HITL tier）**：高风险输出不直接返回，而是进入 Slack 队列等人工复核通道。
 
-红队范围运行在一个调度器上. PAIR 和 TAP 自主地发现 jailbreaks. GCG运行基于梯度的后音攻击. ASCII / base64 / rot13编码攻击.多转攻击 (个人采用,内存利用).代码交换攻击 (混合英语和斯瓦希利或泰语).每个运行产生一个结构化的发现文件,CVSS得分和披露时间表.
+红队演练场由调度器定时运行。PAIR 和 TAP 自主探索越狱路径，GCG 执行基于梯度的后缀攻击。测试还要覆盖 ASCII / base64 / rot13 编码攻击、多轮攻击（角色扮演、记忆利用），以及语码转换攻击，例如混合英语与斯瓦希里语或泰语。每次运行都要生成结构化发现文件，其中包含 CVSS 评分和披露时间线。
 
-宪法自我批评是训练时间干预. 采取1k的有害尝试提示,让模型起草答案,对书面宪法 (不要伤害规则) 进行批评,并在批评循环上重新训练. 在持久的评估中测量之前/后的无害性三角形.
+宪法式自我批评（constitutional self-critique）是一种训练阶段干预。准备 1,000 条尝试诱导有害回答的提示词，让模型先起草答案，再依据一份明确写出的宪法进行批评，例如“不造成伤害”“引用证据”“拒绝非法请求”。批评模型提出异议的样本需要重写，目标模型再用这些经批评改进的样本对继续训练。最后在留出评估集上测量无害性指标的前后变化。
 
-## 建筑
+## 架构
 
 ```
 request (text / image / multilingual)
@@ -63,41 +63,41 @@ parallel:
 output: CVSS-scored findings + disclosure timeline + before/after harmlessness delta
 ```
 
-## 堆
+## 技术栈
 
-- 安全分类:Llama Guard 4,ShieldGemma-2,NVIDIA Nemotron 3 内容安全,X-Guard
-- 防护轨道框架:NeMo防护轨道 v0.12 + OPA
-- 红团队驱动程序:garak (NVIDIA),PyrIT (Microsoft Azure),NVIDIA Aegis, promptfoo
-- 监狱突破剂:PAIR (Chao等人, 2023),攻击树 (TAP),GCG后
-- 宪法培训:人类式的自我批评循环 + 批评的SFT
-- 标签: 总统
-- 目标:一个8B指令调整的模型或其他顶点石的RAG聊天机器人
+- 安全分类器：Llama Guard 4、ShieldGemma-2、NVIDIA Nemotron 3 Content Safety、X-Guard
+- 护栏框架：NeMo Guardrails v0.12 + OPA
+- 红队驱动器：garak（NVIDIA）、PyRIT（Microsoft Azure）、NVIDIA Aegis、promptfoo
+- 越狱智能体：PAIR（Chao 等，2023）、Tree-of-Attacks（TAP）、GCG 对抗性后缀
+- 宪法式训练：Anthropic 风格的自我批评循环 + 基于批评结果的 SFT
+- 个人身份信息清理：Presidio
+- 目标应用：一个 8B 指令微调模型，或其他综合项目中的 RAG 聊天机器人
 
 ```figure
 cf-safety-stack
 ```
 
-## 建立它
+## 动手构建
 
-1. **Target setup.**在vLLM上建立一个8B指令调整模型 (或从另一个顶石中重新使用RAG聊天机器人).这是正在测试的应用程序.
+1. **准备目标应用。** 在 vLLM 上启动一个 8B 指令微调模型，或者复用其他综合项目中的 RAG 聊天机器人。这就是被测应用。
 
-2. **Safety pipeline wrap.**导线在目标周围的五层管道. 检查每个层是个别可观测的 (在Langfuse中每个层的跨度).
+2. **封装安全流水线。** 在目标系统外围接入五层安全管道。确认每一层都能单独观测，例如在 Langfuse 中为每层记录一个跨度（span）。
 
-3. **Classifier coverage.**装载Llama Guard 4,X-Guard (多语言),ShieldGemma-2 (图片). 运行每个小标记的集,以建立基线.
+3. **验证分类器覆盖范围。** 加载 Llama Guard 4、X-Guard（多语言）和 ShieldGemma-2（图像）。先在一小批带标签样本上运行，建立基线。
 
-4. **Red-team scheduler.**计划加拉克,Pyrit,一个PAIR代理,一个TAP代理,一个GCG运行者,一个多轮攻击者,一个代码交换者攻击者.
+4. **实现红队调度器。** 调度 garak、PyRIT、PAIR 智能体、TAP 智能体、GCG 运行器、多轮攻击器和语码转换攻击器。每类攻击使用独立队列。
 
-5. **Attack suite.**攻击家族: (1) PAIR自动 jailbreak, (2) TAP tree-of-attacks, (3) GCG梯度后, (4) ASCII/base64/rot13编码, (5) 多转型人格, (6) 多语言代码交换. 每个家庭报告成功率.
+5. **构建攻击套件。** 至少覆盖六类攻击：(1) PAIR 自动越狱，(2) TAP 攻击树，(3) GCG 梯度后缀，(4) ASCII / base64 / rot13 编码，(5) 多轮角色扮演，(6) 多语言语码转换。每一类都要报告成功率。
 
-6. **Constitutional self-critique.**监督1k的危害试图提示.每个目标都起草了一个反应.一个批评者LLM评价一个书面宪法 ("不要伤害","引用证据","拒绝非法请求").指导评论对象被重写;目标对批评改善的对进行细节调整.在进行的评估中测量之前/之后无害性.
+6. **执行宪法式自我批评。** 整理 1,000 条尝试诱导有害回答的提示词。对每条提示词，目标模型先生成答案，再由批评模型依据写好的宪法评分，例如“不造成伤害”“引用证据”“拒绝非法请求”。批评模型提出异议的样本要被重写，目标模型再用这些改进后的样本对进行微调。最后在留出评估集上测量无害性变化。
 
-7. **Over-refusal measurement.**检测良性提示套件 (例如XSTest) 上的错误阳性率. 目标必须在良性问题上保持有用.
+7. **测量过度拒绝。** 在 XSTest 等良性提示词套件上跟踪假阳性率。系统面对良性问题时必须保持有用，而不是一味拒绝。
 
-8. **CVSS scoring.**对于每次成功的 jailbreak,评分 CVSS 4.0 (攻击向量,复杂性,影响). 制作披露时间表和缓解计划.
+8. **进行 CVSS 评分。** 每个成功的越狱都要按 CVSS 4.0 打分，包括攻击向量、复杂度和影响，并形成披露时间线与缓解方案。
 
-9. **Range automation.**上面的一切都运行在 cron 上; 结果写到队列上; 过度拒绝回归警告到 Slack 上.
+9. **演练场自动化。** 上述所有流程都应挂到 cron 上自动运行；发现项写入队列；一旦过度拒绝出现回归，就向 Slack 发告警。
 
-## 用它
+## 运行示例
 
 ```
 $ safety probe --model=target --family=PAIR --budget=50
@@ -109,52 +109,52 @@ $ safety probe --model=target --family=PAIR --budget=50
 [range]      7 successes out of 50 (14% success rate)
 ```
 
-## 运送它
+## 交付成果
 
-`outputs/skill-safety-harness.md`产品可交付.生产级层级的安全管道加上可复制的红色车队范围,具有前/后无害度.
+`outputs/skill-safety-harness.md` 就是本课交付物：一套生产级分层安全管道，以及一套可复现的红队演练场，并附带无害性指标的前后变化。
 
-| Weight | Criterion | How it is measured |
+| 权重 | 评判标准 | 衡量方式 |
 |:-:|---|---|
-| 25 | Attack-surface coverage | 6+ attack families exercised, 2+ languages |
-| 20 | True-positive / false-positive trade-off | Attack block rate vs XSTest benign pass rate |
-| 20 | Self-critique delta | Before/after harmlessness on held-out eval |
-| 20 | Documentation and disclosure | CVSS-scored findings with timeline |
-| 15 | Automation and repeatability | Everything runs on cron with alerts |
+| 25 | 攻击面覆盖 | 至少演练 6 类攻击，覆盖 2 种以上语言 |
+| 20 | 真阳性与假阳性的权衡 | 攻击拦截率与 XSTest 良性样本通过率的对比 |
+| 20 | 自我批评带来的变化 | 留出评估集上无害性指标的前后变化 |
+| 20 | 文档与披露 | 包含 CVSS 评分和时间线的发现报告 |
+| 15 | 自动化与可重复性 | 所有任务都通过 cron 运行并配置告警 |
 | **100** | | |
 
-## 运动
+## 练习
 
-1. 运行garak的插件,即将在RAG聊天机器人中注射,并与输出过层和没有输出过器层进行攻击成功率的比较.
+1. 在 RAG 聊天机器人上运行 garak 的提示词注入插件，比较启用和关闭输出过滤层时的攻击成功率。
 
-2. 增加第七次攻击家族:通过检索文件间接即时注射.
+2. 加入第七类攻击：通过检索文档发起间接提示词注入，并测量还需要增加哪些防御。
 
-3. 执行"拒绝与帮助"模式:当防护堵塞时,目标提供更安全的相关答案,而不是平坦的拒绝.
+3. 实现“拒绝但提供帮助”（refuse-with-help）模式：护栏拦截时，不只给出生硬拒绝，还提供一个更安全的相关回答。测量它对 XSTest 的影响。
 
-4. 多语言覆盖率差距:找到X-Guard低性能的语言. 提出针对它进行细节调整的数据集.
+4. 找出一种 X-Guard 表现较差的语言，并设计有针对性的微调数据集。
 
-5. 根据30B模型进行宪法自我批评,
+5. 在 30B 模型上运行宪法式自我批评，测量无害性改善幅度是否会随模型规模变化。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|-----------------|------------------------|
-| Layered safety | "Defense in depth" | Multiple guardrails at input, gate, output, HITL |
-| Llama Guard 4 | "Meta's safety classifier" | The 2026 reference input/output content classifier |
-| PAIR | "Jailbreak agent" | Paper (Chao et al.) on LLM-driven jailbreak discovery |
-| TAP | "Tree-of-Attacks" | Tree-search variant of PAIR |
-| GCG | "Greedy coordinate gradient" | Gradient-based adversarial suffix attack |
-| Constitutional self-critique | "Anthropic-style training" | Target drafts -> critic scores -> rewrite -> retrain |
-| XSTest | "Benign probe set" | Benchmark for over-refusal regression |
-| CVSS 4.0 | "Severity score" | Standard vulnerability scoring for safety findings |
+| 分层安全 | “纵深防御” | 在输入、门控、输出和 HITL 等多层部署防护 |
+| Llama Guard 4 | “Meta 的安全分类器” | 2026 年输入/输出内容分类器的参考基线 |
+| PAIR | “越狱智能体” | Chao 等人提出的 LLM 驱动越狱发现方法 |
+| TAP | “攻击树” | PAIR 的树搜索变体 |
+| GCG | “贪婪坐标梯度” | 基于梯度的对抗性后缀攻击 |
+| 宪法式自我批评 | “Anthropic 风格训练” | 目标模型起草回答 -> 批评模型评分 -> 重写 -> 再训练 |
+| XSTest | “良性探测集” | 用于度量过度拒绝回归的基准集 |
+| CVSS 4.0 | “严重性评分” | 为安全发现项打分的标准漏洞评分体系 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Anthropic Constitutional Classifiers](https://www.anthropic.com/research/constitutional-classifiers)培训时间参考
-- [Meta Llama Guard 4](https://www.llama.com/docs/model-cards-and-prompt-formats/llama-guard-4/)2026年输出输入分类器
-- [Google ShieldGemma-2](https://huggingface.co/google/shieldgemma-2b)图像+多模安全
-- [NVIDIA Nemotron 3 Content Safety](https://developer.nvidia.com/blog/building-nvidia-nemotron-3-agents-for-reasoning-multimodal-rag-voice-and-safety/)企业参考
-- [X-Guard (arXiv:2504.08848)](https://arxiv.org/abs/2504.08848) 132 种语言的多语言安全
-- [garak](https://github.com/NVIDIA/garak)NVIDIA红队工具包
-- [PyRIT](https://github.com/Azure/PyRIT)微软红团框架
-- [NeMo Guardrails v0.12](https://docs.nvidia.com/nemo-guardrails/)铁路框架
-- [PAIR (arXiv:2310.08419)](https://arxiv.org/abs/2310.08419) 监狱突破代理文件
+- [Anthropic Constitutional Classifiers](https://www.anthropic.com/research/constitutional-classifiers) — 训练阶段参考资料
+- [Meta Llama Guard 4](https://www.llama.com/docs/model-cards-and-prompt-formats/llama-guard-4/) — 2026 年输入/输出分类器
+- [Google ShieldGemma-2](https://huggingface.co/google/shieldgemma-2b) — 图像与多模态安全模型
+- [NVIDIA Nemotron 3 Content Safety](https://developer.nvidia.com/blog/building-nvidia-nemotron-3-agents-for-reasoning-multimodal-rag-voice-and-safety/) — 企业级参考方案
+- [X-Guard (arXiv:2504.08848)](https://arxiv.org/abs/2504.08848) — 覆盖 132 种语言的多语言安全模型
+- [garak](https://github.com/NVIDIA/garak) — NVIDIA 红队测试工具包
+- [PyRIT](https://github.com/Azure/PyRIT) — Microsoft 红队测试框架
+- [NeMo Guardrails v0.12](https://docs.nvidia.com/nemo-guardrails/) — 防护规则框架
+- [PAIR (arXiv:2310.08419)](https://arxiv.org/abs/2310.08419) — 越狱智能体论文
