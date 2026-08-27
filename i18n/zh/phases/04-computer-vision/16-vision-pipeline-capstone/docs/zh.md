@@ -1,30 +1,30 @@
-# 建立一个完整的视觉管道  石头
+# 构建完整视觉流水线——综合项目
 
-> 产品视觉系统是一个由数据合同编织成的模型和规则链.
+> 生产级视觉系统是由多个模型和规则组成的链条，并通过数据契约连接起来。本阶段已经准备好了所有部件，这个综合项目会把它们端到端串联起来。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 4 Lessons 01-15
-**Time:** ~120 minutes
+**Prerequisites:** 第 4 阶段第 01–15 课
+**Time:** 约 120 分钟
 
 ## 学习目标
 
-- 设计一个产品视觉管道,检测到物体,分类它们,并发出结构化的JSON ,每一个处理失败路径
-- 连接一个探测器 (面具R-CNN或YOLO),一个分类器 (ConvNeXt-Tiny),以及一个数据合同 (Pydantic) 进入一个服务
-- 标记端到端管道并确定第一个瓶 (通常是预处理,然后是检测器)
-- 运送一个最小的FastAPI服务,它接受图像上传,运行管道,并返回分类的检测
+- 设计一条生产级视觉流水线：检测物体、对物体分类并输出结构化 JSON，同时处理每一种失败路径
+- 把检测器（Mask R-CNN 或 YOLO）、分类器（ConvNeXt-Tiny）和数据契约（Pydantic）接入同一个服务
+- 对端到端流水线进行基准测试，找出第一个瓶颈；通常先是预处理，其次是检测器
+- 交付一个最小 FastAPI 服务，接收上传图像，运行流水线，并返回包含分类结果的检测项
 
-## 问题
+## 问题所在
 
-视觉模型是有用的;视觉产品是它们的链.零售货架审计是检测器加上产品分类器加上价格OCR管道.自动驾驶是2D检测器加上3D检测器加上分类器加上跟踪器加上规划器.医疗预显示器是分类器加上区域分类器加上临床 UI.
+单个视觉模型很有用，但视觉产品都是由多个模型组成的链条。零售货架审计由检测器、商品分类器和价格 OCR 流水线组成；自动驾驶由二维检测器、三维检测器、分割器、追踪器和规划器组成；医学预筛查则由分割器、区域分类器和临床医生界面组成。
 
-连接这些链是分离ML原型与产品的部分. 模型之间的每个接口都是错误的新地方. 每个坐标转换,每一个正常化,每一个面具尺寸变化都是一个沉默失败候选人. 管道是最弱的接口一样强大.
+把这些链条连接起来，正是机器学习原型与产品之间的分界线。模型之间的每一个接口都会成为新的缺陷来源。每一次坐标变换、每一次归一化、每一次掩码缩放，都可能悄无声息地失败。一条流水线的强度取决于其中最薄弱的接口。
 
-这块顶石设置了最小可行的管道:检测+分类+结构化输出+服务层.第四阶段的其他所有插槽都进入这个骨架:换面膜R-CNN为YOLOv8,添加OCR头,添加细分分支,添加跟踪器.架构稳定;碎片可插.
+这个综合项目会建立一条最小可行流水线：检测 + 分类 + 结构化输出 + 服务层。第 4 阶段的其他所有内容都可以插入这副骨架：把 Mask R-CNN 换成 YOLOv8，增加 OCR Head，增加分割分支，增加追踪器。架构保持稳定，各个部件可以替换。
 
-## 概念
+## 核心概念
 
-### 管道
+### 流水线
 
 ```mermaid
 flowchart LR
@@ -43,11 +43,11 @@ flowchart LR
     style SCHEMA fill:#dcfce7,stroke:#16a34a
 ```
 
-两种模型阶段是昂贵的,其他五个阶段是昆虫居住的地方.
+一共七个阶段。两个模型阶段成本高昂，另外五个阶段则是缺陷最容易藏身的地方。
 
-### 与Pydantic签订数据合同
+### 使用 Pydantic 定义数据契约
 
-每个模型边界都变成一个打字的对象,这将沉默的失败变成响的失败.
+每个模型边界都转换成有类型的对象，从而让静默故障变成明确错误。
 
 ```
 Detection(
@@ -65,39 +65,39 @@ PipelineResult(
 )
 ```
 
-当探测器返回盒子时`(cx, cy, w, h)`没有`(x1, y1, x2, y2)`通过Pydantic的验证在边界失败,你立即发现,而不是调试下游的作物,
+如果检测器返回的是 `(cx, cy, w, h)`，而不是 `(x1, y1, x2, y2)`，Pydantic 会在边界处验证失败。你会立即发现问题，而不必去调试下游那个悄悄返回空区域的裁剪操作。
 
-### 延迟时间的发生
+### 延迟消耗在哪里
 
-几乎每个视觉管道都有三个真理:
+几乎每条视觉流水线都符合三条规律：
 
-1. **Preprocessing is often the biggest single block.**解码JPEG,转换色域,重新尺寸这些都是CPU绑定的,容易忘记.
-2. **The detector dominates GPU time.**现在,我们在检测前进传输中使用70到90%的GPU时间.
-3. **Postprocessing (NMS, RLE encode/decode) is cheap on GPU, expensive on CPU.**总是与实际目标联系在一起.
+1. **预处理往往是最大的单个耗时模块。** JPEG 解码、颜色空间转换、缩放都受 CPU 限制，而且很容易被忽视。
+2. **检测器主导 GPU 时间。** 70%–90% 的 GPU 时间都用于检测器前向传播。
+3. **后处理（NMS、RLE 编解码）在 GPU 上很便宜，在 CPU 上却很昂贵。** 必须在真实目标设备上分析性能。
 
-了解分布是使优化成为优先事项列表的原因.
+了解各阶段耗时分布，才能把优化工作变成一份有优先级的清单。
 
 ### 失败模式
 
-- **Empty detections**返回空清单,不要崩.
-- **Out-of-bounds boxes**在切割前将图像尺寸固定.
-- **Tiny crops** 对于小于分类器的最低输入值小的框,跳过分类.
-- **Corrupt upload** 400个特定错误代码的响应,而不是 500个.
-- **Model load failure**服务启动时失败,而不是在第一次请求时.
+- **没有检测结果**——返回空列表，不要崩溃，并记录日志。
+- **边界框越界**——裁剪前先把坐标限制在图像范围内。
+- **裁剪区域太小**——边界框小于分类器最低输入尺寸时，跳过分类。
+- **上传内容损坏**——返回带具体错误码的 400 响应，而不是 500。
+- **模型加载失败**——服务启动时失败，而不是等到第一个请求才失败。
 
-一个生产管道处理这些,没有写通用.`try/except`每个失败都会得到一个名字代码和一个反应.
+生产级流水线需要逐一处理这些情况，而不是编写一个会隐藏失败原因的通用 `try/except`。每类失败都应该有具名错误码和明确响应。
 
-### 批量
+### 分批
 
-产品服务服务于多个客户端. 批量检测和分类在请求中乘以吞吐量. 交易:等待批量填充的额外延迟. 典型的设置:收集到20ms的请求,批量在一起,处理,分配响应. `torchserve`其他`triton`预测负载的小型服务器自行推出自己的微型批量.
+生产服务会同时服务多个客户端。把不同请求中的检测和分类任务合并成批次，可以成倍提高吞吐量。代价是等待批次凑齐会增加额外延迟。典型配置是最多等待 20 ms，收集多个请求后合并处理，再分别返回结果。`torchserve` 和 `triton` 原生支持这种方式；负载可预测的小型服务也可以自行实现微批处理器。
 
 ```figure
 v4-vision-pipeline
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:数据合同
+### 第 1 步：数据契约
 
 ```python
 from pydantic import BaseModel, Field
@@ -124,9 +124,9 @@ class PipelineResult(BaseModel):
     inference_ms: float
 ```
 
-五秒代码可以节省一个小时的调试任何严重的管道.
+五秒钟写下的代码，可以在任何严肃流水线中节省一小时调试时间。
 
-### 步骤2:最低管道类
+### 第 2 步：最小 Pipeline 类
 
 ```python
 import time
@@ -215,9 +215,9 @@ class VisionPipeline:
         )
 ```
 
-每个界面都会被打字,每一个失败路径都有特定的处理决定.
+每个接口都有类型，每条失败路径都有明确处理决策。
 
-### 步骤3: 连接探测器和分类器
+### 第 3 步：连接检测器与分类器
 
 ```python
 from torchvision.models.detection import maskrcnn_resnet50_fpn_v2
@@ -236,7 +236,7 @@ result = pipe.run(test_image, image_id="demo")
 print(result.model_dump_json(indent=2)[:500])
 ```
 
-### 步骤4:快速API服务
+### 第 4 步：FastAPI 服务
 
 ```python
 from fastapi import FastAPI, UploadFile, HTTPException
@@ -265,9 +265,9 @@ async def detect_endpoint(file: UploadFile):
     return result.model_dump()
 ```
 
-走上`uvicorn main:app --host 0.0.0.0 --port 8000`试验`curl -F 'file=@dog.jpg' http://localhost:8000/detect`现在,我们要去.
+使用 `uvicorn main:app --host 0.0.0.0 --port 8000` 启动，再用 `curl -F 'file=@dog.jpg' http://localhost:8000/detect` 测试。
 
-### 步骤5: 标记管道
+### 第 5 步：对流水线进行基准测试
 
 ```python
 import time
@@ -306,49 +306,49 @@ def benchmark(pipe, num_runs=20, image_size=(400, 600)):
         print(f"{stage:12s}  p50={times[len(times)//2]:7.1f} ms  p95={times[int(len(times)*0.95)]:7.1f} ms")
 ```
 
-在CPU上,典型输出:预处理~3ms,检测300-500ms,分类20-40ms,总数350-550ms.在GPU上,检测是20-40ms,而预处理+分类开始在相对方面更重要.
+CPU 上的典型输出为：预处理约 3 ms，检测约 300–500 ms，分类约 20–40 ms，总计约 350–550 ms。在 GPU 上，检测只需 20–40 ms，此时预处理与分类的相对占比就会变大。
 
-## 用它
+## 实际应用
 
-生产模板与相同的结构相结合,加上:
+生产级模板会收敛到相同结构，并额外加入：
 
-- **Model versioning** 总是记录模型名称和重量哈希在响应中.
-- **Per-request trace IDs**记录每个请求的每个阶段时间,以便您可以将缓慢的响应与阶段相关联.
-- **Fallback path**如果分类器已停止使用,请返回没有分类的检测,而不是完全不执行请求.
-- **Safety filters** NSFW/PII过器在分类后,在响应离开服务之前运行.
-- **Batch endpoint**一个`/detect_batch`接受大量处理的图像URL列表.
+- **模型版本管理**——始终在响应中记录模型名称和权重哈希。
+- **逐请求 Trace ID**——记录每个请求的每个阶段耗时，以便把慢响应定位到具体阶段。
+- **降级路径**——如果分类器超时，仍返回检测结果，而不是让整个请求失败。
+- **安全过滤器**——NSFW / PII 过滤器在分类后、响应离开服务前运行。
+- **批量端点**——提供接受图像 URL 列表的 `/detect_batch`，用于批量处理。
 
-供生产服务`torchserve`现在`Triton Inference Server`其他`BentoML`处理批量,版本,指标和健康检查.`FastAPI`直接对原型和小型产品来说是很好的.
+生产服务通常使用 `torchserve`、`Triton Inference Server` 或 `BentoML`，它们原生处理分批、版本管理、指标和健康检查。原生运行 `FastAPI` 适合原型和小规模产品。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-vision-service-shape-reviewer.md`一个提示,检查视觉服务的代码,以查询合同/响应形状违规行为,并命名第一个破解错误.
-- `outputs/skill-pipeline-budget-planner.md`一个技能,鉴于目标延迟和吞吐量,将时间预算分配给每个管道阶段,并标记哪个阶段将首先错过预算.
+- `outputs/prompt-vision-service-shape-reviewer.md`——审查视觉服务代码中的契约/响应形状违规，并指出第一处破坏性缺陷的提示词。
+- `outputs/skill-pipeline-budget-planner.md`——给定目标延迟和吞吐量后，为每个流水线阶段分配时间预算，并标记最先超出预算阶段的技能。
 
-## 运动
+## 练习
 
-1. **(Easy)**运行任何开放数据集中的10张图像的管道. 报告每个阶段的平均时间和每个图像的检测数量的分布.
-2. **(Medium)**添加一个面具输出字段到`Detection`检查JSON的容量低于1MB,即使是10个对象图像.
-3. **(Hard)**在分类器前添加微分量器:收集最大10ms的作物,将它们分类成一个GPU调用,每次请求返回结果.每秒5次同时请求的吞吐量增长量和延迟加量.
+1. **（简单）** 在任意开放数据集的 10 张图像上运行流水线，报告各阶段平均耗时和每张图像检测数量的分布。
+2. **（中等）** 为 `Detection` 增加掩码输出字段，并编码为 RLE。验证即使一张图像中有 10 个物体，JSON 仍小于 1 MB。
+3. **（困难）** 在分类器前增加微批处理器：最多收集 10 ms 内的裁剪区域，在一次 GPU 调用中完成全部分类，再按请求返回结果。测量每秒 5 个并发请求时的吞吐量提升和增加的延迟。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Pipeline | "The system" | An ordered chain of preprocessing, inference, and postprocessing steps with a typed interface between each pair |
-| Data contract | "The schema" | Pydantic / dataclass definitions that every stage input and output conforms to; catches integration bugs at the boundary |
-| Preprocessing | "Before the model" | Decoding, colour conversion, resizing, normalising; usually the biggest CPU time sink |
-| Postprocessing | "After the model" | NMS, mask resize, threshold, RLE encode; cheap on GPU, expensive on CPU |
-| Microbatcher | "Collect then forward" | Aggregator that waits a fixed window for multiple requests, runs a single batched forward pass |
-| Trace ID | "Request id" | Per-request identifier logged at every stage so slow requests can be traced end-to-end |
-| Failure code | "Named error" | Specific error code per failure class instead of generic 500; enables client retry logic |
-| Health check | "Readiness probe" | Cheap endpoint that reports whether the service can answer; loadbalancers rely on this |
+| 流水线 | “系统” | 由预处理、推理和后处理步骤组成的有序链条，每对相邻阶段之间都有类型化接口 |
+| 数据契约 | “Schema” | 每个阶段输入与输出都必须遵守的 Pydantic / Dataclass 定义，在边界处捕捉集成缺陷 |
+| 预处理 | “模型之前” | 解码、颜色转换、缩放、归一化；通常是最大的 CPU 耗时来源 |
+| 后处理 | “模型之后” | NMS、掩码缩放、阈值过滤、RLE 编码；在 GPU 上便宜，在 CPU 上昂贵 |
+| 微批处理器 | “收集后统一前向传播” | 在固定时间窗口等待多个请求，再执行一次批量前向传播的聚合器 |
+| Trace ID | “请求 ID” | 在每个阶段记录的逐请求标识符，使慢请求可以端到端追踪 |
+| 失败代码 | “具名错误” | 为每种失败类型设置具体错误码，而不是笼统返回 500，使客户端能够实施重试逻辑 |
+| 健康检查 | “就绪探针” | 报告服务是否能够响应的低成本端点，负载均衡器会依赖它 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Full Stack Deep Learning — Deploying Models](https://fullstackdeeplearning.com/course/2022/lecture-5-deployment/)生产 ML部署的常规概述
-- [BentoML docs](https://docs.bentoml.com)服务框架,配套,版本和指标
-- [torchserve docs](https://pytorch.org/serve/)PyTorch的官方服务图书馆
-- [NVIDIA Triton Inference Server](https://developer.nvidia.com/triton-inference-server)高吞吐量服务,配套和多型号支持
+- [Full Stack Deep Learning——Deploying Models](https://fullstackdeeplearning.com/course/2022/lecture-5-deployment/)——生产级机器学习部署的经典概览
+- [BentoML 文档](https://docs.bentoml.com)——支持分批、版本管理和指标的服务框架
+- [torchserve 文档](https://pytorch.org/serve/)——PyTorch 官方服务库
+- [NVIDIA Triton Inference Server](https://developer.nvidia.com/triton-inference-server)——支持分批与多模型的高吞吐推理服务
