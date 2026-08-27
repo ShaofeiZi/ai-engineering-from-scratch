@@ -1,84 +1,84 @@
-# 损失功能
+# 损失函数
 
-> 网络做出了预测. 基本的真相说相反. 错误多大? 这个数字是损失. 选择错误的损失函数,你的模型完全优化了错误的东西.
+> 网络给出一个预测，真实答案却并非如此。它错得有多离谱？这个数值就是损失。选错损失函数，模型就会优化一个完全错误的目标。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Lesson 03.04 (Activation Functions)
-**Time:** ~75 minutes
+**Prerequisites:** 第 03.04 课（激活函数）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 从零开始实施MSE,二进制交叉,分类交叉和对比损失 (InfoNCE)
-- 解释为什么MSE未能进行分类,通过显示"预测0.5对所有"失败模式
-- 涂抹标签滑滑度对跨体,并描述它如何防止过度自信的预测
-- 选择回归,二进制分类,多类分类,并嵌入学习任务的正确损失函数
+- 从零实现 MSE、二元交叉熵、类别交叉熵和对比损失（InfoNCE）及其梯度
+- 通过展示“对所有输入都预测 0.5”的失败模式，解释 MSE 为何不适用于分类
+- 在交叉熵中应用标签平滑，并说明它如何防止预测过度自信
+- 为回归、二分类、多分类和嵌入学习任务选择正确的损失函数
 
 ## 问题
 
-通过减少MSE的模型,我们可以预测0.5的损失.
+在分类问题上最小化 MSE 的模型，可能会自信地把所有样本都预测为 0.5。它的确在最小化损失，却也完全没有用。
 
-损失函数是你模型真正优化的唯一东西. 没有准确性. 没有F1的成绩. 不是你向你的经理报告的任何标准. 优化器取损失函数的梯度,调整权重,使该数量变得更小. 如果损失函数不捕捉到你关心的东西,模型会找到最便宜的数学方法来满足它,
+损失函数是模型真正优化的唯一对象。不是准确率，不是 F1 分数，也不是你向经理汇报的任何指标。优化器会求损失函数的梯度，再调整权重，使这个数值变小。如果损失函数没有表达你真正关心的目标，模型就会找到数学上成本最低的方式来满足它，而那几乎从来不是你想要的结果。
 
-这是一个具体的例子. 你有双重分类任务. 两个课程,50/50分. 你用MSE作为你的损失. 模型预测每次输入为0.5. 平均MSE为0.25,这是最少的可能, 这种模型没有任何歧视性,但它技术上将你的损失功能降至最低. 转向交叉缩,同样的模型被迫推向0或1,因为 -log(0.5) =0.693是一个可怕的损失,而 -log(0.99) =0.01 奖励自信正确的预测. 损失函数的选择是学习模型和测量模型之间的区别.
+来看一个具体例子。你有一个二分类任务，两个类别各占 50%，使用 MSE 作为损失。模型对每个输入都预测 0.5，平均 MSE 是 0.25；在没有真正学习任何东西的情况下，这已经是可能达到的最小值。模型完全没有判别能力，却在技术上最小化了你的损失函数。切换到交叉熵后，同一个模型会被迫把预测推向 0 或 1，因为 -log(0.5) = 0.693 是很糟糕的损失，而 -log(0.99) = 0.01 会奖励自信且正确的预测。损失函数的选择，决定了模型究竟是在学习，还是只是在钻指标的空子。
 
-变得更糟.在自我监督学习中,你甚至没有标签.对比性损失完全定义了学习信号:什么值得相似,什么值得不同,以及模型应该如何将它们推离开.
+自监督学习中的情况更加严峻，因为连标签都不存在。对比损失完全定义了学习信号：什么算相似、什么算不同，以及模型应该多用力地把它们分开。如果对比损失设计错误，嵌入可能坍缩到同一个点——每个输入都映射到完全相同的向量。技术上损失为零，实际上一文不值。
 
-## 概念
+## 核心概念
 
-### 平均平方错误 (MSE)
+### 均方误差（MSE）
 
-预测和目标之间的二次差异,平均所有样本.
+这是回归任务的默认选择。计算预测值与目标值之差的平方，再对所有样本取平均。
 
 ```
 MSE = (1/n) * sum((y_pred - y_true)^2)
 ```
 
-为什么正方位是重要的:它将大错误处罚成四次. 2 的错误的成本是 4 倍 1. 10 的错误是 100 倍. 这使得MSE 对异常值敏感 - 一个非常错误的预测占据了损失.
+平方很重要，因为它会以二次方式惩罚大误差。误差为 2 的代价是误差为 1 的 4 倍，误差为 10 的代价则是 100 倍。因此 MSE 对离群点很敏感：一次严重错误的预测就可能主导整个损失。
 
-实际数字:如果您的模型预测住房价格,并且在$10,000 on most houses but off by $作为一个豪宅的200万,MSE将积极尝试修复那个豪宅,
+用真实数值举例：如果模型预测房价时，对大多数房屋都偏差 10,000 美元，却对一栋豪宅偏差 200,000 美元，MSE 会非常激进地试图修正这栋豪宅，甚至可能损害其余 99 栋房屋的预测表现。
 
-对于预测的MSE梯度是:
+MSE 对预测值的梯度为：
 
 ```
 dMSE/dy_pred = (2/n) * (y_pred - y_true)
 ```
 
-错误的线性.更大的错误会变得更大的梯度.这是回归的特征 (大错误需要大修正) 和分类的错误 (你想以指数而不是线性地惩罚自信错误的答案).
+梯度与误差呈线性关系。误差越大，梯度越大。这对回归是优点，因为大误差需要大幅修正；对分类却是缺点，因为你希望自信但错误的答案受到指数级惩罚，而不是线性惩罚。
 
-### 交叉缩损失
+### 交叉熵损失
 
-根据信息理论,它测量了预测概率分布和真实分布之间的差异.
+这是分类任务使用的损失函数。它源自信息论，用来衡量预测概率分布与真实分布之间的差异。
 
-**Binary Cross-Entropy (BCE):**
+**二元交叉熵（BCE）：**
 
 ```
 BCE = -(y * log(p) + (1 - y) * log(1 - p))
 ```
 
-在此,y是真实标签 (0或1) 和p是预测概率.
+其中 y 是真实标签，取 0 或 1；p 是预测概率。
 
-为什么 -log(p) 效果:当真实标签为1并且你预测p =0.99,损失是 -log(0.99) =0.01.当你预测p =0.01,损失是 -log(0.01) =4.6.这460x差异是为什么交叉能效果.它残酷地惩罚自信错误的预测,同时几乎惩罚自信正确的预测.
+为什么 -log(p) 有效？当真实标签为 1，而你预测 p = 0.99 时，损失为 -log(0.99) = 0.01；当预测 p = 0.01 时，损失为 -log(0.01) = 4.6。两者相差 460 倍，这正是交叉熵有效的原因。它会严厉惩罚自信但错误的预测，同时几乎不惩罚自信且正确的预测。
 
-梯度讲述了同样的故事:
+梯度传达了同样的信息：
 
 ```
 dBCE/dp = -(y/p) + (1-y)/(1-p)
 ```
 
-当 y = 1 和 p 接近零时,梯度是 -1/p,接近负无限.模型得到了一个巨大的信号来纠正错误.当 p 接近 1,梯度是小的.已经正确,没有什么可以纠正.
+当 y = 1 且 p 接近零时，梯度是 -1/p，会趋向负无穷，模型因此收到一个巨大的修正信号。当 p 接近 1 时，梯度很小：已经预测正确，无需修正。
 
-**Categorical Cross-Entropy:**
+**类别交叉熵：**
 
-对于多类分类,具有单个加密目标.
+适用于目标采用独热编码的多分类任务。
 
 ```
 CCE = -sum(y_i * log(p_i))
 ```
 
-如果有10个类,正确的类得到0.1的概率 (随机猜测),则损失为 -log(0.1) = 2.3. 如果正确的类得到0.9的概率,则损失为 -log(0.9) = 0.105.模型学会集中概率质量在正确的答案.
+只有真实类别会对损失作出贡献，因为其他 y_i 都为零。如果一共有 10 个类别，正确类别得到 0.1 的概率，相当于随机猜测，损失为 -log(0.1) = 2.3；如果正确类别得到 0.9 的概率，损失则是 -log(0.9) = 0.105。模型会学着把概率质量集中到正确答案上。
 
-### 为什么MSE未能进行分类
+### MSE 为何不适用于分类
 
 ```mermaid
 graph TD
@@ -96,60 +96,60 @@ graph TD
     C3 -->|"CE gradient<br/>explodes near<br/>wrong answer"| Fast["Fast correction"]
 ```
 
-由于sigmoid和度,MSE梯度平坦化 (由于sigmoid和度). 交叉缩梯度补偿了这一点 - - 记录取消了sigmoid的平坦区域,给出强大的梯度,正是最需要的地方.
+当预测接近 0 或 1 时，由于 Sigmoid 已经饱和，MSE 梯度会变平。交叉熵梯度能够补偿这一点：-log 会抵消 Sigmoid 的平坦区域，在最需要修正的地方提供强梯度。
 
-### 标签滑滑
+### 标签平滑
 
-标准的单热标签说:"这是100%的3级,其他一切都是0%".这是一个强有力的说法.
+标准独热标签断言：“这个样本 100% 属于类别 3，属于其他所有类别的概率都是 0%。”这是一个很强的主张。标签平滑会软化它：
 
 ```
 smooth_label = (1 - alpha) * one_hot + alpha / num_classes
 ```
 
-对于阿尔法=0.1和10类:而不是 [0, 0, 1, 0, ...],目标变成 [0.01, 0.01, 0.91, 0.01, ...].模型目标是0.91而不是1.0.
+当 alpha = 0.1 且有 10 个类别时，目标不再是 [0, 0, 1, 0, ...]，而会变成 [0.01, 0.01, 0.91, 0.01, ...]。模型的目标是 0.91，而不是 1.0。
 
-为什么这有所效果:试图通过软max出口精确的模型需要将logits推到无限.这导致过度自信,损害了通用化,并使模型变得脆弱的分布转移.标签滑板将目标限制在0.9 (含alpha=0.1),保持logits在合理的范围内.GPT和大多数现代模型使用标签滑板或其相当.
+它为何有效？模型若想通过 Softmax 精确输出 1.0，就必须把 logits 推向无穷大。这会造成过度自信、损害泛化能力，并使模型面对分布偏移时非常脆弱。标签平滑把目标限制在 0.9 左右（alpha=0.1 时），让 logits 保持在合理范围内。GPT 和大多数现代模型都会使用标签平滑或等价技术。
 
-### 显著损失
+### 对比损失
 
-没有标签,没有类,只是输入的对,问题是:它们相似还是不同的?
+没有标签，也没有类别，只有成对输入和一个问题：它们相似还是不同？
 
-**SimCLR-style contrastive loss (NT-Xent / InfoNCE):**
+**SimCLR 风格的对比损失（NT-Xent / InfoNCE）：**
 
-像是一个图像. 创建两个增长的视图 (剪切,旋转,色彩). 这些是"正对" - - 他们应该有相似的嵌入. 批量中的每一个图像都形成"负对" - 他们应该有不同的嵌入.
+取一张图像，生成两个增强视图，例如裁剪、旋转、颜色抖动。它们构成“正样本对”，嵌入应该相似；批次中的其他所有图像都会构成“负样本对”，嵌入应该不同。
 
 ```
 L = -log(exp(sim(z_i, z_j) / tau) / sum(exp(sim(z_i, z_k) / tau)))
 ```
 
-在 sim() 是相似的, z_i 和 z_j 是正对,总数是所有负数,tau (温度) 控制分布的度.低温 = 硬的负数 = 更加激进的分离.
+其中 sim() 是余弦相似度，z_i 与 z_j 构成正样本对，求和涵盖全部负样本，tau（温度）控制分布的尖锐程度。温度越低，负样本越“难”，分离也越激进。
 
-实际数量:批量大小256意味着每对正数的255负.温度tau=0.07 (SimCLR默认).损失看起来像一个软最大比相似性 - 它希望正数对的相似性在所有256个选项中是最高的.
+代入真实数值：批大小为 256，意味着每个正样本对对应 255 个负样本；温度 tau = 0.07，这是 SimCLR 的默认值。这个损失就像在相似度上执行 Softmax：它希望正样本对的相似度在全部 256 个候选项中最高。
 
-**Triplet Loss:**
+**三元组损失：**
 
-采用三个输入:,正 (相同类),负 (不同的类).
+它接收三个输入：锚点、正样本（同一类别）和负样本（不同类别）。
 
 ```
 L = max(0, d(anchor, positive) - d(anchor, negative) + margin)
 ```
 
-边缘 (通常是0.2-1.0) 强制使正面和负面距离之间的最小差距.如果负面已经足够远,损失是零 - 没有梯度,没有更新.这使得训练效率高,但需要仔细的三角形挖掘 (选择靠近的硬负面).
+margin 通常取 0.2–1.0，用来强制正负距离之间至少存在一定间隔。如果负样本已经足够远，损失就为零，不产生梯度，也不更新参数。这样可以提高训练效率，但需要谨慎进行三元组挖掘，也就是选择靠近锚点的困难负样本。
 
-### 焦点损失
+### Focal Loss
 
-对于不平衡的数据集.标准的交叉缩对待所有正确分类的例子均等.焦点损失减重简单的例子:
+它适用于不平衡数据集。标准交叉熵平等对待所有已正确分类的样本，而 Focal Loss 会降低简单样本的权重：
 
 ```
 FL = -alpha * (1 - p_t)^gamma * log(p_t)
 ```
 
-在p_t是真类的预测概率,而gamma控制着聚焦.在gamma=0时,这是标准的交叉.在gamma=2时 (默认):
+其中 p_t 是真实类别的预测概率，gamma 控制聚焦程度。当 gamma = 0 时，它就是标准交叉熵；当 gamma = 2，也就是默认值时：
 
-- 简单的例子 (p_t = 0.9):重量 = (0.1) ^ 2 = 0.01.
-- 硬实例 (p_t = 0.1):重量 = (0.9) ^2 = 0.81. 完全梯度信号.
+- 简单样本（p_t = 0.9）：权重 = (0.1)^2 = 0.01，几乎被忽略。
+- 困难样本（p_t = 0.1）：权重 = (0.9)^2 = 0.81，保留完整的梯度信号。
 
-焦点损失是由林等人推出的,用于对象检测,其中99%的候选区域是背景 (轻微负面).没有焦点损失,模型会沉浸在轻松的背景示例中,从来没有学会检测对象.通过它,模型将其能力集中在重要的事实中.
+Lin 等人为目标检测提出了 Focal Loss。在该任务中，99% 的候选区域都是背景，也就是简单负样本。没有 Focal Loss 时，模型会淹没在简单背景样本中，无法学会检测物体；采用它之后，模型便能把能力集中到真正重要的困难、模糊样本上。
 
 ### 损失函数决策树
 
@@ -173,7 +173,7 @@ flowchart TD
     Emb -->|"Large batch self-supervised"| NCE["Use InfoNCE"]
 ```
 
-### 失景
+### 损失曲面
 
 ```mermaid
 graph LR
@@ -191,9 +191,9 @@ graph LR
 cross-entropy-loss
 ```
 
-## 建立它
+## 动手构建
 
-### 第一步:MSE及其分数
+### 第 1 步：MSE 及其梯度
 
 ```python
 def mse(predictions, targets):
@@ -211,9 +211,9 @@ def mse_gradient(predictions, targets):
     return grads
 ```
 
-### 步骤2:二进制交叉
+### 第 2 步：二元交叉熵
 
-如果模型预测正确的例子为0, log(0) =负无限. 剪切阻止这一点.
+log(0) 问题确实存在。如果模型为正样本预测严格的 0，log(0) 就是负无穷。裁剪可以防止这种情况。
 
 ```python
 import math
@@ -234,9 +234,9 @@ def bce_gradient(predictions, targets, eps=1e-15):
     return grads
 ```
 
-### 步骤3: 软max 的类型交叉透
+### 第 3 步：结合 Softmax 的类别交叉熵
 
-软max将原始的数据转换为概率,然后我们计算了与一个热点目标的交叉位.
+Softmax 把原始 logits 转换成概率，然后计算它们与独热目标之间的交叉熵。
 
 ```python
 def softmax(logits):
@@ -257,9 +257,9 @@ def cce_gradient(logits, target_index):
     return grads
 ```
 
-软max + 交叉缩的梯度简化得很好:它只是 (预测概率 - 1) 对真实类,和 (预测概率) 对所有其他类.
+Softmax + 交叉熵的梯度可以漂亮地化简：真实类别上就是（预测概率 - 1），其他所有类别上则是预测概率。这个优雅的化简绝非巧合，也正是 Softmax 总与交叉熵配合使用的原因。
 
-### 步骤4: 标签滑滑
+### 第 4 步：标签平滑
 
 ```python
 def label_smoothed_cce(logits, target_index, num_classes, alpha=0.1, eps=1e-15):
@@ -275,7 +275,7 @@ def label_smoothed_cce(logits, target_index, num_classes, alpha=0.1, eps=1e-15):
     return loss
 ```
 
-### 步骤5:对比损失 (简化信息NCE)
+### 第 5 步：对比损失（简化版 InfoNCE）
 
 ```python
 def cosine_similarity(a, b):
@@ -298,9 +298,9 @@ def contrastive_loss(anchor, positive, negatives, temperature=0.07):
     return -math.log(max(1e-15, exp_pos / total_exp))
 ```
 
-### 阶段6:MSE与分类交叉透
+### 第 6 步：分类任务中的 MSE 与交叉熵
 
-训练从04课 (循环数据集) 训练相同的网络,使用两个损失函数.
+使用两种损失函数训练第 04 课中的同一个网络，也就是圆形数据集，观察交叉熵如何更快收敛。
 
 ```python
 import random
@@ -392,9 +392,9 @@ class LossComparisonNetwork:
         return losses
 ```
 
-## 用它
+## 实际应用
 
-PyTorch提供了所有标准损失函数,
+PyTorch 提供了全部标准损失函数，并内置数值稳定性处理：
 
 ```python
 import torch
@@ -413,46 +413,46 @@ ce_loss = F.cross_entropy(logits, labels)
 ce_smooth = F.cross_entropy(logits, labels, label_smoothing=0.1)
 ```
 
-使用`F.cross_entropy`(没有)`F.nll_loss`通过将软max 单独应用,然后取日志变得不稳定,你在减小大指数时失去精度.
+应使用 `F.cross_entropy`，不要把 `F.nll_loss` 与手工 Softmax 组合。前者把 log-softmax 与负对数似然合并成一个数值稳定的操作。如果先单独应用 Softmax 再取对数，大指数相减时会损失精度，稳定性更差。
 
-对于对比性学习,大多数团队使用自定义实现或库,如`lightly`或`pytorch-metric-learning`核心循环总是相同的:计算对式相似性,创造出对正和负的软最大,反向扩散.
+对比学习中，大多数团队会使用自定义实现，或采用 `lightly`、`pytorch-metric-learning` 等库。核心循环始终相同：计算两两相似度，对正负样本的相似度应用 Softmax，再执行反向传播。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/prompt-loss-function-selector.md`-- 选择正确的损失函数的可重复使用提示
-- `outputs/prompt-loss-debugger.md`-- 诊断提示,当你的损失曲线看起来错误时
+本课会产出：
+- `outputs/prompt-loss-function-selector.md`——用于选择正确损失函数的可复用提示词
+- `outputs/prompt-loss-debugger.md`——损失曲线异常时使用的诊断提示词
 
-## 运动
+## 练习
 
-1. 运行Huber损失 (柔顺L1损失),这是小错误的MSE和大错误的MAE. 训练一个预测y = sin(x的回归网络,使用MSE与Huber当5%的训练目标随机增加噪音 (异常). 进行最终测试错误的比较.
+1. 实现 Huber Loss（平滑 L1 损失）：误差较小时使用 MSE，误差较大时使用 MAE。训练一个回归网络预测 y = sin(x)，并在 5% 的训练目标中加入随机噪声，也就是离群点。比较使用 MSE 与 Huber 时的最终测试误差。
 
-2. 加入二进制分类训练循环中的焦点损失. 创建一个不平衡的数据集 (90%类0,10%类1). 在200个时代后的少数类回忆中,对比标准 BCE 与焦点损失 (gamma=2) .
+2. 在二分类训练循环中加入 Focal Loss。创建一个不平衡数据集，其中 90% 为类别 0、10% 为类别 1。训练 200 个 epoch 后，比较标准 BCE 与 Focal Loss（gamma=2）在少数类上的召回率。
 
-3. 实现半硬负挖矿的三分数损失.为5类生成2D嵌入数据.对于每个,找到最硬的负,比正面还远 (半硬).将收缩与随机三分数选择进行比较.
+3. 实现带半困难负样本挖掘的三元组损失。为 5 个类别生成二维嵌入数据。对每个锚点，找出仍比正样本更远、但距离最小的负样本，也就是半困难负样本。与随机选择三元组比较收敛速度。
 
-4. 运行MSE与跨缩比较,但在训练期间跟踪每个层的梯度大小.按时段绘制平均梯度规范.检查模型最不确定时代的跨缩产生更大的梯度.
+4. 重新运行 MSE 与交叉熵的比较，同时追踪训练期间各层的梯度幅度。绘制每个 epoch 的平均梯度范数，验证模型最不确定的训练初期，交叉熵会产生更大的梯度。
 
-5. 实现KL分离损失并验证将KL ((真实的意思预测) 降至最低时,当真正的分布是单热时,会产生与交叉缩相同的梯度.然后尝试软目标 (如知识蒸) 试验,其中"真实的"分布来自教师模型的软max输出.
+5. 实现 KL 散度损失，并验证当真实分布是独热分布时，最小化 KL(true || predicted) 与交叉熵产生相同梯度。然后尝试软目标，例如知识蒸馏中由教师模型 Softmax 输出提供的“真实”分布。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Loss function | "How wrong the model is" | A differentiable function mapping predictions and targets to a scalar that the optimizer minimizes |
-| MSE | "Average squared error" | Mean of squared differences between predictions and targets; penalizes large errors quadratically |
-| Cross-entropy | "The classification loss" | Measures divergence between predicted probability distribution and true distribution using -log(p) |
-| Binary cross-entropy | "BCE" | Cross-entropy for two classes: -(y*log(p) + (1-y)*log(1-p)) |
-| Label smoothing | "Softening the targets" | Replacing hard 0/1 targets with soft values (e.g., 0.1/0.9) to prevent overconfidence and improve generalization |
-| Contrastive loss | "Pull together, push apart" | A loss that learns representations by making similar pairs close and dissimilar pairs far in embedding space |
-| InfoNCE | "The CLIP/SimCLR loss" | Normalized temperature-scaled cross-entropy over similarity scores; treats contrastive learning as classification |
-| Focal loss | "The imbalanced data fix" | Cross-entropy weighted by (1-p_t)^gamma to down-weight easy examples and focus on hard ones |
-| Triplet loss | "Anchor-positive-negative" | Pushes anchor closer to positive than negative by at least a margin in embedding space |
-| Temperature | "Sharpness knob" | A scalar divisor on logits/similarities that controls how peaked the resulting distribution is; lower = sharper |
+| 损失函数 | “模型错得有多离谱” | 把预测与目标映射成标量，并由优化器最小化的可微函数 |
+| MSE | “平均平方误差” | 预测与目标之间平方差的平均值，以二次方式惩罚大误差 |
+| 交叉熵 | “分类损失” | 使用 -log(p) 衡量预测概率分布与真实分布之间的差异 |
+| 二元交叉熵 | “BCE” | 两个类别使用的交叉熵：-(y*log(p) + (1-y)*log(1-p)) |
+| 标签平滑 | “软化目标” | 用软数值（例如 0.1/0.9）取代硬 0/1 目标，防止过度自信并改善泛化 |
+| 对比损失 | “拉近相似项，推远不同项” | 通过让相似样本对在嵌入空间中靠近、不同样本对远离来学习表示的损失 |
+| InfoNCE | “CLIP/SimCLR 损失” | 在相似度分数上应用归一化且带温度缩放的交叉熵，把对比学习视为分类问题 |
+| Focal Loss | “解决不平衡数据” | 使用 (1-p_t)^gamma 为交叉熵加权，降低简单样本权重并聚焦困难样本 |
+| 三元组损失 | “锚点—正样本—负样本” | 要求嵌入空间中锚点与正样本的距离，比锚点与负样本至少小一个 margin |
+| 温度 | “控制尖锐程度的旋钮” | 作为除数应用于 logits 或相似度的标量，用于控制最终分布有多尖锐；越低越尖锐 |
 
-## 进一步阅读
+## 延伸阅读
 
-- 林等人",密集物体检测的焦点损失" (2017) -- 引入对物体检测的极端类分类失衡处理的焦点损失 (RetinaNet)
-- 陈等人",视觉表示的对比性学习的简单框架" (SimCLR, 2020) - 定义了与NT-Xent损失的现代对比性学习管道
-- 谢吉迪等人",重新思考初始架构" (2016) -- 作为规范化技术引入了标签平滑,现在是大多数大型模型的标准
-- 希顿等人",神经网络中的知识蒸" (2015) -- 使用软目标和KL分离的知识蒸,这是模型压缩的基础
+- Lin 等，《Focal Loss for Dense Object Detection》（2017）——为处理目标检测（RetinaNet）中的极端类别不平衡而提出 Focal Loss
+- Chen 等，《A Simple Framework for Contrastive Learning of Visual Representations》（SimCLR，2020）——使用 NT-Xent 损失定义现代对比学习流程
+- Szegedy 等，《Rethinking the Inception Architecture》（2016）——提出标签平滑这一正则化技术，如今已成为多数大型模型的标准做法
+- Hinton 等，《Distilling the Knowledge in a Neural Network》（2015）——使用软目标与 KL 散度进行知识蒸馏，是模型压缩的奠基工作
