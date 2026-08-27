@@ -1,46 +1,46 @@
-# 贝叶斯定理
+# Bayes 定理
 
-> 概率是你预期的,贝叶斯定理是你学习的.
+> 概率描述你的预期，Bayes 定理描述你如何根据证据学习。
 
-**Type:** Build
-**Language:**字符串
-**Prerequisites:** Phase 1, Lesson 06 (Probability Fundamentals)
-**Time:** ~75 minutes
+**Type:** 构建
+**Language:** Python
+**Prerequisites:** 第 1 阶段，第 06 课（Probability Fundamentals）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 应用贝叶斯定理来计算后期概率从前,概率和证据
-- 创建一个简单的贝叶斯文本分类器从零开始,使用拉普莱斯平滑和日志空间计算
-- 比较MLE和MAP估计,并解释MAP如何与L2规范化相符
-- 执行使用Beta-Binomial结合前列进行A/B测试的连续贝叶斯式更新
+- 应用 Bayes 定理，根据先验、似然和证据计算后验概率
+- 从零构建使用 Laplace 平滑和对数空间计算的 Naive Bayes 文本分类器
+- 比较 MLE 与 MAP 估计，并解释 MAP 与 L2 正则化的对应关系
+- 使用 Beta-Binomial 共轭先验，为 A/B 测试实现序贯 Bayesian 更新
 
 ## 问题
 
-医疗检查是99%准确的.你检测得阳性.你确实有什么机会患上这种疾病?
+一项医学检测的准确率为 99%。你的检测结果呈阳性，那么你真正患病的概率是多少？
 
-大多数人说99%.真实的答案取决于这种疾病是多么罕见.如果每1万人中有1人患有这种疾病,积极的结果只会给你患病的机会大约1%.其余的99%的积极结果是健康人发出的虚假警报.
+大多数人会回答 99%，但真正的答案取决于这种疾病有多罕见。如果每 10,000 人中只有 1 人患病，那么一次阳性结果意味着你患病的概率只有约 1%。其余 99% 的阳性结果，都是健康人得到的误报。
 
-这不是一个诡计的问题.这是贝叶斯定理.每一个垃圾邮件过器,每一个医疗诊断,每一个测量不确定性的机器学习模型都使用了这个正确的推理.你从一个信念开始.你看到证据.你更新.
+这不是一道文字陷阱，而是 Bayes 定理。垃圾邮件过滤器、医学诊断，以及任何量化不确定性的机器学习模型，都使用同样的推理方式：先有一个信念，观察到证据，然后更新信念。
 
-如果你没有理解这一点,就会误解模型输出,设定不好的门,
+如果在不了解这一点的情况下构建机器学习系统，你会误读模型输出、设置错误的阈值，并交付过度自信的预测。
 
-## 概念
+## 核心概念
 
-### 从联合概率到贝斯
+### 从联合概率推导 Bayes 定理
 
-根据第六课,你已经知道条件概率是:
+你已经在第 06 课学过条件概率：
 
 ```
 P(A|B) = P(A and B) / P(B)
 ```
 
-并且对称:
+对称地，也有：
 
 ```
 P(B|A) = P(A and B) / P(A)
 ```
 
-两个表达式都有相同的数值:P(A和B). 设置它们为等,然后重新排列:
+两个表达式拥有相同的分子 P(A and B)。令它们相等并重新整理：
 
 ```
 P(A and B) = P(A|B) * P(B) = P(B|A) * P(A)
@@ -50,26 +50,26 @@ Therefore:
 P(A|B) = P(B|A) * P(A) / P(B)
 ```
 
-这就是贝叶斯定理,四个量,一个方程.
+这就是 Bayes 定理：四个量、一个方程。
 
-### 它们的四部分
+### 四个组成部分
 
-| Part | Name | What it means |
+| 部分 | 名称 | 含义 |
 |------|------|---------------|
-| P(A\|B) | Posterior | Your updated belief about A after seeing evidence B |
-| P(B\|A) | Likelihood | How probable the evidence B is if A is true |
-| P(A) | Prior | Your belief about A before seeing any evidence |
-| P(B) | Evidence | Total probability of seeing B under all possibilities |
+| P(A\|B) | 后验概率 | 观察到证据 B 后，对 A 更新后的信念 |
+| P(B\|A) | 似然 | 如果 A 为真，证据 B 出现的概率 |
+| P(A) | 先验概率 | 看到任何证据之前，对 A 的信念 |
+| P(B) | 证据 | 在所有可能情况下观察到 B 的总概率 |
 
-证据术语P(B) 作为一个正常化.你可以用总概率定律扩展它:
+证据项 P(B) 起到归一化作用。可以使用全概率公式展开它：
 
 ```
 P(B) = P(B|A) * P(A) + P(B|not A) * P(not A)
 ```
 
-### 医疗检测的例子
+### 医学检测示例
 
-检测结果是99%准确的 (检测结果是99%的病人,结果是1%的错误阳性).
+某种疾病的患病率是万分之一。检测准确率为 99%：能够检出 99% 的患者，同时有 1% 的健康人会得到假阳性结果。
 
 ```
 P(sick)          = 0.0001     (prior: disease is rare)
@@ -87,11 +87,11 @@ P(sick|positive) = P(positive|sick) * P(sick) / P(positive)
                  = 0.98%
 ```
 
-医生们说,如果病情很少,即使是精确的测试也会产生虚假阳性.
+结果不到 1%，因为先验概率占据主导地位。当某种情况十分罕见时，即使检测很准确，大多数阳性结果仍可能是假阳性。这就是医生会安排复查的原因。
 
-### 垃圾邮件过器的例子
+### 垃圾邮件过滤示例
 
-你收到一封包含"彩票"的电子邮件.
+你收到一封包含 “lottery” 一词的邮件。它是垃圾邮件吗？
 
 ```
 P(spam)                = 0.3      (30% of email is spam)
@@ -107,11 +107,11 @@ P(spam|"lottery") = 0.05 * 0.3 / 0.0157
                   = 95.5%
 ```
 
-一个字将概率从30%转移到95.5%. 一个真正的垃圾邮件过器同时应用百度百度单词.
+仅凭一个词，垃圾邮件概率就从 30% 上升到了 95.5%。真实的垃圾邮件过滤器会同时对数百个词应用 Bayes 推理。
 
-### 简单的贝耶斯:独立假设
+### Naive Bayes：独立性假设
 
-简单的贝耶斯将这一点扩展到多个特征,假设所有特征都在给类别的条件下独立:
+Naive Bayes 假设给定类别后，所有特征条件独立，从而把 Bayes 推理扩展到多个特征：
 
 ```
 P(class | feature_1, feature_2, ..., feature_n)
@@ -119,89 +119,89 @@ P(class | feature_1, feature_2, ..., feature_n)
     / P(feature_1, feature_2, ..., feature_n)
 ```
 
-单词出现并不独立 ("新"和"纽约"相关).但这种假设在实践中非常有效,因为分类器只需要排名类,而不是产生校准概率.
+所谓“朴素”，指的正是这个独立性假设。在文本中，词语的出现并不独立，例如 “New” 与 “York” 彼此相关。但这种假设在实践中出奇地有效，因为分类器只需要对类别排序，并不一定要给出经过校准的概率。
 
-由于所有类的分母是相同的,所以你可以跳过它,
+由于分母对所有类别都相同，可以忽略分母，只比较分子：
 
 ```
 score(class) = P(class) * product of P(feature_i | class)
 ```
 
-选择最高分的班级.
+选择分数最高的类别即可。
 
-### 极限概率估计 (MLE)
+### 最大似然估计（MLE）
 
-如何从训练数据中获得P (特征性) 类?
+如何从训练数据得到 P(feature|class)？直接计数。
 
 ```
 P("free"|spam) = (number of spam emails containing "free") / (total spam emails)
 ```
 
-现在,我们要选择最可能的参数值, 并且要最大化概率函数,
+这就是 MLE：选择让已观测数据出现概率最大的参数值。对于离散计数，它会化为相对频率。
 
-问题:如果一个词在训练中从来没有出现在垃圾邮件中,MLE给它一个可能性是零.一个未见的词会杀死整个产品.
+问题在于，如果某个词在训练期间从未出现在垃圾邮件中，MLE 会给它分配零概率。一个未见过的词就会让整个乘积变为零。Laplace 平滑可以解决这个问题：
 
 ```
 P(word|class) = (count(word, class) + 1) / (total_words_in_class + vocabulary_size)
 ```
 
-增加1个数量,确保没有可能性是零的.
+给每个计数加 1，可以确保概率永远不会为零。
 
-### 后期最大 (MAP)
+### 最大后验估计（MAP）
 
-们需要了解到哪些参数可以最大化数据参数的 P ?
+MLE 的问题是：哪些参数能使 P(data|parameters) 最大？
 
-图表问:什么参数可以最大化P 参数在数据中)?
+MAP 的问题是：哪些参数能使 P(parameters|data) 最大？
 
-根据贝叶斯定理:
+根据 Bayes 定理：
 
 ```
 P(parameters|data) proportional to P(data|parameters) * P(parameters)
 ```
 
-图为""的定位,即""的定位,即""的定位,即""的定位.
+MAP 会为参数本身加入一个先验。如果你认为参数应该较小，就可以用惩罚较大数值的先验表达这一信念。这与机器学习中的 L2 正则化完全等价。岭回归中的“ridge”惩罚，本质上就是权重的 Gaussian 先验。
 
-| Estimation | Optimizes | ML equivalent |
+| 估计方法 | 优化目标 | 机器学习中的对应方法 |
 |------------|-----------|---------------|
-| MLE | P(data\|params) | Unregularized training |
-| MAP | P(data\|params) * P(params) | L2 / L1 regularization |
+| MLE | P(data\|params) | 无正则化训练 |
+| MAP | P(data\|params) * P(params) | L2 / L1 正则化 |
 
-### 贝叶斯人与频率主义者:实际的区别
+### Bayesian 与频率学派：实践中的区别
 
-频率学家认为参数是固定的未知的.他们问道:"如果我重复这个实验多次,会发生什么?"
+频率学派把参数视为固定但未知的值，并问：“如果把这项实验重复很多次，会发生什么？”
 
-贝叶斯人把参数视为分布,他们问:"鉴于我观察到的,我对参数有什么看法?"
+Bayesian 方法把参数视为分布，并问：“根据目前观察到的内容，我对这些参数有怎样的信念？”
 
-对于构建ML系统,实际的区别:
+在构建机器学习系统时，实际差异如下：
 
-| Aspect | Frequentist | Bayesian |
+| 方面 | 频率学派 | Bayesian 方法 |
 |--------|-------------|----------|
-| Output | Point estimate | Distribution over values |
-| Uncertainty | Confidence intervals (about procedure) | Credible intervals (about parameter) |
-| Small data | Can overfit | Prior acts as regularization |
-| Computation | Usually faster | Often requires sampling (MCMC) |
+| 输出 | 点估计 | 数值上的分布 |
+| 不确定性 | 置信区间（描述统计过程） | 可信区间（描述参数） |
+| 小数据 | 可能过拟合 | 先验起到正则化作用 |
+| 计算 | 通常更快 | 通常需要采样（MCMC） |
 
-贝耶斯方法在需要校准不确定性 (医疗决策,安全关键系统) 或数据稀缺时 (短暂学习,冷启动) 闪耀.
+大多数生产级机器学习使用频率学派方法（SGD、点估计）。当你需要校准良好的不确定性（医学决策、安全关键系统），或数据量很少（few-shot 学习、冷启动）时，Bayesian 方法格外有用。
 
-### 为什么贝耶斯思想对 ML 重要
+### Bayesian 思维为何对机器学习很重要
 
-它们的联系比比喻更深.
+二者的联系远不只是类比：
 
-**Priors are regularization.**对于重量来说,一个高斯式先例是L2规律化.一个拉普莱斯式先例是L1.每次你添加一个规律化术语,你就会做一个贝耶斯式声明,你预计的参数值是什么.
+**先验就是正则化。**权重的 Gaussian 先验对应 L2 正则化，Laplace 先验对应 L1。每当你加入正则化项时，实际上都在表达自己预期参数应取什么值。
 
-**Posteriors are uncertainty.**贝耶斯方法给出了分布:"我认为P(spam) 在0.8到0.95之间.
+**后验描述不确定性。**单个预测概率无法告诉你模型对该估计有多大把握。Bayesian 方法会给出一个分布，例如：“我认为 P(spam) 位于 0.8 到 0.95 之间。”
 
-**Bayes updates are online learning.**当你的模型看到新的数据时,它会逐步更新自己的信念,而不是从头开始重新训练.
+**Bayes 更新就是在线学习。**今天的后验会成为明天的先验。模型看到新数据后，可以增量更新信念，而不必从头重新训练。
 
-**Model comparison is Bayesian.**贝叶斯信息标准 (BIC),边际概率和贝叶斯因素都使用贝叶斯推理来选择没有过度适应的模型.
+**模型比较也可以是 Bayesian 的。**Bayesian 信息准则（BIC）、边际似然和 Bayes 因子都使用 Bayesian 推理，在避免过拟合的同时选择模型。
 
 ```figure
 bayes-update
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:贝叶斯定理函数
+### 第 1 步：Bayes 定理函数
 
 ```python
 def bayes(prior, likelihood, false_positive_rate):
@@ -213,7 +213,7 @@ result = bayes(prior=0.0001, likelihood=0.99, false_positive_rate=0.01)
 print(f"P(sick|positive) = {result:.4f}")
 ```
 
-### 步骤2: 简单的贝叶斯分类器
+### 第 2 步：Naive Bayes 分类器
 
 ```python
 import math
@@ -254,9 +254,9 @@ class NaiveBayes:
         return best_class
 ```
 
-记载概率防止下流.乘以许多小概率产生数量太小,无法浮动点.编算记载概率是数学的稳定和数学上的等价.
+对数概率可以防止数值下溢。许多小概率相乘后会小到超出浮点数能够表示的范围，而对数概率求和既与乘法在数学上等价，又具有良好的数值稳定性。
 
-### 步骤3:训练垃圾邮件数据
+### 第 3 步：使用垃圾邮件数据训练
 
 ```python
 train_docs = [
@@ -293,7 +293,7 @@ for msg in test_messages:
     print(f"  '{msg}' -> {classifier.predict(msg)}")
 ```
 
-### 步骤4:检查所学到的可能性
+### 第 4 步：检查学到的概率
 
 ```python
 def show_top_words(classifier, cls, n=5):
@@ -313,9 +313,9 @@ print("\nTop ham words:")
 show_top_words(classifier, "ham")
 ```
 
-## 用它
+## 实际使用
 
-无辜的贝伊斯实施,准备生产的飞船:
+Scikit-learn 提供了可用于生产环境的 Naive Bayes 实现：
 
 ```python
 from sklearn.feature_extraction.text import CountVectorizer
@@ -333,33 +333,33 @@ for msg, pred in zip(test_messages, predictions):
     print(f"  '{msg}' -> {pred}")
 ```
 
-算法相同. CountVectorizer处理代码化和词汇构建. MultinomialNB处理内地平滑和日志概率.你的从头开始版本在40行中做同样的事情.
+算法完全相同。CountVectorizer 负责分词和构建词表，MultinomialNB 在内部处理平滑与对数概率。你从零实现的版本用 40 行代码完成了相同工作。
 
-## 运送它
+## 交付成果
 
-代码在 果中是 果的代码, 代码在 果的代码中是 果的代码.`code/bayes.py`无需超越Python的标准库的依赖性.
+这里构建的 NaiveBayes 类演示了完整流水线：分词、使用 Laplace 平滑估计概率，以及在对数空间中预测。`code/bayes.py` 中的代码可以端到端运行，除 Python 标准库外不需要任何依赖。
 
-### 结合的先驱
+### 共轭先验
 
-当前和后的分布属于同一类分布时,前的分布被称为"结合". 这使得贝耶斯的更新对代数清洁 - - 你得到一个没有数字集成的闭式后的形式.
+如果先验分布和后验分布属于同一个分布族，就称这个先验为“共轭先验”。这样可以简洁地完成 Bayesian 更新——无需数值积分，就能得到闭式后验。
 
-| Likelihood | Conjugate Prior | Posterior | Example |
+| 似然 | 共轭先验 | 后验 | 示例 |
 |-----------|----------------|-----------|---------|
-| Bernoulli | Beta(a, b) | Beta(a + successes, b + failures) | Coin flip bias estimation |
-| Normal (known variance) | Normal(mu_0, sigma_0) | Normal(weighted mean, smaller variance) | Sensor calibration |
-| Poisson | Gamma(a, b) | Gamma(a + sum of counts, b + n) | Modeling arrival rates |
-| Multinomial | Dirichlet(alpha) | Dirichlet(alpha + counts) | Topic modeling, language models |
+| Bernoulli | Beta(a, b) | Beta(a + successes, b + failures) | 估计硬币的偏置 |
+| Normal（方差已知） | Normal(mu_0, sigma_0) | Normal(weighted mean, smaller variance) | 传感器校准 |
+| Poisson | Gamma(a, b) | Gamma(a + sum of counts, b + n) | 建模事件到达率 |
+| Multinomial | Dirichlet(alpha) | Dirichlet(alpha + counts) | 主题建模、语言模型 |
 
-没有结合前数,你需要蒙特卡罗样本或变化推理来接近后方.
+这为什么重要：没有共轭先验时，需要使用 Monte Carlo 采样或变分推断近似后验；使用共轭先验时，只需更新两个数字。
 
-贝塔分布是实践中最常见的结合式先.贝塔 (a,b) 表示你对概率参数的信念.平均值是/(a+b).a+b越大,分布就越集中 (自信).
+Beta 分布是实践中最常见的共轭先验。Beta(a, b) 表示你对某个概率参数的信念，其均值为 a/(a+b)。a+b 越大，分布越集中，也表示信念越确定。
 
-贝塔前的特殊情况:
-- 您对参数没有意见.
-- 测量量量是0.5的.
-- 测量参数是小的.
+Beta 先验的特殊情况：
+- Beta(1, 1) = 均匀分布，表示你对参数没有先入之见
+- Beta(10, 10) 的峰值位于 0.5，表示你强烈相信参数接近 0.5
+- Beta(1, 10) 向 0 偏斜，表示你相信参数较小
 
-更新规则非常简单:
+更新规则非常简单：
 
 ```
 Prior:     Beta(a, b)
@@ -367,29 +367,29 @@ Data:      s successes, f failures
 Posterior: Beta(a + s, b + f)
 ```
 
-没有整体,没有样本,只是加算.
+不需要积分，也不需要采样，只需做加法。
 
-### 序列的贝叶斯语更新
+### 序贯 Bayesian 更新
 
-贝叶斯推理是自然的序列.今天的后者成为明天的前者. 这就是真正的系统在没有重新处理所有历史数据的情况下逐步学习的方式.
+Bayesian 推断天然适合按顺序更新。今天的后验会成为明天的先验。真实系统因此能够根据新数据增量更新信念，而不必重新处理所有历史数据。
 
-具体例子:估计硬币是否公平.
+具体示例：估计一枚硬币是否公平。
 
-**Day 1: No data yet.**
-首先,Beta 1, 1,是统一的前任.
-- 前平均:0.5
-- 预先是平面的 [0, 1]
+**第 1 天：还没有数据。**
+从 Beta(1, 1) 均匀先验开始，你暂时没有倾向。
+- 先验均值：0.5
+- 先验在 [0, 1] 上是平坦的
 
-**Day 2: Observe 7 heads, 3 tails.**
-后面 = 贝塔 (Beta) 1 + 7, 1 + 3) = 贝塔 (Beta) 8, 4)
-- 后期平均值: 8/12 = 0.667
-- 证据表明,硬币偏向头部
+**第 2 天：观察到 7 次正面、3 次反面。**
+后验 = Beta(1 + 7, 1 + 3) = Beta(8, 4)
+- 后验均值：8/12 = 0.667
+- 证据表明硬币更偏向正面
 
-**Day 3: Observe 5 more heads, 5 more tails.**
-现在用昨天的后面作为今天的前面.
-后面 = 贝塔 ((8 + 5, 4 + 5) = 贝塔 ((13, 9)
-- 后期平均值: 13/22 = 0.591
-- 根据新的平衡数据,估计将重回0.5
+**第 3 天：又观察到 5 次正面、5 次反面。**
+把昨天的后验作为今天的先验。
+后验 = Beta(8 + 5, 4 + 5) = Beta(13, 9)
+- 后验均值：13/22 = 0.591
+- 新的均衡数据把估计拉回到了更接近 0.5 的位置
 
 ```mermaid
 graph LR
@@ -398,26 +398,26 @@ graph LR
     C -->|"5H, 5T"| D["Posterior 2<br/>Beta(13,9)<br/>mean = 0.59"]
 ```
 
-测量顺序并不重要.Beta(1,1) 一次更新了所有12个头和8个尾,结果是Beta(13,9) - - 同样的结果.序列更新和批量更新是数学上相当的.但序列更新让你在每一步都能做出决定,而不需要存储原始数据.
+观测顺序并不影响结果。以 Beta(1,1) 为先验，一次性使用总计 12 次正面和 8 次反面更新，也会得到 Beta(13, 9)。序贯更新与批量更新在数学上等价，但序贯更新允许你在每一步做出决策，而无需保存原始数据。
 
-这就是生产ML系统的在线学习的基础. 普森对盗进行样本取,增量推系统和流动异性检测器都使用这种模式.
+这正是生产级机器学习系统中在线学习的基础。用于多臂老虎机的 Thompson sampling、增量推荐系统和流式异常检测器都使用这一模式。
 
-### 连接到A/B测试
+### 与 A/B 测试的联系
 
-化测试是贝叶斯推理.
+A/B 测试本质上是一种 Bayesian 推断。
 
-设置:您正在测试两个按颜色:A变体 (蓝色) 和B变体 (绿色).您想知道哪个获得更多点击.
+场景：你正在测试两种按钮颜色，变体 A 为蓝色，变体 B 为绿色。你想知道哪一种能获得更多点击。
 
-贝耶斯 A/B 测试:
+Bayesian A/B 测试的步骤如下：
 
-1. **Prior.**开始与Beta(1,1) 对两个变体.
-2. **Data.**选择A: 1000个浏览中50个点击,选择B: 1000个浏览中65个点击.
-3. **Posteriors.**
-   - 答:Beta(1 + 50,1 + 950) =Beta(51,951).平均值 =0.051
-   - 平均值为0.066
-4. **Decision.**计算P ((B>A) -- B的真实转换率比A的可能性更高.
+1. **先验。**两个变体都从 Beta(1, 1) 开始，不预先偏好任何一方。
+2. **数据。**变体 A：1,000 次展示获得 50 次点击；变体 B：1,000 次展示获得 65 次点击。
+3. **后验。**
+   - A：Beta(1 + 50, 1 + 950) = Beta(51, 951)，均值 = 0.051
+   - B：Beta(1 + 65, 1 + 935) = Beta(66, 936)，均值 = 0.066
+4. **决策。**计算 P(B > A)，即 B 的真实转化率高于 A 的概率。
 
-分析计算P (B) >A) 很难,但蒙特卡罗使得它很微不足道:
+直接解析计算 P(B > A) 很困难，但用 Monte Carlo 会非常简单：
 
 ```
 1. Draw 100,000 samples from Beta(51, 951)  -> samples_A
@@ -425,50 +425,50 @@ graph LR
 3. P(B > A) = fraction of samples where B > A
 ```
 
-如果P(B > A) >0.95,你将运送B变体.如果它在0.05到0.95之间,你会继续收集数据.如果P(B > A) <0.05,你将运送A变体.
+如果 P(B > A) > 0.95，就发布变体 B；如果它位于 0.05 到 0.95 之间，就继续收集数据；如果 P(B > A) < 0.05，则发布变体 A。
 
-频率A/B测试的优势:
-- 你得到了直接的概率声明:"有97%的机会B更好"
-- 没有p值的混,没有"未能拒绝零假设"的对冲.
-- 您可以随时检查结果,而不需要加大假阳性率 (没有"查问题")
-- 您可以包含先前的知识 (例如,之前的测试表明转换率通常为3-8%)
+相较于频率学派 A/B 测试，它具有以下优势：
+- 可以直接给出概率陈述：“B 有 97% 的概率更好”
+- 不会产生 p 值解释混乱，也无需使用“无法拒绝零假设”这类迂回表述
+- 可以随时查看结果，而不会抬高假阳性率（不存在“偷看问题”）
+- 可以纳入先验知识，例如历史实验表明转化率通常位于 3%–8%
 
-| Aspect | Frequentist A/B | Bayesian A/B |
+| 方面 | 频率学派 A/B 测试 | Bayesian A/B 测试 |
 |--------|----------------|--------------|
-| Output | p-value | P(B > A) |
-| Interpretation | "How surprising is this data if A=B?" | "How likely is B better than A?" |
-| Early stopping | Inflates false positives | Safe at any point (given a well-chosen prior and correctly specified model) |
-| Prior knowledge | Not used | Encoded as Beta prior |
-| Decision rule | p < 0.05 | P(B > A) > threshold |
+| 输出 | p 值 | P(B > A) |
+| 解释 | “如果 A=B，这些数据有多反常？” | “B 优于 A 的可能性有多大？” |
+| 提前停止 | 会抬高假阳性率 | 可随时安全停止（前提是先验选择合理、模型设定正确） |
+| 先验知识 | 不使用 | 编码为 Beta 先验 |
+| 决策规则 | p < 0.05 | P(B > A) > threshold |
 
-## 运动
+## 练习
 
-1. **Multiple tests.**一个患者在独立测试中检测得两次阳性 (两者都99%准确,病例在1万中1).两次测试后,P(病是什么?使用第一次测试后者作为第二次测试的前者.
+1. **多次检测。**一名患者在两项相互独立的检测中都呈阳性（两项检测的准确率均为 99%，疾病患病率为万分之一）。两次检测后 P(sick) 是多少？把第一次检测的后验作为第二次检测的先验。
 
-2. **Smoothing impact.**运行垃圾邮件分类器,以0.01,0.1,1.0,和10.0的平滑值运行.顶级词概率如何改变?平滑=0和只出现在子中的词发生了什么?
+2. **平滑的影响。**分别使用 0.01、0.1、1.0 和 10.0 的 smoothing 值运行垃圾邮件分类器。概率最高的词会如何变化？当 smoothing=0，并遇到只在 ham 中出现的词时会怎样？
 
-3. **Add features.**扩展NaiveBayes类,以同时使用短/长的消息长度作为单词数量的功能. 从训练数据中估计P(short的时代垃圾) 和P(short的时代,然后将其折叠成预测分数.
+3. **添加特征。**扩展 NaiveBayes 类，在词频之外加入消息长度（短/长）特征。从训练数据估计 P(short|spam) 和 P(short|ham)，并将其纳入预测分数。
 
-4. **MAP by hand.**根据观察到的数据 (7个头10个币),使用Beta(2,2) 预先计算偏差的MAP估计,并将其与MLE估计 (7/10) 进行比较.
+4. **手工计算 MAP。**给定观测数据（抛硬币 10 次，其中 7 次正面），使用 Beta(2,2) 先验计算偏置的 MAP 估计，并与 MLE 估计（7/10）比较。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Prior | "My initial guess" | P(hypothesis) before observing evidence. In ML: the regularization term. |
-| Likelihood | "How well the data fits" | P(evidence\|hypothesis). How probable the observed data is under a specific hypothesis. |
-| Posterior | "My updated belief" | P(hypothesis\|evidence). The prior multiplied by the likelihood, then normalized. |
-| Evidence | "The normalizing constant" | P(data) across all hypotheses. Ensures the posterior sums to 1. |
-| Naive Bayes | "That simple text classifier" | A classifier that assumes features are independent given the class. Works well despite the false assumption. |
-| Laplace smoothing | "Add-one smoothing" | Adding a small count to every feature to prevent zero probabilities from unseen data. |
-| MLE | "Just use the frequencies" | Choose parameters that maximize P(data\|parameters). No prior. Can overfit with small data. |
-| MAP | "MLE with a prior" | Choose parameters that maximize P(data\|parameters) * P(parameters). Equivalent to regularized MLE. |
-| Log-probability | "Work in log space" | Using log(P) instead of P to avoid floating-point underflow when multiplying many small numbers. |
-| False positive | "A wrong alarm" | The test says positive, but the true state is negative. Drives the base rate fallacy. |
+| Prior | “我的初始猜测” | 观察证据之前的 P(hypothesis)；在机器学习中对应正则化项 |
+| Likelihood | “数据拟合得有多好” | P(evidence\|hypothesis)，表示特定假设成立时观测数据出现的概率 |
+| Posterior | “更新后的信念” | P(hypothesis\|evidence)，由先验乘以似然后再归一化得到 |
+| Evidence | “归一化常数” | 所有假设下的 P(data)，保证后验概率之和为 1 |
+| Naive Bayes | “那个简单的文本分类器” | 假设给定类别后各特征相互独立的分类器；虽然假设并不真实，实际效果往往很好 |
+| Laplace smoothing | “加一平滑” | 给每个特征增加一个小计数，防止未见数据产生零概率 |
+| MLE | “直接使用频率” | 选择使 P(data\|parameters) 最大的参数；不使用先验，在小数据上可能过拟合 |
+| MAP | “带先验的 MLE” | 选择使 P(data\|parameters) * P(parameters) 最大的参数，等价于正则化的 MLE |
+| Log-probability | “在对数空间中计算” | 使用 log(P) 代替 P，避免大量小概率相乘时出现浮点数下溢 |
+| False positive | “误报” | 检测结果为阳性，但真实状态为阴性；这是基础率谬误的主要来源 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [3Blue1Brown: Bayes' theorem](https://www.youtube.com/watch?v=HZGCoVF3YvM)- 视觉解释与医疗检测示例
-- [Stanford CS229: Generative Learning Algorithms](https://cs229.stanford.edu/notes2022fall/cs229-notes2.pdf)- 简单的贝尔斯及其与歧视性模式的联系
-- [Think Bayes](https://greenteapress.com/wp/think-bayes/)- 免费书,贝耶斯统计数据,使用Python代码
-- [scikit-learn Naive Bayes](https://scikit-learn.org/stable/modules/naive_bayes.html)-生产实施情况以及每种变体使用时间
+- [3Blue1Brown：Bayes 定理](https://www.youtube.com/watch?v=HZGCoVF3YvM)——使用医学检测示例进行可视化讲解
+- [Stanford CS229：生成式学习算法](https://cs229.stanford.edu/notes2022fall/cs229-notes2.pdf)——Naive Bayes 及其与判别式模型的联系
+- [Think Bayes](https://greenteapress.com/wp/think-bayes/)——一本结合 Python 代码讲解 Bayesian 统计的免费图书
+- [scikit-learn Naive Bayes](https://scikit-learn.org/stable/modules/naive_bayes.html)——生产级实现以及各变体的适用场景
