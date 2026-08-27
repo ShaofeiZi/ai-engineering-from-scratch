@@ -1,44 +1,44 @@
-# 字体包,TF-IDF,文字表示
+# 词袋、TF-IDF 与文本表示
 
-> 根据F-IDF的数据,在2026年,
+> 先计数，再思考。到 2026 年，在边界清晰的任务上，TF-IDF 仍能胜过嵌入。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 5 · 01 (Text Processing), Phase 2 · 02 (Linear Regression from Scratch)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 5 · 01（文本处理）、阶段 2 · 02（从零实现线性回归）
+**Time:** 约 75 分钟
 
 ## 问题
 
-模型需要数字,你有字符串.
+模型需要数字，而你手中只有字符串。
 
-每个NLP管道都必须回答同一个问题.我们如何将变长的代币流转化为一个固定尺寸的向量,一个分类器可以消耗. 首先答案是最愚蠢的答案. 计算字母. 制作向量.
+每条自然语言处理流水线都必须回答同一个问题：如何把长度不定的词元流转换成分类器能够接收的定长向量？这个领域最先采用的答案，是能奏效的最简单方案：数一数每个词，组成一个向量。
 
-输出量比任何嵌入式模型都多. 垃圾邮件过器,主题分类器,日志异常检测,搜索排名 (BM25之前),情感分析的第一波, 2026年,从业者仍然在狭窄的分类任务上先达到它. 它是快速的,可解释的,而且往往无法区分于400M参数嵌入模型,
+这种向量支撑的生产级自然语言处理系统，比任何嵌入模型都多：垃圾邮件过滤器、主题分类器、日志异常检测、搜索排序（BM25 之前）、第一波情感分析系统，以及学术界最初十年的自然语言处理基准。2026 年的从业者面对范围狭窄的分类任务时，仍会优先尝试它。它速度快、可解释；当词语是否出现就是关键时，它的效果往往与拥有 4 亿参数的嵌入模型难分伯仲。
 
-课程将从零开始构建一个词包,然后是TF-IDF,然后将Skit-Learn在三个行中做同样的事情,然后将导致你接触嵌入的失败模式命名.
+本课先从零构建词袋和 TF-IDF，再用三行代码展示 scikit-learn 如何完成同样的工作，最后指出何种失败模式会促使你改用嵌入。
 
 ## 概念
 
-**Bag of Words (BoW)**对于每个文件,计算每个词汇词汇出现的次数. 矢量长度是词汇大小. 位置 `i`是字数`i`现在,我们要去.
+**词袋（BoW）**会丢弃顺序。对于每篇文档，统计词表中的每个词出现了多少次。向量长度等于词表大小，第 `i` 个位置就是第 `i` 个词的计数。
 
-**TF-IDF**任何文件中出现的单词都是非信息性的,所以缩小.一个词在整个文件中很少出现,但在单一文件中频繁的,是信号,所以缩小.
+**TF-IDF** 会重新加权词袋。如果一个词出现在每篇文档中，它就没有区分度，因此应降低权重。如果一个词在整个语料库中罕见，却频繁出现在某篇文档中，它就是有效信号，因此应提高权重。
 
 ```
 TF-IDF(w, d) = TF(w, d) * IDF(w)
              = count(w in d) / |d| * log(N / df(w))
 ```
 
-在哪里?`TF`是文件中的术语频率,`df`是文件频率 (包含这个词的文件数量),`N`文件是全部的文件.`log`限制了人们使用无处不在的词语的重量.
+其中，`TF` 是词语在文档中的频率，`df` 是文档频率（包含该词的文档数），`N` 是文档总数。`log` 能限制高频词的权重范围。
 
-两个产生的稀疏向量具有可解释轴.你可以看看训练有素的分类器的重量,并读出哪些单词将文档推向每个类.你不能用768维的BERT嵌入来做到这一点.
+二者的关键性质是都会生成坐标轴含义明确的稀疏向量。你可以查看训练后分类器的权重，直接读出哪些词会把文档推向哪个类别。对于 768 维的 BERT 嵌入，你做不到这一点。
 
 ```figure
 bow-tfidf
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:建立词汇库
+### 第 1 步：构建词表
 
 ```python
 def build_vocab(docs):
@@ -50,9 +50,9 @@ def build_vocab(docs):
     return vocab
 ```
 
-输入:标记文件列表 (任何字面级标记器都会做; `code/main.py`在本课程中使用简体小写的变体.`{word: index}`标签: 稳定插入顺序 意思是字符指数0是第一个文档中看到的第一字. 公约有所不同; scikit-learn类型以字母顺序.
+输入：已经分词的文档列表（任何词级分词器都可以；本课的 `code/main.py` 使用简化的小写版本）。输出：`{word: index}` 字典。稳定的插入顺序意味着索引 0 对应第一篇文档中最先出现的词。不同工具的约定不同；scikit-learn 会按字母顺序排序。
 
-### 步骤2:字包
+### 第 2 步：词袋
 
 ```python
 def bag_of_words(docs, vocab):
@@ -71,9 +71,9 @@ def bag_of_words(docs, vocab):
 [[1, 1, 1, 1, 0], [2, 0, 0, 0, 1]]
 ```
 
-列是文件,列是词汇指数.`[i][j]`是"多次说话"`j`在文件中显示`i`"第一医生有`cat`医生0已经做了.`ran`没有,因为没有.
+每一行代表一篇文档，每一列代表一个词表索引。`[i][j]` 表示“词 `j` 在文档 `i` 中出现了多少次”。文档 1 中 `cat` 出现两次，所以计数为 2；文档 0 没有 `ran`，所以计数为 0。
 
-### 步骤3:术语频率和文件频率
+### 第 3 步：词频与文档频率
 
 ```python
 import math
@@ -96,9 +96,9 @@ def inverse_document_frequency(df, n_docs):
     return [math.log((n_docs + 1) / (d + 1)) + 1 for d in df]
 ```
 
-两种滑滑技巧值得命名.`(n+1)/(d+1)`避免`log(x/0)`后面的东西`+1`确保每个文件中的单词仍然具有 IDF 1 (而不是 0),与 scikit-learn的默认匹配.`log(N/df)`两者都能工作,但更友好的版本.
+这里有两种值得点明的平滑技巧。`(n+1)/(d+1)` 可以避免 `log(x/0)`。末尾的 `+1` 则保证出现在每篇文档中的词仍有 1（而非 0）的 IDF，与 scikit-learn 的默认行为一致。其他实现会直接使用 `log(N/df)`。两者都可行，平滑版本更温和。
 
-### 步骤4:TF-IDF
+### 第 4 步：TF-IDF
 
 ```python
 def tfidf(bow_matrix):
@@ -124,9 +124,9 @@ def tfidf(bow_matrix):
 >>> tfidf(bow)
 ```
 
-文件,字母词 (`the`现在`cat`现在`sat`现在`dog`现在`ran`它们是`the`现在,它在三部都出现了,所以 IDF 很低.`dog`它们的向量很稀少 (大多数输入都是小的) 而歧视性的词则出现.
+三篇文档，五个词表词（`the`、`cat`、`sat`、`dog`、`ran`）。`the` 出现在全部三篇中，所以 IDF 较低；`dog` 只出现一次，所以 IDF 较高。得到的向量是稀疏的（大部分元素都很小），有区分力的词会凸显出来。
 
-### 步骤 5: L2 规范行
+### 第 5 步：对每行进行 L2 归一化
 
 ```python
 def l2_normalize(matrix):
@@ -137,11 +137,11 @@ def l2_normalize(matrix):
     return out
 ```
 
-没有正常化,一个更长的文档得到了更大的向量,并且占据了相似度分数.L2正常化将每个文档放在单元超层上.
+如果不归一化，较长的文档会得到较大的向量，并支配相似度分数。L2 归一化把每篇文档都放到单位超球面上。此时，两行之间的余弦相似度就等于它们的点积。
 
-## 用它
+## 学以致用
 
-子学习将生产版本发送.
+scikit-learn 提供了生产级版本。
 
 ```python
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -158,39 +158,39 @@ tfidf = tfidf_vectorizer.fit_transform(docs)
 print(tfidf.toarray().round(3))
 ```
 
-`CountVectorizer`能在一个电话中实现代码化,词汇和BoW. `TfidfVectorizer`增加 IDF 重量和 L2 正规化. 两者都返回稀疏矩阵. 在100k 文件中,密集版本不适合内存;保持稀疏直到分类器要求密集.
+`CountVectorizer` 在一次调用中完成分词、构建词表和词袋。`TfidfVectorizer` 再加入 IDF 加权与 L2 归一化。二者都返回稀疏矩阵。对于 10 万篇文档，稠密版本无法装入内存；在分类器明确要求稠密输入之前，都应保持稀疏形式。
 
-改变一切的节点:
+足以改变一切的参数：
 
-| Arg | Effect |
+| 参数 | 效果 |
 |-----|--------|
-| `ngram_range=(1, 2)` | Include bigrams. Usually boosts classification. |
-| `min_df=2` | Drop words in fewer than 2 docs. Trims vocabulary on noisy data. |
-| `max_df=0.95` | Drop words in more than 95% of docs. Approximates stopword removal without a hardcoded list. |
-| `stop_words="english"` | scikit-learn's builtin stopword list. Task-dependent — sentiment analysis should *not* drop negations. |
-| `sublinear_tf=True` | Use `1 + log(tf)` instead of raw `tf`. Helps when a term repeats many times in one doc. |
+| `ngram_range=(1, 2)` | 加入二元语法，通常能提升分类效果。 |
+| `min_df=2` | 丢弃出现在少于 2 篇文档中的词，可以精简噪声数据的词表。 |
+| `max_df=0.95` | 丢弃出现在超过 95% 文档中的词，无须硬编码列表即可近似移除停用词。 |
+| `stop_words="english"` | scikit-learn 内置的停用词表。是否使用取决于任务——情感分析不应删除否定词。 |
+| `sublinear_tf=True` | 使用 `1 + log(tf)` 代替原始 `tf`，适合某个词在单篇文档中反复出现的情况。 |
 
-### 尽管TF-IDF仍然在胜利 (2026年)
+### TF-IDF 在何时仍能胜出（截至 2026 年）
 
-- 标签,记录异常标记,词存在是重要的,语义细微的不同.
-- 低数据模式 (数百个标记的例子).TF-IDF加上物流回归没有预训费用.
-- 任何地方延迟都重要.TF-IDF加上线性模型在微秒内回答.通过变压器嵌入文件需要10-100ms.
-- 系统必须解释他们的预测,检查分类器的系数. 最好的正面词是原因.
+- 垃圾邮件检测、主题标注、日志异常标记。这些任务看重词语是否出现，而非细微语义。
+- 小数据场景（数百个带标签样本）。TF-IDF 加逻辑回归不需要预训练成本。
+- 任何重视延迟的系统。TF-IDF 加线性模型可以在微秒内给出答案，而让文档通过 Transformer 生成嵌入需要 10～100 毫秒。
+- 必须解释预测结果的系统。检查分类器系数即可；权重最高的正向词就是预测理由。
 
-### 当TF-IDF失败时
+### TF-IDF 在何时失效
 
-根据这两个文件:
+首先是语义盲区。考虑下面两篇文档：
 
-- "这部电影根本不好.
-- "这部电影很棒.
+- “这部电影一点也不好。（The movie was not good at all.）”
+- “这部电影非常精彩。（The movie was excellent.）”
 
-一是负面评价,一个是积极的,他们的TF-IDF重叠是完全的`{the, movie, was}`一个词包分类器必须记住这个词`not`附近`good`它可以从足够的数据中学习,但从来没有像理解语法模型那样优雅.
+一篇是负面评价，另一篇是正面评价。它们的 TF-IDF 重叠部分恰好是 `{the, movie, was}`。词袋分类器必须记住 `not` 靠近 `good` 时会反转标签。数据足够多时，它可以学到这一点，却永远不会像理解句法的模型那样自然。
 
-另一种失败:在推断时,不存在词汇库中的单词.`Zoomer-approved`如果该代币从未出现在训练中. 字母嵌入式 (课4) 处理这一点. TF-IDF不能.
+另一个问题是推理时出现词表外单词。在 IMDb 影评上训练的词袋模型，面对训练中从未出现过的 `Zoomer-approved` 时无从下手。子词嵌入（第 04 课）可以处理，TF-IDF 不行。
 
-### 混合型:TF-IDF权重嵌入式
+### 混合方案：TF-IDF 加权嵌入
 
-2026年中型数据分类的实际默认:使用TF-IDF权重作为关注词嵌入.
+2026 年中等规模数据分类的务实默认方案，是把 TF-IDF 权重作为词嵌入上的注意力。
 
 ```python
 def tfidf_weighted_embedding(doc, tfidf_scores, embedding_table, dim):
@@ -209,11 +209,11 @@ def tfidf_weighted_embedding(doc, tfidf_scores, embedding_table, dim):
     return [v / total_weight for v in vec]
 ```
 
-您从嵌入式中获得语义能力,并从TF-IDF中强调稀有词. 类别列在聚合向量上. 这在约50k标记的例子下,在情感,主题和意图分类方面本身都比较好.
+嵌入提供语义能力，TF-IDF 则强调罕见词。分类器在池化后的向量上训练。当带标签样本少于约 5 万个时，这种方案在情感、主题和意图分类上优于任何一种单独方案。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/prompt-vectorization-picker.md`其他:
+保存为 `outputs/prompt-vectorization-picker.md`：
 
 ```markdown
 ---
@@ -240,25 +240,25 @@ Example output:
 - Failure to test: verify `min_df=3` does not drop rare category keywords. Run `get_feature_names_out` filtered by class and eyeball.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**实施`cosine_similarity(doc_vec_a, doc_vec_b)`检查相同文件的分数为1.0和分离词汇文件的分数为0.0.
-2. **Medium.**加入`n-gram`支持`bag_of_words`参数`n`产量超过了`n`- 试试吧`n=2`现在`["the", "cat", "sat"]`产生了大数的数量.`["the cat", "cat sat"]`现在,我们要去.
-3. **Hard.**通过 GloVe 100d 矢量 (下载一次,缓存) 构建上述TF-IDF 重量嵌入式混合式. 根据20新闻组数据集中的简单TF-IDF和简单中共嵌入式进行分类精度比较. 报告哪个获胜.
+1. **简单。** 在 L2 归一化后的 TF-IDF 输出上实现 `cosine_similarity(doc_vec_a, doc_vec_b)`。验证相同文档的得分为 1.0，词表完全不相交的文档得分为 0.0。
+2. **中等。** 增加 `n-gram` 对 `bag_of_words` 的支持。参数 `n` 用于生成 `n` 元语法计数。测试 `n=2` 作用于 `["the", "cat", "sat"]` 时，会为 `["the cat", "cat sat"]` 生成二元语法计数。
+3. **困难。** 使用 GloVe 100 维向量构建上面的 TF-IDF 加权嵌入混合方案（只下载一次并缓存）。在 20 Newsgroups 数据集上，把它的分类准确率与纯 TF-IDF 和普通均值池化嵌入比较，并报告各种方案分别在哪些情况下胜出。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| BoW | Word frequency vector | Counts of vocabulary words in one document. Throws away order. |
-| TF | Term frequency | Count of a word in a document, optionally normalized by document length. |
-| DF | Document frequency | Count of documents containing the word at least once. |
-| IDF | Inverse document frequency | `log(N / df)` smoothed. Downweights words that appear everywhere. |
-| Sparse vector | Mostly zeros | Vocabulary is typically 10k-100k words; most are absent from any given document. |
-| Cosine similarity | Vector angle | Dot product of L2-normalized vectors. 1 is identical, 0 is orthogonal. |
+| BoW | 词频向量 | 一篇文档中词表词的计数，会丢弃顺序。 |
+| TF | 词频 | 一个词在文档中的计数，可以按文档长度归一化。 |
+| DF | 文档频率 | 至少包含一次该词的文档数量。 |
+| IDF | 逆文档频率 | 平滑后的 `log(N / df)`，降低随处可见词语的权重。 |
+| 稀疏向量 | 大部分为零 | 词表通常有 1 万～10 万个词，其中绝大多数不会出现在某一篇文档中。 |
+| 余弦相似度 | 向量夹角 | L2 归一化向量的点积。1 表示相同，0 表示正交。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [scikit-learn — feature extraction from text](https://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction)法典API参考,加上每个上的注释.
-- [Salton, G., & Buckley, C. (1988). Term-weighting approaches in automatic text retrieval](https://www.sciencedirect.com/science/article/pii/0306457388900210)使TF-IDF成为十年的默认文件.
-- ["Why TF-IDF Still Beats Embeddings" — Ashfaque Thonikkadavan (Medium)](https://medium.com/@cmtwskb/why-tf-idf-still-beats-embeddings-ad85c123e1b2) 2026年,当旧方法获胜时,以及为什么.
+- [scikit-learn——从文本中提取特征](https://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction)——权威 API 参考，以及每个参数的说明。
+- [Salton, G. 与 Buckley, C.（1988），自动文本检索中的词项加权方法](https://www.sciencedirect.com/science/article/pii/0306457388900210)——让 TF-IDF 在十年间成为默认方案的论文。
+- [“为什么 TF-IDF 仍能胜过嵌入”——Ashfaque Thonikkadavan（Medium）](https://medium.com/@cmtwskb/why-tf-idf-still-beats-embeddings-ad85c123e1b2)——2026 年对这种老方法何时胜出及其原因的分析。
