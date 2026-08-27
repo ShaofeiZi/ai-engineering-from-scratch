@@ -1,26 +1,26 @@
-#  GPU 设置和云
+# GPU 配置与云服务
 
-> 实用训练需要一个GPU.
+> 用 CPU 训练足以满足学习需要。真正进行训练时，则需要 GPU。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 0, Lesson 01
-**Time:** ~45 minutes
+**Prerequisites:** 第 0 阶段，第 01 课
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 使用 `nvidia-smi`并且PyTorch的CUDAAPI
-- 使用T4GPU配置Google Colab,可进行免费的基于云的实验
-- 测量CPU与GPU的基数乘法,测量加快速度
-- 根据fp16指纹,估计适合VRAM的最大模型
+- 使用 `nvidia-smi` 和 PyTorch 的 CUDA API 验证本地 GPU 是否可用
+- 在 Google Colab 中配置免费的 T4 GPU，开展云端实验
+- 对 CPU 与 GPU 的矩阵乘法进行基准测试，并测量加速倍数
+- 使用 fp16 经验法则，估算显存能够容纳的最大模型
 
 ## 问题
 
-在1-3阶段的大部分课程都在CPU上运行得很好.但是一旦你开始训练CNN,变压器或LLM (阶段4+),你需要GPU加速.一个8小时的训练运行在CPU上需要10分钟的GPU.
+第 1–3 阶段的大多数课程都可以顺畅地在 CPU 上运行。但当你开始训练 CNN、Transformer 或 LLM（第 4 阶段及以后）时，就需要 GPU 加速。在 CPU 上耗时 8 小时的训练任务，使用 GPU 可能只需 10 分钟。
 
-你有三个选择:本地GPU,云GPU或谷歌Collab (免费).
+你有三种选择：本地 GPU、云端 GPU，或者免费的 Google Colab。
 
-## 概念
+## 核心概念
 
 ```
 Your options:
@@ -45,17 +45,17 @@ Your options:
 s0-gpu-dispatch
 ```
 
-## 建立它
+## 动手构建
 
-### 选择1:本地NVIDIA GPU
+### 方案 1：本地 NVIDIA GPU
 
-检查你是否有:
+先检查电脑是否配备 NVIDIA GPU：
 
 ```bash
 nvidia-smi
 ```
 
-安装PyTorch与CUDA:
+安装支持 CUDA 的 PyTorch 后，运行以下代码进行验证：
 
 ```python
 import torch
@@ -67,17 +67,17 @@ if torch.cuda.is_available():
     print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 ```
 
-### 选择2:谷歌协作
+### 方案 2：Google Colab
 
-1. 走去[colab.research.google.com](https://colab.research.google.com)
-2. 运行时间 > 改变运行时间类型 > T4 GPU
-3. 跑步`!nvidia-smi`检查
+1. 打开 [colab.research.google.com](https://colab.research.google.com)
+2. 依次选择 Runtime > Change runtime type > T4 GPU
+3. 运行 `!nvidia-smi` 进行验证
 
-直接将课程的笔记本上传到科拉布.
+你可以将本课程的 Notebook 直接上传到 Colab。
 
-### 选择3:云GPU
+### 方案 3：云端 GPU
 
-对于Lambda Labs,RunPod或Vast.ai:
+使用 Lambda Labs、RunPod 或 Vast.ai 时：
 
 ```bash
 ssh user@your-gpu-instance
@@ -86,16 +86,16 @@ pip install torch torchvision torchaudio
 python -c "import torch; print(torch.cuda.get_device_name(0))"
 ```
 
-### 没有GPU?
+### 没有 GPU？没关系
 
-需要GPU的人会说,并包括Colab链接.
+大多数课程都可以在 CPU 上运行。确实需要 GPU 的课程会明确说明，并提供 Colab 链接。
 
 ```python
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using: {device}")
 ```
 
-## 构建它:GPU与CPU基准
+## 动手构建：GPU 与 CPU 基准测试
 
 ```python
 import torch
@@ -124,17 +124,17 @@ if torch.cuda.is_available():
     print(f"Speedup: {cpu_time / gpu_time:.0f}x")
 ```
 
-## 运动
+## 练习
 
-1. 运行上述基准,并比较CPU与GPU时间
-2. 如果没有GPU,请在Google Colab上运行,然后比较
-3. 检查您有多少GPU内存,并估计您可以安装的最大模型 (指公规则:fp16的每个参数为2字节)
+1. 运行上面的基准测试，比较 CPU 与 GPU 的耗时
+2. 如果没有 GPU，请在 Google Colab 上运行并比较结果
+3. 查看你的 GPU 显存容量，并估算它能容纳的最大模型（经验法则：fp16 中每个参数占 2 字节）
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| CUDA | "GPU programming" | NVIDIA's parallel computing platform that lets you run code on the GPU |
-| VRAM | "GPU memory" | Video RAM on the GPU, separate from system RAM. Limits model size. |
-| fp16 | "Half precision" | 16-bit floating point, uses half the memory of fp32 with minimal accuracy loss |
-| Tensor Core | "Fast matrix hardware" | Specialized GPU cores for matrix multiplication, 4-8x faster than regular cores |
+| CUDA | “GPU 编程” | NVIDIA 的并行计算平台，可让代码在 GPU 上运行 |
+| VRAM | “GPU 显存” | GPU 上独立于系统内存的视频内存，它会限制模型规模 |
+| fp16 | “半精度” | 16 位浮点格式，内存占用是 fp32 的一半，而精度损失通常很小 |
+| Tensor Core | “高速矩阵硬件” | 专用于矩阵乘法的 GPU 核心，速度可达普通核心的 4–8 倍 |
