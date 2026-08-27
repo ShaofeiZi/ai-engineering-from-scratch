@@ -1,51 +1,51 @@
-# 为什么变革器  问题与RNN
+# 为什么选择 Transformer——RNN 的问题
 
-> 转变器一次处理所有代币.这一次建筑投注改变了深度学习的每一个扩展曲线,2017年后.
+> RNN 每次处理一个词元，Transformer 则同时处理所有词元。这个架构赌注改变了 2017 年后深度学习中的每一条规模化曲线。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python
-**Prerequisites:** Phase 3 (Deep Learning Core), Phase 5 · 09 (Sequence-to-Sequence), Phase 5 · 10 (Attention Mechanism)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 3（深度学习核心）、阶段 5 · 09（序列到序列）、阶段 5 · 10（注意力机制）
+**Time:** 约 45 分钟
 
 ## 问题
 
-在2017年之前,地球上每一个最先进的序列模型都是一个反复的神经网络.LST和GRU在半十年内获得了像网相当的翻译基准.它们是唯一的工具.
+2017 年以前，世界上每个顶尖序列模型——语言、翻译、语音——都是循环神经网络。LSTM 与 GRU 连续五年称霸相当于 ImageNet 的翻译基准，那时大家只有这一种工具可用。
 
-它们有三个致命的缺点. 序列计算意味着你不能沿时间轴平行化:`t+1`需要隐藏状态的代币`t`一个1024代币的序列意味着1 024个串行步骤在一个GPU上,可以每周期完成1,000,000个浮点操作.训练墙钟时间以线性方式与平行设计的硬件上的序列长度进行扩展.
+它们有三个致命弱点。顺序计算意味着无法沿时间轴并行：词元 `t+1` 需要词元 `t` 的隐藏状态。长度为 1024 的序列需要 1024 个串行步骤，而 GPU 每个周期可以执行 100 万次浮点运算。在专为并行计算设计的硬件上，训练墙钟时间却随序列长度线性增长。
 
-消失的梯度意味着50代币的信息已经被压缩到50个非线性.关闭的复发单位 (LSTM,GRU) 缓和了压缩,但从来没有消除过它.长距离的依赖性"我去年夏天在飞机上读到的书..."经常失败.
+梯度消失意味着 50 个词元之前的信息已经经过 50 次非线性压缩。门控循环单元（LSTM、GRU）减轻了这种挤压，却从未彻底消除它。长距离依赖——“the book I read last summer on a plane to Kyoto was…”——经常失败。
 
-固定的宽度隐藏状态意味着编码器在解码器看到任何东西之前将整个源序列挤入一个单个向量.源源是否是5个代币或500个,不管是什么,瓶是相同的形状.
+定宽隐藏状态意味着，在解码器看到任何内容之前，编码器必须把整个源序列压缩到单一向量中。源序列是 5 个词元还是 500 个都不重要，瓶颈的形状始终相同。
 
-2017年"注意力是你需要的"论文提出了一些根本的建议:完全放弃复发.让每个位置并行地关注其他位置.
+2017 年的论文《Attention Is All You Need》提出了一种激进方案：彻底移除循环，让每个位置同时关注其他所有位置。用一次大型矩阵乘法完成训练，而不是执行 1024 个串行步骤。
 
-结果在2026年之前占据所有模式的主导地位.语言 (GPT-5,Claude 4,Llama 4),视觉 (ViT,DINOv2,SAM 3),音频 (声),生物学 (AlphaFold 3),机器人 (RT-2).相同的区块,不同的输入.
+到 2026 年，它已经主导所有模态：语言（GPT-5、Claude 4、Llama 4）、视觉（ViT、DINOv2、SAM 3）、音频（Whisper）、生物学（AlphaFold 3）、机器人（RT-2）。同一种模块，不同的输入。
 
 ## 概念
 
-![RNN sequential compute vs Transformer parallel attention](../assets/rnn-vs-transformer.svg)
+![RNN 顺序计算与 Transformer 并行注意力](../assets/rnn-vs-transformer.svg)
 
-**Recurrence as a bottleneck.**电脑计算器`h_t = f(h_{t-1}, x_t)`每一步都取决于前一步.`h_5`在之前`h_4`在现代GPU上,有10,000多个并行芯,
+**循环造成的瓶颈。** RNN 计算 `h_t = f(h_{t-1}, x_t)`。每一步都依赖上一步；`h_5` 无法先于 `h_4` 计算。现代 GPU 拥有 1 万多个并行核心，处理长序列时却浪费了 99% 的计算单元。
 
-**Attention as a broadcast.**自我注意力计算`output_i = sum_j(a_ij * v_j)`对于每一个对`(i, j)`整个N×N注意力矩阵都填充了一个批量的. 没有一步取决于另一个. GPU 很喜欢它.
+**注意力如同广播。** 自注意力会同时计算 `output_i = sum_j(a_ij * v_j)`，覆盖每个位置对 `(i, j)`。整个 N×N 注意力矩阵通过一次批量矩阵乘法填充，不存在步骤间依赖。这正是 GPU 擅长的工作。
 
-**The speedup is not a constant.**它们的区别是`O(N)`系列深度和`O(1)`在实践中,变压器在N=512的匹配硬件上每时训练510倍快,并且随着序列长度的增加,间隙会扩大,直到你达到`O(N²)`记忆注意力墙 (后者被Flash Attention修复了见12课).
+**加速不是一个常数。** 这是 `O(N)` 串行深度与 `O(1)` 串行深度之间的差异。实践中，在 N=512 且硬件相同的情况下，Transformer 每轮训练速度快 5～10 倍；随着序列变长，差距还会扩大，直到遇到注意力的 `O(N²)` 内存墙（后来由 Flash Attention 缓解——见第 12 课）。
 
-**What transformers cost.**关注记忆规模如`O(N²)`对于2K文本来说,很好.对于128K文本来说,你需要滑窗,ROPE外分,闪光注意力,或线性注意力变体.`O(N)`转换器将时间换取记忆,然后通过平行性获取时间.
+**Transformer 的代价。** 注意力内存按 `O(N²)` 增长。2K 上下文没有问题；128K 上下文则需要滑动窗口、RoPE 外推、Flash Attention 分块或线性注意力变体。循环结构的时间与内存都是 `O(N)`；Transformer 用内存换取时间，再通过并行把时间优势拿回来。
 
-**The inductive bias shift.**变压器认为没有什么每个对都是关注的候选人.这就是为什么变压器需要更多的数据来训练好,但一旦有了更大的规模.辛奇拉 (2022) 正式化了这一点:给出足够的代币,变压器总是击败一个相同参数数数的RNN.
+**归纳偏置的转变。** RNN 假设局部性和新近性，Transformer 不作任何假设——每一对位置都可能相互关注。因此，Transformer 需要更多数据才能训练良好，但一旦拥有足够数据，扩展能力就更强。Chinchilla（2022）对此进行了形式化：给定足够词元，同等参数量的 Transformer 总能胜过 RNN。
 
 ```figure
 rnn-vs-parallel
 ```
 
-## 建立它
+## 动手构建
 
-我们数量模拟核心瓶,让你感觉到笔记本电脑上的空隙.
+这里不构建神经网络——我们通过数值模拟核心瓶颈，让你在自己的笔记本电脑上直观感受差距。
 
-### 步骤1:测量序列深度
+### 第 1 步：测量串行深度
 
-看到`code/main.py`我们构建两个函数.一个编码一个序列作为一个连接链 (连续,像RNN一样).一个编码它作为一个平行减小 (像广播,像注意力).同样的数学,不同的依赖图.
+见 `code/main.py`。我们构建两个函数，一个用加法链编码序列（串行，类似 RNN），另一个用并行归约编码序列（广播，类似注意力）。数学相同，依赖图不同。
 
 ```python
 def rnn_style(xs):
@@ -58,54 +58,54 @@ def attention_style(xs):
     return sum(xs) / len(xs)  # every x is independent
 ```
 
-我们在连续上都能计时到10万个元素.RNN版本是O(N) 和单个CPU管道.即使在纯Python中,注意力式的减小也超过了1000,因为Python的`sum()`执行C语言,并且每步无解释器的代价.
+我们会在长度最多 10 万的序列上为两者计时。即使在纯 Python 中，序列达到 1000 个元素后，注意力式归约也会胜出，因为 Python 的 `sum()` 用 C 实现，不需要为每一步承担解释器开销；RNN 版本则为 `O(N)`，并且只能走单一 CPU 流水线。
 
-### 步骤2:计算理论操作
+### 第 2 步：计算理论运算量
 
-两个算法都会增加N. 区别是 *依赖深度*:在下一个开始之前,必须进行多次操作. RNN深度 = N. 注意深度 = log(N) 通过树缩小,或1通过并行扫描.深度,而不是操作数量,决定了GPU时间.
+两种算法都执行 N 次加法。区别在于*依赖深度*：下一个操作开始前，必须依次完成多少个操作。RNN 深度 = N；注意力通过树形归约实现时深度 = log(N)，通过并行扫描实现时为 1。即使硬件资源无限，决定墙钟时间的也是深度，而不是运算数量。
 
-### 步骤3:长序列的经验规模化
+### 第 3 步：长序列上的经验扩展
 
-我们打印了一个时间表,使得O(N) 差距可见.在2026 Mac笔记本电脑上,1000个元素以下的序列太快以测量.100,000的序列显示了清洁的线性扫描.将其量化为16,384个代币变压器和12层LSTM等级,你会看到为什么训练墙钟在2016年是阻碍者.
+我们会打印一张计时表，让 O(N) 差距清晰可见。在 2026 年的 Mac 笔记本电脑上，长度低于 1000 的序列快得难以测量；长度达到 10 万时，则能看到清晰的线性扫描。把这一点扩展到 16384 词元的 Transformer 和等效的 12 层 LSTM，就能理解为什么墙钟训练时间在 2016 年会成为瓶颈。
 
-## 用它
+## 学以致用
 
-在2026年,还可以选择什么时候:
+2026 年仍应选择 RNN 的场景：
 
-| Situation | Pick |
+| 场景 | 选择 |
 |-----------|------|
-| Streaming inference, one token at a time, constant memory | RNN or state-space model (Mamba, RWKV) |
-| Very long sequences (>1M tokens) where attention memory explodes | Linear attention, Mamba 2, Hyena |
-| Edge device with no matmul accelerator | Depthwise-separable RNN still wins on FLOPs/watt |
-| Anything else (training, batched inference, context up to 128K) | Transformer |
+| 流式推理、逐词元处理、恒定内存 | RNN 或状态空间模型（Mamba、RWKV） |
+| 注意力内存爆炸的超长序列（超过 100 万词元） | 线性注意力、Mamba 2、Hyena |
+| 没有矩阵乘法加速器的边缘设备 | 从每瓦浮点运算量看，深度可分离 RNN 仍然胜出 |
+| 其他所有情况（训练、批量推理、最长 128K 上下文） | Transformer |
 
-像Mamba这样的国家空间模型 (SSM) 基本上是具有结构化参数化的RNN,`O(N)`通过选择性扫描,他们恢复了变压器质量的90%通过更好的长文本扩展. 2026年,大多数边境实验室都将混合型SSM+变压器模型 (例如Jamba,Samba) 训练.
+Mamba 等状态空间模型（SSM）本质上是具有结构化参数的 RNN，可以通过选择性扫描实现并行训练。它们以更好的长上下文扩展性达到 Transformer 约 90% 的质量。2026 年，大多数前沿实验室都在训练 SSM + Transformer 混合模型（例如 Jamba、Samba）——循环并未消亡，只是成为一个组件。
 
-## 运送它
+## 交付成果
 
-看到`outputs/skill-architecture-picker.md`由于长度,吞吐量和训练预算限制,技能选择一个新序列问题架构. 它应该始终拒绝推纯粹的RNN在训练运行超过1B代币的情况下,而不说明交易.
+见 `outputs/skill-architecture-picker.md`。该技能会根据长度、吞吐量与训练预算约束，为新的序列问题选择架构。对于超过 10 亿词元的训练任务，如果不说明相应权衡，它应始终拒绝推荐纯 RNN。
 
-## 运动
+## 练习
 
-1. **Easy.**接下来`rnn_style`其他`code/main.py`测量重复. 随着隐藏状态的维度,连续上层多少长?
-2. **Medium.**通过纯 Python 实现平行前总数 (Hillis-Steele 扫描). 验证它产生与1024长度的连续扫描相同的数值输出.
-3. **Hard.**按GPU上将注意力式降低调整到PyTorch. 时间同时扫描序列长度从64到65,536. 绘制并解释曲线形状.
+1. **简单。** 取 `rnn_style`（位于 `code/main.py`），把标量隐藏状态替换为长度为 64 的隐藏状态向量，再次测量。串行开销会随隐藏状态维度增加多少？
+2. **中等。** 使用纯 Python 实现并行前缀和（Hillis-Steele 扫描）。验证它在长度 1024 上产生与串行扫描相同的数值输出，并计算依赖深度。
+3. **困难。** 把注意力式归约移植到 GPU 上的 PyTorch。让序列长度从 64 扫描到 65536，分别为两种方法计时，绘制并解释曲线形状。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Recurrence | "RNNs are sequential" | Computation where step `t` depends on step `t-1`, forcing serial execution along the time axis. |
-| Serial depth | "How deep the graph is" | Longest chain of dependent ops; bounds wall-clock even on infinite hardware. |
-| Attention | "Let tokens look at each other" | Weighted sum `sum_j a_ij v_j` where `a_ij` comes from a similarity score between positions i and j. |
-| Context window | "How much the model sees" | Number of positions an attention layer can take as input; quadratic memory cost scales here. |
-| Inductive bias | "Assumptions baked into the architecture" | Prior about what the data looks like; CNNs assume translation invariance, RNNs assume recency. |
-| State-space model | "RNN with algebra behind it" | Recurrence parameterized for parallel training via structured state-space matrices. |
-| Quadratic bottleneck | "Why context costs so much" | Attention memory = `O(N²)` in sequence length; Flash Attention hides the constants, not the scaling. |
+| 循环 | “RNN 是顺序执行的” | 步骤 `t` 依赖步骤 `t-1` 的计算，因此时间轴上只能串行执行。 |
+| 串行深度 | “计算图有多深” | 最长的依赖操作链；即使硬件无限，也会限制墙钟时间。 |
+| 注意力 | “让词元彼此查看” | 值序列的加权和 `sum_j a_ij v_j`，其中 `a_ij` 来自位置 i 与 j 之间的相似度分数。 |
+| 上下文窗口 | “模型能看到多少内容” | 注意力层可以接收的位置数；二次方内存成本随之增长。 |
+| 归纳偏置 | “架构内置的假设” | 关于数据形态的先验；CNN 假设平移不变性，RNN 假设新近性。 |
+| 状态空间模型 | “有代数基础的 RNN” | 通过结构化状态空间矩阵进行参数化、可以并行训练的循环结构。 |
+| 二次方瓶颈 | “上下文为何如此昂贵” | 注意力内存随序列长度按 `O(N²)` 增长；Flash Attention 只降低常数，不改变增长阶数。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Vaswani et al. (2017). Attention Is All You Need](https://arxiv.org/abs/1706.03762)这篇论文杀死了主流NLP的复发.
-- [Bahdanau, Cho, Bengio (2014). Neural MT by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473)在一个RNN上着注意力.
-- [Hochreiter, Schmidhuber (1997). Long Short-Term Memory](https://www.bioinf.jku.at/publications/older/2604.pdf)原始的LSTM纸,为了记录.
-- [Gu, Dao (2023). Mamba: Linear-Time Sequence Modeling with Selective State Spaces](https://arxiv.org/abs/2312.00752)现代回复式答案变压器.
+- [Vaswani 等（2017），Attention Is All You Need](https://arxiv.org/abs/1706.03762)——终结主流自然语言处理中循环架构的论文。
+- [Bahdanau、Cho、Bengio（2014），通过联合学习对齐和翻译实现神经机器翻译](https://arxiv.org/abs/1409.0473)——注意力的诞生；当时它作为附件接在 RNN 上。
+- [Hochreiter、Schmidhuber（1997），长短期记忆](https://www.bioinf.jku.at/publications/older/2604.pdf)——原始 LSTM 论文，留作历史记录。
+- [Gu、Dao（2023），Mamba：使用选择性状态空间实现线性时间序列建模](https://arxiv.org/abs/2312.00752)——循环架构对 Transformer 的现代回应。
