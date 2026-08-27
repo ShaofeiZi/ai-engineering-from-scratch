@@ -1,28 +1,28 @@
-# 代理指令作为可执行的限制
+# 将代理指令写成可执行约束
 
-> 作为散文写的指示是愿望.作为限制写的指示是测试.工作台将每一个规则变成一个代理在运行时间检查的东西,一个审查员可以验证事实之后.
+> 写成散文的指令只是愿望,写成约束的指令才是测试。工作台会把每一条规则都变成一种东西: 代理在运行时可以检查它,审查者在事后也能验证它。
 
-**Type:** Build
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 14 · 32 (Minimal Workbench)
-**Time:** ~50 minutes
+**Type:** 构建
+**Languages:** Python（标准库）
+**Prerequisites:** 第 14 阶段 · 32（最小工作台）
+**Time:** 约 50 分钟
 
 ## 学习目标
 
-- 单独从操作规则中分开路由散文.
-- 声明启动规则,禁止行动,完成的定义,不确定性处理和批准界限作为可机器检查的限制.
-- 执行一个规则检查器,以对规则设置进行运行.
-- 让规则设置变异友好,以便审查可以看到发生了什么变化.
+- 把路由型说明和操作型规则分离开来。
+- 将启动规则、禁止行为、完成定义、不确定性处理和审批边界表达成可机器检查的约束。
+- 实现一个规则检查器,能对一次运行按规则集打分。
+- 让规则集本身对 diff 友好,以便评审能清楚看到改了什么。
 
 ## 问题
 
-典型的`AGENTS.md`经理说:"要小心",要彻底测试",要问"如果不确定".三天后,经理发送了没有测试的变更,写到一个被禁止的目录,
+典型的 `AGENTS.md` 常常写得像入职文档。它告诉代理“要小心”“测试要充分”“不确定就问”。三天后,代理交出一个没有测试的改动,还写进了禁止目录,而且从头到尾都没有提问,因为它从来不知道真正的边界在哪里。
 
-工作指令是有效的,而有抱负的时代是弱的. 解决方案是写出工作桌可以解释的规则,评审员可以得分.
+当指令是“可操作的”时,它才有力量; 当指令只是“带期待的口号”时,它就很弱。解决方法是把规则写成工作台可以解释、审查者可以评分的形式。
 
 ## 概念
 
-规则属于`docs/agent-rules.md`每个规则都有一个名字,一个类别,一个检查.
+规则应该放在 `docs/agent-rules.md`,而不是塞进那个简短的根路由器里。每条规则都要有名字、类别和检查方式。
 
 ```mermaid
 flowchart LR
@@ -32,35 +32,35 @@ flowchart LR
   Report --> Reviewer[Reviewer]
 ```
 
-### 五类涵盖大多数规则
+### 五类规则已经覆盖了大多数场景
 
-| Category | Question the rule answers | Example |
+| 类别 | 规则回答的问题 | 示例 |
 |----------|---------------------------|---------|
-| Startup | What must be true before work begins? | "state file exists and is fresh" |
-| Forbidden | What must never happen? | "do not edit `scripts/release.sh`" |
-| Definition of done | What proves the task is complete? | "pytest exits 0 and acceptance line passes" |
-| Uncertainty | What does the agent do when unsure? | "open a question note instead of guessing" |
-| Approval | What requires human approval? | "any new dependency, any prod write" |
+| Startup | 工作开始前哪些条件必须成立? | “状态文件存在且仍然新鲜” |
+| Forbidden | 哪些事绝不能发生? | “不要编辑 `scripts/release.sh`” |
+| Definition of done | 任务完成要靠什么来证明? | “pytest 退出码为 0 且 acceptance line 通过” |
+| Uncertainty | 代理不确定时该怎么做? | “创建 question note,而不是瞎猜” |
+| Approval | 哪些操作必须经过人工批准? | “任何新增依赖、任何 prod 写入” |
 
-没有一个规则,通常需要两个规则.
+一条规则如果塞不进这五类中的任意一类,通常说明它其实应该拆成两条规则。强行拆开。
 
-### 规则是机器可读的
+### 规则必须机器可读
 
-每个规则都有一个字符,一个类别,一个单行描述,`check`域中一个函数的名称`rule_checker.py`增加规则意味着增加支票; 随着工作桌的增长,支票也会增长.
+每条规则都应该带有 slug、category、一句描述,以及一个 `check` 字段,它对应 `rule_checker.py` 中的某个检查函数。增加一条规则,就意味着增加一个检查; 检查器会和工作台一起成长。
 
-### 规则是不同的
+### 规则必须对 diff 友好
 
-规则在一个标记文件中每个标题都有一个. 名称在不同中可见. 新规则位于其类别的顶部. 旧规则被删除,而不是发表评论,因为工作台是真相的来源,而不是团队上季度感觉的聊天日志.
+规则以 Markdown 形式存放在同一个文件里,每个标题对应一条规则。重命名在 diff 里一眼能看见。新规则插到所属类别的顶部。过时规则直接删掉,不要注释掉,因为工作台是当前真相源,不是团队上季度心理活动的聊天记录。
 
-### 规则与框架护
+### 规则和框架级 guardrails 不是一回事
 
-框架护 (OpenAI Agents SDK护,LangGraph中断) 执行运行时间水平的规则.本课中设定的规则是这些护实施的可读,可审查的合同.你需要两者:运行时间在转换过程中捕获违规行为,规则设定证明运行时间正在做正确的事情.
+框架级 guardrails,例如 OpenAI Agents SDK guardrails 或 LangGraph interrupts,是在运行时强制执行的。此课里的规则集,则是人类可读、可审查的契约,这些 runtime guardrails 正是它的实现方式。两者都要有: runtime 在执行过程中拦违规,规则集负责证明 runtime 的行为本身是正确的。
 
-### 渐进的披露:地图,而不是百科全书
+### Progressive disclosure: 给代理一张地图,不是一整套百科全书
 
-原因`AGENTS.md`每次事件都增加了一个规则,没有事件删除了一个.一年后,文件是2000行,代理阅读了第一张屏幕,没有注意力预算,并以所被告知的部分行动.一个巨大的指令文件由于40页的登录文件失败的原因而失败:读者一次扫描它,从来没有回到重要部分.
+`AGENTS.md` 之所以越来越长,通常是因为每次事故发生后都会加一条规则,但几乎从来不会删掉旧规则。一年后,文件变成两千行,代理只读了第一屏,注意力预算就见底了,最后只按自己记住的那一小部分去行动。超长指令文件失败的原因,跟四十页入职手册失败的原因完全一样: 读者只会快速扫一遍,然后永远不再回到真正关键的那一页。
 
-解决方案不是一个更短的文件.它是一个层次的文件.根路由器保持足够小,可以阅读每次会议,只能包含指针. 文件的深度只在任务触及时才会被代理加载.给代理一个地图,而不是整个百科全书,让它走到它需要的页面.
+解决方案不是“单纯更短的文件”,而是“分层文件”。根路由器必须小到每次会话都能完整读一遍,内容只放指针。更深的细节放进专题文档,只有任务真的碰到那个主题时才加载。给代理一张地图,不要把整套百科全书一次性塞给它,让它走到自己需要的页面上去。
 
 ```
 AGENTS.md                  # router, < 50 lines: what this repo is, where to look, the 5 hard rules
@@ -72,25 +72,25 @@ docs/
 feature_list.json          # the backlog (Phase 14 · 36)
 ```
 
-| Tier | Lives in | Read when | Size budget |
+| 层级 | 所在位置 | 读取时机 | 大小预算 |
 |------|----------|-----------|-------------|
-| Router | `AGENTS.md` | Every session, always | Under ~50 lines |
-| Rules | `docs/agent-rules.md` | Every session, on startup | One screen per category |
-| Topic docs | `docs/<topic>.md` | Only when the task touches that topic | As deep as needed |
+| Router | `AGENTS.md` | 每次会话、始终读取 | 控制在约 50 行以内 |
+| Rules | `docs/agent-rules.md` | 每次会话启动时读取 | 每个类别约一屏 |
+| Topic docs | `docs/<topic>.md` | 只有任务触及该主题时才读 | 需要多深都可以 |
 
-两次测试让层次保持诚实. 可达性测试:代理应在路由器最多两次跳到任何规则,因此路由器必须按路径链接每个主题文档,而不是用散文描述它. 调节器的短短足以让评论员在每一个公关上重新阅读它, 这就是唯一阻止它默默地重新成长到它所取代的百科全书. 没有解决的指针比缺失的规则更糟糕, 所以路由器中断的链接本身就是启动检查违规.
+要维持这种分层结构,有两个测试很关键。第一个是 reachability test: 从路由器出发,代理最多经过两跳就应该能触达任何规则,所以路由器必须按路径显式链接每份专题文档,而不是只用文字描述“那里有东西”。第二个是 freshness test: 路由器必须短到评审者每次 PR 都愿意重读一遍,这是防止它悄悄长回百科全书的唯一手段。一个失效的指针比一条缺失的规则更糟,所以路由器里坏掉的链接本身就应该算作 startup-check 违规。
 
 ```figure
 wb-rule-checkoff
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`船舶:
+`code/main.py` 会交付:
 
-- `agent-rules.md`解析器将规则加载到数据类中.
-- `rule_checker.py`风格检查器功能,每一个`check`参考
-- 经过两项规则的演示代理,并通过一个检查证来抓住他们.
+- 一个 `agent-rules.md` 解析器,把规则读进 dataclass。
+- 一组 `rule_checker.py` 风格的检查函数,每个函数对应一个 `check` 引用。
+- 一次故意违反两条规则的演示性代理运行,再用检查器把问题抓出来。
 
 运行它:
 
@@ -98,60 +98,60 @@ wb-rule-checkoff
 python3 code/main.py
 ```
 
-输出:解析规则集,运行跟踪,通过/失败每规则,`rule_report.json`保存在脚本旁边.
+输出内容包括: 解析后的规则集、运行轨迹、每条规则的 pass/fail 结果,以及保存在脚本旁边的 `rule_report.json`。
 
-## 野生生产模式
+## 生产环境里的常见模式
 
-只有三种模式, 隔离一个持续四分之一的规则,
+有三种模式决定了一套规则能撑一个季度,还是一周就开始腐烂。
 
-**Severity tagging at write time.**每一个规则都包含`severity`其他`block`现在`warn`其他`info`检查器报告了所有三个; 运行时间只拒绝了`block`许多团队在预期期期内过度估值严重性,然后在最后期限压力下轻松削弱它;在写作时标签,将校准带来前进.`block`规则成一个`overrides.jsonl`审计记录.
+**写规则时就标注 severity。** 每条规则都带上 `severity`: `block`、`warn` 或 `info`。检查器三种都会报告,但 runtime 只会因为 `block` 而真正拒绝执行。很多团队早期会把严重级别标得过高,等到 deadline 压力来了再偷偷放水; 在编写规则时就要求明确 severity,相当于把校准工作提前。再把它和验证闸门绑定起来,例如在 Phase 14 · 38 里,任何对 `block` 规则的 override 都必须写进 `overrides.jsonl` 审计日志。
 
-**Rule expiry as a forcing function.**每一个规则都有一个规则.`expires_at`检查器在未到期的规则已连续60天没有违反过的时发出警告;下一个季度审查要么证明保留它是合理的,要么削弱它.`info`云飞云的生产AI代码审查数据 (2026年4月,131,246次审查在30天内进行了5,169个备忘录) 显示,明确过期的规则集保持在每个备忘录的30个规则下;没有的组长到80多个,大多数从来没有开放.
+**给规则设置过期时间,把“清理陈旧规则”变成硬约束。** 每条规则都带一个 `expires_at` 日期,默认是编写后 90 天。检查器在一条尚未过期的规则连续 60 天都没有命中过违规时发出警告; 下一次季度评审就必须决定: 要么为保留它提供理由,要么把它降级成 `info`,要么直接删掉。Cloudflare 2026 年 4 月在生产 AI Code Review 上公开的数据是 30 天内 131,246 次审查、覆盖 5,169 个仓库; 其中显式设置过期机制的规则集能稳定保持在每仓库 30 条以内,没有过期机制的则会膨胀到 80 多条,而且多数从来没触发过。
 
-**Markdown-as-source, JSON-as-cache.** `agent-rules.md`是作者文件;`agent-rules.lock.json`检查器在热路中读取的缓存.锁由预约重建. 标记差异可检查; JSON 解析不出每一个转折. 同样的形状`package.json`现在,`package-lock.json`其他`Cargo.toml`现在,`Cargo.lock`现在,我们要去.
+**Markdown 作为源文件,JSON 作为缓存。** `agent-rules.md` 是作者真正维护的源文件; `agent-rules.lock.json` 是检查器在热路径上读取的缓存。lock 文件由 pre-commit hook 自动重建。Markdown diff 可审查,JSON 解析不必塞进每一轮代理执行。这个模式和 `package.json` / `package-lock.json`, `Cargo.toml` / `Cargo.lock` 是同一种形状。
 
-## 用它
+## 如何使用
 
-在生产中:
+在生产环境中:
 
-- 考试员在拒绝行动时引用规则, 检查员在CI中重新运行它们,
-- 开放AI代理SDK护卫器记录与输入和输出护卫器相同的检查. 标记是文件表面;SDK是运行时间表面.
-- 长度图器在飞行中违反规则时打断火. 打断处理器读取规则,询问人类,并恢复.
+- Claude Code、Codex、Cursor 会在会话启动时读取规则,并在拒绝某个动作时直接引用对应规则。检查器则会在 CI 中重新跑一遍,防止规则和实现静默漂移。
+- OpenAI Agents SDK guardrails 会把同一组检查同时注册为输入和输出 guardrails。Markdown 是文档层,SDK 是 runtime 层。
+- LangGraph interrupts 会在图中某个正在执行的节点违反规则时触发中断。中断处理器读取规则,向人类发问,然后继续执行。
 
-规则集是可移植的,因为它只是一个标记加上函数名称.
+这套规则能跨工具移植,原因很简单: 它本质上只是 Markdown 加上一组函数名。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-rule-set-builder.md`采访项目主人,将现有的散文说明分为五类,并发出一个版本的`agent-rules.md`另外还有一张检查片.
+`outputs/skill-rule-set-builder.md` 会访谈项目负责人,把现有那些散文化的指令分拣进五大类,然后产出一个带版本的 `agent-rules.md` 和一份检查器 stub。
 
-## 运动
+## 练习
 
-1. 如果您的产品真的需要它,请添加第六类别,并解释为什么产品不会被分为五类.
-2. 扩展检查器,使规则具有严重性 (`block`现在`warn`现在`info`) 报告相应的总结.
-3. 通过电线将检查器输入CI:如果在最新的代理运行中失败了区块严格规则,则无法构建.
-4. 通过"过期"的字段,每条规则都会被修改.
-5. 找一个真正的`AGENTS.md`它们中的几条是运行的?
+1. 如果你的产品真的需要第六类规则,就加上去,并解释为什么它不能被压缩回现有五类之一。
+2. 扩展检查器,让规则可以携带 severity (`block`、`warn`、`info`),并在报告里做聚合统计。
+3. 把检查器接入 CI: 只要最新代理运行触发了 block 级规则失败,就让构建直接失败。
+4. 给每条规则增加一个 “expiry” 字段。连续 90 天没有失败过的规则,自动进入待复审状态。
+5. 找一个真实的 `AGENTS.md`,把它重写成五类规则。里面到底有多少行是可操作的? 又有多少行只是愿望式表达?
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Operational rule | "A real instruction" | A rule the workbench can check at runtime |
-| Aspirational rule | "Be careful" | A rule with no check; either delete or upgrade |
-| Definition of done | "Acceptance" | An objective, file-backed proof the task is complete |
-| Block severity | "Hard rule" | Violation halts the run; cannot be silenced without an operator |
-| Rule expiry | "Stale rule sweep" | A rule with no fails in N days is up for retirement |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| Operational rule | “真正的指令” | 工作台可以在运行时检查的规则 |
+| Aspirational rule | “小心一点” | 没有对应检查的规则; 要么删掉,要么升级成可执行规则 |
+| Definition of done | “验收标准” | 用文件或命令客观证明任务已完成 |
+| Block severity | “硬规则” | 一旦违规就必须中止运行,不能悄悄忽略 |
+| Rule expiry | “陈旧规则清扫” | 一条规则在 N 天内无失败记录,就应该考虑退休 |
 
-## 进一步阅读
+## 延伸阅读
 
 - [OpenAI Agents SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/)
 - [LangGraph interrupts](https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/breakpoints/)
 - [Anthropic, Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
-- [Rick Hightower, Agent RuleZ: A Deterministic Policy Engine](https://medium.com/@richardhightower/agent-rulez-a-deterministic-policy-engine-for-ai-coding-agents-9489e0561edf)  产量中阻塞/警告/信息严重性
-- [Cloudflare, Orchestrating AI Code Review at Scale](https://blog.cloudflare.com/ai-code-review/)131万次复习,规则编制课程
-- [microservices.io, GenAI development platform — part 1: guardrails](https://microservices.io/post/architecture/2026/03/09/genai-development-platform-part-1-development-guardrails.html)规则与CI之间的深度防御
-- [Type-Checked Compliance: Deterministic Guardrails (arXiv 2604.01483)](https://arxiv.org/pdf/2604.01483)                                                                                                                                                                                                                                                              
-- [logi-cmd/agent-guardrails](https://github.com/logi-cmd/agent-guardrails)融合门的实施:范围,突变测试,违规预算
-- 阶段 14 · 32  工作台最小这个规则设置下降到
-- 阶段14 · 38  消耗规则报告的验证门
-- 阶段14 · 39 评审员评分规则遵守
+- [Rick Hightower, Agent RuleZ: A Deterministic Policy Engine](https://medium.com/@richardhightower/agent-rulez-a-deterministic-policy-engine-for-ai-coding-agents-9489e0561edf) — 生产环境里的 block/warn/info 严重级别实践
+- [Cloudflare, Orchestrating AI Code Review at Scale](https://blog.cloudflare.com/ai-code-review/) — 13.1 万次审查背后的规则组合经验
+- [microservices.io, GenAI development platform — part 1: guardrails](https://microservices.io/post/architecture/2026/03/09/genai-development-platform-part-1-development-guardrails.html) — 规则与 CI 之间如何做纵深防御
+- [Type-Checked Compliance: Deterministic Guardrails (arXiv 2604.01483)](https://arxiv.org/pdf/2604.01483) — 把“规则即检查”推进到 Lean 4 的极限形态
+- [logi-cmd/agent-guardrails](https://github.com/logi-cmd/agent-guardrails) — merge gate 实现,包括 scope、mutation testing 与 violation budget
+- Phase 14 · 32 — 这套规则要落到哪个最小工作台里
+- Phase 14 · 38 — 消费 rule_report 的验证闸门
+- Phase 14 · 39 — 对规则遵守情况打分的 reviewer agent
