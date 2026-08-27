@@ -1,69 +1,69 @@
-# 发电机与区分器
+# GAN——生成器与判别器
 
-> 2014年,Goodfellow的技巧是完全跳过密度.两个网络.一个制造假冒.一个抓住他们.他们战斗直到假冒是无法区分的真实.它不应该工作.它经常不会.当它做的时候,样本仍然是最尖的文学中,对于狭窄域.
+> Goodfellow 在 2014 年提出的技巧是完全跳过密度。两个网络，一个制造假样本，一个识别假样本。它们不断对抗，直到假样本无法与真实样本区分。这套方法看起来不该有效，实际也经常失效；但当它奏效时，在狭窄领域中生成的样本至今仍是研究文献里最清晰的。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 3 · 02 (Backprop), Phase 3 · 08 (Optimizers), Phase 8 · 02 (VAE)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 3 · 02（反向传播）、阶段 3 · 08（优化器）、阶段 8 · 02（VAE）
+**Time:** 约 75 分钟
 
 ## 问题
 
-由于它们的MSE解码器损失是*平均*图像的最佳,而许多可信数字的平均值是模糊的数字.你想要一个损失,以奖励*可信性*,而不是像素智能接近任何一个目标.可信性没有封闭形式.你必须学习它.
+VAE 会生成模糊样本，因为它的 MSE 解码器损失在贝叶斯意义下对*平均*图像最优——而许多看似真实的数字图像取平均后，就会得到一个模糊数字。你真正想要的是奖励样本*逼真性*的损失，而不是奖励它在像素层面接近某个目标。逼真性没有闭式表达，只能从数据中学习。
 
-善良的想法:训练一个分类器`D(x)`让一个发电机训练一个发电机.`G(z)`愚蠢`D`输出信号`G`是什么都不一样`D`现在的信号是:`G`如果两个网络融合,`G`没有写下数据的分布.`log p(x)`现在,我们要去.
+Goodfellow 的想法是：训练分类器 `D(x)` 区分真实图像与伪造图像，再训练生成器 `G(z)` 欺骗 `D`。`G` 的损失信号，就是 `D` 当前认为某个样本看起来真实的依据。随着 `G` 改进，这个信号也不断变化，因此生成器始终追逐一个移动目标。如果两个网络最终收敛，`G` 就在从未写出 `log p(x)` 的情况下学会了数据分布。
 
-这是一场对抗训练.数学是一场最小级游戏:
+这就是对抗训练，其数学形式是一场极小极大博弈：
 
 ```
 min_G max_D  E_real[log D(x)] + E_fake[log(1 - D(G(z)))]
 ```
 
-2026年,GAN不再是SOTA生成器 (扩散和流量匹配吞了那冠).但StyleGAN 2/3仍然是有史以来出货的最尖的面型,GAN歧视器被用于扩散训练中的感知损失,而对抗训练支持快速的1步蒸 (SDXL-Turbo,SD3-Turbo,LCM) 允许您出货实时扩散.
+到 2026 年，GAN 已不再是质量最高的生成器（扩散与流匹配夺走了这顶王冠）。但 StyleGAN 2/3 仍然是已交付的人脸模型中最清晰的；GAN 判别器会作为*感知损失*用于扩散训练；对抗训练还支撑了快速单步蒸馏（SDXL-Turbo、SD3-Turbo、LCM），让实时扩散得以落地。
 
 ## 概念
 
-![GAN training: generator and discriminator in minimax](../assets/gan.svg)
+![GAN 训练：生成器与判别器进行极小极大博弈](../assets/gan.svg)
 
-**Generator `G(z)`.**绘制一个噪音向量`z ~ N(0, I)`给一个样本`x̂`电脑系统的电脑系统.
+**生成器 `G(z)`。** 把噪声向量 `z ~ N(0, I)` 映射为样本 `x̂`。它是形似解码器的网络，可以使用全连接层或转置卷积。
 
-**Discriminator `D(x)`.**绘制一个样本的échar概率 (或分数).真 → 1,假 → 0.
+**判别器 `D(x)`。** 把样本映射为标量概率（或分数）。真实 → 1，伪造 → 0。
 
-**Loss.**两次交替更新:
+**损失。** 交替执行两种更新：
 
-- **Train `D`:** `loss_D = -[ log D(x) + log(1 - D(G(z))) ]`双向交叉值在真=1,假=0.
-- **Train `G`:** `loss_G = -log D(G(z))`这是Goodfellow使用的 *不和的*形式 (原始`log(1 - D(G(z)))`化和杀死梯度时`D`对于其他国家,
+- **训练 `D`：** `loss_D = -[ log D(x) + log(1 - D(G(z))) ]`。对真实样本=1、伪造样本=0 计算二元交叉熵。
+- **训练 `G`：** `loss_G = -log D(G(z))`。这是 Goodfellow 使用的*非饱和*形式（原始的 `log(1 - D(G(z)))` 会在 `D` 非常确信时饱和并令梯度消失）。
 
-**Training loop.**一步走`D`现在,我们要做一个好事.`G`复制.
+**训练循环。** 更新一次 `D`，再更新一次 `G`，不断重复。
 
-**Why it works.**如果`G`非常合适`p_data`现在`D`没有机会, 没有机会, 没有机会.`G`没有任何梯度,平衡.
+**它为何有效。** 如果 `G` 与 `p_data` 完全一致，`D` 的表现最多只能等同于随机猜测，并在所有位置输出 0.5；`G` 也不会再获得梯度。此时达到均衡。
 
-**Why it breaks.**模式崩 (`G`找到一个模式`D`它们的度变化,`D`学习得太快,`log D`培训不稳定性 (学习率,批量,任何东西).
+**它为何失效。** 模式坍塌（`G` 找到一个 `D` 无法识别的模式，随后永远复制它）、梯度消失（`D` 学得太快，`log D` 饱和）、训练不稳定（学习率、批量大小或任何因素都可能引发）。
 
-## 让GAN工作的变体
+## 让 GAN 真正可用的变体
 
-| Year | Innovation | Fix |
+| 年份 | 创新 | 解决的问题 |
 |------|------------|-----|
-| 2015 | DCGAN | Conv/deconv, batch norm, LeakyReLU — the first stable architecture. |
-| 2017 | WGAN, WGAN-GP | Replace BCE with Wasserstein distance + gradient penalty. Fixes vanishing gradient. |
-| 2017 | Spectral normalization | Lipschitz-bound the discriminator. Still used in 2026 discriminators. |
-| 2018 | Progressive GAN | Train low-res first, add layers. First megapixel results. |
-| 2019 | StyleGAN / StyleGAN2 | Mapping network + adaptive instance norm. State of the art for fixed-domain photorealism. |
-| 2021 | StyleGAN3 | Alias-free, translation-equivariant — still the face gold standard in 2026. |
-| 2022 | StyleGAN-XL | Conditional, class-aware, larger scale. |
-| 2024 | R3GAN | Rebrands with stronger regularization; works on 1024² without tricks. |
+| 2015 | DCGAN | 卷积/反卷积、批归一化、LeakyReLU——第一个稳定架构。 |
+| 2017 | WGAN、WGAN-GP | 用 Wasserstein 距离 + 梯度惩罚替代 BCE，修复梯度消失。 |
+| 2017 | 谱归一化 | 为判别器施加 Lipschitz 约束；2026 年仍在使用。 |
+| 2018 | 渐进式 GAN | 先训练低分辨率，再增加层；首次生成百万像素结果。 |
+| 2019 | StyleGAN / StyleGAN2 | 映射网络 + 自适应实例归一化；固定领域照片级真实感的顶尖方案。 |
+| 2021 | StyleGAN3 | 无混叠、平移等变；到 2026 年仍是人脸生成黄金标准。 |
+| 2022 | StyleGAN-XL | 条件式、感知类别、规模更大。 |
+| 2024 | R3GAN | 以更强正则化重新包装 GAN；无须特殊技巧即可处理 1024²。 |
 
 ```figure
 gan-minimax
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`导电和分辨器是单层隐藏MLP.我们手动执行前进,后退和最小x循环.目标是看到两个关键故障模式 (模式崩 +消失梯度) 发生.
+`code/main.py` 会在一维数据上训练微型 GAN：数据来自两个高斯分布的混合。生成器与判别器都是单隐藏层 MLP。我们会手工实现前向传播、反向传播和极小极大循环。目标是亲眼看到两种关键失败模式（模式坍塌 + 梯度消失）如何发生。
 
-### 步骤1:不和损失
+### 第 1 步：非饱和损失
 
-瓦尼莉的好友失去了`log(1 - D(G(z)))`在这个时候,G的梯度基本上是零  G不能改善.非和形式`-log D(G(z))`它们在D自信时爆炸,给G一个强烈的信号.
+当 D 以高置信度把 G 的伪造样本判为假时，原始 Goodfellow 损失 `log(1 - D(G(z)))` 会趋近于 0。此时 G 的梯度几乎为零，无法继续改进。非饱和形式 `-log D(G(z))` 的渐近行为相反：D 越确信，损失越大，从而为 G 提供强信号。
 
 ```python
 def g_loss(d_fake):
@@ -71,7 +71,7 @@ def g_loss(d_fake):
     return -sum(math.log(max(p, 1e-8)) for p in d_fake) / len(d_fake)
 ```
 
-### 步骤2:每一个生成器步骤的一个歧视步骤
+### 第 2 步：每更新一次生成器，就更新一次判别器
 
 ```python
 for step in range(steps):
@@ -85,9 +85,9 @@ for step in range(steps):
     update_G(fake_batch)
 ```
 
-对于G来说,新鲜的假冒,否则梯度是陈旧的.
+训练 G 时要使用新生成的伪造样本，否则梯度已经过时。
 
-### 步骤3: 警模式崩
+### 第 3 步：监测模式坍塌
 
 ```python
 if step % 200 == 0:
@@ -98,70 +98,70 @@ if step % 200 == 0:
         print("  [!] mode collapse: one mode is starved")
 ```
 
-法症状:两个真正的模式中的一个停止生成. 歧视者停止纠正它,因为它从来没有被视为假的.
+典型症状是两个真实模式中的一个不再被生成。判别器也不再纠正它，因为它永远不会以伪造样本的形式出现。
 
-## 陷
+## 陷阱
 
-- **Discriminator too strong.**如果D达到95%以上的准确度,G就死了.
-- **Generator memorizes a mode.**加入噪音到D输入,使用微批量区分器层,或切换到WGAN-GP.
-- **Batch norm leaking statistics.**实际批量+假批量通过同一BN层流动混合他们的统计数据.
-- **Inception-score gaming.**在低样本数量时,FID和IS有噪音.在 eval时使用≥10k样本.
-- **One-shot sampling is a lie for conditional tasks.**你仍然需要CFG尺度,切割技巧,再采样才能得到可用的输出.
+- **判别器太强。** 把 D 的学习率降低 2～5 倍，或加入实例噪声/层噪声。如果 D 的准确率超过 95%，G 就无法学习。
+- **生成器记住一个模式。** 向 D 的输入加入噪声，使用小批量判别层，或切换到 WGAN-GP。
+- **批归一化泄漏统计量。** 真实批次与伪造批次通过同一个 BN 层时，其统计量会混合。应改用实例归一化或谱归一化。
+- **操纵 Inception Score。** 样本数量较少时，FID 与 IS 的噪声很大。评估时至少使用 1 万个样本。
+- **条件任务中的单步采样是假象。** 要获得可用输出，仍然需要 CFG 缩放、截断技巧和重新采样。
 
-## 用它
+## 学以致用
 
-根据"2026年"的GAN堆:
+2026 年的 GAN 技术栈：
 
-| Situation | Pick |
+| 场景 | 选择 |
 |-----------|------|
-| Photoreal human faces, fixed pose | StyleGAN3 (sharpest, smallest) |
-| Anime / stylized faces | StyleGAN-XL or Stable Diffusion LoRA |
-| Image-to-image translation | Pix2Pix / CycleGAN (Phase 8 · 04) or ControlNet (Phase 8 · 08) |
-| Fast 1-step text-to-image | Adversarial distillation of diffusion (SDXL-Turbo, SD3-Turbo) |
-| Perceptual loss inside a diffusion trainer | Small GAN discriminator on image crops |
-| Anything multi-modal, open-ended | Don't — use diffusion or flow matching |
+| 固定姿态的照片级人脸 | StyleGAN3（最清晰、最小） |
+| 动漫/风格化人脸 | StyleGAN-XL 或 Stable Diffusion LoRA |
+| 图像到图像翻译 | Pix2Pix / CycleGAN（阶段 8 · 04）或 ControlNet（阶段 8 · 08） |
+| 快速单步文本生成图像 | 扩散模型的对抗蒸馏（SDXL-Turbo、SD3-Turbo） |
+| 扩散训练器中的感知损失 | 在图像裁剪上运行的小型 GAN 判别器 |
+| 任何多模态开放式任务 | 不要使用——改用扩散或流匹配 |
 
-网页的数据源是很简单的,但很窄的.一旦您的域名打开了照片,任意的文本提示,视频转向扩散.
+GAN 生成清晰，但适用范围狭窄。一旦领域扩展到照片、任意文本提示或视频，就应转向扩散。对抗技巧则作为组件（感知损失、蒸馏）继续存在，而不再充当独立生成器。
 
-## 运送它
+## 交付成果
 
-保存`outputs/skill-gan-debugger.md`技能采用一个失败的GAN运行 (损失曲线,样本格格,数据集大小) 并输出了排列可能原因列表,一线修复和重复运行协议.
+保存 `outputs/skill-gan-debugger.md`。该技能接收一次失败 GAN 训练的损失曲线、样本网格与数据集大小，并输出按可能性排序的原因、单行修复方法和重新运行方案。
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`code/main.py`根据股票设置.`D_LR = 5 * G_LR`几快G的损失会崩到恒定?
-2. **Medium.**取代Goodfellow BCE损失的WGAN损失: `loss_D = E[D(fake)] - E[D(real)]`现在`loss_G = -E[D(fake)]`子 D 的重量到`[-0.01, 0.01]`训练是否更稳定?
-3. **Hard.**扩展1D示例到2D数据 (环上混合8个高西安).追踪发电机在1k,5k,10k步骤中捕获了8种模式中的多少种.实施微批次差异和重新测量.
+1. **简单。** 使用默认设置运行 `code/main.py`，再令 `D_LR = 5 * G_LR` 重新运行。G 的损失多快坍缩为常数？
+2. **中等。** 用 WGAN 损失替换 Goodfellow 的 BCE 损失：`loss_D = E[D(fake)] - E[D(real)]`、`loss_G = -E[D(fake)]`，并把 D 的权重裁剪到 `[-0.01, 0.01]`。训练是否更稳定？比较墙钟收敛时间。
+3. **困难。** 把一维示例扩展到二维数据（环上的 8 个高斯混合）。在第 1k、5k、10k 步记录生成器覆盖了 8 个模式中的多少个；实现小批量判别，再重新测量。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Generator | "G" | Noise-to-sample network, `G: z → x̂`. |
-| Discriminator | "D" | Classifier `D: x → [0, 1]`, real vs fake. |
-| Minimax | "The game" | `min_G max_D` of a joint objective. |
-| Non-saturating loss | "The fix" | Use `-log D(G(z))` for G instead of `log(1 - D(G(z)))`. |
-| Mode collapse | "G memorized one thing" | Generator produces few distinct outputs despite diverse data. |
-| WGAN | "Wasserstein" | Replace BCE with Earth-Mover distance + gradient penalty; smoother gradient. |
-| Spectral norm | "Lipschitz trick" | Constrain D's weight norms to bound its slope; stabilizes training. |
-| StyleGAN | "The one that works" | Mapping network + AdaIN; best-in-class for faces, still in 2026. |
+| 生成器 | “G” | 从噪声到样本的网络，`G: z → x̂`。 |
+| 判别器 | “D” | 分类器 `D: x → [0, 1]`，区分真实与伪造。 |
+| 极小极大 | “博弈” | 联合目标上的 `min_G max_D`。 |
+| 非饱和损失 | “修复方法” | G 使用 `-log D(G(z))`，而不是 `log(1 - D(G(z)))`。 |
+| 模式坍塌 | “G 只记住了一种东西” | 尽管数据多样，生成器却只产生少量不同输出。 |
+| WGAN | “Wasserstein” | 用地球移动距离 + 梯度惩罚替代 BCE，提供更平滑的梯度。 |
+| 谱归一化 | “Lipschitz 技巧” | 约束 D 的权重范数以限制斜率，稳定训练。 |
+| StyleGAN | “真正好用的那个” | 映射网络 + AdaIN；人脸领域至今仍属顶尖。 |
 
-## 产品说明:一次性推断是GAN的持久优势
+## 生产说明：单步推理是 GAN 长久的优势
 
-在生产-推理文献词汇中,一个GAN有:
+GAN 在开放领域生成的样本质量上不再领先，却仍在推理成本上占优。用生产推理领域的术语来说，GAN 具备：
 
-- **No prefill, no decode stages.**一个单身的`G(z)`预测时间:
-- **No KV-cache pressure.**只有重量,批量量由激活内存限制,而不是缓存.
-- **Trivial continuous batching.**由于每个请求都采用相同的固定FLOP,因此在服务器的目标占用量上静态批量通常是最佳的.
+- **没有预填充和解码阶段。** 只需一次 `G(z)` 前向传播，TTFT 约等于总延迟。
+- **没有 KV 缓存压力。** 唯一状态就是权重。批量大小受激活内存限制，而非缓存限制。
+- **连续批处理非常简单。** 每个请求都需要相同的固定 FLOPs，因此按服务器目标占用率组成静态批次通常最优，无须在途调度器。
 
-这就是为什么GAN蒸 (SDXL-Turbo,SD3-Turbo,ADD,LCM) 是2026年快速文字到图像的主导技术:它将20-50步的扩散管道分解成1-4步GAN式前进通道,同时保持了扩散基的分布.对抗损失作为将慢发电器转化为快速发电器的训练时间.
+这就是 GAN 蒸馏（SDXL-Turbo、SD3-Turbo、ADD、LCM）在 2026 年成为快速文本生成图像主流技术的原因：它把 20～50 步扩散流水线压缩成 1～4 次 GAN 风格前向传播，同时保留扩散基础模型的分布。对抗损失继续作为训练旋钮，用于把慢速生成器转变为快速生成器。
 
-## 进一步阅读
+## 延伸阅读
 
-- [Goodfellow et al. (2014). Generative Adversarial Nets](https://arxiv.org/abs/1406.2661)原始的GAN纸.
-- [Radford et al. (2015). Unsupervised Representation Learning with DCGAN](https://arxiv.org/abs/1511.06434)第一种稳定的建筑.
-- [Arjovsky, Chintala, Bottou (2017). Wasserstein GAN](https://arxiv.org/abs/1701.07875)  
-- [Miyato et al. (2018). Spectral Normalization for GANs](https://arxiv.org/abs/1802.05957) SN
-- [Karras et al. (2020). Analyzing and Improving the Image Quality of StyleGAN](https://arxiv.org/abs/1912.04958)    
-- [Karras et al. (2021). Alias-Free Generative Adversarial Networks](https://arxiv.org/abs/2106.12423)    
-- [Sauer et al. (2023). Adversarial Diffusion Distillation](https://arxiv.org/abs/2311.17042)SDXL-Turbo.
+- [Goodfellow 等（2014），生成对抗网络](https://arxiv.org/abs/1406.2661)——原始 GAN 论文。
+- [Radford 等（2015），使用 DCGAN 进行无监督表示学习](https://arxiv.org/abs/1511.06434)——第一个稳定架构。
+- [Arjovsky、Chintala、Bottou（2017），Wasserstein GAN](https://arxiv.org/abs/1701.07875)——WGAN。
+- [Miyato 等（2018），用于 GAN 的谱归一化](https://arxiv.org/abs/1802.05957)——SN。
+- [Karras 等（2020），分析并改进 StyleGAN 的图像质量](https://arxiv.org/abs/1912.04958)——StyleGAN2。
+- [Karras 等（2021），无混叠生成对抗网络](https://arxiv.org/abs/2106.12423)——StyleGAN3。
+- [Sauer 等（2023），对抗式扩散蒸馏](https://arxiv.org/abs/2311.17042)——SDXL-Turbo。
