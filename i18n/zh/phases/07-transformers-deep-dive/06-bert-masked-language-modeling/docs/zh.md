@@ -1,87 +1,87 @@
-# 面具语言建模
+# BERT——掩码语言建模
 
-> 预测下一个字,预测一个缺失的字,一个句子的差异,一个半十年的嵌入式形状.
+> GPT 预测下一个词，BERT 预测缺失的词。仅此一处差异，便开启了此后五年的嵌入模型时代。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 7 · 05 (Full Transformer), Phase 5 · 02 (Text Representation)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 7 · 05（完整 Transformer）、阶段 5 · 02（文本表示）
+**Time:** 约 45 分钟
 
 ## 问题
 
-2018年,每一个NLP任务都从零开始训练了自己的模型,使用自己的标签数据.没有预训练的"理解英语"检查点,你可以调整.ELMo (2018) 显示你可以预训练背景嵌入式使用双向LSTM;它帮助但没有通用化.
+2018 年，每项自然语言处理任务——情感分析、NER、问答、蕴含——都要在自己的带标签数据上从零训练模型。当时不存在可以微调的预训练“理解英语”检查点。ELMo（2018）证明了可以使用双向 LSTM 预训练上下文嵌入；它有所帮助，却无法广泛泛化。
 
-伯特 (Devlin et al. 2018) 问:如果我们拿一个变压器编码器,训练它在互联网上的每句话,并强迫它预测两个方面缺失的语境中的单词呢?
+BERT（Devlin 等，2018）提出：如果拿一个 Transformer 编码器，在互联网上的所有句子上训练，并迫使它根据左右两侧上下文预测缺失词语，会怎样？之后只需针对下游任务微调一个输出头。这种参数效率令人耳目一新。
 
-结果:在18个月内,BERT及其变体 (RoBERTa,ALBERT,ELECTRA) 占据了所有现有的NLP排名榜.到2020年,地球上每一个搜索引擎,内容调节管道和语义搜索系统都拥有BERT.
+结果是：仅仅 18 个月内，BERT 及其变体（RoBERTa、ALBERT、ELECTRA）就主导了当时所有自然语言处理排行榜。到 2020 年，全球每个搜索引擎、内容审核流水线和语义搜索系统中几乎都有一个 BERT。
 
-2026年仅使用编码器的模型仍然是分类,检索和结构化提取的合适工具.它们比解码器更快510x,其嵌入式是每个现代检索堆的骨干.ModernBERT (2024年12月) 通过Flash Attention + RoPE + GeGLU将架构推向8K文本.
+到 2026 年，仅编码器模型仍然是分类、检索与结构化抽取的正确工具——每词元运行速度比解码器快 5～10 倍，其嵌入也是每个现代检索技术栈的骨干。ModernBERT（2024 年 12 月）通过 Flash Attention + RoPE + GeGLU，把架构扩展到 8K 上下文。
 
 ## 概念
 
-![Masked language modeling: pick tokens, mask them, predict originals](../assets/bert-mlm.svg)
+![掩码语言建模：选择词元、遮盖、预测原词](../assets/bert-mlm.svg)
 
 ### 训练信号
 
-拿一个句子:`the quick brown fox jumps over the lazy dog`现在,我们要去.
+取一个句子：`the quick brown fox jumps over the lazy dog`。
 
-随机地出15%的代币:
+随机遮盖 15% 的词元：
 
 ```
 input:  the [MASK] brown fox jumps [MASK] the lazy dog
 target: the  quick brown fox jumps  over  the lazy dog
 ```
 
-训练模型以预测原始代币在隐藏位置. 因为编码器是双向,预测`[MASK]`在位置1可以使用`brown fox jumps`现在,我们在2+位置上做了什么?
+训练模型预测被遮盖位置上的原始词元。由于编码器是双向的，在位置 1 预测 `[MASK]` 时可以利用位置 2 之后的 `brown fox jumps`。这是 GPT 无法做到的事情。
 
-### 关于BERT面具的规则
+### BERT 的掩码规则
 
-预测选择的15%的代币:
+在选中用于预测的 15% 词元中：
 
-- 80% 则被替换为`[MASK]`现在,我们要去.
-- 10% 则被随机代币取代.
-- 只有10%的情况保持不变.
+- 80% 替换为 `[MASK]`。
+- 10% 替换为随机词元。
+- 10% 保持不变。
 
-为什么不总是`[MASK]`因为`[MASK]`训练模型以预期`[MASK]`假设在100%的面具位置,预训练和细调之间会产生分布转变.10%的随机加上10%的变化保持模型的诚实性.
+为什么不始终使用 `[MASK]`？因为 `[MASK]` 在推理时从不出现。如果训练模型预期所有被选位置都出现 `[MASK]`，预训练与微调之间就会产生分布偏移。10% 随机替换 + 10% 保持不变，可以让模型面对更真实的输入。
 
-### 下一句预测 (NSP) ,为什么它被放弃
+### 下一句预测（NSP）——以及它为何被弃用
 
-原始BERT也在NSP上训练:给了两个句子A和B,预测如果B跟随A.RoBERTa (2019) 删除了它并显示NSP受伤,没有帮助.现代编码器跳过它.
+原始 BERT 还会训练 NSP：给定句子 A 与 B，预测 B 是否紧接着 A 出现。RoBERTa（2019）通过消融实验表明，NSP 不仅无益，反而有害。现代编码器不再使用它。
 
-### 2026年发生了什么变化:ModernBERT
+### 2026 年的变化：ModernBERT
 
-根据2026年的原始模型,
+2024 年的 ModernBERT 论文使用 2026 年的现代组件重建了整个模块：
 
-| Component | Original BERT (2018) | ModernBERT (2024) |
+| 组件 | 原始 BERT（2018） | ModernBERT（2024） |
 |-----------|----------------------|-------------------|
-| Positional | Learned absolute | RoPE |
-| Activation | GELU | GeGLU |
-| Normalization | LayerNorm | Pre-norm RMSNorm |
-| Attention | Full dense | Alternating local (128) + global |
-| Context length | 512 | 8192 |
-| Tokenizer | WordPiece | BPE |
+| 位置编码 | 学习式绝对编码 | RoPE |
+| 激活函数 | GELU | GeGLU |
+| 归一化 | LayerNorm | 预归一化 RMSNorm |
+| 注意力 | 完全稠密 | 局部（128）与全局交替 |
+| 上下文长度 | 512 | 8192 |
+| 分词器 | WordPiece | BPE |
 
-与2018年的堆不同,它是闪光注意力原生.在序列长度8K时,传输速度比DeBERTa-v3更快,GLU比分更好.
+与 2018 年技术栈不同，它原生支持 Flash Attention。在序列长度 8K 时，推理速度比 DeBERTa-v3 快 2～3 倍，GLUE 分数也更高。
 
-### 在2026年仍会选择编码器的使用案例
+### 2026 年仍应选择编码器的用例
 
-| Task | Why encoder beats decoder |
+| 任务 | 编码器胜过解码器的原因 |
 |------|---------------------------|
-| Retrieval / semantic search embeddings | Bidirectional context = better embedding quality per token |
-| Classification (sentiment, intent, toxicity) | One forward pass; no generation overhead |
-| NER / token labeling | Per-position output, natively bidirectional |
-| Zero-shot entailment (NLI) | Classifier head on top of encoder |
-| Reranker for RAG | Cross-encoder scoring, 10x faster than LLM rerankers |
+| 检索/语义搜索嵌入 | 双向上下文 = 每词元的嵌入质量更高 |
+| 分类（情感、意图、有害内容） | 一次前向传播，无生成开销 |
+| NER/词元标注 | 逐位置输出，原生双向 |
+| 零样本蕴含（NLI） | 编码器顶部的分类头 |
+| RAG 重排器 | 交叉编码器评分，比大语言模型重排器快 10 倍 |
 
 ```figure
 transformer-residual
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:掩盖逻辑
+### 第 1 步：掩码逻辑
 
-看到`code/main.py`功能`create_mlm_batch`返回输入 ID (面具应用) 和标签 (仅在面具位置, -100其他地方  PyTorch 忽略索引公约).
+见 `code/main.py`。函数 `create_mlm_batch` 接收词元 ID 列表、词表大小和掩码概率。它返回应用掩码后的输入 ID，以及标签（只在被遮盖位置保留标签，其他位置为 -100——这是 PyTorch 的忽略索引约定）。
 
 ```python
 def create_mlm_batch(tokens, vocab_size, mask_prob=0.15, rng=None):
@@ -99,19 +99,19 @@ def create_mlm_batch(tokens, vocab_size, mask_prob=0.15, rng=None):
     return input_ids, labels
 ```
 
-### 步骤2:在一个小的体积上运行MLM预测
+### 第 2 步：在微型语料库上运行 MLM 预测
 
-训练一个2层编码器+MLM头,用20个字,200个句子的词汇.没有梯度.我们做了前进通过的智力检查. 需要 PyTorch的全面训练.
+在只有 20 个词的词表和 200 个句子上，训练一个双层编码器 + MLM 头。不计算梯度——这里只做前向传播健全性检查。完整训练需要 PyTorch。
 
-### 步骤3:比较面具类型
+### 第 3 步：比较掩码类型
 
-展示三向规则如何使模型可以使用`[MASK]`预测一个未蒙面的句子和一个蒙面的句子. 两者都应该产生合理的符号分布,因为模型在训练中看到了两种模式.
+展示三路规则如何让模型在不存在 `[MASK]` 的情况下仍可使用。分别在未遮盖句子与遮盖句子上预测。两者都应产生合理的词元分布，因为模型在训练中见过两种模式。
 
-### 步骤4:细调头
+### 第 4 步：微调输出头
 
-换一个玩具感觉数据集上的MLM头部以分类头部. 只有头部,编码器被结. 每个BERT应用程序都遵循这种模式.
+在玩具情感数据集上，用分类头替换 MLM 头。只训练输出头，冻结编码器。这就是每种 BERT 应用都遵循的模式。
 
-## 用它
+## 学以致用
 
 ```python
 from transformers import AutoModel, AutoTokenizer
@@ -124,39 +124,39 @@ inputs = tok(text, return_tensors="pt")
 out = model(**inputs).last_hidden_state   # (1, N, 768)
 ```
 
-**Embedding models are fine-tuned BERT.** `sentence-transformers`模型`all-MiniLM-L6-v2`它们的编码器是相同的,损失发生了变化.
+**嵌入模型就是经过微调的 BERT。** `sentence-transformers` 中的 `all-MiniLM-L6-v2` 等模型，是使用对比损失训练的 BERT。编码器相同，改变的是损失函数。
 
-**Cross-encoder rerankers are also fine-tuned BERT.**双对分类`[CLS] query [SEP] doc [SEP]`查询和文档之间的双向关注正是交叉编码器对双码器的质量优势.
+**交叉编码器重排器也是经过微调的 BERT。** 对 `[CLS] query [SEP] doc [SEP]` 执行样本对分类。查询与文档之间的双向注意力，正是交叉编码器质量高于双编码器的原因。
 
-**When not to pick BERT in 2026.**任何生成性.编码器没有任何合理的方式来自动降低生成代币.
+**2026 年不应选择 BERT 的场景。** 任何生成任务。编码器无法合理地自回归生成词元。此外，对于参数量小于 10 亿、可由小型解码器以更大灵活性达到相同质量的任务（Phi-3-Mini、Qwen2-1.5B），也不应选择它。
 
-## 运送它
+## 交付成果
 
-看到`outputs/skill-bert-finetuner.md`技能范围为一个新的分类或提取任务进行BERT细调 (背骨选择,头部规格,数据,评估,停止).
+见 `outputs/skill-bert-finetuner.md`。该技能会为新的分类或抽取任务界定 BERT 微调方案，包括骨干网络选择、输出头规格、数据、评估与停止条件。
 
-## 运动
+## 练习
 
-1. **Easy.**跑步`code/main.py`确认15%是选定的,其中80%是`[MASK]`现在,我们要去.
-2. **Medium.**实施全字掩饰:如果一个词被标记成子词,把所有子词都掩盖在一起或没有.测量这是否提高了500句子的MLM准确性.
-3. **Hard.**训练一个小的 (2层,d=64) BERT从公共数据集中的1万句子.`[CLS]`比较与匹配的参数中只有解码器的基线.
+1. **简单。** 运行 `code/main.py`，打印 1 万个词元上的掩码分布。确认约 15% 被选中，其中约 80% 会变成 `[MASK]`。
+2. **中等。** 实现全词掩码：如果一个词被拆成多个子词，就要么同时遮盖全部子词，要么全部保留。在包含 500 个句子的语料库上测量它是否改善 MLM 准确率。
+3. **困难。** 在公共数据集的 1 万个句子上训练微型 BERT（两层，d=64）。使用 `[CLS]` 词元针对 SST-2 情感分类进行微调，并与参数量相同的仅解码器基线比较——哪一个胜出？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| MLM | "Masked language modeling" | Training signal: randomly replace 15% of tokens with `[MASK]`, predict the originals. |
-| Bidirectional | "Looks both ways" | Encoder attention has no causal mask — every position sees every other position. |
-| `[CLS]` | "The pooler token" | A special token prepended to every sequence; its final embedding is used as the sentence-level representation. |
-| `[SEP]` | "Segment separator" | Separates paired sequences (e.g. query/doc, sentence A/B). |
-| NSP | "Next sentence prediction" | BERT's second pretraining task; shown to be useless in RoBERTa, dropped after 2019. |
-| Fine-tuning | "Adapt to a task" | Keep the encoder mostly frozen; train a small head on top for the downstream task. |
-| Cross-encoder | "A reranker" | A BERT that takes both query and doc as input, outputs a relevance score. |
-| ModernBERT | "2024 refresh" | Encoder rebuilt with RoPE, RMSNorm, GeGLU, alternating local/global attention, 8K context. |
+| MLM | “掩码语言建模” | 训练信号：随机把 15% 的词元替换为 `[MASK]`，预测原始词元。 |
+| 双向 | “同时看两边” | 编码器注意力没有因果掩码——每个位置都能看到其他所有位置。 |
+| `[CLS]` | “池化词元” | 添加到每个序列开头的特殊词元；其最终嵌入用作句子级表示。 |
+| `[SEP]` | “片段分隔符” | 分隔成对序列（例如查询/文档、句子 A/B）。 |
+| NSP | “下一句预测” | BERT 的第二个预训练任务；RoBERTa 证明它没有作用，2019 年后被弃用。 |
+| 微调 | “适配任务” | 让编码器大体保持冻结，在顶部为下游任务训练一个小型输出头。 |
+| 交叉编码器 | “重排器” | 同时接收查询与文档，并输出相关性分数的 BERT。 |
+| ModernBERT | “2024 年更新版” | 使用 RoPE、RMSNorm、GeGLU、交替局部/全局注意力和 8K 上下文重建的编码器。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Devlin et al. (2018). BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)原始的纸.
-- [Liu et al. (2019). RoBERTa: A Robustly Optimized BERT Pretraining Approach](https://arxiv.org/abs/1907.11692)如何正确训练BERT;杀死NSP.
-- [Clark et al. (2020). ELECTRA: Pre-training Text Encoders as Discriminators Rather Than Generators](https://arxiv.org/abs/2003.10555)替换代代币检测在匹配计算时超过MLM.
-- [Warner et al. (2024). Smarter, Better, Faster, Longer: A Modern Bidirectional Encoder](https://arxiv.org/abs/2412.13663)现代BERT纸.
-- [HuggingFace `modeling_bert.py`](https://github.com/huggingface/transformers/blob/main/src/transformers/models/bert/modeling_bert.py)可нони化编码器参考.
+- [Devlin 等（2018），BERT：用于语言理解的深度双向 Transformer 预训练](https://arxiv.org/abs/1810.04805)——原始论文。
+- [Liu 等（2019），RoBERTa：稳健优化的 BERT 预训练方法](https://arxiv.org/abs/1907.11692)——如何正确训练 BERT；证明 NSP 无益。
+- [Clark 等（2020），ELECTRA：把文本编码器预训练为判别器而非生成器](https://arxiv.org/abs/2003.10555)——在计算量相同时，以替换词元检测胜过 MLM。
+- [Warner 等（2024），更智能、更出色、更快速、更长：现代双向编码器](https://arxiv.org/abs/2412.13663)——ModernBERT 论文。
+- [Hugging Face `modeling_bert.py`](https://github.com/huggingface/transformers/blob/main/src/transformers/models/bert/modeling_bert.py)——经典编码器参考实现。
