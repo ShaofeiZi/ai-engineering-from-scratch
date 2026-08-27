@@ -1,70 +1,70 @@
-# 开放模型:建筑步行
+# 开放模型：架构剖析
 
-> 你在第04课中从零开始建造了GPT-2小型. 2026年,边界开放模式是相同的, 没有任何其他方法, ,而不是. ,而不是学习的职位. 没有任何其他地方的政府. 专家的混合量. 你已经知道的数学覆盖了95%的数据. 这一课程将拉马3,深度寻找V3,Mixtral,Qwen和Gemma一边,并列出每个建筑的不同线程.
+> 你在第 04 课从零构建了 GPT-2 Small。2026 年的前沿开放模型仍属于同一家族，只做了五六项具体改动：用 RMSNorm 取代 LayerNorm，用 SwiGLU 取代 GELU，用 RoPE 取代学习式位置编码，用 GQA 或 MLA 取代完整 MHA，并在大规模模型中采用混合专家。你已经掌握的数学足以解释其中 95% 的内容。本课会并列剖析 Llama 3、DeepSeek-V3、Mixtral、Qwen 与 Gemma，并明确指出每种架构究竟从哪一行开始分叉。
 
-**Type:** Learn
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 10, Lessons 04, 05, 12 (Pre-training, Scaling, Inference)
-**Time:** ~45 minutes
+**Type:** 学习
+**Languages:** Python（标准库）
+**Prerequisites:** 阶段 10 第 04、05、12 课（预训练、规模化、推理）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 阅读Llama 3,Mistral,Mixtral,Gemma 2,Qwen 2.5和DeepSeek-V3的配置.json,并解释每个字段
-- 具体地说明每个模型所做的建筑变化,而不是GPT-2小,并根据第一条原则证明它是正确的.
-- 仅从配置中计算任何开放模型的计算参数,KV缓存大小和激活内存
-- 选择适合的开放模型,以考虑延迟,内存和能力限制
+- 阅读 Llama 3、Mistral、Mixtral、Gemma 2、Qwen 2.5 与 DeepSeek-V3 的 config.json，并解释其中每个字段
+- 明确指出每个模型相对于 GPT-2 Small 所做的架构改动，并从第一性原理说明原因
+- 仅根据配置计算任意开放模型的参数量、KV 缓存大小与激活内存
+- 根据延迟、内存与能力约束，为部署目标选择合适的开放模型
 
 ## 问题
 
-在第04课中,你写了350行曲,并有一个GPT-2-形模型. 拉马3405B的技术报告有200页. 你的直觉是,这些是不同的野兽. 他们不是. 两百页面描述了同一个对象,有五到六个有理由的修改, 骨架--嵌入,变体块,注意力,MLP,规范,头--没有改变.
+第 04 课中，你用 350 行 numpy 写出了一个 GPT-2 形态的模型。Llama 3 405B 则有一份 200 页的技术报告。你的直觉可能认为二者是截然不同的庞然大物，其实并非如此。这 200 页描述的仍是同一个对象，只进行了五六项动机明确的修改，再加上约一千项与规模化有关的实现细节。它的骨架——嵌入、Transformer 块、注意力、MLP、归一化与输出头——没有改变。
 
-对于每个主要的开放模型家族,我们列出了从GPT-2发生了什么变化,为什么,以及它花费了多少.
+本课就是一份差异对比。对于每个主流开放模型家族，我们都会准确列出它相对于 GPT-2 改了什么、为什么改，以及付出了什么代价。完成后，你将能够阅读一个新模型卡，并在脑中把它还原到 GPT-2 基线。
 
-实际的回报是,当Meta发布Llama 5或DeepSeek发布V4时,你不需要新的心理模型.你会看看配置,看看已知的按移动,并知道下游的影响是什么.2026架构是一个有限的工具箱.每个新模型都选择不同的子集.
+实际收益在于，当 Meta 发布 Llama 5 或 DeepSeek 发布 V4 时，你无须重新建立一套心智模型。只需查看配置，识别哪些熟悉的旋钮发生了变化，就能理解下游影响。2026 年的架构来自一套有限工具箱，每个新模型只是选择了不同子集。
 
 ## 概念
 
-### 变化不变的核心
+### 不变的核心
 
-所有自动退缩式开放模型都分享:
+所有自回归开放模型都包含：
 
-- 符号嵌入矩阵 (语音_大小 x 隐藏_dim).
-- 堆积N解码器块:标准,自注意,残留,标准,MLP,残留.
-- 终极标准和直线头投射到语音大小 (通常有嵌入式重量绑定).
-- 原因面具,下一个代号交叉缩损失.
+- 词元嵌入矩阵（vocab_size × hidden_dim）。
+- N 个解码器块组成的堆栈：归一化、自注意力、残差、归一化、MLP、残差。
+- 最终归一化，以及投影到 vocab_size 的线性头（通常与嵌入绑定权重）。
+- 因果掩码与下一词元交叉熵损失。
 
-其他都是子.
+这就是固定结构，其余都只是旋钮。
 
-### 实际上移动的六个节点
+### 真正发生变化的六个旋钮
 
-在每一个2024-2026年开放的边境模型中,
+纵观 2024～2026 年的所有前沿开放模型，反复调整的始终是以下六项设计选择：
 
-1. **Normalization.**标准层 -> RMSNorm.
-2. **Positional encoding.**学习绝对 -> RoPE (加上 YaRN, NTK).
-3. **Activation.** (GELU) ->  (GELU)
-4. **Attention head sharing.**美国政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府政府.
-5. **Dense vs sparse MLP.**密集的专家混合物.
-6. **Pre-norm placement.**之前的规范仍然存在,后的规范已经消失了.
+1. **归一化。** LayerNorm → RMSNorm。
+2. **位置编码。** 学习式绝对位置 → RoPE（及其 YaRN、NTK 等变体）。
+3. **激活函数。** GELU → SwiGLU（或 GeGLU）。
+4. **注意力头共享。** MHA → GQA → MQA → MLA。
+5. **稠密与稀疏 MLP。** 稠密 → 混合专家。
+6. **预归一化位置。** 继续使用预归一化，后归一化已经退出舞台。
 
-其他一切 (学习速度时间表,数据组合,批量大小,背景长度) 都存在于训练配置中,而不是架构中.
+其余内容（学习率调度、数据配比、批大小、上下文长度）属于训练配置，而不是架构。真正的旋钮只有六个。
 
-### 按1:RMSNorm
+### 旋钮 1：RMSNorm
 
-层规则减小了平均值,分为std,尺度和转移.RMSNorm只保留了尺度:
+LayerNorm 会减去均值、除以标准差，再执行缩放和平移。RMSNorm 只保留缩放：
 
 ```
 RMSNorm(x) = x / sqrt(mean(x^2) + eps) * gamma
 ```
 
-没有中减.没有偏见.每代币少了一个matmul.张和森尼里希 (2019) 认为它在机器翻译上匹配LayerNorm,同时速度更快10%.每一个现代开放模型都运行它.
+不减均值，也没有偏置，每个词元少做一次矩阵运算。Zhang 与 Sennrich（2019）证明，它在机器翻译上可达到与 LayerNorm 相当的效果，同时快 10%。所有现代开放模型都采用它。
 
-成本:没有. 优势: 产量较小,代码更简单.
+代价：无。收益：吞吐量小幅提高，代码更简单。
 
-### 子 2: 子
+### 旋钮 2：RoPE
 
-学习位置嵌入式是GPT-2中1024槽查找表. 1025文本是表的末端.模型不能超出其训练长度.
+GPT-2 的学习式位置嵌入是一张包含 1024 个槽位的查找表。位置 1025 已经超出表尾，模型无法外推到训练长度以外。
 
-转动位置嵌入 (RoPE, Su等. 通过在注意点产品之前双旋转每个Q和K向量来注射位置. 旋转角是位置的定性函数,所以没有什么可以学习,没有什么可以耗尽. 通过扩展技巧 (NTK意识到插射,YaRN),在8k环境上训练的模型可以在推断下延伸到128k,而小的精度损失.
+旋转位置嵌入（RoPE，Su 等，2021）在执行注意力点积之前，将每个 Q 与 K 向量按二维分组旋转，从而注入位置信息。旋转角度是位置的确定性函数，因此没有需要学习的参数，也不会耗尽位置。借助缩放技巧（NTK 感知插值、YaRN），在 8k 上下文训练的模型可以在推理时扩展至 128k，而准确率只会轻微下降。
 
 ```
 q_rotated = rotate(q, angle(pos))
@@ -72,40 +72,40 @@ k_rotated = rotate(k, angle(pos))
 score = q_rotated . k_rotated
 ```
 
-每个Llama,Mistral,Qwen,DeepSeek和Gemma都使用RoPE.Gemma2使用混合物 (大多数层上使用RoPE,其他层上使用本地滑动窗口).
+Llama、Mistral、Qwen、DeepSeek 与 Gemma 全都使用 RoPE。Gemma 2 采用混合方案：多数层使用 RoPE，其他层使用局部滑动窗口注意力。
 
-### 结3: 转移
+### 旋钮 3：SwiGLU
 
-GPT-2的MLP是`x -> gelu(xW1 + b1) -> (...)W2 + b2`. SwiGLU (Shazeer 2020) 将激活取代一个封闭产品:
+GPT-2 的 MLP 为 `x -> gelu(xW1 + b1) -> (...)W2 + b2`。SwiGLU（Shazeer，2020）把激活函数替换为门控乘积：
 
 ```
 SwiGLU(x) = (xW1) * sigmoid(xW1) * xV
 ```
 
-两个平行投影而不是一个,被Swish激活关闭.对每个参数的困难性具有实验性强度.Llama 2采用它,每个人都遵循它.MLP的隐藏尺寸通常设置以使参数总数与原始密集MLP相匹配:如果使用GPT-2`ff_dim = 4 * hidden`滑使用`ff_dim = (2/3) * 4 * hidden = 8/3 * hidden`现在,我们要去.
+它并行执行两个投影，再由 Swish 激活进行门控。实证表明，在参数量相同时，它能得到更好的困惑度。Llama 2 采用后，其他模型纷纷跟进。MLP 隐藏层大小通常设为让总参数量与原稠密 MLP 相同：若 GPT-2 使用 `ff_dim = 4 * hidden`，SwiGLU 就使用 `ff_dim = (2/3) * 4 * hidden = 8/3 * hidden`。
 
-### 节点4: 关注头部共享
+### 旋钮 4：注意力头共享
 
-使用GPT-2**Multi-Head Attention (MHA)**每个头都具有自己的Q,K,V投影.
+GPT-2 使用**多头注意力（MHA）**：每个头都有自己的 Q、K、V 投影。
 
-**Multi-Query Attention (MQA, Shazeer 2019)**通过数_heads,将KV缓存减小12x至32x,在典型模型上.在硬度基准上,精度略有下降.
+**多查询注意力（MQA，Shazeer，2019）**让所有头共享一组 K 和 V。KV 缓存会缩小 num_heads 倍，对典型模型而言就是缩小 12～32 倍，代价是困难基准上的准确率略有下降。
 
-**Grouped-Query Attention (GQA, Ainslie et al. 2023)**是中间线:Q头G组共享一个K和一个V. Llama 3 8B使用GQA,有32个Q头和8个KV头 (G=8),因此KV缓存缩小了4x对完全MHA.
+**分组查询注意力（GQA，Ainslie 等，2023）**取中间路线：G 组 Q 头各共享一组 K 与 V。Llama 3 8B 使用 32 个 Q 头、8 个 KV 头（G=8）的 GQA，因此 KV 缓存相对于完整 MHA 缩小 4 倍。
 
-**Multi-Head Latent Attention (MLA, DeepSeek 2024)**通过将K和V压缩到共享的低级隐形中,将它们投影到每头上.进一步减少KV缓存,同时保持每头表达性.
+**多头潜在注意力（MLA，DeepSeek，2024）**把 K 与 V 压缩到共享的低秩潜变量中，再为每个头向上投影。它在保留逐头表达能力的同时，进一步缩小 KV 缓存。DeepSeek-V2 与 V3 的长上下文性能依赖这一机制。
 
-| Scheme | KV Heads | KV Cache | Accuracy |
+| 方案 | KV 头 | KV 缓存 | 准确率 |
 |--------|----------|----------|----------|
-| MHA    | num_heads | full | best |
-| GQA    | num_groups (G < num_heads) | num_heads / G reduction | near-MHA |
-| MQA    | 1 | num_heads reduction | small hit |
-| MLA    | latent, per-head decompression | smaller than MQA | near-MHA |
+| MHA | num_heads | 完整 | 最佳 |
+| GQA | num_groups（G < num_heads） | 缩小 num_heads / G 倍 | 接近 MHA |
+| MQA | 1 | 缩小 num_heads 倍 | 略有损失 |
+| MLA | 潜变量、逐头解压缩 | 小于 MQA | 接近 MHA |
 
-对于超过13B参数的任何模型,GQA或MLA实际上是强制性的.
+对于约 13B 参数以上的任何模型，GQA 或 MLA 实际上都是必需的。在这种规模上使用完整 MHA，会造成 KV 缓存灾难。
 
-### 五节:专家组合
+### 旋钮 5：混合专家
 
-密集MLP为每个代币激活所有参数.一个MoE MLP每个区块都有K专家,一个路由器选择每个代币的顶级k专家 (通常是顶级-2).只有这些专家的权重才能看到该代币的前进通过.
+稠密 MLP 会为每个词元激活全部参数。MoE MLP 在每个块中拥有 K 个专家，并由路由器为每个词元选择 top-k 个专家（通常为 top-2）。只有被选专家的权重会为该词元执行前向传播。
 
 ```
 router_logits = xW_r
@@ -113,7 +113,7 @@ indices, weights = top_k(router_logits, k=2)
 output = sum_i weights[i] * expert[indices[i]](x)
 ```
 
-吸引力:你可以拥有64位7B尺寸的专家 (因此总参数数量巨大),同时只运行每代币的2个 (因此每代币计算匹配密集的7B模型).Mixtral 8x7B总参数为47B,但每代币只激活13B.DeepSeek-V3总参数为671B,但每代币只激活37B.
+吸引力在于：你可以拥有 64 个各为 7B 大小的专家（因此总参数量极大），每个词元却只运行其中 2 个（因此逐词元计算量与稠密 7B 模型相当）。Mixtral 8x7B 总参数量为 47B，每个词元只激活 13B；DeepSeek-V3 总参数量为 671B，每个词元只激活 37B。
 
 ```mermaid
 graph LR
@@ -132,34 +132,34 @@ graph LR
     style R fill:#1a1a2e,stroke:#e94560,color:#fff
 ```
 
-优点:相同的计算,更多参数,更好的容量. 缺点:专家内存仍然必须住在某个地方 (因此服务需要比密集的相当数量更多的VRAM),负载平衡路由器很难,并调整路由器在调整过程中是其自己的研究领域.
+优点是计算量相同、参数更多、容量更强。缺点是专家权重仍必须存放在某处（所以服务所需显存高于计算量相当的稠密模型），路由器负载均衡很困难，而且在对齐期间微调路由器本身就是一个研究课题。
 
-### 按6: 预规停留
+### 旋钮 6：预归一化继续保留
 
-变压器原始的层规范在每个子层之后应用.自GPT-2以来的每一个开放模型都把它放在每个子层之前.预规格在深度训练非常容易.没有什么可争辩的.
+原始 Transformer 在每个子层之后应用层归一化。GPT-2 以来的每个开放模型都把它放在每个子层*之前*。预归一化在深层模型中严格来说更容易训练，无须争论。
 
-### 模型以模型的差异
+### 逐模型差异
 
-这里是制造这一切混凝土的表.
+下面这张表把所有差异具体列出。
 
-| Model | Year | Total Params | Active Params | Norm | Activation | Position | Attention | MoE | Context |
+| 模型 | 年份 | 总参数量 | 活跃参数量 | 归一化 | 激活函数 | 位置编码 | 注意力 | MoE | 上下文 |
 |-------|------|-------------|---------------|------|-----------|----------|-----------|-----|---------|
-| GPT-2 Small | 2019 | 124M | 124M | LayerNorm | GELU | Learned | MHA (12 heads) | no | 1k |
-| Llama 3 8B | 2024 | 8B | 8B | RMSNorm | SwiGLU | RoPE | GQA (32/8) | no | 128k |
-| Llama 3 70B | 2024 | 70B | 70B | RMSNorm | SwiGLU | RoPE | GQA (64/8) | no | 128k |
-| Llama 3 405B | 2024 | 405B | 405B | RMSNorm | SwiGLU | RoPE | GQA (128/16) | no | 128k |
-| Mistral 7B | 2023 | 7.2B | 7.2B | RMSNorm | SwiGLU | RoPE | GQA | no | 32k |
-| Mixtral 8x7B | 2023 | 47B | 13B | RMSNorm | SwiGLU | RoPE | GQA | yes (8 experts, top-2) | 32k |
-| Gemma 2 9B | 2024 | 9B | 9B | RMSNorm (pre+post) | GeGLU | RoPE + sliding | GQA | no | 8k |
-| Qwen 2.5 72B | 2024 | 72B | 72B | RMSNorm | SwiGLU | RoPE (YaRN) | GQA (64/8) | no | 128k |
-| DeepSeek V2 236B | 2024 | 236B | 21B | RMSNorm | SwiGLU | RoPE | MLA | yes (160 experts, top-6) | 128k |
-| DeepSeek V3 | 2024 | 671B | 37B | RMSNorm | SwiGLU | RoPE | MLA | yes (256 experts, top-8) | 128k |
+| GPT-2 Small | 2019 | 124M | 124M | LayerNorm | GELU | 学习式 | MHA（12 个头） | 否 | 1k |
+| Llama 3 8B | 2024 | 8B | 8B | RMSNorm | SwiGLU | RoPE | GQA（32/8） | 否 | 128k |
+| Llama 3 70B | 2024 | 70B | 70B | RMSNorm | SwiGLU | RoPE | GQA（64/8） | 否 | 128k |
+| Llama 3 405B | 2024 | 405B | 405B | RMSNorm | SwiGLU | RoPE | GQA（128/16） | 否 | 128k |
+| Mistral 7B | 2023 | 7.2B | 7.2B | RMSNorm | SwiGLU | RoPE | GQA | 否 | 32k |
+| Mixtral 8x7B | 2023 | 47B | 13B | RMSNorm | SwiGLU | RoPE | GQA | 是（8 个专家，top-2） | 32k |
+| Gemma 2 9B | 2024 | 9B | 9B | RMSNorm（前置+后置） | GeGLU | RoPE + 滑动窗口 | GQA | 否 | 8k |
+| Qwen 2.5 72B | 2024 | 72B | 72B | RMSNorm | SwiGLU | RoPE（YaRN） | GQA（64/8） | 否 | 128k |
+| DeepSeek V2 236B | 2024 | 236B | 21B | RMSNorm | SwiGLU | RoPE | MLA | 是（160 个专家，top-6） | 128k |
+| DeepSeek V3 | 2024 | 671B | 37B | RMSNorm | SwiGLU | RoPE | MLA | 是（256 个专家，top-8） | 128k |
 
-扫描列.RMSNorm是通用的.SwiGLU或其GeGLU表兄弟是通用的.RoPE是通用的.GQA是通用的7B以上,除非被MLA取代.MoE是顶端的区分符.
+逐列查看即可发现：RMSNorm 无处不在；SwiGLU 或近亲 GeGLU 无处不在；RoPE 无处不在；7B 以上模型普遍采用 GQA，除非用 MLA 取代它；在顶级规模上，MoE 才是主要差异。
 
-### 阅读一个config.json
+### 阅读 config.json
 
-号3 8B配置:
+Llama 3 8B 的配置如下：
 
 ```
 {
@@ -175,58 +175,58 @@ graph LR
 }
 ```
 
-每个领域都与你已经实施的东西相匹配.
+每个字段都对应你已经实现过的概念。
 
-- `hidden_size`嵌入式尺寸
-- `intermediate_size`缩的数据是:
-- `num_hidden_layers`积深度
-- `num_attention_heads`头.
-- `num_key_value_heads`:KV头 (GQA).
-- `max_position_embeddings`培训背景长度.
-- `rope_theta`基频率:RoPE. Meta将其从默认10k到500k进行长文本外分.
-- `rms_norm_eps`数字稳定性
-- `vocab_size`标记
+- `hidden_size`：嵌入维度。
+- `intermediate_size`：MLP 隐藏层大小（是 hidden 的 3.5 倍——由 SwiGLU 数学决定）。
+- `num_hidden_layers`：堆栈深度。
+- `num_attention_heads`：Q 头数量。
+- `num_key_value_heads`：KV 头数量（GQA）。
+- `max_position_embeddings`：训练上下文长度。
+- `rope_theta`：RoPE 基频。Meta 为实现长上下文外推，将其从默认的 10k 提高到 500k。
+- `rms_norm_eps`：数值稳定项。
+- `vocab_size`：词元数量。
 
-通过这些单独计算总参数,KV缓存和最高激活内存.`code/main.py`对于准确的公式.
+只根据这些字段，就能计算总参数量、KV 缓存和峰值激活内存。确切公式见 `code/main.py`。
 
 ### 激活内存预算
 
-激活在几十亿参数以上的训练记忆中占主导地位.
+模型超过数十亿参数后，激活值会主导训练内存。预训练（使用梯度检查点）的大致计算规则为：
 
 ```
 activation_mem ~ batch_size * seq_len * hidden_size * num_layers * bytes_per_element
 ```
 
-对于Llama 3 8B,第1批,次数8192,BF16,32层,隐藏4096:大约8GB只用于检查点的激活,40GB没有.这就是为什么闪光注意力和环节注意力重要--他们重写注意力计算,使激活适合.
+对于批大小为 1、序列长度为 8192、隐藏维度为 4096、共 32 层且使用 BF16 的 Llama 3 8B：即使启用检查点，仅激活值也约占 8 GB；不启用时则为 40 GB。这正是 Flash Attention 与环形注意力很重要的原因——它们会重写注意力计算，使激活值能够装入内存。
 
-### 库存预算
+### KV 缓存预算
 
-为了在最大的背景下推断:
+最大上下文推理时：
 
 ```
 kv_cache = 2 * num_layers * num_kv_heads * head_dim * max_seq_len * bytes_per_element
 ```
 
-号 3 8B 在 128k 语境中,BF16,头_dim =隐藏 / num_heads = 128:
-`2 * 32 * 8 * 128 * 131072 * 2 = 17.2 GB`按顺序进行.
+Llama 3 8B 在 128k 上下文、BF16、head_dim = hidden / num_heads = 128 时：
+`2 * 32 * 8 * 128 * 131072 * 2 = 17.2 GB`，这是每条序列的占用。
 
-8B重量为16GB,BF16中.单个128k序列的KV缓存量比重量大.这是驱动GQA,MLA和KV缓存量化研究的内存压力.
+8B 权重在 BF16 下占 16 GB。单条 128k 序列的 KV 缓存比权重还大。这种内存压力推动了 GQA、MLA 与 KV 缓存量化研究。
 
-### 每个模特都会赢得
+### 每种模型适合什么场景
 
-- **Single 80GB GPU, no MoE**马3 8B,米斯特拉7B,Gemma2 9B. 很容易使用,宽的工具.
-- **Single node (8x80GB), big capacity**门2.572B. 密度最大的开放能力.
-- **Biggest open capability, accept MoE complexity**果:深度搜索V3,Mixtral 8x22B. 每个活跃的FLOP最好的功能.
-- **Long-context needs**: Llama 3 (128k 具有ROPE扩展),深度搜索 (MLA优势).
-- **Low-latency serving**:Gemma 2 9B (滑窗切断长文本计算).
+- **单张 80GB GPU，不使用 MoE：** Llama 3 8B、Mistral 7B、Gemma 2 9B。易于服务，工具生态广泛。
+- **单节点（8×80GB），需要大容量：** Llama 3 70B、Qwen 2.5 72B。能力最强的开放稠密模型。
+- **追求最强开放能力，接受 MoE 复杂性：** DeepSeek V3、Mixtral 8x22B。每活跃 FLOP 对应的能力最佳。
+- **需要长上下文：** Llama 3（通过 RoPE 缩放达到 128k）、DeepSeek（MLA 优势）。
+- **低延迟服务：** Gemma 2 9B（滑动窗口降低长上下文计算量）。
 
 ```figure
 rmsnorm-vs-layernorm
 ```
 
-## 建立它
+## 动手构建
 
-课程代码是计算器. 给出任何 config.json,它会按组件打印参数数,KV缓存在最大的背景下,SwiGLU MLP比率,以及对架构的简短判决 (密度 / GQA / MLA / MoE).
+本课代码是一个计算器。给定任意 config.json，它会打印各组件参数量、最大上下文下的 KV 缓存、SwiGLU MLP 比率，以及对架构的简短判断（稠密/GQA/MLA/MoE）。
 
 ```python
 config = {
@@ -237,54 +237,54 @@ config = {
 }
 ```
 
-脚本将建筑领域按字段进行行程,计算嵌入,注意 (GQA减小),MLP (SwiGLU扩展),层规范和头.然后计算KV缓存在指定的文本长度上并打印总结.
+脚本逐字段遍历架构，计算嵌入、注意力（包含 GQA 缩减）、MLP（包含 SwiGLU 扩展）、层归一化与输出头的参数量。随后，它按配置中的上下文长度计算 KV 缓存并打印摘要。
 
-看到`code/main.py`执行.
+实现见 `code/main.py`。
 
-## 用它
+## 学以致用
 
-运行计算器在Llama 3 8B,Mistral 7B,Mixtral 8x7B和DeepSeek V3配置中. 进行参数分解的比较. 注意MoE模型的总参数数数量超过密集型号,但活性参数数数量通常较小. 注意DeepSeek V3的KV缓存量比Llama 3 405B小,尽管总参数更大 - 即是MLA在操作中.
+用脚本计算其中内置的 Llama 3 8B、Mistral 7B、Mixtral 8x7B 与 DeepSeek V3 配置，并比较参数构成。注意：MoE 模型的总参数量远大于稠密模型，活跃参数量却往往更少。还应观察到，DeepSeek V3 的总参数量虽高于 Llama 3 405B，KV 缓存却更小——这就是 MLA 的作用。
 
-然后将本地任何模型的配置插入,阅读摘要,
+然后填入你本地任意模型的配置，阅读摘要，并判断它能否装入 GPU。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-open-model-picker.md`鉴于部署目标 (GPU类型,VRAM,文本长度,延迟预算) 和任务配置文件 (聊天,代码,推理,长文本),它建议一个开放模型,从第11课中进行量化方案,以及从第12课中进行推断堆,明确推理六个架构按.
+本课会生成 `outputs/skill-open-model-picker.md`。给定部署目标（GPU 类型、显存、上下文长度、延迟预算）与任务特征（聊天、代码、推理、长上下文），它会推荐开放模型、第 11 课的量化方案和第 12 课的推理技术栈，并明确说明六个架构旋钮上的取舍。
 
-## 运动
+## 练习
 
-1. 阅读 HuggingFace 的 Qwen 2.5 72B 配置.从零开始计算总参数.与 HF 报告值进行比较,并确定任何三角形来自哪里 (头部缩,KV 分享因子等).
+1. 从 HuggingFace 读取 Qwen 2.5 72B 的配置，从零计算总参数量。与 Hugging Face 报告的数值比较，并找出差异来源（头维度取整、KV 共享因子等）。
 
-2. 根据 DeepSeek V3 的数据,使用256名专家,并提供8位专家的路由.计算活跃专家与总专家的比例,并与Mixtral 8x7B的8位专家的2位专家进行比较.从稀疏 (25%) 到更密集稀疏 (3%) 的转变意味着每 FLOP的容量是什么?
+2. DeepSeek V3 使用 256 个专家，每个词元路由到 top-8。计算活跃专家数与专家总数的比例，再与 Mixtral 8x7B 的 8 选 2 比较。从稀疏度为 25% 变为稀疏度为 3%，对每 FLOP 容量意味着什么？
 
-3. 在 FP8 和 BF16 中计算 Llama 3 405B 的 KV缓存在 128k 语境中.在 FP8 中,它是 BF16 号码的一半.在一个 8xH100 节点上,你可以提供多少个并行序列 (每一个 80GB = 640GB 总量,减减重内存)?
+3. 计算 Llama 3 405B 在 128k 上下文下分别使用 FP8 与 BF16 时的 KV 缓存大小。FP8 是 BF16 的一半。单个 8×H100 节点（每张 80GB，共 640GB）扣除权重内存后，可以并行服务多少条序列？
 
-4. 基玛2交替全注意和滑动窗口注意层.写出KV缓存的数学,当一半层使用4096代币滑动窗口而不是全文本时.这在8k总文本上节省了多少内存?
+4. Gemma 2 交替使用完整注意力层与滑动窗口注意力层。写出一半层使用 4096 词元滑动窗口、而非完整上下文时的 KV 缓存计算公式。在总上下文为 8k 时能节省多少内存？
 
-5. 找一个最近发布的边界开放模型,这个课程写完后. 确定它选择的六个按中的哪个,以及它是否推出了第七个按. 新的建筑设计开始时,课程将会感到过时 - - 目标是更新你的表格,而不需要重建你的心理模型.
+5. 找一个在本课写成后发布的新前沿开放模型。识别它选择了六个旋钮中的哪些，以及是否引入了第七个旋钮。新架构一发布，课程就会显得过时——目标是更新你的表格，而不是重建整套心智模型。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| RMSNorm | "LayerNorm without the mean" | Normalize by root mean square only, with a learned scale — cheaper and comparable to LayerNorm |
-| RoPE | "Rotary positions" | Rotate each Q and K vector in 2D pairs by an angle that depends on position — extrapolates beyond training length with scaling tricks |
-| SwiGLU | "The new MLP activation" | Gated linear unit with Swish: `(xW1) * sigmoid(xW1) * xV` — standard in every 2024+ open model |
-| GQA | "Middle ground attention" | Grouped-Query Attention: G groups of Q heads share one K and one V head — shrinks KV cache without MQA's accuracy hit |
-| MLA | "DeepSeek's attention" | Multi-Head Latent Attention: compress K/V into a shared low-rank latent, decompress per head — smallest KV cache for large models |
-| MoE | "Sparse experts" | Mixture of Experts: N MLPs per block, router picks top-k per token — huge total params, small active params |
-| Top-k routing | "Pick k experts per token" | The router computes a score per expert and activates the k highest — typical k is 2 (Mixtral) to 8 (DeepSeek) |
-| YaRN | "Stretch RoPE" | Yet another RoPE extension — interpolates rotary angles to extend context from 8k to 128k+ at inference time |
-| Sliding-window attention | "Don't attend to everything" | Each token attends only to the last W tokens — caps attention cost at O(W) per token, used in Gemma 2 and early Mistral |
-| Active params | "What runs per token" | For MoE models, the parameter count that sees a forward pass per token (much smaller than total params) — governs per-token FLOPs |
+| RMSNorm | “不减均值的 LayerNorm” | 只按均方根归一化，并使用可学习缩放——成本更低，效果与 LayerNorm 相当 |
+| RoPE | “旋转位置” | 根据位置决定的角度，将每个 Q、K 向量按二维分组旋转——通过缩放技巧可以外推到训练长度之外 |
+| SwiGLU | “新的 MLP 激活函数” | 使用 Swish 的门控线性单元：`(xW1) * sigmoid(xW1) * xV`——所有 2024 年之后开放模型的标准配置 |
+| GQA | “折中的注意力” | 分组查询注意力：G 组 Q 头共享一个 K 头与一个 V 头——缩小 KV 缓存，却不承受 MQA 的准确率损失 |
+| MLA | “DeepSeek 的注意力” | 多头潜在注意力：把 K/V 压缩为共享低秩潜变量，再为每个头解压缩——大型模型中最小的 KV 缓存 |
+| MoE | “稀疏专家” | 混合专家：每个块有 N 个 MLP，路由器为每个词元选择 top-k——总参数量巨大，活跃参数量较小 |
+| Top-k 路由 | “每个词元选择 k 个专家” | 路由器为每个专家计算分数，并激活得分最高的 k 个——典型 k 从 2（Mixtral）到 8（DeepSeek） |
+| YaRN | “拉伸 RoPE” | Yet another RoPE extension——插值旋转角度，在推理时把上下文从 8k 扩展至 128k 以上 |
+| 滑动窗口注意力 | “不要关注所有内容” | 每个词元只关注最近 W 个词元——将逐词元注意力成本限制为 O(W)，Gemma 2 与早期 Mistral 均采用 |
+| 活跃参数 | “每个词元实际运行的参数” | 对 MoE 模型而言，每个词元执行前向传播所涉及的参数量（远小于总参数量）——决定逐词元 FLOP |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Dubey et al., 2024 -- "The Llama 3 Herd of Models"](https://arxiv.org/abs/2407.21783)-- 密集的Llama 3家族的建筑和培训参考
-- [DeepSeek-AI, 2024 -- "DeepSeek-V3 Technical Report"](https://arxiv.org/abs/2412.19437)-- MLA加上辅助减损免负载平衡加上671B MoE
-- [Jiang et al., 2024 -- "Mixtral of Experts"](https://arxiv.org/abs/2401.04088)-- 开放式的"MoE"模型文件
-- [Su et al., 2021 -- "RoFormer: Enhanced Transformer with Rotary Position Embedding"](https://arxiv.org/abs/2104.09864)-- RoPE纸
-- [Shazeer, 2020 -- "GLU Variants Improve Transformer"](https://arxiv.org/abs/2002.05202),,和朋友
-- [Ainslie et al., 2023 -- "GQA: Training Generalized Multi-Query Transformer Models"](https://arxiv.org/abs/2305.13245)-- 关于GQA的论文
-- [Gemma 2 Team, 2024 -- "Gemma 2: Improving Open Language Models at a Practical Size"](https://arxiv.org/abs/2408.00118)--混合式全+滑动注意力,前+后标准
-- [Qwen Team, 2024 -- "Qwen 2.5 Technical Report"](https://arxiv.org/abs/2412.15115)-- YaRN 背景扩展和长文本培训配方
+- [Dubey 等，2024——“Llama 3 模型群”](https://arxiv.org/abs/2407.21783)——稠密 Llama 3 家族的架构与训练参考
+- [DeepSeek-AI，2024——“DeepSeek-V3 技术报告”](https://arxiv.org/abs/2412.19437)——MLA、无辅助损失负载均衡与 671B MoE
+- [Jiang 等，2024——“Mixtral of Experts”](https://arxiv.org/abs/2401.04088)——典型开放 MoE 模型论文
+- [Su 等，2021——“RoFormer：使用旋转位置嵌入增强 Transformer”](https://arxiv.org/abs/2104.09864)——RoPE 论文
+- [Shazeer，2020——“GLU 变体改进 Transformer”](https://arxiv.org/abs/2002.05202)——SwiGLU、GeGLU 及相关变体
+- [Ainslie 等，2023——“GQA：训练广义多查询 Transformer 模型”](https://arxiv.org/abs/2305.13245)——GQA 论文
+- [Gemma 2 团队，2024——“Gemma 2：改进实用规模的开放语言模型”](https://arxiv.org/abs/2408.00118)——混合完整/滑动注意力、前置/后置归一化
+- [Qwen 团队，2024——“Qwen 2.5 技术报告”](https://arxiv.org/abs/2412.15115)——YaRN 上下文扩展与长上下文训练方案
