@@ -1,34 +1,34 @@
-# 标志和位置嵌入
+# 词元嵌入与位置嵌入
 
-> 模型需要向量.两个查找表坐在他们之间,选择位置的一个塑造模型可以学习什么.
+> Id 是整数，模型真正要处理的是向量。两张 lookup table 夹在这两者之间，而位置编码表的选型会直接影响模型能学到什么。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 04 lessons, Phase 07 transformer lessons, Lessons 30 and 31 of this phase
-**Time:** ~90 minutes
+**Prerequisites:** 第 04 阶段的课程、第 07 阶段的 Transformer 课程，以及本阶段第 30 和 31 课
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 建立一个嵌入符号的搜索表,将词汇标识映射到密集向量.
-- 建立一个按位置索引的学习位置嵌入式查找表.
-- 建立一个固定的鼻状位置嵌入,按位置索引,没有参数.
-- 组合代币和定位嵌入式为变压器块的单个输入.
-- 长度概括和参数数数的对比学和阴影形嵌入式.
+- 构建一个 token-embedding lookup table，把 vocabulary id 映射成 dense vector。
+- 构建一个按位置索引的 learned positional-embedding lookup table。
+- 构建一个按位置索引、且不含参数的 fixed sinusoidal positional embedding。
+- 将 token embedding 与 positional embedding 组合成 transformer block 的统一输入。
+- 对比 learned embedding 与 sinusoidal embedding 在长度泛化和参数量上的差异。
 
 ```figure
 cc-embedding-lookup
 ```
 
-## 框架
+## 基本框架
 
-模型与代币ID的第一个接触是代币嵌入矩阵中的一行查找.矩阵每个词汇ID有一个行,每个模型维度有一个列.查找返回一个向量,其余模型将其视为代码的意义.后方向更新了前进传递中使用的行列.在训练中,这些行列的几何学学会在方向中编码相似性.
+模型第一次接触 token id，是在 token-embedding matrix 中做一次按行查找。这个矩阵的每一行对应一个 vocabulary id，每一列对应一个 model dimension。查找结果是一个向量，后续网络都会把它当作该 id 的语义表示。反向传播只会更新本次 forward pass 真正用到的那些行。随着训练推进，这些行向量的几何结构会逐渐学会用方向来表达相似性。
 
-只有代币身份证就没有序列. 模型需要第二个信号,告诉它位置1与位置17不同. 对于该信号的两个主要选择是学习的位置嵌入 (第二个查找表,每位置一行) 和固定的鼻状位置嵌入 (没有参数的数学公式). 这种选择有后果. 学习表是一个参数,由模型训练的最大文本长度来界定. 理论上,一个阴影形表是没有参数的,公式扩展到任何位置,但这门课程是`SinusoidalPositionalEmbedding`预计一个固定表在`max_context_length`其他`forward`模型可能仍然在经历训练长度,即使表是足够大的以索引.
+但 token id 本身不携带顺序。模型还需要第二个信号来告诉它，位置 1 和位置 17 并不相同。这个信号最常见的两种做法是 learned positional embedding，也就是第二张 lookup table，每个位置一行；以及 fixed sinusoidal positional embedding，也就是一个不含参数的数学公式。这个选择会带来实际后果。learned table 是参数的一部分，因此受训练时最大上下文长度限制。sinusoidal table 理论上不含参数，公式也可以扩展到任意位置；但本课的 `SinusoidalPositionalEmbedding` 会在 `max_context_length` 处预先计算一张固定表，并且它的 `forward` 在超出这个边界时会抛错，所以在这里两种模块都会强制遵守最大上下文长度。即便表本身足够大，模型在超出训练长度之后仍然可能表现不稳。
 
-这一课构建了两者,并将它们构成一个单个输入符号,
+这一课会同时构建这两种位置编码，并把它们和 token embedding 组合成下一课 attention block 的输入。
 
-## 形状合同
+## 形状约定
 
-嵌入阶段的输入是一个批量形状的标志 ID `(B, T)`输出是形状子`(B, T, D)`在哪里`D`任何批量元素的背景长度都相同`T`每个位置都有相同的向量尺寸`D`现在,我们要去.
+embedding 阶段的输入，是一个形状为 `(B, T)` 的 token id batch。输出是形状为 `(B, T, D)` 的 tensor，其中 `D` 是模型维度。batch 里的每个样本都具有相同的上下文长度 `T`，每个位置的向量维度也都统一为 `D`。
 
 ```mermaid
 flowchart LR
@@ -42,25 +42,25 @@ flowchart LR
     G --> H["(B, T, D) input to attention"]
 ```
 
-总结是总和,而不是连接.`D`通过网络的恒定,使模型根据每个特征决定符号意义或位置是否在每个层中占主导地位.
+组合方式是求和，而不是拼接。求和可以让整个网络中的 `D` 保持不变，同时允许模型按特征维度自行决定：在某一层里，到底是 token 语义还是位置信号占主导。
 
-## 符号嵌入矩阵
+## 词元嵌入矩阵
 
-符号嵌入是形状参数子`(V, D)`在哪里`V`字母是字体的尺寸.`nn.Embedding(V, D)`在 init 中,输入是从小的高斯式中得到的,传统上是平均零和标准偏差大约`0.02`对于变压器尺度模型来说,精确的 init 比在运行中保持一致的更少.
+token embedding 是一个形状为 `(V, D)` 的参数 tensor，其中 `V` 是词表大小。PyTorch 里通常直接写成 `nn.Embedding(V, D)`。初始化时，参数一般来自一个较小的 Gaussian 分布，传统做法是均值为零、标准差约为 `0.02`，这在 transformer 规模模型里很常见。具体数值没有“唯一正确答案”，但跨运行保持一致非常重要。
 
-向前传递是单次索引操作.`(B, T)` int64 个体`(B, T, D)`后行仅积累了触及前行的行列的梯度.两行从未出现在批量中得到的梯度是零的.
+forward pass 本质上就是一次索引操作。PyTorch 会把 `(B, T)` 的 int64 id 映射成 `(B, T, D)` 的浮点向量，方式是按行 gather。backward pass 只会把梯度累计到本次 forward 真正访问过的那些行。没有出现在当前 batch 中的行，在这一步拿到的梯度就是零。
 
-细节.模型末端的代币嵌入和输出投影通常共享重量 (重量绑定).当这种情况发生时,每次倒退的传递都通过输出侧触及嵌入的每一行.这里的课程都将它们作为单独的模块暴露出来,但同一矩阵可以在完整模型中发挥两个作用.
+还有一个容易被忽略的细节：token embedding 和模型末端的 output projection 往往会共享权重，也就是 weight tying。一旦这么做，每次 backward pass 都会因为输出端的梯度而触及 embedding matrix 的每一行。本课为了教学清晰，把它们拆成独立模块；但在完整模型中，同一张矩阵完全可以同时承担这两个角色。
 
-## 学习的位置嵌入
+## 学习式位置嵌入
 
-学习的位置嵌入是第二个`nn.Embedding`形状`(max_context_length, D)`搜索按位置ID键进行`0, 1, 2, ..., T-1`发射向前传输,将该位置向量传输到批量维度.
+learned positional embedding 是另一张 `nn.Embedding`，形状为 `(max_context_length, D)`。它的 lookup key 是位置 id，也就是 `0, 1, 2, ..., T-1`。forward pass 会把这些位置向量沿 batch 维度广播出去。
 
-学习表的缺点是,它不能在位置上查询.`T`如果模型只训练到位置`T-1`仅使用这种方案的生产解码器模型将最大的文本长度放入了架构中,拒绝处理更长的输入.
+它的缺点也很直接：如果模型想查询位置 `T`，但训练其实只覆盖到位置 `T-1`，那这一行根本就不存在。现实中，采用这套方案的 decoder-only 模型通常会把最大上下文长度直接烘焙进架构里，并且拒绝处理超长输入。
 
-## 状位置嵌入
+## 正弦位置嵌入
 
-位置向向量函数.`p`功能`i`产品
+sinusoidal positional embedding 是一个从位置到向量的函数。位置 `p` 与特征维度 `i` 会生成
 
 ```python
 angle = p / (10000 ** (2 * (i // 2) / D))
@@ -68,15 +68,15 @@ emb[p, 2k]     = sin(angle)
 emb[p, 2k + 1] = cos(angle)
 ```
 
-函数没有参数.每个位置都有一个独特的向量.波长在各个特征维度之间几何变化,因此较低维度编码粗大位置,较高维度编码细位置.
+这个函数没有参数。每个位置都会对应一个唯一向量。不同特征维度上的波长按几何级数变化，所以低维特征编码的是粗粒度位置，高维特征编码的是细粒度位置。
 
-选择后的财产`sin`其他`cos`总体而言,在位置上的向量`p + k`是位置上的向量线性函数`p`这使得注意层能够学习相对位置偏移的简单途径.模型不需要单独的参数来表达"看五个代币".
+同时选用 `sin` 和 `cos` 的一个重要性质是：位置 `p + k` 处的向量，可以表示为位置 `p` 处向量的线性函数。这让 attention layer 更容易学出相对位置偏移。模型不需要额外再学一个参数去表达“向前看五个 token”。
 
-课程计算了整体阴形表,在构建时,并将它指数列出在前面时间.
+本课的实现会在构造阶段一次性算完整张 sinusoidal table，forward 时只负责索引。
 
-## 组成
+## 组合
 
-输入管道排序上做了三个事情.阅读代币ID,查找代币向量,添加位置向量,返回总数.
+这个输入管道的顺序很简单，只有三步：读取 token id，查 token vector，叠加 position vector，然后返回二者之和。
 
 ```mermaid
 sequenceDiagram
@@ -91,24 +91,24 @@ sequenceDiagram
     Layer->>Caller: (B, T, D)
 ```
 
-总体阶段的广播重复了`(T, D)`随着波动的尺寸,PyTorch自动处理,因为位置子有形状.`(1, T, D)`在不挤后.
+在求和步骤里，broadcast 会把 `(T, D)` 的位置张量沿 batch 维度复制展开。PyTorch 会自动处理这件事，因为 positional tensor 在 unsqueeze 之后的形状是 `(1, T, D)`。
 
 ## 对比分析
 
-课程将两种变体都运行在同一输入上,
+本课会在同一组输入上同时运行这两种方案，并打印两个诊断量。
 
-首先是参数数. 学习的变体添加了`max_context_length * D`符号嵌入的参数上方. 阴影形变体增加了零.
+第一个是参数量。learned 版本会在 token embedding 之外额外引入 `max_context_length * D` 个参数。sinusoidal 版本则不会新增任何参数。
 
-第二个是,在邻近位置的嵌入式之间的共数相似性. 由于功能是连续的,而突形变体具有平滑且可预测的衰变. 在初始化时,学习的变体几乎随机相似,因为行列是独立地绘制的. 训练后,学习的变体通常会发展出类似的光滑结构,但它必须从数据中发现这种结构.
+第二个是相邻位置 embedding 之间的 cosine similarity。sinusoidal 版本因为底层函数连续，所以这种相似度会呈现平滑、可预期的衰减。learned 版本在初始化时，相邻行之间通常接近随机相似，因为每一行是独立采样出来的。训练之后，learned 版本往往也会长出类似的平滑结构，但那是它通过数据自己学出来的，不是公式天然保证的。
 
-## 这一课不做什么
+## 本课不做什么
 
-它不构建旋转位置编码 (RoPE) 或AliBi.这些是生产变压器的现代选择.它们都遵循如本文嵌入式一样的形状合约 (应用位置依赖的变化到形状向量`(B, T, D)`接下来的课程构建了注意力区块,一个可选的扩展是将旋转折叠到查询键投影中.
+这节课不会实现 rotary positional encoding（RoPE）或 AliBi。它们才是现代生产级 transformer 更常见的做法。它们与本课 embedding 的 shape contract 一致，也就是都会对形状为 `(B, T, D)` 的向量施加与位置有关的变换；但真正发生的位置是在 attention projection 阶段，而不是输入端。下一课会构建 attention block，其中一个可选扩展就是把 rotary 折叠到 query-key projection 里。
 
-训练需要一个损失,需要一个模型输出,需要注意力和一个LM头.这是下一个课程,然后一个.
+这节课也不会真正训练 embedding。训练需要 loss，loss 需要模型输出，而模型输出又需要 attention 和 LM head。这正是下一课和再下一课要接上的部分。
 
-## 如何读取代码
+## 如何阅读代码
 
-`main.py`定义了三个模块.`TokenEmbedding`包裹`nn.Embedding(V, D)`现在,我们要去.`LearnedPositionalEmbedding`包裹`nn.Embedding(L, D)`现在,我们要去.`SinusoidalPositionalEmbedding`预计表,并将其作为缓冲器.`EmbeddingComposer`图表下面的示范图印制了形状,参数数和邻居位置相似性诊断.`code/tests/test_embeddings.py`形,广播行为,参数数量和鼻状公式.
+`main.py` 定义了三个模块。`TokenEmbedding` 包装 `nn.Embedding(V, D)`。`LearnedPositionalEmbedding` 包装 `nn.Embedding(L, D)`。`SinusoidalPositionalEmbedding` 会预计算整张表，并把它注册成 buffer。`EmbeddingComposer` 负责把 token embedding 和 positional embedding 接在一起。文件底部的 demo 会打印 shape、parameter count，以及相邻位置相似度诊断。`code/tests/test_embeddings.py` 会钉住 shape、broadcast 行为、参数量和 sinusoidal 公式。
 
-运行演示,然后更改模型尺寸.`D`通过 64 个到 32 个,观察阴道波长带的变化.
+先运行 demo。然后把模型维度 `D` 从 64 改成 32，观察 sinusoidal wavelength bands 会怎么变化。
