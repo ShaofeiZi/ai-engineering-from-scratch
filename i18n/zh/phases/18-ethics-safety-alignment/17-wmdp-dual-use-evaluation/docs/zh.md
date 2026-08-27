@@ -1,111 +1,111 @@
-# 双重利用能力评估
+# WMDP 与双重用途能力评估
 
-> 李等",WMDP基准:通过不学习测量和减少恶意使用" (ICML 2024, arXiv:2403.03218). 4,157个多选题涉及生物安全 (1,520),网络安全 (2,225),化学 (412). 问题在"黄区"附近的知识支持区内,通过多专家审查和ITAR/EAR法律合规来过. 双重目的:代理评估双重用途能力和脱学习基准 (伴随式RMU方法降低了WMDP性能,同时保持了一般能力). 2024-2025场地叙述:早期的OpenAI/人类2024评估报告了"轻微升级"在互联网搜索上;到2025年4月,OpenAI的准备框架v2表示,模型"正处于帮助新手创造已知的生物威胁的峰".人类生物武器获取试验显示了2.5倍升级,不足以排除ASL-3.
+> Li 等人的《The WMDP Benchmark: Measuring and Reducing Malicious Use With Unlearning》（ICML 2024，arXiv:2403.03218）包含 4,157 道多项选择题，覆盖生物安全（1,520 道）、网络安全（2,225 道）和化学（412 道）。问题位于“黄色区域”——涉及邻近的赋能知识，并经过多位专家审查和 ITAR / EAR 法律合规筛选。它有双重用途：既是双重用途能力的代理评估，也是遗忘学习基准（配套的 RMU 方法会在保留通用能力的同时降低 WMDP 表现）。2024–2025 年的领域叙事发生了变化：OpenAI / Anthropic 在 2024 年的早期评估报告称，相比互联网搜索只有“轻微提升”；到 2025 年 4 月，OpenAI 的 Preparedness Framework v2 已表示，模型“即将能够切实帮助新手制造已知生物威胁”。Anthropic 的生物武器获取试验显示能力提升 2.53 倍，尚不足以排除 ASL-3。
 
-**Type:** Learn
-**Languages:** Python (stdlib, WMDP-shaped uplift evaluation harness)
-**Prerequisites:** Phase 18 · 16 (red-team tooling), Phase 14 (agent engineering)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库，WMDP 形态的能力提升评估工具）
+**Prerequisites:** 阶段 18 · 16（红队工具）、阶段 14（智能体工程）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 描述WMDP的三个域,问题数量和"黄区"过标准.
-- 解释RMU以及为什么WMDP既是评估,也是不学习的基准.
-- 描述2024-2025年的升起叙述:"轻度升起" -> "在峰" -> "不够排除ASL-3".
-- 区分初学者相对的升级与专家绝对能力.
+- 描述 WMDP 的三个领域、题目数量与“黄色区域”筛选标准。
+- 解释 RMU，以及为什么 WMDP 既是评估基准，也是遗忘学习基准。
+- 描述 2024–2025 年的能力提升叙事：“轻微提升”→“即将跨过临界点”→“不足以排除 ASL-3”。
+- 区分相对于新手的能力提升与专家的绝对能力。
 
 ## 问题
 
-双重使用能力是每个实验室的边界安全框架下的测量问题 (课 18). 问题是,模型X是否能显著提升新手在生物,化学或网络领域造成大规模伤害的能力? 直接测量 (要求模型实际产生损害) 是违法和不道德的. 代理测量需要一个基准,模型不能拒绝 (产生诚实的能力数量),但其问题本身不是有害的出版物.
+每家实验室的前沿安全框架（第 18 课）都依赖双重用途能力这一测量问题：模型 X 是否会显著提高新手在生物、化学或网络领域造成大规模伤害的能力？直接测量——要求模型实际实施伤害——既违法也不道德。代理测量需要一种模型不会拒答的基准，从而获得真实能力数据，同时问题本身又不能构成有害内容的公开传播。
 
-## 概念
+## 核心概念
 
-### 黄区
+### “黄色区域”
 
-需要接近,能够了解有害过程的问题,而不是直接合成的方法. "什么反应剂催化了[发表的路径]的第4步?"而不是"我如何制造[危险化合物]?"每个问题由多个领域专家进行审查;过以确定ITAR/EAR的出口控制合规性.
+问题要求掌握接近有害过程、能够为其提供帮助的知识，但不能直接给出合成配方。例如可以问“哪种试剂会催化[已发表路径]的第 4 步？”，而不能问“如何制造[危险化合物]？”每道题都经多位领域专家审查，并按 ITAR / EAR 出口管制要求筛选。
 
-总共有4157个问题:
-- 生物安全:1,520
-- 网络安全: 2,225
-- 化学: 412
+共 4,157 道题：
+- 生物安全：1,520
+- 网络安全：2,225
+- 化学：412
 
-模特没有被要求协助任何东西,能力可以测量而不会引起有害行为.
+题目采用多项选择形式。模型只需回答问题，不会被要求协助实施任何行为；因此可以在不诱导有害行为的情况下测量其能力。
 
-### 代表性错误指导不学习
+### RMU——用于遗忘学习的表征误导
 
-随机解学方法. 应用到LLaMa-2-7B,将WMDP分数降低到近随机,同时保持MMLU和其他一般能力基准在几个百分点内. 发表的方法是每次生物化学网络解学论文的解学基准.
+这是配套的遗忘学习方法。应用于 LLaMa-2-7B 后，它将 WMDP 分数降至接近随机水平，同时把 MMLU 等通用能力基准的损失控制在几个百分点内。此后每篇生物—化学—网络领域的遗忘学习论文，都把这一公开方法作为基线。
 
-### 2024-2025年升起的叙事
+### 2024–2025 年的能力提升叙事
 
-三个阶段:
+它经历了三个阶段：
 
-1. **2024 "mild uplift."**早期的OpenAI和人类准备/RSP评估报告了尝试生物相邻任务的初学者在互联网搜索中具有较小的优势.
+1. **2024 年的“轻微提升”。** OpenAI 和 Anthropic 早期的 Preparedness / RSP 评估报告称，对于尝试完成生物相关任务的新手，模型相比互联网搜索只带来较小优势。公开表述是：前沿模型有所帮助，但并未显著超过 Google。
 
-2. **April 2025 "on the cusp."**开通AI的准备框架v2报告了模型"在帮助新手创造已知的生物威胁的边缘".
+2. **2025 年 4 月的“即将跨过临界点”。** OpenAI 的 Preparedness Framework v2 报告称，模型“即将能够切实帮助新手制造已知生物威胁”。这不是能力已经成立的断言，而是在警告临界点已经很近。
 
-3. **Anthropic's 2025 bioweapon-acquisition trial.**随着新手参与者进行的控制研究,测量了收购阶段任务的相对成功.报告的升级为2.53.不够排除ASL-3 (课 18) 人类责任扩展政策3级的门值已达到或接近.
+3. **Anthropic 2025 年的生物武器获取试验。** 这项受控研究以新手参与者为对象，测量他们完成获取阶段任务的相对成功率，报告了 2.53 倍的能力提升。该结果不足以排除 ASL-3（第 18 课）——也就是说，Anthropic Responsible Scaling Policy 第 3 级的阈值已经达到或正在接近。
 
-### 初学者对专家对绝对
+### 新手相对提升与专家绝对能力
 
-对于这些问题,
+两者之间有一项关键区别：
 
-- **Novice-relative uplift.**模型有多大帮助一个非专家?多倍.相对优势很大,因为新手知道很少;即使是小小的信息也有帮助.
-- **Expert-absolute capability.**专家可以提取更多信息,而不是初学者.绝对的天花板很高.
+- **新手相对提升。** 模型对非专家的帮助有多大？这是乘数效应。因为新手原本掌握的知识很少，即使不多的信息也可能带来很高的相对优势。
+- **专家绝对能力。** 模型在最大投入下能产出多少信息？专家可以从模型中提取出比新手更多的内容，绝对能力上限很高。
 
-安全案例 (课 18) 针对两者: "模型不能给初学者足够的提高执行"以及"专家不能从模型中提取尚未发布的信息".
+安全论证（第 18 课）同时针对两者：“模型无法给新手提供足以实施行为的能力提升”，并且“专家无法从模型中提取尚未公开的信息”。
 
-### 测量陷
+### 测量陷阱
 
-基于 WMDP 的数据,WMDP 是一个能力代理,而不是部署测量.
-- 发射阻力 (不需要安全过器的,才能得到能力的难度)
-- 默默的知识 (需要湿实验室技能的能力,而不是信息)
-- 执行障碍 (采购,设备)
+WMDP 是能力的代理指标，而不是部署环境中的直接测量。WMDP 得分高的模型在实践中未必能被新手利用，具体取决于：
+- 诱导阻力（在不触发安全过滤器的情况下提取能力有多难）
+- 默会知识（能力是否依赖湿实验室技能，而不只是信息）
+- 实施障碍（采购、设备）
 
-普的2025年生物武器采购试验增加了初学者启动层,并增加了WMDP类型的能力:它测量了实际任务成功,而不是多种选择能力.
+Anthropic 2025 年的生物武器获取试验在 WMDP 式能力之上加入了新手诱导层：它测量实际任务成功率，而不是多项选择能力。
 
-### 在这个阶段的第18阶段
+### 本课在阶段 18 中的位置
 
-课时12-16是针对模型输出的攻击和防御工具.课时17是双用途能力层. 课时18是边境安全框架评估的测量.课时30是通过2026年的网络/生物/化学/核升级证据来完成这一任务.
+第 12–16 课介绍针对模型输出的攻击与防御工具。第 17 课进入双重用途能力层，即前沿安全框架（第 18 课）评估的测量对象。第 30 课则以 2026 年最新的网络／生物／化学／核领域能力提升证据收束这条主线。
 
 ```figure
 al-wmdp-yellow-zone
 ```
 
-## 用它
+## 实际使用
 
-`code/main.py`通过一个简单的不学习干预 (零出域特定表示) 降低了分数;你可以衡量对一般能力的折衷.
+`code/main.py` 构建一个 WMDP 形态的玩具评估工具。一个模拟模型接受按类别分组的问题测试，并报告各领域得分。一项简单的遗忘干预（将特定领域表征归零）会降低得分；你可以测量它与通用能力之间的取舍。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-wmdp-eval.md`鉴于可用双重能力的说法 ("我们的模型对生物武器没有任何意义",它审计了:哪些基准标准运行,哪些拒绝路径用于评估 (原始完成与政策目标),以及是否新手启动研究补充了多次选择结果.
+本课产出 `outputs/skill-wmdp-eval.md`。给定一项双重用途能力声明（“我们的模型不会在生物武器方面提供实质帮助”），它会审计：运行了哪些基准、评估使用哪条拒答路径（原始补全还是策略门控），以及是否用新手诱导研究补充多项选择结果。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`报告玩具脱习步骤前后的各领域准确性. 解释一般能力的交易.
+1. 运行 `code/main.py`。报告玩具遗忘步骤前后各领域的准确率，并解释通用能力方面的取舍。
 
-2. 增加玩具WMDP的第四个领域 (例如,放射性).在黄色区指定两个插图问题类型.解释为什么编制这样的问题比添加MMLU形状的问题更难.
+2. 为玩具 WMDP 增加第四个领域（例如放射性风险）。给出两类位于黄色区域的示例问题，并解释为何编写此类问题比增加 MMLU 形态的问题更困难。
 
-3. 阅读WMDP 2024第5节 (RMU方法). 绘制一个更简单的不学习方法 (例如,抑制域内容的顶级k神经元) 并描述预期的一般能力成本.
+3. 阅读 WMDP 2024 第 5 节（RMU 方法）。勾勒一种更简单的遗忘方法（例如抑制与领域内容相关的 top-k 神经元），并说明它预期会付出多少通用能力代价。
 
-4. 关于人类2025年生物武器采购试验报告的增长为2.53.描述这两个方法可以偏向上方 (初学者样本大小,任务忠诚度) 和下方 (诱导天花板,模型安全门).
+4. Anthropic 2025 年的生物武器获取试验报告了 2.53 倍提升。说明这个数字可能被向上偏置的两个原因（新手样本量、任务保真度），以及被向下偏置的两个原因（诱导上限、模型安全门控）。
 
-5. 阐述 ASL-3 的安全情况需要的内容,除了通过WMDP脱学习之外. 举出至少两项补充性诱导研究.
+5. 说明 ASL-3 安全论证除通过 WMDP 遗忘测试外还需要什么。至少说出两项互补的诱导研究。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| WMDP | "the dual-use benchmark" | 4,157 MCQ questions across bio/cyber/chem in the yellow zone |
-| Yellow zone | "enabling but not synthesis" | Proximate knowledge adjacent to harmful capability without being a synthesis recipe |
-| RMU | "the unlearning baseline" | Representation Misdirection for Unlearning; reduces WMDP scores, preserves general capability |
-| Novice-relative uplift | "how much it helps non-experts" | Multiplicative advantage over status-quo internet search for a novice |
-| Expert-absolute capability | "ceiling for experts" | Maximum information extractable from the model by a motivated expert |
-| Acquisition-phase task | "steps before synthesis" | Procurement, equipment, permits — the earliest parts of a harm pathway |
-| ITAR/EAR | "export-control compliance" | Legal frameworks that constrain publishing certain enabling knowledge |
+| WMDP | “双重用途基准” | 黄色区域中涵盖生物／网络／化学的 4,157 道多项选择题 |
+| 黄色区域 | “赋能但不涉及合成” | 接近有害能力但不构成合成配方的邻近知识 |
+| RMU | “遗忘基线” | Representation Misdirection for Unlearning；降低 WMDP 分数，同时保留通用能力 |
+| 新手相对提升 | “对非专家帮助多大” | 相比新手依靠现状下互联网搜索所获得的乘数优势 |
+| 专家绝对能力 | “专家能力上限” | 有动机的专家能从模型中提取的信息总量上限 |
+| 获取阶段任务 | “合成前的步骤” | 采购、设备、许可——伤害路径中最早的环节 |
+| ITAR / EAR | “出口管制合规” | 限制某些赋能知识公开传播的法律框架 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Li et al. — The WMDP Benchmark (arXiv:2403.03218, ICML 2024)](https://arxiv.org/abs/2403.03218)基准和RMU文件
-- [OpenAI — Preparedness Framework v2 (April 15, 2025)](https://openai.com/index/updating-our-preparedness-framework/)"在边"的语言
-- [Anthropic — Responsible Scaling Policy v3.0 (February 2026)](https://www.anthropic.com/responsible-scaling-policy)ASL-3生物门和收购试验结果
-- [DeepMind — Frontier Safety Framework v3.0 (September 2025)](https://deepmind.google/blog/strengthening-our-frontier-safety-framework/)生物升级CCL
+- [Li 等——WMDP Benchmark（arXiv:2403.03218，ICML 2024）](https://arxiv.org/abs/2403.03218)——基准与 RMU 论文
+- [OpenAI——Preparedness Framework v2（2025 年 4 月 15 日）](https://openai.com/index/updating-our-preparedness-framework/)——“即将跨过临界点”的表述
+- [Anthropic——Responsible Scaling Policy v3.0（2026 年 2 月）](https://www.anthropic.com/responsible-scaling-policy)——ASL-3 生物风险阈值与获取试验结果
+- [DeepMind——Frontier Safety Framework v3.0（2025 年 9 月）](https://deepmind.google/blog/strengthening-our-frontier-safety-framework/)——生物能力提升 CCL
