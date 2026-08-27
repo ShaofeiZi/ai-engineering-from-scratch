@@ -1,26 +1,26 @@
-#   终端本土编码代理
+# 综合项目 01——终端原生编程智能体
 
-> 到2026年,编码器的形状已经确定. 图伊带,一个状态的计划,一个沙盒的工具表面,一个循环,计划,行动,观察,恢复. 克劳德代码,课程3和开码从50英尺处看起来都是一样的. 这块顶石要求你构建一个端到一个端,  CLI,  拉出请求, 你会了解为什么最难的是不是模型调用,而是工具循环,沙盒和50转运费用上限.
+> 到 2026 年，编程智能体的形态已经基本定型：终端用户界面（TUI）执行框架、一份有状态的计划、受沙箱保护的工具接口，以及规划、行动、观察、恢复的循环。远看之下，Claude Code、Cursor 3 和 OpenCode 大同小异。本综合项目要求你从头搭建完整系统，让它接收命令行输入，最终创建拉取请求；然后在 SWE-bench Pro 上与 mini-swe-agent 和 Live-SWE-agent 对比。做完后你会明白，真正棘手的不是调用模型，而是工具循环、沙箱，以及如何为 50 轮任务设定成本上限。
 
-**Type:** Capstone
-**Languages:** TypeScript / Bun (harness), Python (eval scripts)
-**Prerequisites:** Phase 11 (LLM engineering), Phase 13 (tools and protocols), Phase 14 (agents), Phase 15 (autonomous systems), Phase 17 (infrastructure)
-**Phases exercised:**子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子,子
-**Time:** 35 hours
+**Type:** 综合项目
+**Languages:** TypeScript / Bun（执行框架）、Python（评测脚本）
+**Prerequisites:** 第 11 阶段（LLM 工程）、第 13 阶段（工具与协议）、第 14 阶段（智能体）、第 15 阶段（自主系统）、第 17 阶段（基础设施）
+**Phases exercised:** P0 · P5 · P7 · P10 · P11 · P13 · P14 · P15 · P17 · P18
+**Time:** 35 小时
 
 ## 问题
 
-2026年,编码代理成为主导AI应用类别. 克劳德代码 (人类),Cursor 3与组合器2和代理图表 (Cursor),Amp (Sourcegraph),OpenCode (112k星),工厂无人机和谷歌朱尔斯所有船变化相同的架构:终端带,一个许可的工具表面,一个沙盒,和一个计划-行动观察循环围绕边界模型. 直播SWE代理达到79.2%的SWE台 验证了Opus 4.5 ,但工程工艺是宽的. 失败模式的大部分都不是模型错误. 它们是工具循环不稳定性,环境中毒,逃跑的代币成本,
+到 2026 年，编程智能体已成为最主要的 AI 应用类别。Claude Code（Anthropic）、配备 Composer 2 和 Agent Tabs 的 Cursor 3（Cursor）、Amp（Sourcegraph）、拥有 11.2 万颗星的 OpenCode、Factory Droids 与 Google Jules，采用的都是同一套架构的变体：终端执行框架、受权限约束的工具接口、沙箱，以及围绕前沿模型运行的“规划—行动—观察”循环。前沿模型只是这套系统中很窄的一环：Live-SWE-agent 使用 Opus 4.5，在 SWE-bench Verified 上达到了 79.2%，但工程工作远不止模型本身。多数故障并非模型判断失误，而是工具循环不稳定、上下文污染、令牌成本失控，或文件系统操作带来破坏。
 
-你必须建造一个,在47的环节崩,当Ripgrep返回8MB的匹配,
+只从外部观察，无法真正理解这类智能体。你得亲手造一个，看着它在第 47 轮因 ripgrep 返回 8 MB 匹配结果而崩溃，再重新设计输出截断层。这正是本综合项目的用意。
 
-## 概念
+## 核心概念
 
-带有四个表面.**Plan**保持一个 TodoWrite 样式状态对象,模型每次转换. **Act**发送工具调用 (阅读,编辑,运行,搜索, Git).**Observe**捕获/stderr/出口代码,缩小,并将总结回放. **Recover**没有打破文本窗口或永远循环处理工具错误. 2026 形状增加了另一个东西: **hooks**现在,我们要去.`PreToolUse`现在`PostToolUse`现在`SessionStart`现在`SessionEnd`现在`UserPromptSubmit`现在`Notification`现在`Stop`其他`PreCompact`可配置的延伸点,操作员注入的政策,远程测量和防护.
+执行框架包含四个部分。**规划（Plan）**维护一个 TodoWrite 风格的状态对象，模型每轮都会重写它。**行动（Act）**负责分派读取、编辑、运行、搜索和 git 等工具调用。**观察（Observe）**捕获标准输出、标准错误与退出码，截断后再把摘要送回上下文。**恢复（Recover）**处理工具错误，同时避免撑爆上下文窗口或陷入死循环。2026 年的实现还多了一类机制：**钩子（hooks）**。`PreToolUse`、`PostToolUse`、`SessionStart`、`SessionEnd`、`UserPromptSubmit`、`Notification`、`Stop` 和 `PreCompact` 都是可配置的扩展点，操作者可借此加入策略、遥测和防护规则。
 
-沙箱是E2B或戴顿. 每个任务都运行在一个新的 devcontainer, 连接器永远不会触及主机文件系统. 工作树在成功或失败时会被撕毁. 成本控制是通过三个层次执行的:每轮代币上限,每次会议的美元预算,以及硬转限 (通常是50). 观察性层是与GenAI语义公约的OpenTelemetry跨度,
+沙箱选用 E2B 或 Daytona。每个任务都在全新的开发容器中运行，并挂载一个可读写的 git 工作树（worktree）。执行框架绝不接触宿主机文件系统；无论任务成功还是失败，工作树最终都会被销毁。成本控制有三道硬限制：每轮令牌上限、每次会话的美元预算，以及总轮数上限（通常为 50 轮）。可观测性由采用 GenAI 语义约定的 OpenTelemetry 跨度（span）提供，数据发送到自托管的 Langfuse。
 
-## 建筑
+## 架构
 
 ```
   user CLI  ->  harness (Bun + Ink TUI)
@@ -50,41 +50,41 @@
            PR via GitHub app
 ```
 
-## 堆
+## 技术栈
 
-- 带运行时间: Bun 1.2 + Ink 5 (终端反应)
-- 模型访问:OpenRouter与Claude Sonnet 4.7,GPT-5.4-Codex,Gemini 3 Pro,Opus 4.5 (用于最困难的任务)
-- 工具运输:模式语境协议 StreamableHTTP (MCP 2026修订)
-- 沙箱:E2B沙箱 (JS SDK) 或戴tona开发集装箱
-- 代码搜索: ripgrep子工艺,17种语言的树守护器 (预编译)
-- 隔离:`git worktree add`按任务,成功/失败的清理
-- 杆:SWE-bench Pro (验证子集) +终端-Bench 2.0 +您自己的30任务持有
-- 可观察性: 开放Telemetry SDK`gen_ai.*`semconv → 自主主办的Langfuse
-- 公共关系发布:GitHub应用程序,具有细粒度的代币,范围仅限于目标回复
+- 执行框架运行时：Bun 1.2 + Ink 5（终端中的 React）
+- 模型接入：通过 OpenRouter 统一 API 使用 Claude Sonnet 4.7、GPT-5.4-Codex、Gemini 3 Pro、Opus 4.5（用于最难任务）
+- 工具传输：Model Context Protocol StreamableHTTP（MCP 2026 修订版）
+- 沙箱：E2B 沙箱（JavaScript SDK）或 Daytona 开发容器
+- 代码搜索：ripgrep 子进程，以及支持 17 种语言的预编译 tree-sitter 解析器
+- 隔离：每个任务执行 `git worktree add`，成功或失败后都清理
+- 评测框架：SWE-bench Pro（已验证子集）+ Terminal-Bench 2.0 + 自建的 30 题留出集
+- 可观测性：OpenTelemetry SDK 配合 `gen_ai.*` 语义约定，接入自托管 Langfuse
+- PR 发布：GitHub App 使用细粒度令牌，权限范围仅限目标仓库
 
 ```figure
 ce-agent-loop
 ```
 
-## 建立它
+## 动手构建
 
-1. **TUI and command loop.**布一个子项目用墨水.接受.`agent run <repo> "<task>"`打印分类视图:计划表 (上),工具调用流 (中),代币预算 (下). 添加取消在Ctrl-C上开启 `SessionEnd`在出口前.
+1. **TUI 与命令循环。** 使用 Ink 搭建 Bun 项目，接受 `agent run <repo> "<task>"` 命令。界面分为三栏：顶部显示计划，中部滚动显示工具调用，底部显示令牌预算。按 Ctrl-C 可以取消任务，但退出前必须先触发 `SessionEnd` 钩子。
 
-2. **Plan state.**定义输入的 TodoWrite 方案 (悬而未决 / in_progress /完成的项目与笔记).模型每次重写完整状态作为工具调用. 不要让它逐步变化. 继续计划`.agent/state.json`让车恢复.
+2. **计划状态。** 定义带类型的 TodoWrite 模式，条目状态包括 pending、in_progress 和 done，并可附带备注。模型每轮都通过工具调用重写完整状态，不得增量修改。将计划持久化到 `.agent/state.json`，以便崩溃后继续执行。
 
-3. **Tool surface.**定义六种工具:`read_file`现在`edit_file`其他地方的`ripgrep`现在`tree_sitter_symbols`现在`run_shell`通过时间限制,`git`(status/diff/commit/push). 通过MCP StreamableHTTP将其曝光,使其具有交通不知性.每个工具都会返回缩小输出 (每次通话的4k代币限制).
+3. **工具接口。** 定义六个工具：`read_file`、`edit_file`（可预览差异）、`ripgrep`、`tree_sitter_symbols`、`run_shell`（带超时限制）以及 `git`（支持 status / diff / commit / push）。通过 MCP StreamableHTTP 暴露这些工具，使执行框架不依赖具体传输方式。每个工具都必须截断返回内容，单次调用最多返回 4k 个令牌。
 
-4. **Sandbox wrapping.**每个任务都会产生一个E2B沙箱.`git worktree add -b agent/$TASK_ID`现在,我们在一个新的分支.所有工具调用都在沙盒内执行. 主机文件系统是不可访问的.
+4. **沙箱封装。** 每个任务都启动一个 E2B 沙箱。执行 `git worktree add -b agent/$TASK_ID` 创建新分支。所有工具调用均在沙箱内执行，且无法访问宿主机文件系统。
 
-5. **Hooks.**实现2026年所有八种子类型. 连接至少四种用户授权的子: (a) `PreToolUse`破坏性指挥卫队,阻止了`rm -rf`在工作树外,`PostToolUse`标志性会计, (c) `SessionStart`预算初始化,`Stop`写出最后一个痕迹.
+5. **钩子。** 实现 2026 年的全部八种钩子。至少接入四个由用户编写的钩子：(a) `PreToolUse` 充当破坏性命令守卫，阻止针对工作树外部执行 `rm -rf`；(b) `PostToolUse` 统计令牌用量；(c) `SessionStart` 初始化预算；(d) `Stop` 写出最终追踪包。
 
-6. **Eval loop.**复制一个30个版本的SWE-bench Pro Python子集. 运行你的束对每一个. 通过@1,转换每任务和$-per-task上进行微型Swe-agent (最小基线) 的比较. 写结果到`eval/results.jsonl`现在,我们要去.
+6. **评测循环。** 克隆由 30 个 Python 问题组成的 SWE-bench Pro 子集，让执行框架逐题运行。以 mini-swe-agent 为最小基线，比较 pass@1、每题轮数和每题成本。将结果写入 `eval/results.jsonl`。
 
-7. **Cost control.**硬切割:50轮,200万语境,每任务5美元.`PreCompact`子总结了旧的转变,成为一个前状态块, 在150k的标志, 给新的观测空间,
+7. **成本控制。** 设置三项硬上限：50 轮、200k 上下文、每个任务 5 美元。上下文达到 150k 时，`PreCompact` 钩子把较早轮次概括为一个先前状态块，在保留计划的同时为新的观察结果腾出空间。
 
-8. **PR posting.**对于成功,最后一步是`git push`+一个GitHub API调用,将计划和体内的差异总结打开一个 PR.
+8. **发布 PR。** 任务成功后，最后执行 `git push` 并调用 GitHub API 创建 PR，在正文中附上计划与差异摘要。
 
-## 用它
+## 实际使用
 
 ```
 $ agent run ./my-repo "Fix the race condition in worker.rs"
@@ -99,50 +99,50 @@ $ agent run ./my-repo "Fix the race condition in worker.rs"
 [done]  PR opened: #482   turns=9   tokens=38k   cost=$0.41
 ```
 
-## 运送它
+## 交付成果
 
-能得到的技能生活在`outputs/skill-terminal-coding-agent.md`根据备忘录路径和任务描述,它将在沙盒中运行完整的计划-行为-观察循环,并返回一个 PR URL 加上一个追踪捆绑.
+交付的技能文件位于 `outputs/skill-terminal-coding-agent.md`。输入仓库路径和任务描述后，它会在沙箱中运行完整的“规划—行动—观察”循环，并返回 PR URL 和追踪包。本综合项目按以下标准评分：
 
-| Weight | Criterion | How it is measured |
+| 权重 | 标准 | 测量方式 |
 |:-:|---|---|
-| 25 | SWE-bench Pro pass@1 vs baseline | Your harness vs mini-swe-agent on 30 matched Python tasks |
-| 20 | Architecture clarity | Plan/act/observe separation, hook surface, tool schema — reviewed against Live-SWE-agent layout |
-| 20 | Safety | Sandbox escape tests, permission prompts, destructive-command guard passes red-team |
-| 20 | Observability | Trace completeness (100% of tool calls spanned), token accounting per turn |
-| 15 | Developer UX | Cold-start < 2s, crash recovery resumes plan, Ctrl-C cancels mid-tool cleanly |
+| 25 | SWE-bench Pro pass@1 相对基线表现 | 在 30 道相同的 Python 任务上比较你的执行框架与 mini-swe-agent |
+| 20 | 架构清晰度 | 对照 Live-SWE-agent 的布局，审查规划、行动、观察三者的分离方式，以及钩子接口和工具模式定义 |
+| 20 | 安全性 | 沙箱逃逸测试、权限提示和破坏性命令守卫均通过红队测试 |
+| 20 | 可观测性 | 追踪信息完整（100% 的工具调用都有对应跨度），且逐轮统计令牌用量 |
+| 15 | 开发者体验 | 冷启动 < 2 秒；崩溃后能继续原计划；Ctrl-C 可在工具执行期间完整取消任务 |
 | **100** | | |
 
-## 运动
+## 练习
 
-1. 换取支持模型从Claude Sonnet 4.7到vLLM上提供的Qwen3-Coder-30B.比较pass@1和$-per-task.报告开放模型的性能低.
+1. 把底层模型从 Claude Sonnet 4.7 切换为由 vLLM 提供的 Qwen3-Coder-30B。比较 pass@1 与每题成本，并报告开源模型具体在哪些任务上表现更差。
 
-2. 添加一个`reviewer`测量假阳性评价是否降低SWE位通过率低于单代理基线 (提示:通常是的).
+2. 增加一个 `reviewer` 子智能体，在发布 PR 前阅读差异，并可要求进入修改循环。测量误报审查是否会让 SWE-bench 通过率低于单智能体基线。提示：通常会。
 
-3. 压力测试沙盒:写一个试图完成的任务`curl`确认两个被 PreToolUse 锁.记录尝试.
+3. 对沙箱做压力测试：编写一个尝试用 `curl` 访问外部 URL 的任务，再编写一个尝试向工作树外写入文件的任务。确认两者都被 PreToolUse 钩子拦截，并记录这些尝试。
 
-4. 实施`PreCompact`通过较小的模型来总结 (海库4.5). 测量在3x紧缩时损失了多少计划忠诚度.
+4. 使用较小的模型 Haiku 4.5 实现 `PreCompact` 摘要。测量经过三次压缩后，计划内容的保留程度下降了多少。
 
-5. 换MCP流动HTTP输送为工作室. 标记冷启动和每次通话延迟. 选择一个获胜者仅用于本地使用.
+5. 将 MCP StreamableHTTP 传输方式换成 stdio。对冷启动和单次调用延迟进行基准测试，并选出更适合纯本地场景的方案。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| Harness | "The agent loop" | The code surrounding the model that dispatches tools, maintains plan state, and enforces budgets |
-| Hook | "Agent event listener" | A user-authored script run on one of eight lifecycle events by the harness |
-| Worktree | "Git sandbox" | A linked git checkout at a separate path; disposable without touching the main clone |
-| TodoWrite | "Plan state" | A typed list of pending/in-progress/done items the model rewrites each turn |
-| StreamableHTTP | "MCP transport" | 2026 MCP revision: long-lived HTTP connection with bidirectional streaming; replaces SSE |
-| Token ceiling | "Context budget" | Per-turn or per-session cap on input+output tokens; triggers compaction or termination |
-| pass@1 | "Single-attempt pass rate" | Fraction of SWE-bench tasks solved on the first run without retry or test-set peeking |
+| 执行框架（Harness） | “智能体循环” | 包围模型的一层代码，负责分派工具、维护计划状态并执行预算限制 |
+| 钩子（Hook） | “智能体事件监听器” | 用户编写的脚本，由执行框架在八种生命周期事件之一发生时运行 |
+| 工作树（Worktree） | “Git 沙箱” | 位于独立路径、与同一仓库相连的检出目录；丢弃它不会影响主克隆目录 |
+| TodoWrite | “计划状态” | 带类型的 pending / in-progress / done 条目列表，由模型每轮重写 |
+| StreamableHTTP | “MCP 传输方式” | MCP 2026 修订版中的长连接 HTTP 双向流传输方式，用于取代 SSE |
+| 令牌上限（Token ceiling） | “上下文预算” | 每轮或每次会话的输入与输出令牌总上限；达到上限会触发压缩或终止 |
+| pass@1 | “单次尝试通过率” | 无需重试且不查看测试集，第一次运行就能解决的 SWE-bench 任务比例 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code)来自Anthropic的参考带
-- [Cursor 3 changelog](https://cursor.com/changelog) 代理 标签和作曲器2产品说明
-- [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent)SWE-板的最低基准比较
-- [Live-SWE-agent](https://github.com/OpenAutoCoder/live-swe-agent) 79.2% SWE  通过 Opus 4.5 验证
-- [OpenCode](https://opencode.ai)开放的带,112千颗星星
-- [SWE-bench Pro leaderboard](https://www.swebench.com)本标题的评估目标
-- [Model Context Protocol 2026 roadmap](https://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/)流式HTTP,功能元数据
-- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)工具调用和代币使用的跨度方案
+- [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code) — Anthropic 提供的参考执行框架
+- [Cursor 3 changelog](https://cursor.com/changelog) — Agent Tabs 与 Composer 2 的产品说明
+- [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) — 用于比较 SWE-bench 执行框架的最小基线
+- [Live-SWE-agent](https://github.com/OpenAutoCoder/live-swe-agent) — 使用 Opus 4.5 在 SWE-bench Verified 上达到 79.2%
+- [OpenCode](https://opencode.ai) — 拥有 11.2 万颗星的开源执行框架
+- [SWE-bench Pro leaderboard](https://www.swebench.com) — 本综合项目采用的目标评测
+- [Model Context Protocol 2026 roadmap](https://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/) — StreamableHTTP 与能力元数据
+- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) — 工具调用与令牌用量的跨度结构定义
