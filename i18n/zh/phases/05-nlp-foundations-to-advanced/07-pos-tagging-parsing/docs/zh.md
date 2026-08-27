@@ -1,36 +1,36 @@
-# 标签和语法解析
+# 词性标注与句法分析
 
-> 语法一段时间不适用,然后每一个LLM管道都需要验证结构化的提取,
+> 语法曾一度不受追捧。后来每条大语言模型流水线都需要验证结构化抽取，它又回来了。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 5 · 01 (Text Processing), Phase 2 · 14 (Naive Bayes)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 5 · 01（文本处理）、阶段 2 · 14（朴素贝叶斯）
+**Time:** 约 45 分钟
 
 ## 问题
 
-第1课承诺, 化需要部分语音标签.`running`是一个动词,一个 lemmatizer不能把它缩小到`run`没有意识到`better`是一个形容词,不能缩小到`good`现在,我们要去.
+第 01 课提到，词形还原需要词性标签。不知道 `running` 是动词，词形还原器就无法把它还原成 `run`；不知道 `better` 是形容词，就无法把它还原成 `good`。
 
-语法分析恢复了句子的树结构:哪个词修改哪个,哪个动词控制哪些参数.经典NLP花了二十年时间来完善这两种.然后深度学习将它们分解成一个预训练的变压器之上的代币分类任务,研究社区继续前进.
+这个前提背后隐藏着一整个子领域。词性标注负责分配语法类别，句法分析则负责还原句子的树形结构：哪个词修饰哪个词，哪个动词支配哪些论元。经典自然语言处理用了二十年完善这两项任务。随后，深度学习把它们压缩成预训练 Transformer 顶部的词元分类任务，研究界便转向了别处。
 
-没有应用社区.每个结构化提取管道仍然使用 POS 和依赖树在罩杯下.LLM生成的JSON得到对语法限制进行验证.问答系统使用依赖解析分解查询.机器翻译质量评估人员检查解析树的对齐.
+但应用界没有离开。每条结构化抽取流水线仍在底层使用词性和依存句法树。大语言模型生成的 JSON 会依据语法约束进行验证，问答系统利用依存句法分析拆解查询，机器翻译质量评估器则会检查句法树的对齐情况。
 
-这一课介绍了标签组,基线,以及你停止从零开始实现的点,
+这些知识值得掌握。本课将介绍标签集、基线方法，以及何时应该停止从零实现、直接调用 spaCy。
 
 ## 概念
 
-**POS tagging**标签每一个符号以语法类别.**Penn Treebank (PTB)**标签是英语默认的. 36个标签有区别,随便读者发现很尬: `NN`单一名词`NNS`复数名词`NNP`个体名词`VBD`过去时代的动词,`VBZ`动词第三个单词存在,等等.**Universal Dependencies (UD)**标签是粗的 (17标签) 和语言不认同的;它成为跨语言工作的默认.
+**词性标注**为每个词元标注语法类别。**Penn Treebank（PTB）**标签集是英语的默认标准，包含 36 个标签，细分程度在普通读者看来甚至有些繁琐：`NN` 表示单数名词，`NNS` 表示复数名词，`NNP` 表示单数专有名词，`VBD` 表示过去时动词，`VBZ` 表示第三人称单数现在时动词，等等。**Universal Dependencies（UD）**标签集更粗粒度（17 个标签），且与语言无关；它已成为跨语言工作的默认选择。
 
 ```
 The/DET cats/NOUN were/AUX running/VERB at/ADP 3pm/NOUN ./PUNCT
 ```
 
-**Syntactic parsing**树木的生长方式是:
+**句法分析**会生成一棵树，主要有两种形式：
 
-- **Constituency parsing.**词词,动词,预语词,在彼此内嵌. 输出是一个非终端类别的树 (NP,VP,PP) 具有单词的叶子.
-- **Dependency parsing.**每个字都有一个单个单词,它依赖于,标记着语法关系.输出是一个树,每个边缘是一个 (头,依赖,关系) 三倍.
+- **成分句法分析。** 名词短语、动词短语和介词短语相互嵌套，输出是一棵以词为叶节点、以非终结类别（NP、VP、PP）为内部节点的树。
+- **依存句法分析。** 每个词都有一个它所依赖的中心词，并标有语法关系。输出是一棵树，其中每条边都是一个（中心词、从属词、关系）三元组。
 
-依赖性解析在2010年代取得了成功,因为它在语言中,特别是自由单词顺序中,
+依存句法分析在 2010 年代胜出，因为它可以自然地泛化到各种语言，尤其是语序自由的语言。
 
 ```
 running is ROOT
@@ -48,11 +48,11 @@ pos-tagger
 dependency-arcs
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:最常见标签的基线
+### 第 1 步：最高频标签基线
 
-对于每一个字,预测它在训练中最常用的标签.
+这是能奏效的最简单词性标注器：对于每个词，预测它在训练数据中最常出现的标签。
 
 ```python
 from collections import Counter, defaultdict
@@ -74,17 +74,17 @@ def predict_mft(tokens, word_best, default_tag):
     return [word_best.get(t.lower(), default_tag) for t in tokens]
 ```
 
-在布朗体上,这个基线达到85%的准确度. 不好,但没有任何严重的模型应该落下的地板.
+在 Brown 语料库上，这个基线的准确率约为 85%。并不好，但任何严肃模型都不应低于这条底线。
 
-### 步骤2:大 HMM标签
+### 第 2 步：二元 HMM 标注器
 
-模型对序列的联合概率:
+对整个序列的联合概率建模：
 
 ```
 P(tags, words) = prod P(tag_i | tag_{i-1}) * P(word_i | tag_i)
 ```
 
-两个表:过渡概率 (给前一个标签),排放概率 (给一个词标签). 根据拉普莱斯平滑计算来估算两者. 用维特比解码 (在标签网格上动态编程).
+使用两张表：转移概率（给定前一个标签时当前标签的概率）和发射概率（给定标签时出现某个词的概率）。通过带有拉普拉斯平滑的计数估算二者，再用维特比算法解码（在标签网格上进行动态规划）。
 
 ```python
 import math
@@ -150,22 +150,22 @@ def viterbi(tokens, transitions, emissions, tags, vocab, alpha=0.01):
     return [tags_list[j] for j in reversed(path)]
 ```
 
-黑色的HMM大小是93%的准确度.从85%跳到93%的跳跃主要是过渡概率模型学习`DET NOUN`常见的`NOUN DET`很少见.
+二元 HMM 在 Brown 语料库上能达到约 93% 的准确率。从 85% 到 93% 的提升主要来自转移概率——模型学会了 `DET NOUN` 很常见，而 `NOUN DET` 很少见。
 
-### 步骤3:为什么现代标记器比这更好
+### 第 3 步：现代标注器为何能胜过它
 
-转变+排放概率是本地的.`saw`在"我买了"中是名词,但在"我看过电影"中是动词.一个任意特征的CRF (后音,字形,字前后,字本身) 达到~97%.一个BiLSTM-CRF或变压器达到~98%+.
+转移概率与发射概率都是局部的。它们无法理解 `saw` 在“I bought a saw”中是名词，在“I saw the movie.”中却是动词。带有任意特征（后缀、词形、前后单词、单词本身）的 CRF 能达到约 97%；BiLSTM-CRF 或 Transformer 则能达到约 98% 以上。
 
-们在林银行上约97%的时间都同意.超过98%的模型可能过于适合测试集.
+这项任务的上限由标注者之间的分歧决定。在 Penn Treebank 上，人类标注者的一致率约为 97%。超过 98% 的模型很可能是在过拟合测试集。
 
-### 步骤4:依赖性分析草图
+### 第 4 步：依存句法分析概要
 
-完全依赖从零开始分析是不适用的;正文教科书处理是Jurafsky和马丁.
+从零实现完整的依存句法分析超出了本课范围；权威教材请参考 Jurafsky 与 Martin。需要了解两个经典家族：
 
-- **Transition-based**解析器 (arc-eager,arc-standard) 像一个减变解析器一样:它们读取代币,将它们移到堆上,并应用减少创建弧的操作.贪解码是快速的.经典的实现是MaltParser.现代神经版本:陈和曼宁的过渡基于解析器.
-- **Graph-based**子 (Eisner 的算法, Dozat-Manning 白) 测量了每一个可能的根部依赖边缘,然后选择最大的跨度树.
+- **基于转移的**分析器（arc-eager、arc-standard）像移进—归约分析器一样工作：读取词元，把它们移入栈，再执行创建弧的归约动作。贪心解码速度很快。经典实现是 MaltParser，现代神经版本则是 Chen 与 Manning 的基于转移分析器。
+- **基于图的**分析器（Eisner 算法、Dozat-Manning 双仿射模型）会为每条可能的中心词—从属词边评分，再选出最大生成树。速度较慢，但准确率更高。
 
-对于大多数应用工作,请拨打 spaCy:
+对于大多数应用工作，直接调用 spaCy：
 
 ```python
 import spacy
@@ -186,29 +186,29 @@ at         tag=IN    pos=ADP    dep=prep       head=running
 .          tag=.     pos=PUNCT  dep=punct      head=running
 ```
 
-阅读`dep`列从下到上,句子的语法结构掉下来.
+从下往上读取 `dep` 列，句子的语法结构便会显现出来。
 
-## 用它
+## 学以致用
 
-每个生产NLP图书馆都作为标准管道的一部分运送 POS和依赖性解析器.
+每个生产级自然语言处理库都会把词性标注器和依存句法分析器作为标准流水线的一部分提供。
 
-- **spaCy**(`en_core_web_sm`现在,`md`现在,`lg`现在,`trf`快速,精确,与代币化+NER+Lemmatization集成.`token.tag_`现在,我们要做什么?`token.pos_`其他国家`token.dep_`(依赖关系).
-- **Stanford NLP (stanza)**斯坦福大学的继任者,在60多种语言上.
-- **trankit**基于变压器,高度的DD准确性.
-- **NLTK**现在,我们要去.`pos_tag`很适合教学,很适合教学.
+- **spaCy**（`en_core_web_sm` / `md` / `lg` / `trf`）。快速、准确，并与分词、NER、词形还原集成。`token.tag_`（Penn）、`token.pos_`（UD）、`token.dep_`（依存关系）。
+- **Stanford NLP（stanza）**。斯坦福对 CoreNLP 的继任者，在 60 多种语言上达到顶尖水平。
+- **trankit**。基于 Transformer，UD 准确率很高。
+- **NLTK**。`pos_tag`。可用但较慢，也较老旧，适合教学。
 
-### 在2026年,这仍然是重要的
+### 这些知识在 2026 年仍然重要的场景
 
-- **Lemmatization.**第1课需要POS正确的化.
-- **Structured extraction from LLM outputs.**验证生成的句子是否遵守语法限制 (例如,主题verb协议,要求修改).
-- **Aspect-based sentiment.**依赖性解析告诉你哪个属性修改哪个名词.
-- **Query understanding.**"由韦斯安德森导演的电影,由比尔·穆雷主演",通过分析,分解成结构化限制.
-- **Cross-lingual transfer.**语言不了解语言,使得新语言的结构分析能够进行零射击.
-- **Low-compute pipelines.**如果您无法运送变压器,
+- **词形还原。** 第 01 课需要词性信息才能正确还原词形，始终如此。
+- **从大语言模型输出中进行结构化抽取。** 验证生成句子是否遵守语法约束（例如主谓一致、必须存在的修饰语）。
+- **基于方面的情感分析。** 依存句法分析可以告诉你哪个形容词修饰哪个名词。
+- **查询理解。** “movies directed by Wes Anderson starring Bill Murray”可以通过句法树拆解为结构化约束。
+- **跨语言迁移。** UD 标签与依存关系不依赖具体语言，可以对新语言执行零样本结构分析。
+- **低算力流水线。** 如果无法部署 Transformer，词性 + 依存分析 + 词典仍能带你走很远。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/skill-grammar-pipeline.md`其他:
+保存为 `outputs/skill-grammar-pipeline.md`：
 
 ```markdown
 ---
@@ -230,25 +230,25 @@ Given a downstream task (information extraction, rewrite validation, query decom
 Refuse to recommend rolling your own parser. Building parsers from scratch is a research project, not an application task. Flag any pipeline that consumes POS tags without handling lowercase/uppercase variants as fragile.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**使用一个小标签组 (例如,NLTK的Brown子组) 上最常见标签基线,测量保留的句子上的准确性. 验证~85%的结果.
-2. **Medium.**按每标签的精度/回忆报告.哪些标签最困惑?
-3. **Hard.**使用 spaCy 的依赖分析来从1000句的样本中提取主体-动词-对象三倍. 评估50个手动标记的三倍. 抽取失败的文档 (通常是被动,协调和被删除的主体).
+1. **简单。** 在小型带标注语料库（例如 NLTK 的 Brown 子集）上使用最高频标签基线，测量它在留出句子上的准确率，验证约 85% 的结果。
+2. **中等。** 训练上面的二元 HMM，并报告每个标签的精确率与召回率。HMM 最容易混淆哪些标签？
+3. **困难。** 使用 spaCy 的依存句法分析，从 1000 个句子的样本中提取主语—动词—宾语三元组。在 50 个手工标注的三元组上评估，并记录抽取会在哪些地方失效（通常是被动语态、并列结构和省略的主语）。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| POS tag | Word's type | Grammatical category. PTB has 36; UD has 17. |
-| Penn Treebank | Standard tagset | English-specific. Fine-grained verb tenses and noun number. |
-| Universal Dependencies | Multilingual tagset | Coarser than PTB; language-neutral; defaults for cross-lingual work. |
-| Dependency parse | Sentence tree | Each word has one head, each edge has a grammatical relation. |
-| Viterbi | Dynamic programming | Finds the highest-probability tag sequence given emissions and transitions. |
+| 词性标签 | 词的类型 | 语法类别。PTB 有 36 个，UD 有 17 个。 |
+| Penn Treebank | 标准标签集 | 英语专用，细分动词时态和名词单复数。 |
+| Universal Dependencies | 多语言标签集 | 比 PTB 更粗粒度，与语言无关，是跨语言工作的默认选择。 |
+| 依存句法树 | 句子树 | 每个词有一个中心词，每条边带有一种语法关系。 |
+| 维特比算法 | 动态规划 | 根据发射概率与转移概率，找出概率最高的标签序列。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Jurafsky and Martin — Speech and Language Processing, chapters 8 and 18](https://web.stanford.edu/~jurafsky/slp3/)可教教本处理 POS和解析.
-- [Universal Dependencies project](https://universaldependencies.org/)每一个多语言分析器使用的跨语言标签和树库集.
-- [spaCy linguistic features guide](https://spacy.io/usage/linguistic-features) 关于每一个被曝光的属性的实际参考`Token`现在,我们要去.
-- [Chen and Manning (2014). A Fast and Accurate Dependency Parser using Neural Networks](https://nlp.stanford.edu/pubs/emnlp2014-depparser.pdf)引入神经分辨器的论文.
+- [Jurafsky 与 Martin——《语音与语言处理》第 8、18 章](https://web.stanford.edu/~jurafsky/slp3/)——讲解词性与句法分析的权威教材。
+- [Universal Dependencies 项目](https://universaldependencies.org/)——每种多语言分析器都使用的跨语言标签集与树库集合。
+- [spaCy 语言学特征指南](https://spacy.io/usage/linguistic-features)——`Token` 上每个公开属性的实用参考。
+- [Chen 与 Manning（2014），使用神经网络实现快速准确的依存句法分析器](https://nlp.stanford.edu/pubs/emnlp2014-depparser.pdf)——推动神经句法分析器进入主流的论文。
