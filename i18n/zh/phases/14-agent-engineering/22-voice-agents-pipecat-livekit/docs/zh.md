@@ -1,133 +1,133 @@
-# 语音代理:皮皮卡特和LiveKit
+# 语音代理：Pipecat 与 LiveKit
 
-> 语音代理是2026年一流的生产类别.皮皮卡特为您提供了基于Python框架的管道 (VAD → STT → LLM → TTS →运输).LiveKit代理将AI模型与用户交互通过WebRTC.
+> 到了 2026 年，语音代理已经是正式的一线生产形态。Pipecat 提供基于 Python 的 frame 管线（VAD → STT → LLM → TTS → transport），LiveKit Agents 则通过 WebRTC 把 AI 模型接到真实用户面前。高端语音栈的端到端延迟目标，通常落在 450–600ms。
 
-**Type:** Learn
-**Languages:** Python (stdlib)
-**Prerequisites:** Phase 14 · 01 (Agent Loop), Phase 14 · 12 (Workflow Patterns)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库）
+**Prerequisites:** 第 14 阶段 · 01（Agent Loop），第 14 阶段 · 12（工作流模式）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 描述皮佩卡的基于框架的管道:DOWNSTREAM (来源→沉没) 和UPSTREAM (控制).
-- 列出了可信语音管道的阶段,以及 Pipecat 运输的支持.
-- 解释LiveKit代理的两个语音代理类 (多模特代理,语音管线代理) 和每一个类的适合时间.
-- 总结2026年生产延迟预期以及它们如何推动建筑选择.
+- 解释 Pipecat 的 frame 管线模型：DOWNSTREAM（source→sink）与 UPSTREAM（control）。
+- 说出标准语音管线的主要阶段，以及 Pipecat 支持哪些 transport。
+- 解释 LiveKit Agents 的两类语音代理：MultimodalAgent 与 VoicePipelineAgent，并说明各自适用场景。
+- 概括 2026 年生产环境常见的延迟预期，以及这些延迟预算如何反向约束架构设计。
 
 ## 问题
 
-语音代理不是一个文字循环,TTS是插入的.延迟预算是残酷的 (~600ms),部分音频是默认的,转转检测是模型,运输范围从电话SIP到WebRTC.要么你构建一个基于框架的管道 (Pipecat) 或你依赖于一个平台 (LiveKit).
+语音代理不是在文本循环外面简单套一层 TTS。它的延迟预算非常苛刻，大致只有 ~600ms；部分音频输出是默认能力；turn detection 本身也需要模型参与；传输层从电话 SIP 到 WebRTC 都得支持。你通常只有两条路线：要么自己搭一条基于 frame 的实时语音管线，例如 Pipecat；要么基于现成平台，如 LiveKit。
 
 ## 概念
 
-### 皮皮卡特 (pipecat-ai/pipecat)
+### Pipecat (pipecat-ai/pipecat)
 
-- 基于Python框架的管道框架.
-- `Frame`其他`FrameProcessor`链接.
-- 两条流程:
-  - **DOWNSTREAM**源 →水槽 (音频进入,TTS出).
-  - **UPSTREAM**反和控制 (取消,指标,入).
-- `PipelineTask`管理生命周期与事件 (`on_pipeline_started`现在`on_pipeline_finished`现在`on_idle_timeout`) 和指标/追踪/RTVI观察员.
+- 一个基于 Python 的 frame 化管线框架。
+- 以 `Frame` → `FrameProcessor` 的链式结构组织处理流程。
+- 数据流有两个方向：
+  - **DOWNSTREAM**：source → sink，也就是音频进入、语音输出的正向路径。
+  - **UPSTREAM**：反馈与控制路径，例如取消、指标回传、barge-in。
+- `PipelineTask` 负责整个生命周期，带有事件（`on_pipeline_started`、`on_pipeline_finished`、`on_idle_timeout`）以及用于指标、tracing、RTVI 的 observers。
 
-典型的管道:
+典型管线如下：
 
 ```
 VAD (Silero) → STT → LLM (context alternates user/assistant) → TTS → transport
 ```
 
-运输:日报,LiveKit,SmallWebRTCTransport,FastAPI WebSocket,WhatsApp.
+支持的 transport 包括：Daily、LiveKit、SmallWebRTCTransport、FastAPI WebSocket、WhatsApp。
 
-皮佩卡特流量添加结构化对话 (状态机).皮佩卡特云是管理运行时间.
+Pipecat Flows 在此基础上增加了结构化会话能力，本质上是状态机；Pipecat Cloud 则是它的托管运行时。
 
-### 现场服务代理 (livekit/agents)
+### LiveKit Agents (livekit/agents)
 
-- 通过WebRTC将人工智能模型传达给用户.
-- 主要概念:`Agent`现在`AgentSession`现在`entrypoint`现在`AgentServer`现在,我们要去.
-- 两个语音代理课程:
-  - **MultimodalAgent**通过OpenAI实时或同等方式直接录音.
-  - **VoicePipelineAgent** STT → LLM → TTS;提供文本级控制.
-- 通过变压器模型进行语义转换检测.
-- 产地MCP集成
-- 通过SIP进行电话.
-- 通过LiveKitInference使用没有API密钥的50多个模型;通过插件使用的200多个模型.
+- 负责通过 WebRTC 把 AI 模型连接到最终用户。
+- 核心概念包括：`Agent`、`AgentSession`、`entrypoint`、`AgentServer`。
+- 两类主要语音代理：
+  - **MultimodalAgent**：直接走音频输入和音频输出，例如 OpenAI Realtime 或同类实时模型。
+  - **VoicePipelineAgent**：采用 STT → LLM → TTS 级联，因此可以在文本层面做更细粒度控制。
+- 支持基于 transformer 的语义 turn detection。
+- 原生集成 MCP。
+- 支持通过 SIP 接入电话系统。
+- 可通过 LiveKit Inference 使用 50+ 无需 API key 的模型，也可通过插件接入额外 200+ 模型。
 
 ### 商业平台
 
-在此基础上,Vapi (~450600ms在优化的高级堆上) 和Retell (~600ms在180次测试调用中端到端) 构建.当您想要一个没有WebRTC团队的管理语音堆时,选择一个平台.
+Vapi 与 Retell 这类商业产品通常就是在上述基础设施之上再做托管封装。Vapi 在优化过的高端栈上可做到约 450–600ms；Retell 在 180 次测试通话中的端到端延迟大约是 600ms。如果你不想自己养一支 WebRTC 团队，直接选托管平台往往更现实。
 
-### 在这个模式出现错误的地方
+### 这种模式常见的失败点
 
-- **No barge-in handling.**用户打断,代理继续说话. 要求UPSTREAM在Pippecat中取消,相当于LiveKit.
-- **STT confidence ignored.**低信心的转录像像像福音一样送给法师.
-- **TTS mid-sentence cutoff.**电气管道在中发音中取消时,TTS需要知道或切断音频.
-- **Latency budget ignored.**每个组件都增加了50200ms.
+- **没有处理 barge-in。** 用户已经打断，代理还在继续说。Pipecat 里需要依赖 UPSTREAM cancel frame，LiveKit 里也需要对应机制。
+- **忽略 STT confidence。** 低置信度转写被当成确定事实直接送给 LLM，应该基于置信度做拦截或请求用户确认。
+- **TTS 在句中被截断。** 如果管线中途取消了一段正在播报的 utterance，TTS 侧必须明确感知到取消或能主动截音。
+- **完全没算延迟预算。** 每个组件都可能额外增加 50–200ms，上线前必须把整条链路加总一遍。
 
-### 2026年典型的延迟
+### 2026 年的典型延迟
 
-- 射频: 2060ms
-- 部分STT: 100250ms
-- 士师第一代币:150400ms
-- 频率:100200ms
-- 运输时间:3080ms
+- VAD：20–60ms
+- STT 部分结果：100–250ms
+- LLM 首个词元：150–400ms
+- TTS 首段音频：100–200ms
+- 传输往返时间（RTT）：30–80ms
 
-总体而言,在线观看的视频是非常简单的.
+450–600ms 的端到端体验算高端。800–1200ms 很常见。任何超过 1500ms 的系统，用户都会明显感觉它坏了。
 
 ```figure
 voice-pipeline
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`是一个基于的玩具管道,具有:
+`code/main.py` 实现了一个基于 frame 的玩具管线，包含：
 
-- `Frame`类型 (音频,转录,文字,tts_audio,控制).
-- `Processor`接口`process(frame)`现在,我们要去.
-- 作为脚本处理器的五阶段管道 (VAD → STT → LLM → TTS → 运输).
-- 为了证明入.
+- `Frame` 类型（audio、transcript、text、tts_audio、control）。
+- `Processor` 接口，定义 `process(frame)`。
+- 一个五阶段管线（VAD → STT → LLM → TTS → transport），由脚本化 processor 构成。
+- 一个用于演示 barge-in 的 UPSTREAM cancel frame。
 
-运行它:
+运行方式：
 
 ```
 python3 code/main.py
 ```
 
-痕迹显示正常流量, 轮取消了TTS中发射.
+输出 trace 会展示正常流动，以及一次 barge-in cancel 如何在播报中途打断 TTS。
 
-## 用它
+## 如何使用
 
-- **Pipecat**对于完全控制的定制处理器,Python首,可插入的提供商.
-- **LiveKit Agents**对于WebRTC首次部署和电话.
-- **Vapi / Retell**对于没有WebRTC团队的托管语音代理人.
-- **OpenAI Realtime / Gemini Live**直接录音/录音输出 (多动机代理).
+- **Pipecat**：适合需要完全控制权的场景，比如自定义 processor、Python 优先开发、自由切换 provider。
+- **LiveKit Agents**：适合 WebRTC 优先部署，以及电话语音接入。
+- **Vapi / Retell**：适合没有 WebRTC 工程团队、但又要尽快落地托管语音代理的团队。
+- **OpenAI Realtime / Gemini Live**：适合直接做 audio-in/audio-out 的实时语音代理，也就是 MultimodalAgent 一类方案。
 
-## 运送它
+## 交付成果
 
-`outputs/skill-voice-pipeline.md`配备一个像皮佩卡特的音频管道,配备VAD+STT+LLM+TTS+运输以及船操作.
+`outputs/skill-voice-pipeline.md` 提供一个 Pipecat 风格的语音管线脚手架，包含 VAD + STT + LLM + TTS + transport，以及 barge-in 处理。
 
-## 运动
+## 练习
 
-1. 加入一个测量观察器到玩具管道:每秒计算每个阶段的框架.
-2. 执行安全门户的STT:在门以下,请问"您可以重复吗?"
-3. 添加语义转变检测:简单规则如果转录以"?",转变结束.
-4. 读取皮皮卡特的运输文件. 换取Stdlib运输的SmalWebRTCTransport配置 (stub).
-5. 在同一查询中测量OpenAI实时与STT+LLM+TTS的尾数.文本级控制带来了什么延迟成本?
+1. 给这个玩具管线加一个 metrics observer：统计每秒每个阶段处理了多少 frame。延迟主要积累在哪一段？
+2. 实现带置信度门槛的 STT：低于阈值时，不进入 LLM，而是请求用户“could you repeat that?”
+3. 增加语义 turn detection：先用一个最简单的规则，如果 transcript 以 ? 结尾，就视为轮次结束。
+4. 阅读 Pipecat 的 transport 文档。把当前 stdlib transport 替换成 SmallWebRTCTransport 的配置桩（stub）。
+5. 对同一个问题，分别测量 OpenAI Realtime 与 STT+LLM+TTS 级联系统的延迟。文本层控制到底带来了多少延迟成本？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
-|------|----------------|------------------------|
-| Frame | "Event" | Typed unit of data in the pipeline (audio, transcript, text, control) |
-| Processor | "Pipeline stage" | Handler with process(frame) |
-| DOWNSTREAM | "Forward flow" | Source to sink: audio in, speech out |
-| UPSTREAM | "Feedback flow" | Control: cancel, metrics, barge-in |
-| VAD | "Voice activity detection" | Detects when user is speaking |
-| Semantic turn detection | "Smart end-of-turn" | Model-based decision that the user is done |
-| MultimodalAgent | "Direct audio agent" | Audio in, audio out; no text in the middle |
-| VoicePipelineAgent | "Cascade agent" | STT + LLM + TTS; text-level control |
+| 术语 | 常见说法 | 实际含义 |
+|------|----------|----------|
+| Frame | "Event" | 管线中的一个带类型数据单元，例如 audio、transcript、text、control |
+| Processor | "Pipeline stage" | 一个实现了 process(frame) 的处理节点 |
+| DOWNSTREAM | "Forward flow" | 从 source 到 sink 的正向路径：音频输入，语音输出 |
+| UPSTREAM | "Feedback flow" | 控制路径：cancel、metrics、barge-in |
+| VAD | "Voice activity detection" | 检测用户是否正在说话 |
+| Semantic turn detection | "Smart end-of-turn" | 通过模型判断用户这一轮是否已经说完 |
+| MultimodalAgent | "Direct audio agent" | 中间不经过文本，直接 audio in / audio out |
+| VoicePipelineAgent | "Cascade agent" | 通过 STT + LLM + TTS 级联，保留文本层控制能力 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Pipecat docs](https://docs.pipecat.ai/getting-started/introduction)基于的管道,加工器,运输
-- [LiveKit Agents docs](https://docs.livekit.io/agents/) WebRTC + 语音原始
-- [Vapi](https://vapi.ai/)管理的语音平台
-- [Retell AI](https://www.retellai.com/)语音管理,延迟标记
+- [Pipecat docs](https://docs.pipecat.ai/getting-started/introduction) — frame-based pipeline、processors、transports
+- [LiveKit Agents docs](https://docs.livekit.io/agents/) — WebRTC + 语音基础能力
+- [Vapi](https://vapi.ai/) — 托管语音平台
+- [Retell AI](https://www.retellai.com/) — 托管语音平台，并公开过延迟基准
