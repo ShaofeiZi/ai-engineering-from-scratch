@@ -1,67 +1,67 @@
-# 音频基础 波形,样本,福利尔转换
+# 音频基础——波形、采样与傅里叶变换
 
-> 波形是原始信号.谱谱是表示.MEL特征是ML友好的形式.每一个现代ASR和TTS管道都走在这个梯子上,第一步是理解采样和Fourier.
+> 波形是原始信号，频谱图是它的表示，梅尔特征则是适合机器学习的形式。每条现代 ASR 和 TTS 流水线都会沿着这组阶梯向上走，而第一阶就是理解采样与傅里叶变换。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python
-**Prerequisites:** Phase 1 · 06 (Vectors & Matrices), Phase 1 · 14 (Probability Distributions)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 1 · 06（向量与矩阵）、阶段 1 · 14（概率分布）
+**Time:** 约 45 分钟
 
 ## 问题
 
-电话产生压力与时间信号.你的神经网络消耗了器.它们之间有堆积的规则,如果被违反,会产生沉默的错误:模型运行得很好,但WER翻倍,或者TTS发出声,或者语音克隆系统记忆起电话而不是扬声器.
+麦克风产生的是压力随时间变化的信号，神经网络接收的却是张量。二者之间存在一整套约定；一旦违反，就会产生悄无声息的错误：模型训练看似正常，但词错误率翻倍；TTS 生成嘶嘶声；语音克隆系统记住的是麦克风，而不是说话人。
 
-语音系统中的每一个错误都追溯到三个问题之一:
+语音系统中的每个问题，都可以追溯到以下三个问题之一：
 
-1. 数据记录的样本率是多少,模型预期什么?
-2. 信号是个别名吗?
-3. 你是用原始样本或频率表示操作?
+1. 数据使用什么采样率录制，模型期望什么采样率？
+2. 信号是否发生了混叠？
+3. 你是在处理原始采样，还是频率表示？
 
-错误的,甚至是声大型v4也会产生垃圾.
+这些问题处理正确，阶段 6 的其他内容就容易掌握；处理错误，即使 Whisper-Large-v4 也只能输出垃圾。
 
 ## 概念
 
-![Waveform, sampling, DFT, and frequency bins visualized](../assets/audio-fundamentals.svg)
+![波形、采样、DFT 与频率分箱可视化](../assets/audio-fundamentals.svg)
 
-**Waveform.**的一个维度的浮动阵列`[-1.0, 1.0]`为了将其转换为秒,按样本速率划分:`t = n / sr`十秒钟的 16 kHz 剪辑是 160,000 个浮动的阵列.
+**波形。** 一个取值位于 `[-1.0, 1.0]` 的一维浮点数组，按采样编号索引。除以采样率即可转换为秒：`t = n / sr`。一段 16 kHz、10 秒的音频包含 16 万个浮点数。
 
-**Sampling rate (sr).**2026年常见率:
+**采样率（sr）。** 每秒采集的样本数。2026 年常见采样率如下：
 
-| Rate | Use |
+| 采样率 | 用途 |
 |------|-----|
-| 8 kHz | Telephony, legacy VOIP. Nyquist at 4 kHz kills consonants. Avoid for ASR. |
-| 16 kHz | ASR standard. Whisper, Parakeet, SeamlessM4T v2 all consume 16 kHz. |
-| 22.05 kHz | TTS vocoder training for older models. |
-| 24 kHz | Modern TTS (Kokoro, F5-TTS, xTTS v2). |
-| 44.1 kHz | CD audio, music. |
-| 48 kHz | Film, pro audio, high-fidelity TTS (VALL-E 2, NaturalSpeech 3). |
+| 8 kHz | 电话与旧式 VOIP。奈奎斯特频率只有 4 kHz，会损失辅音；ASR 应避免使用。 |
+| 16 kHz | ASR 标准。Whisper、Parakeet、SeamlessM4T v2 都接收 16 kHz。 |
+| 22.05 kHz | 较早模型的 TTS 声码器训练。 |
+| 24 kHz | 现代 TTS（Kokoro、F5-TTS、xTTS v2）。 |
+| 44.1 kHz | CD 音频、音乐。 |
+| 48 kHz | 电影、专业音频、高保真 TTS（VALL-E 2、NaturalSpeech 3）。 |
 
-**Nyquist-Shannon.**样本率`sr`能明确表示高达 `sr/2`现在,我们要去.`sr/2`边界是尼奎斯特频率. 尼奎斯特上方的能量被*aliased* 折叠到较低频率,并破坏信号.
+**奈奎斯特—香农定理。** 采样率 `sr` 可以无歧义地表示最高 `sr/2` 的频率。`sr/2` 这个边界称为*奈奎斯特频率*。高于奈奎斯特频率的能量会发生*混叠*——折返到较低频率——从而污染信号。降采样前必须先使用低通滤波器。
 
-**Bit depth.**16位PCM (签名int16,范围±32,767) 是通用交换格式. 24位为音乐, 32位为内部DSP.`soundfile`读 int16,但在 显示 float32 阵列中`[-1, 1]`现在,我们要去.
+**位深度。** 16 位 PCM（有符号 int16，范围 ±32767）是通用交换格式；音乐使用 24 位，内部数字信号处理使用 32 位浮点数。`soundfile` 等库读取 int16，但会公开取值位于 `[-1, 1]` 的 float32 数组。
 
-**Fourier Transform.**任何有限的信号是不同频率的突体的总和.`N`样本`N`复杂系数 每频段一个. `bin k`频率地图`k · sr / N`度是频率的宽度,角度是相.
+**傅里叶变换。** 任何有限信号都可以表示为不同频率正弦波之和。离散傅里叶变换（DFT）对 `N` 个样本计算 `N` 个复数系数——每个频率分箱对应一个。`bin k` 映射到频率 `k · sr / N` Hz。模长代表该频率的振幅，相角代表相位。
 
-**FFT.**快速福利尔转换:一个`O(N log N)`对于DFT的算法`N`每个音频库都使用FFT在罩杯下. 1024样本FFT在16kHz时提供512个可用频段,范围为08kHz在15.6Hz分辨率.
+**FFT。** 快速傅里叶变换：一种复杂度为 `O(N log N)` 的 DFT 算法，要求 `N` 是 2 的幂。每个音频库都在底层使用 FFT。对 16 kHz 音频执行 1024 点 FFT，会得到 512 个可用频率分箱，覆盖 0～8 kHz，分辨率为 15.6 Hz。
 
-**Framing + window.**我们不把整个剪辑 FFT. 我们将它切成重叠的 * 框架* (通常是25 ms和10 ms跳),乘以窗口函数 (汉,汉明) 来消除边缘不连续性,然后将每个框 FFT.这是短时间福利尔转换 (STFT).课程02从这里开始.
+**分帧 + 加窗。** 我们不会对整段音频执行一次 FFT，而是把它切成相互重叠的*帧*（通常为 25 毫秒帧长、10 毫秒步长），将每一帧乘以窗口函数（Hann、Hamming）以消除边缘不连续，再逐帧执行 FFT。这就是短时傅里叶变换（STFT）。第 02 课将从这里继续。
 
 ```figure
 mel-scale
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:阅读一个剪辑,绘制波形
+### 第 1 步：读取音频片段并绘制波形
 
-`code/main.py`仅使用SDLIB`wave`为了保持演示的无依赖性.`soundfile`或`torchaudio.load`(两者都回来了)`(waveform, sr)`双:
+`code/main.py` 仅使用标准库 `wave` 模块，使演示不依赖第三方库。生产环境中应使用 `soundfile` 或 `torchaudio.load`（二者都返回 `(waveform, sr)` 元组）：
 
 ```python
 import soundfile as sf
 waveform, sr = sf.read("clip.wav", dtype="float32")  # shape (T,), sr=int
 ```
 
-### 步骤2:从第一原则合成一个鼻波
+### 第 2 步：从第一性原理合成正弦波
 
 ```python
 import math
@@ -71,9 +71,9 @@ def sine(freq_hz, sr, seconds, amp=0.5):
     return [amp * math.sin(2 * math.pi * freq_hz * i / sr) for i in range(n)]
 ```
 
-按16kHz的440Hz音节 (音乐会A) 速度,在1秒钟内,是16000个浮动.`wave.open(..., "wb")`使用16位PCM编码.
+在 16 kHz 下生成 1 秒的 440 Hz 正弦波（音乐会标准音 A），会得到 16000 个浮点数。使用 16 位 PCM 编码，通过 `wave.open(..., "wb")` 写入文件。
 
-### 步骤3:手动计算DFT
+### 第 3 步：手工计算 DFT
 
 ```python
 def dft(x):
@@ -86,57 +86,57 @@ def dft(x):
     return out
 ```
 
-`O(N²)`罚款`N=256`为了确认正确性,对真正的音频无用.`numpy.fft.rfft`或`torch.fft.rfft`现在,我们要去.
+复杂度为 `O(N²)`——用于 `N=256` 时可以验证正确性，处理真实音频则毫无实用价值。真实代码会调用 `numpy.fft.rfft` 或 `torch.fft.rfft`。
 
-### 步骤4:找到主导频率
+### 第 4 步：找出主导频率
 
-极度峰值指数`k_star`频率地图`k_star * sr / N`运行这个440Hz的阴影应该返回一个峰值`440 * N / sr`现在,我们要去.
+幅度峰值索引 `k_star` 对应频率 `k_star * sr / N`。在 440 Hz 正弦波上运行时，应当在分箱 `440 * N / sr` 处找到峰值。
 
-### 步骤5:证明名
+### 第 5 步：演示混叠
 
-采样一个7kHz的弦在10kHz (Nyquist = 5kHz). 7kHz的音调是在 Nyquist 上,并折叠到`10 − 7 = 3 kHz`子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子
+以 10 kHz 采样率采样 7 kHz 正弦波（奈奎斯特频率 = 5 kHz）。7 kHz 音调高于奈奎斯特频率，会折返到 `10 − 7 = 3 kHz`；FFT 峰值会出现在 3 kHz。这是经典的混叠演示，也是每个 DAC/ADC 都配备砖墙式低通滤波器的原因。
 
-## 用它
+## 学以致用
 
-实际上你将在2026年发送的堆:
+2026 年实际交付时使用的技术栈：
 
-| Task | Library | Why |
+| 任务 | 库 | 原因 |
 |------|---------|-----|
-| Read/write WAV/FLAC/OGG | `soundfile` (libsndfile wrapper) | Fastest, stable, returns float32. |
-| Resample | `torchaudio.transforms.Resample` or `librosa.resample` | Correct anti-aliasing built in. |
-| STFT / Mel | `torchaudio` or `librosa` | GPU-friendly; PyTorch ecosystem. |
-| Real-time streaming | `sounddevice` or `pyaudio` | Cross-platform PortAudio bindings. |
-| Inspect a file | `ffprobe` or `soxi` | CLI, fast, reports sr/channels/codec. |
+| 读写 WAV/FLAC/OGG | `soundfile`（libsndfile 封装） | 速度最快且稳定，返回 float32。 |
+| 重采样 | `torchaudio.transforms.Resample` 或 `librosa.resample` | 内置正确的抗混叠处理。 |
+| STFT / 梅尔特征 | `torchaudio` 或 `librosa` | 支持 GPU，与 PyTorch 生态集成。 |
+| 实时流式处理 | `sounddevice` 或 `pyaudio` | 跨平台 PortAudio 绑定。 |
+| 检查文件 | `ffprobe` 或 `soxi` | 命令行工具，速度快，可报告采样率、声道数与编解码器。 |
 
-决策规则:**match sample rate before you match anything else**通过44.1千克Hz的立体音频,你会得到像模型 bug 的垃圾.
+决策规则：**在匹配其他任何内容之前，先匹配采样率**。Whisper 期望输入 16 kHz 单声道 float32。如果传入 44.1 kHz 立体声，输出会像模型出错一样糟糕。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/skill-audio-loader.md`技术帮助您检查音频输入是否符合下游模型的预期,并且在不符合时,可以正确复制.
+保存为 `outputs/skill-audio-loader.md`。这个技能帮助你检查音频输入是否符合下游模型的预期，并在不符合时正确重采样。
 
-## 运动
+## 练习
 
-1. **Easy.**在16kHz时合成220Hz+440Hz+880Hz的1秒混合.运行DFT.确认预期的垃圾桶的三个峰值.
-2. **Medium.**记录你的声音的3秒 WAV48kHz. 下样子到16kHz使用`torchaudio.transforms.Resample`通过每三样子进行简单的十度测量, FFT 两者.
-3. **Hard.**仅使用 创建STFT从零开始`math`图像大小与 图像大小与 图像大小与 图像大小与 图像大小与 图像大小`matplotlib.pyplot.imshow`这是第二课的光谱.
+1. **简单。** 在 16 kHz 下合成一秒钟的 220 Hz + 440 Hz + 880 Hz 混合音，运行 DFT，确认预期分箱位置出现三个峰值。
+2. **中等。** 以 48 kHz 录制一段 3 秒语音。先使用 `torchaudio.transforms.Resample`（带抗混叠）降采样至 16 kHz，再使用朴素抽取（每三个样本取一个）降采样至 16 kHz。对二者执行 FFT，混叠出现在哪里？
+3. **困难。** 只使用 `math` 和第 3 步中的 DFT 从零构建 STFT。帧大小为 400，步长为 160，采用 Hann 窗。使用 `matplotlib.pyplot.imshow` 绘制幅度图。这就是第 02 课中的频谱图。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Sample rate | How many samples per second | Frequency in Hz at which the ADC measures the signal. |
-| Nyquist | The max frequency you can represent | `sr/2`; energy above it aliases back down. |
-| Bit depth | Resolution of each sample | `int16` = 65,536 levels; `float32` = 24-bit precision in `[-1, 1]`. |
-| DFT | The Fourier transform for sequences | `N` samples → `N` complex frequency coefficients. |
-| FFT | The fast DFT | `O(N log N)` algorithm requiring `N` = power of 2. |
-| Bin | Frequency column | `k · sr / N` Hz; resolution = `sr / N`. |
-| STFT | Spectrogram under the hood | Framed + windowed FFT over time. |
-| Aliasing | Weird frequency ghosts | Energy above Nyquist mirroring down to lower bins. |
+| 采样率 | 每秒采集多少样本 | ADC 测量信号的频率，单位为 Hz。 |
+| 奈奎斯特频率 | 可以表示的最高频率 | `sr/2`；高于它的能量会向下混叠。 |
+| 位深度 | 每个样本的分辨率 | `int16` = 65536 个电平；`float32` = `[-1, 1]` 范围内的 24 位精度。 |
+| DFT | 序列的傅里叶变换 | `N` 个样本 → `N` 个复数频率系数。 |
+| FFT | 快速 DFT | 复杂度为 `O(N log N)`、要求 `N` 为 2 的幂的算法。 |
+| 分箱 | 频率列 | `k · sr / N` Hz；分辨率 = `sr / N`。 |
+| STFT | 频谱图的底层机制 | 分帧 + 加窗 + 随时间执行 FFT。 |
+| 混叠 | 奇怪的频率幽灵 | 高于奈奎斯特频率的能量镜像到较低频率分箱。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Shannon (1949). Communication in the Presence of Noise](https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf)样本定理背后的论文.
-- [Smith — The Scientist and Engineer's Guide to Digital Signal Processing](https://www.dspguide.com/ch8.htm)免费的法典DSP教科书.
-- [librosa docs — audio primer](https://librosa.org/doc/latest/tutorial.html)实用程序.
-- [Heinrich Kuttruff — Room Acoustics (6th ed.)](https://www.routledge.com/Room-Acoustics/Kuttruff/p/book/9781482260434)为什么现实世界音频不是一个清洁的阴影.
-- [Steve Eddins — FFT Interpretation notebook](https://blogs.mathworks.com/steve/2020/03/30/fft-spectrum-and-spectral-densities/)频率桶直觉在10分钟内清除了.
+- [Shannon（1949），噪声环境中的通信](https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf)——采样定理背后的论文。
+- [Smith——《科学家与工程师的数字信号处理指南》](https://www.dspguide.com/ch8.htm)——免费、经典的 DSP 教材。
+- [librosa 文档——音频入门](https://librosa.org/doc/latest/tutorial.html)——配有代码的实践教程。
+- [Heinrich Kuttruff——《室内声学》（第 6 版）](https://www.routledge.com/Room-Acoustics/Kuttruff/p/book/9781482260434)——解释现实音频为何不是干净正弦波的参考资料。
+- [Steve Eddins——FFT 解读笔记](https://blogs.mathworks.com/steve/2020/03/30/fft-spectrum-and-spectral-densities/)——十分钟理清频率分箱的直觉。
