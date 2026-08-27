@@ -1,47 +1,47 @@
-# 短枪VLM的闪电和关门交叉注意力
+# Flamingo 与面向少样本 VLM 的门控交叉注意力
 
-> 们都在想, 它显示,一个模型可以任意处理交织的图像,视频和文本序列. 模型可以在背景下学习, 通过三个例子 (图像,字幕) 组进行几次提示, 机制:关闭的跨注意层,插入了结的LLM现有层之间,具有从零开始的学习门,因此在初始化时保留了LLM的文本能力. 这一课程讲述了弗拉明戈的感知器复制样本和关闭的交叉注意力架构,
+> DeepMind 的 Flamingo（2022）率先完成了两件事。它证明单个模型可以处理图像、视频与文本任意交错的序列；也证明 VLM 能够进行上下文学习——给出包含三个（图像、说明文字）样本对的少样本提示后，模型无须任何梯度更新，就能为一幅新图像生成说明文字。其机制是在冻结大语言模型的现有层之间插入门控交叉注意力层，并使用一个初始值为零的可学习 tanh 门，从而在初始化时保留大语言模型的文本能力。本课会讲解 Flamingo 的 Perceiver 重采样器与门控交叉注意力架构——它们是 Gemini 交错输入和 Idefics2 视觉词元的先驱。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python (stdlib, gated cross-attention + Perceiver resampler demo)
-**Prerequisites:** Phase 12 · 03 (BLIP-2 Q-Former)
-**Time:** ~120 minutes
+**Prerequisites:** 第 12 阶段 · 第 03 课（BLIP-2 Q-Former）
+**Time:** 约 120 分钟
 
 ## 学习目标
 
-- 解释如何通过tanh(gate) = 0 保存结的LLM的文本能力.
-- 通过感知器重新样本:N图像补丁 →K通过交叉注意力固定"隐藏"查询.
-- 描述弗拉明戈如何处理交织的图像文本序列,并使用因果掩饰来尊重图像的放置.
-- 复制几次多模式提示结构 (3个图像标题示例,然后是查询图像).
+- 解释门控交叉注意力如何通过 tanh(gate) = 0，在初始化时保留冻结大语言模型的文本能力。
+- 完整说明 Perceiver 重采样器：通过交叉注意力把 N 个图像块压缩成 K 个固定的“潜变量”查询。
+- 描述 Flamingo 如何使用尊重图像位置的因果掩码，处理图像与文本交错的序列。
+- 复现少样本多模态提示结构（3 组图像—说明文字示例，再加一幅待查询图像）。
 
 ## 问题
 
-通过BLIP-2将32个视觉代币输入到一个结的LLM的输入层中. 按一个提示,可以使用一个图像. 但如果您想用文字插入 *许多*图像,如"这里是图像A,标题它;这里是图像B,标题它;现在这里是图像C,标题它"? 专业学习的自我注意力需要在单个流程中处理图像代币和文字代币,
+BLIP-2 会把 32 个视觉词元送入冻结大语言模型的输入层，这适用于每条提示只有一幅图像的情况。但如果想输入*多幅*与文本交错的图像，例如“这是图像 A，请描述；这是图像 B，请描述；现在这是图像 C，请描述”，该怎么办？大语言模型的自注意力需要在单一序列中处理图像词元和文本词元，而哪些位置可以关注哪些图像的问题会变得棘手。
 
-弗拉明戈的答案:不要改变LLM的输入流. 插入现有LLM区间的额外的跨注意层. 文字代币仍然像往常一样流出在LLM的因果自我注意力中. 在每几个LLM块之间,文字代币通过新的封闭层来交叉访问图像功能. 门 (初始化为零) 意味着在零步骤时,新层是无运作的 随着训练的进步,门户就打开,视觉信息开始流动.
+Flamingo 的答案是：完全不改变大语言模型的输入流，而是在已有的大语言模型块之间插入额外的交叉注意力层。文本词元仍像以往一样流经大语言模型的因果自注意力。每隔若干个大语言模型块，文本词元还会通过新的门控层对图像特征执行交叉注意力。门的初始值为零，因此在第 0 步，新层等同于恒等操作——模型的行为与预训练大语言模型完全相同。随着训练推进，门逐渐打开，视觉信息开始流入。
 
-弗拉明戈回答了第二个问题:每提示如何处理每次图像的可变数量 (0, 1,或多个) ?一个感知器重样仪是一个小的跨注意力模块,它取出你拥有的任何数量的补丁并产生固定数量的视觉隐藏代币.无论提示中有多少图像,LLM跨注意力层都会看到相同的形状.
+Flamingo 回答的第二个问题是：如何处理每条提示中数量不定的图像（0 幅、1 幅或多幅）？答案是 Perceiver 重采样器——一个小型交叉注意力模块，无论输入多少个图像块，都会输出固定数量的视觉潜变量词元。无论提示中有多少幅图像，大语言模型的交叉注意力层看到的形状都相同。
 
 ## 概念
 
-### 结的法定律师
+### 冻结的大语言模型
 
-弗拉明戈开始了冷的辛奇拉70B法师.所有70B重量都没有被触及.现有的文字自我注意和FFN正常运行.
+Flamingo 以冻结的 Chinchilla 70B 大语言模型为起点，全部 700 亿个权重保持不变。现有的文本自注意力和 FFN 照常运行。
 
-### 感知器重新样本
+### Perceiver 重采样器
 
-对于每一个提示图像,ViT生成N补丁代币.感知器复样器有K固定可学习的隐藏 (Flamingo使用K=64).每一个复样器块是两个子步骤:
+对于提示中的每幅图像，ViT 会生成 N 个图像块词元。Perceiver 重采样器拥有 K 个固定的可学习潜变量（Flamingo 使用 K=64）。每个重采样器块包含两个子步骤：
 
-1. 交叉注意:K潜伏对N补丁代币 (Q来自潜伏,K/V来自补丁) 进行.
-2. 自我注意力+FFN在隐藏中.
+1. 交叉注意力：K 个潜变量关注 N 个图像块词元（Q 来自潜变量，K/V 来自图像块）。
+2. 潜变量内部的自注意力 + FFN。
 
-输出后6个复制模块,输出为K=64的视觉代币,无论ViT产生了多少补丁. 224x224图像 (196补丁) 和480x480图像 (900补丁) 都作为64个复制模块代币.
+经过 6 个重采样器块后，无论 ViT 生成了多少个图像块，输出始终是 K=64 个 1024 维视觉词元。一幅 224x224 图像（196 个图像块）和一幅 480x480 图像（900 个图像块），最终都会变成 64 个重采样器词元。
 
-视频的重样仪是时间应用的:每个框架的补丁产生64个隐藏,时间定位编码使模型能够区分t=0和t=N.完整的视频成为T * 64视觉代币.
+对于视频，重采样器会沿时间维度应用：每一帧的图像块生成 64 个潜变量，时间位置编码使模型可以区分 t=0 与 t=N。整个视频最终变成 T * 64 个视觉词元。
 
-### 门的跨度注意力
+### 门控交叉注意力
 
-在结的LLM的每一个M层之间 (Flamingo使用M=4),插入一个新的关闭的跨注意区块:
+在冻结大语言模型每 M 层之间（Flamingo 使用 M=4），插入一个新的门控交叉注意力块：
 
 ```
 x_after_llm_block = llm_block(x_before)
@@ -50,112 +50,112 @@ gated = tanh(alpha) * cross + x_after
 x_before_next_block = gated
 ```
 
-- `alpha`它们是可学习的,以零为初始的.
-- `tanh(0) = 0`关闭分支的贡献为零.
-- 作为`alpha`随着移动从零, 跨注意力贡献的增长顺利.
-- 剩余连接意味着即使一个完全开放的门也不会覆盖LLM的文本表示;它只是在上面添加视觉信息.
+- `alpha` 是初始化为零的可学习标量。
+- `tanh(0) = 0`，因此初始化时门控分支的贡献为零。
+- 随着 `alpha` 离开零值，交叉注意力的贡献会平滑增大。
+- 残差连接意味着，即使门完全打开，也不会覆盖大语言模型的文本表示，只会在其上叠加视觉信息。
 
-这是一个最重要的设计选择:视觉调节是加值,关闭,在初始化时是零.一个步骤0的Flamingo是完美的文本输入的Chinchilla 70B.
+这是 Flamingo 最重要的设计选择：视觉条件以相加、门控且初始化为零的方式注入。训练第 0 步的 Flamingo 在纯文本输入上，就是一个完整无损的 Chinchilla 70B。
 
-### 面具的交叉注意力,用于交叉输入
+### 面向交错输入的掩码交叉注意力
 
-在"<图片A>标签A <图片B>标签B <图片C> ?"这样的提示中,每个文本标签只应该看到序列中之前的图像.`t`仅使用图像复样符号,其图像指数`i < i_t`在哪里`i_t`是位置前最新的图像`t`"只看到最后一个前面的图像"或"看到所有前面的图像"都是有效的选择;
+在“<image A> caption A <image B> caption B <image C> ?”这样的提示中，每个文本词元只能看到序列中位于它之前的图像。交叉注意力掩码会强制执行这一规则：位置为 `t` 的文本词元，只能关注图像索引满足 `i < i_t` 的重采样器词元，其中 `i_t` 是位置 `t` 之前最近一幅图像的索引。“只看最近的前置图像”和“看全部前置图像”都是有效选择；Flamingo 选择前者。
 
-### 在环境中学习
+### 上下文内少样本学习
 
-弗拉明戈的提示看起来像:
+Flamingo 的提示词如下：
 
 ```
 <image1> A photo of a cat. <image2> A photo of a dog. <image3> A photo of a
 ```
 
-模型看到完成模式并输出"鸟" (或图像3显示的任何东西).没有梯度步骤.冷的LLM的文本内学习能力通过关闭的交叉注意力.
+模型看到补全模式后，会输出“bird”（或图像 3 实际展示的内容），无须执行任何梯度更新。冻结大语言模型的上下文学习能力通过门控交叉注意力得以保留——这正是论文的核心结论，也是它的重要意义。
 
-### 培训数据
+### 训练数据
 
-弗拉明戈训练了三个数据集:
+Flamingo 使用三个数据集进行训练：
 
-1. 多模 MassiveWeb (M3W): 43万页面的图像和文本交织在一起,重建阅读顺序.
-2. 图像-文本对 (ALIGN + LTIP):4.4B对.
-3. 视频文本对 (VTP):27M短视频片段.
+1. MultiModal MassiveWeb（M3W）：4300 万个图文交错网页，并还原阅读顺序。
+2. 图文对（ALIGN + LTIP）：44 亿个样本对。
+3. 视频—文本对（VTP）：2700 万段短视频。
 
-欧贝利克斯 (2023) 是互联网体的开放复制,Idefics,Idefics2和大多数开放的"像弗拉明戈"模型都在训练中.
+OBELICS（2023）是交错 Web 语料库的开放复现，Idefics、Idefics2 和多数开放的“类 Flamingo”模型都使用它训练。
 
-### 开放和
+### OpenFlamingo 与 Otter
 
-开放Flamingo (2023) 是开放的复制. 架构相同 (感知器重新样本 + 结LLaMA或MPT上的门横向注意力). 3B,4B,9B的检查点.由于LLM的基础较小,数据较少,质量落后于Flamingo.
+OpenFlamingo（2023）是开放复现。它的架构完全相同（Perceiver 重采样器 + 冻结 LLaMA 或 MPT 上的门控交叉注意力），提供 3B、4B 和 9B 检查点。由于基础大语言模型更小、数据更少，其质量落后于 Flamingo。
 
-Otter (2023) 基于OpenFlamingo,并调整了MIMIC-IT (多模式指令的数据集) 的指令,显示了关闭的跨重视功能,也用于指令后续.
+Otter（2023）在 OpenFlamingo 基础上，使用多模态指令数据集 MIMIC-IT 进行指令微调，证明门控交叉注意力也适用于指令遵循。
 
-### 后代
+### 后继方案
 
-- 爱德艺2 / 爱德艺3:拥抱面的关闭跨度注意力谱系,逐渐变得更简单 (爱德艺2放弃了重新样本,以适应性聚合的直接补丁代币为好).
-- 弗拉明戈到卡梅伦过渡:到2024年,许多团队转向早期融合 (课 12.11);在需要脊椎结结的生产中,弗拉明戈风格的门口交叉注意力仍然存在.
-- 双子座的交叉输入:概念上继承了弗拉明戈的交叉格式灵活性,尽管确切的机制是专有的.
+- Idefics / Idefics2 / Idefics3：Hugging Face 的门控交叉注意力谱系，架构逐渐简化（Idefics2 放弃重采样器，改用带自适应池化的直接图像块词元）。
+- 从 Flamingo 到 Chameleon：到 2024 年，许多团队转向早期融合（第 12.11 课）；在必须冻结骨干的生产场景中，Flamingo 风格的门控交叉注意力仍在使用。
+- Gemini 的交错输入：在概念上继承 Flamingo 的交错格式灵活性，尽管具体机制并未公开。
 
-### 与BLIP-2的比较
+### 与 BLIP-2 比较
 
 | | BLIP-2 | Flamingo |
 |---|---|---|
-| Visual bridge | Q-Former once at input | Gated cross-attention at every M layers |
-| Visual tokens | 32 per image | 64 per image per cross-attn layer |
-| Frozen LLM | Yes | Yes |
-| Few-shot in-context | Weak | Strong — the paper's centerpiece |
-| Interleaved inputs | No native support | Yes, the design target |
-| Training data | 130M pairs | 1.3B pairs + 43M interleaved pages |
-| Parameter count | 188M trained | ~10B trained (cross-attn layers) |
-| Compute | Days on 8 A100s | Weeks on thousands of TPUv4 |
+| 视觉桥梁 | 在输入处使用一次 Q-Former | 每 M 层使用门控交叉注意力 |
+| 视觉词元 | 每幅图像 32 个 | 每幅图像在每个交叉注意力层使用 64 个 |
+| 冻结大语言模型 | 是 | 是 |
+| 上下文内少样本学习 | 较弱 | 很强——论文的核心亮点 |
+| 交错输入 | 原生不支持 | 支持，是设计目标 |
+| 训练数据 | 1.3 亿个样本对 | 13 亿个样本对 + 4300 万个交错网页 |
+| 参数量 | 训练 1.88 亿 | 训练约 100 亿（交叉注意力层） |
+| 计算量 | 8 张 A100 运行数天 | 数千张 TPUv4 运行数周 |
 
-选择BLIP-2以供单图像VQA在预算中,选择Flamingo/Idefics2以供交叉,少拍或多图像推理.
+预算有限的单图 VQA 选择 BLIP-2；涉及交错内容、少样本或多图推理时，选择 Flamingo/Idefics2。
 
 ```figure
 cross-attention-fusion
 ```
 
-## 用它
+## 投入使用
 
-`code/main.py`证明:
+`code/main.py` 演示了：
 
-1. 通过36,假的补丁代币和8个可学习的隐藏符号 (纯的Python交叉注意力)
-2. 通过一个关闭的跨度注意力步骤`alpha = 0`→输出等于输入 (LLM未变),然后`alpha = 2.0`视觉贡献混合.
-3. 制作2D注意力面具的"图像1 (文本1) (图像2) (文本2) "序列.
+1. 对 36 个模拟图像块词元使用 Perceiver 重采样器和 8 个可学习潜变量（纯 Python 交叉注意力）。
+2. 使用 `alpha = 0` 执行门控交叉注意力步骤 → 输出与输入相同（大语言模型保持不变）；再使用 `alpha = 2.0` → 混入视觉贡献。
+3. 构建交错掩码，为“（图像 1）（文本 1）（图像 2）（文本 2）”序列生成二维注意力掩码。
 
-## 运送它
+## 交付成果
 
-这一课产生了`outputs/skill-gated-bridge-diagnostic.md`鉴于开放的VLM配置 (模拟器Y/N,跨接频率,门口方案),它识别了弗拉明戈系的元素并解释了结结策略.有用的调整为什么细调降低了文本性能 (答案:门口变得太宽太快).
+本课会产出 `outputs/skill-gated-bridge-diagnostic.md`。给定一个开放 VLM 的配置（是否使用重采样器、交叉注意力频率、门控方案），它会识别其中的 Flamingo 谱系元素，并解释冻结策略。它可用于调试微调后文本性能下降的原因（答案是：门打开得太快、幅度过大）。
 
-## 运动
+## 练习
 
-1. 计算Flamingo-9B的视觉参数数:9B LLM + 1.4B 关闭横跨注意力层 + 64M 复样仪.
+1. 计算 Flamingo-9B 的视觉参数量：90 亿参数的大语言模型 + 14 亿参数的门控交叉注意力层 + 6400 万参数的重采样器。训练参数占总参数的多大比例？
 
-2. 执行封闭的残留物`y = tanh(alpha) * cross + x`在 PyTorch 中,实验证明`alpha=0`现在`y==x`现在就在初步.
+2. 使用 PyTorch 实现门控残差 `y = tanh(alpha) * cross + x`。通过实验说明当 `alpha=0` 时，初始化阶段的 `y==x` 精确成立。
 
-3. 阅读OpenFlamingo第3.2节 (arXiv:2308.01390) 关于当每个提示具有不同的图像数量时,他们如何处理多个图像.描述填充策略.
+3. 阅读 OpenFlamingo 论文（arXiv:2308.01390）第 3.2 节，了解当一个批次中每条提示拥有不同图像数量时，它如何处理多幅图像。描述其填充策略。
 
-4. 弗拉明戈的跨度注意力面具为什么允许一个文本标志只关注*最最近的*前面图像而不是所有前面图像?
+4. 为什么 Flamingo 的交叉注意力掩码只允许文本词元关注*最近的*前置图像，而不是所有前置图像？阅读 Flamingo 论文第 2.4 节，并解释其中的取舍。
 
-5. 在文本中,构建一个提示,为新的Flamingo变体构建4个"图像 →主对象颜色"的例子.随着您将示例数从0到8变化,描述预期的精确性模式.
+5. 上下文内少样本学习：为一个新的 Flamingo 变体构造含 4 个“图像 → 主要物体颜色”示例的提示词。说明示例数量从 0 增加到 8 时，预期的准确率变化模式。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|------------------------|
-| Perceiver resampler | "Fixed-latent cross-attention" | Module that produces K fixed tokens from a variable number of input patches |
-| Gated cross-attention | "Tanh-gated bridge" | Residual layer `y = tanh(alpha)*cross + x`, learnable alpha, init 0 |
-| Interleaved input | "Mixed sequence" | Prompt format with images and text mixed freely in reading order |
-| Frozen LLM | "No LLM gradients" | The text LLM's weights do not update; only resampler + cross-attn layers train |
-| Few-shot | "In-context examples" | Give a few (image, answer) pairs in the prompt; model generalizes without finetuning |
-| OBELICS | "Interleaved web corpus" | Open dataset of 141M web pages with images and text in reading order |
-| Chinchilla | "70B frozen base" | Flamingo's frozen text LLM, from DeepMind's Chinchilla paper |
-| Gate schedule | "How alpha moves" | The rate at which the cross-attention gate opens during training |
-| Cross-attn frequency | "Every M layers" | How often a gated cross-attention block is inserted; Flamingo uses M=4 |
-| OpenFlamingo | "Open reproduction" | MosaicML/LAION open checkpoint at 3-9B; architecture-identical to Flamingo |
+| Perceiver 重采样器 | “固定潜变量交叉注意力” | 从数量可变的输入图像块中生成 K 个固定词元的模块 |
+| 门控交叉注意力 | “tanh 门控桥梁” | 残差层 `y = tanh(alpha)*cross + x`；alpha 可学习，初始值为 0 |
+| 交错输入 | “混合序列” | 图像与文本按阅读顺序任意混合的提示格式 |
+| 冻结大语言模型 | “不计算大语言模型梯度” | 文本大语言模型的权重不更新；只训练重采样器 + 交叉注意力层 |
+| 少样本 | “上下文内示例” | 在提示词中提供少量（图像、答案）样本对；模型无须微调即可泛化 |
+| OBELICS | “交错 Web 语料库” | 含有按阅读顺序排列图像与文本的 1.41 亿网页开放数据集 |
+| Chinchilla | “70B 冻结基座” | Flamingo 使用的冻结文本大语言模型，来自 DeepMind 的 Chinchilla 论文 |
+| 门调度 | “alpha 如何变化” | 训练期间交叉注意力门打开的速率 |
+| 交叉注意力频率 | “每 M 层一次” | 插入门控交叉注意力块的频率；Flamingo 使用 M=4 |
+| OpenFlamingo | “开放复现” | MosaicML/LAION 提供的 3～9B 开放检查点；架构与 Flamingo 相同 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Alayrac et al. — Flamingo (arXiv:2204.14198)](https://arxiv.org/abs/2204.14198)原始的纸.
-- [Awadalla et al. — OpenFlamingo (arXiv:2308.01390)](https://arxiv.org/abs/2308.01390)开放繁殖.
-- [Laurençon et al. — OBELICS (arXiv:2306.16527)](https://arxiv.org/abs/2306.16527) 互联网体.
-- [Jaegle et al. — Perceiver IO (arXiv:2107.14795)](https://arxiv.org/abs/2107.14795)一般的感知器架构.
-- [Li et al. — Otter (arXiv:2305.03726)](https://arxiv.org/abs/2305.03726) 调节指令的弗拉明戈后裔.
-- [Laurençon et al. — Idefics2 (arXiv:2405.02246)](https://arxiv.org/abs/2405.02246)现代化简化弗拉明戈方法.
+- [Alayrac 等——Flamingo（arXiv:2204.14198）](https://arxiv.org/abs/2204.14198)——原始论文。
+- [Awadalla 等——OpenFlamingo（arXiv:2308.01390）](https://arxiv.org/abs/2308.01390)——开放复现。
+- [Laurençon 等——OBELICS（arXiv:2306.16527）](https://arxiv.org/abs/2306.16527)——交错 Web 语料库。
+- [Jaegle 等——Perceiver IO（arXiv:2107.14795）](https://arxiv.org/abs/2107.14795)——通用 Perceiver 架构。
+- [Li 等——Otter（arXiv:2305.03726）](https://arxiv.org/abs/2305.03726)——经过指令微调的 Flamingo 后继模型。
+- [Laurençon 等——Idefics2（arXiv:2405.02246）](https://arxiv.org/abs/2405.02246)——Flamingo 方法的现代简化版本。
