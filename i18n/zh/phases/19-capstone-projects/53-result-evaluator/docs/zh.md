@@ -1,24 +1,24 @@
 # 结果评估器
 
-> 运行者产生了数量.评估者决定这些数量是否是改善,退缩或噪音. 构建判断路径,将测量量变成一个线路结论.
+> runner 已经产出了一组数字。evaluator 的职责是判断这些数字到底意味着改进、退化，还是只是噪音。把这条 verdict path 搭出来，把 metrics 变成一句明确结论。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 Track A lessons 20-29
-**Time:** ~90 minutes
+**Prerequisites:** 第 19 阶段 Track A 的第 20 到 29 课
+**Time:** 约 90 分钟
 
 ## 学习目标
-- 根据方向意识的改善和固定门,将候选人运行与基线进行比较.
-- 运行一个对 t 测试从零开始,然后读取结果的 p 值.
-- 正常化日志规模的指标,以便下游报告可以将它们与线性指标结合起来.
-- 根据假设,发出一个判决, 管弦乐员可以从第五十课中将其附加到排队.
-- 保持每一步的纯度,这样同样的输入总是产生同样的判决.
+- 用方向感知的 improvement 规则和固定阈值，把 candidate run 与 baseline 做比较。
+- 从零实现 paired t test，并读出对应的 p value。
+- 对 log scaled metrics 做归一化，这样下游报告可以把它们与 linear metrics 混合展示。
+- 为每个 hypothesis 发出一个 verdict，让 orchestrator 能把它附到第五十课里的队列上。
+- 保持每一步都是 pure function，这样相同输入总会得到相同 verdict。
 
-## 为什么要做双重测试
+## 为什么要做配对检验
 
-只有一个数字,不能说明变化是真的. 种子的配置不同, 变化可能是噪音. 合适的比较是:相同的种子,相同的数据,一次与候选人进行了运行,一次与基线. 每种种子都会有所不同. 它们的平均差异是效果. 这些差异的标准错误是噪音地板.
+runner 给你的单个数字，并不足以说明变化是真的。相同配置换一个 seed，perplexity 也会不同。变化也许只是噪音。正确比较方式是成对比较：用相同 seeds、相同数据，一次跑 candidate，一次跑 baseline。每个 seed 都贡献一个差值。差值的平均值就是 effect，差值的 standard error 则是 noise floor。
 
-课程从头开始执行测试.`scipy.stats`数学是足够小的,可以在一块屏幕上读.
+这门课从零实现这个检验。没有 `scipy.stats`。数学规模小到一屏可以读完。
 
 ```text
 diffs    = [a_i - b_i for i in seeds]
@@ -29,11 +29,11 @@ df       = n - 1
 p_value  = two_sided_p(t_stat, df)
 ```
 
-两个侧 p 值使用规范化不完整的beta函数.课程运行一个使用Lentz继续分数的小实现.整个东西是60行的 stdlib 数学.
+two sided p value 使用 regularised incomplete beta function。课程附带一个基于 Lentz continued fraction 的小实现。整套逻辑大约就是 60 行 stdlib math。
 
-## 方向意识的改善
+## 方向感知的改进判断
 
-一些指标随着上升 (精度,吞吐量) 改善,另一些指标随着下降 (损失,困难,墙时间) 改善.`direction`在每个指标上.
+有些指标越高越好，比如 accuracy、throughput。另一些指标越低越好，比如 loss、perplexity、wall time。evaluator 会在每个 metric 上带一个 `direction` 字段。
 
 ```text
 if direction == "higher_is_better":
@@ -42,15 +42,15 @@ elif direction == "lower_is_better":
     improvement = (baseline - candidate) / abs(baseline)
 ```
 
-改进签署了.一个较高的负面改进是更好的指标,意味着候选人更糟糕.判决路径读取标志和大小.
+improvement 是带符号的。在 higher-is-better metric 上出现负 improvement，意味着 candidate 更差。verdict path 会同时读取它的符号和幅度。
 
-均的门 (`improvement_threshold=0.02`根据该判断的"噪音"不论p值;循环不感兴趣用户无法测量的变化.
+一个固定阈值（`improvement_threshold=0.02`，也就是 2%）决定变化是否大到值得下判断。低于这个阈值时，不管 p value 如何，verdict 都是 “noise”；循环并不关心用户根本测不出来的变化。
 
 ```figure
 cg-paired-verdict
 ```
 
-## 建筑
+## 架构
 
 ```mermaid
 flowchart TD
@@ -64,13 +64,13 @@ flowchart TD
     O --> Q[attach to hypothesis queue]
 ```
 
-评估器执行三个独立的计算,并将它们结合在判决路径.每个计算都是没有共享状态的纯函数.
+evaluator 会做三个彼此独立的计算，再在 verdict path 中汇合。每个计算都应当是没有共享状态的 pure function。
 
-## 记录规范
+## 对数归一化
 
-乱是损失的指数量.损失的0.1下降是乱的更大的下降.直接对两个配置进行乱的比较是很好的,但将其与线性指标混合在单个报告中需要正常化.
+perplexity 是 loss 的指数形式。loss 降 0.1，往往意味着 perplexity 会有更大变化。直接比较 perplexity 没问题，但若要把它与 linear metrics 混合进一份统一报告，就需要做归一化。
 
-课程将任何指标都正常化`scale`字段是`"log"`通过在计算改进之前取自然日志. 门值则在日志空间中应用. 复杂性从32降至28是`log(28) - log(32) = -0.133`在较低的水平上,更好的指标,远远超过2%的门.
+课程会对任何 `scale` 字段为 `"log"` 的 metric，在计算 improvement 前先取自然对数。阈值也在 log space 中应用。perplexity 从 32 降到 28，在 lower-is-better metric 上对应 `log(28) - log(32) = -0.133`，明显超过 2% 的阈值。
 
 ```text
 if scale == "log":
@@ -81,15 +81,15 @@ else:
     b = baseline
 ```
 
-与`scale="linear"`换代码路径处理两个.
+而 `scale="linear"` 的 metrics 则跳过变换。两者走同一条代码路径。
 
-## 每种种子对对测试
+## 按 seed 配对检验
 
-课52的跑者每次跑出一个最后的测量点.对对测试,评估员需要一个对候选人每种子,一个对基线的种子.调整员在两个配置下运行相同的实验,通过一个种子列表,并交给评估员两个种子列表.`ExperimentResult`记录.
+第五十二课里的 runner 每次只会产出一个最终 metrics blob。要做 paired test，evaluator 需要 candidate 的每-seed 结果列表，以及 baseline 的每-seed 结果列表。orchestrator 会在两个配置下用同一组 seeds 重复运行实验，然后把两组 `ExperimentResult` records 交给 evaluator。
 
-评估者根据种子对应它们 (种子生活在`result.metrics["seed"]`) 并行走所要求的指标.如果两个列表中的种子不匹配,评估员将提升一个`PairingError`管家应该再跑.
+evaluator 会按 seed 做配对，seed 存在 `result.metrics["seed"]` 里，然后读取所请求的 metric。如果两边的 seeds 对不上，evaluator 就抛出一个 `PairingError`。这时 orchestrator 应该重跑。
 
-## 判决的形状
+## 结论结构
 
 ```text
 Verdict
@@ -107,7 +107,7 @@ Verdict
   rationale              : str
 ```
 
-判决路径是一个小的决定表:
+verdict path 是一张很小的 decision table：
 
 ```text
 1. If any candidate result has terminal != "ok": verdict = "failed"
@@ -117,17 +117,17 @@ Verdict
 5. else:                                             verdict = "regressed"
 ```
 
-理性是一个单行的人类可读的句子,管弦乐器可以记录与假设 id.
+rationale 是一条单行、可供人类阅读的句子，orchestrator 可以把它记录到 hypothesis id 上。
 
-## 如何读取代码
+## 如何阅读代码
 
-`code/main.py`定义`MetricSpec`现在`Verdict`现在`Evaluator`测试是纯粹的Stdlib数学中实现的; numpy仅用于阅读指标列表和计算手段和变异.
+`code/main.py` 定义了 `MetricSpec`、`Verdict`、`Evaluator`，以及 t statistic 和 incomplete beta helpers。t test 完全用 stdlib math 实现；numpy 只用于读取 metrics list 并计算 mean 和 variance。
 
-`code/tests/test_evaluator.py`覆盖改进路径,退回路径,噪音路径 (小改进),噪音路径 (低n),故障终端路径,日志正常化路径,对已知参考值的t测试和对配错误.
+`code/tests/test_evaluator.py` 覆盖 improved path、regressed path、noise path（小 improvement）、noise path（低 n）、failed terminal path、log normalised path、对已知参考值的 t test，以及 pairing error。
 
-## 在哪里这个插槽
+## 它在整条链路里的位置
 
-第五十课产生了假设队列. 第五十一课过了文献解决的任何东西. 第五十二课在种子中运行了候选人和基线配置下的实验. 第五十三课阅读了这些运行并写出判决. 管弦乐器将四个编织在一起:
+第五十课生成 hypothesis queue。第五十一课过滤掉已被文献解决的问题。第五十二课在多个 seeds 下分别运行 candidate 和 baseline 配置。第五十三课读取这些运行结果并写出 verdict。orchestrator 会把四课串起来：
 
 ```text
 for hypothesis in queue:
@@ -142,4 +142,4 @@ for hypothesis in queue:
     attach(hypothesis, verdict)
 ```
 
-这位管弦乐器不在这个课程中;四个课程都在它中构成,
+这个 orchestrator 不在本课里；但四门课通过各自定义的 dataclasses，可以无缝拼成它。
