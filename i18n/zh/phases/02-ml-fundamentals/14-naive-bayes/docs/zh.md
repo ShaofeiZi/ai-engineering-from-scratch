@@ -1,82 +1,82 @@
-# 简单的贝尔斯
+# 朴素贝叶斯
 
-> 简单的假设是错误的,它无论如何都能发挥作用.
+> “朴素”的假设明明不成立，算法却依然有效。这正是它的精妙之处。
 
-**Type:** Build
-**Language:**字符串
-**Prerequisites:** Phase 2, Lessons 01-07 (classification, Bayes' theorem)
-**Time:** ~75 minutes
+**Type:** 构建
+**Language:** Python
+**Prerequisites:** 阶段 2，第 01–07 课（分类、贝叶斯定理）
+**Time:** 约 75 分钟
 
 ## 学习目标
 
-- 实现多项字母天真贝伊从零开始,使用拉普莱斯平滑的文本分类
-- 解释为什么天真的独立假设是数学上错误的,但实际上产生了正确的类排名
-- 比较多项式,伯诺利和高斯天真贝叶斯变体,选择给定的特征类型的正确变体
-- 评估高维度稀疏数据的逻辑回归和解释工作中偏差差异的交易
+- 从零实现带拉普拉斯平滑的多项式朴素贝叶斯，用于文本分类
+- 解释朴素独立性假设在数学上为何不成立，以及它在实践中为何仍能给出正确的类别排序
+- 比较多项式、伯努利和高斯朴素贝叶斯，并针对给定的特征类型选择合适变体
+- 在高维稀疏数据上比较朴素贝叶斯与逻辑回归，并解释其中体现的偏差—方差权衡
 
 ## 问题
 
-你需要将文本分类.电子邮件分为垃圾邮件或非垃圾邮件.客户评论分为积极或负面.支持门票分为类别.你有数千个功能 (每字一个) 和有限的培训数据.
+你需要对文本进行分类：判断邮件是否为垃圾邮件，判断客户评价是正面还是负面，或者把支持工单分到不同类别。数据中包含数千个特征，每个单词对应一个特征，而训练数据却很有限。
 
-现在,我们需要一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个单词,一个,一个单词,一个,一个单词,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个,一个
+大多数分类器在这里都会陷入困境。逻辑回归需要足够多的样本，才能可靠估计数千个权重。决策树每次只能选择一个单词进行分裂，很容易严重过拟合。在 10,000 维空间中，KNN 也失去了意义，因为每个点到其他点的距离几乎都一样。
 
-简单的贝耶斯处理这个. 它对数学错误的假设 (每个特征都是独立于给定的类别的其他特征),而且仍然超过了文本分类的"更聪明"模型,特别是小型培训集. 它通过数据进行一次训练. 它可以达到数百万个特征. 它产生了概率估计 (尽管由于独立假设,通常是未准确的).
+朴素贝叶斯可以应对这种情况。它作出了一个数学上错误的假设：给定类别后，每个特征都与其他特征相互独立。然而在文本分类中，它仍然能够胜过许多看似更“聪明”的模型，训练集较小时尤其如此。它只需单次遍历数据即可完成训练，能够扩展到数百万个特征，还能输出概率估计，尽管受独立性假设影响，这些概率往往没有得到良好校准。
 
-了解为什么错误的假设导致了好预测,就教你机器学习的基本知识:最好的模型不是最正确的,
+理解错误假设为何能够带来良好预测，会揭示机器学习的一条基本规律：最好的模型并不是理论上最正确的模型，而是针对你的数据拥有最佳偏差—方差权衡的模型。
 
-## 概念
+## 核心概念
 
-### 贝叶斯定理 (快速复习)
+### 贝叶斯定理（快速回顾）
 
-贝叶斯定理反转了条件概率:
+贝叶斯定理可以反转条件概率：
 
 ```
 P(class | features) = P(features | class) * P(class) / P(features)
 ```
 
-我们想要`P(class | features)`根据文件中的字符,一个文件属于一个类的概率.
-- `P(features | class)`-- 看到这些词在本类文件中的可能性
-- `P(class)`-- 类别的先前概率 (一般情况下垃圾邮件是多么普遍?)
-- `P(features)`证据,同样适用于所有类别,所以我们可以忽略它,
+我们希望求出 `P(class | features)`，也就是已知文档中的单词后，该文档属于某个类别的概率。可以通过以下三项计算：
+- `P(features | class)`：在该类别文档中看到这些单词的似然
+- `P(class)`：该类别的先验概率，例如垃圾邮件总体上有多常见
+- `P(features)`：证据项；它对所有类别都相同，因此比较类别时可以忽略
 
-那些有最高的类型`P(class | features)`赢了.
+`P(class | features)` 最高的类别获胜。
 
-### 无明自主假设
+### 朴素独立性假设
 
-计算`P(features | class)`总体而言,如果我们使用1万个词汇,我们需要估计2^10,000个可能的组合.
+精确计算 `P(features | class)`，需要估计所有特征共同出现的联合概率。如果词表中有 10,000 个单词，就必须估计覆盖 2^10,000 种可能组合的分布，这是不可能做到的。
 
-简单的假设:每一个特征都在给定类别的条件下独立.
+朴素假设认为：给定类别后，每个特征都条件独立。
 
 ```
 P(w1, w2, ..., wn | class) = P(w1 | class) * P(w2 | class) * ... * P(wn | class)
 ```
 
-它们只需要一个数值,一个数值,一个数值,一个数值,一个数值.
+这样一来，就不必估计一个无法处理的联合分布，而只需估计 n 个简单的单特征分布。每个分布只需要一次计数。
 
-这种假设显然是错误的. "机器"和"学习"的单词在任何文档中都不独立.但分类器不需要正确的概率估计.它需要正确的排名 - - 哪个类具有最高的概率.独立假设引入系统错误,但这些错误对所有类别都同样影响,所以排名保持正确.
+这个假设显然是错误的。在任何文档中，“machine”和“learning”都不可能彼此独立。不过，分类器并不需要得到准确的概率估计，它只需要给出正确的排序，也就是找到概率最高的类别。独立性假设会引入系统性误差，但这些误差对所有类别的影响往往相似，所以类别排序仍然可能正确。
 
-### 为什么它仍然有效
+### 它为何依然有效
 
-原因有三个:
+主要有三个原因：
 
-1. **Ranking over calibration.**排名只需要排名最好的类别才是正确的.即使P(spam) =0.99999 当真实概率为0.7,排名器仍然选择了正确的垃圾邮件.我们不需要正确的概率.我们需要正确的赢家.
+1. **排序比校准更重要。** 分类只要求排在第一位的类别正确。即使模型给出 P(spam) = 0.99999，而真实概率其实是 0.7，它仍然正确选择了垃圾邮件。我们不需要概率本身完全准确，只需要选对胜者。
 
-2. **High bias, low variance.**独立假设是一个强大的先驱.它严重限制了模型,这防止过度匹配. 有限训练数据,一个略错误但稳定的模型比一个理论上正确但非常不稳定的模型更好.这是偏差变异的交易.
+2. **高偏差、低方差。** 独立性假设是一种很强的先验，会对模型施加严格约束，从而防止过拟合。训练数据有限时，一个略有偏差但表现稳定的模型，会胜过一个理论正确却极不稳定的模型。这正是偏差—方差权衡的实际体现。
 
-3. **Feature redundancy cancels out.**相关的特性提供了冗余的证据.分类器对这些证据进行双重计算,但对正确类型也进行双重计算.如果"机器"和"学习"总是出现在一起,则这两者都为"技术"类提供证据.NB会两次计算,但对正确类型计算两次.
+3. **特征冗余会相互抵消。** 相关特征提供了重复证据。分类器的确会把证据重复计算，但也会为正确类别重复计算。如果“machine”和“learning”总是一起出现，它们都会为“tech”类别提供证据。朴素贝叶斯把证据算了两次，但这两次都支持正确类别。
 
-第四个,实际原因是:天真贝耶斯非常快.训练是通过数据计算频率的单次通过.预测是矩阵乘法.你可以在几秒钟内训练100万份文件.这种速度意味着你可以更快地反复,尝试更多的功能集,并且比较慢的模型运行更多实验.
+还有第四个更实际的原因：朴素贝叶斯速度极快。训练只需单次遍历数据并统计频率，预测则只是一次矩阵乘法。它可以在数秒内用一百万篇文档完成训练。这种速度意味着，与较慢的模型相比，你能更快迭代、尝试更多特征组合并开展更多实验。
 
-### 数学一步一步
+### 分步理解数学过程
 
-让我们通过一个具体的例子来追踪.假设我们有两个类别:垃圾邮件和非垃圾邮件.我们的词汇有三个词汇:"免费","钱","会议".
+下面通过一个具体例子完整推导。假设有两个类别：垃圾邮件和非垃圾邮件。词表中只有三个单词：“free”“money”“meeting”。
 
-培训数据:
-- 垃圾邮件中提到"免费"80次,"钱"60次,"会议"10次 (150个词汇总)
-- 没有垃圾邮件中提到"免费" 5 次,"钱" 10 次,"会议" 100 次 (115 个词汇总)
-- 40%的电子邮件是垃圾邮件,60%是非垃圾邮件
+训练数据如下：
+- 垃圾邮件中，“free”出现 80 次，“money”出现 60 次，“meeting”出现 10 次，共 150 个单词
+- 非垃圾邮件中，“free”出现 5 次，“money”出现 10 次，“meeting”出现 100 次，共 115 个单词
+- 40% 的邮件是垃圾邮件，60% 是非垃圾邮件
 
-平 (alpha=1):
+采用拉普拉斯平滑（alpha=1）：
 
 ```
 P(free | spam)    = (80 + 1) / (150 + 3) = 81/153 = 0.529
@@ -88,7 +88,7 @@ P(money | not-spam)   = (10 + 1) / (115 + 3) = 11/118 = 0.093
 P(meeting | not-spam) = (100 + 1) / (115 + 3) = 101/118 = 0.856
 ```
 
-新电子邮件包含"免费" (2次),"钱" (1次),"会议" (0次).
+新邮件包含：“free”2 次、“money”1 次、“meeting”0 次。
 
 ```
 log P(spam | email) = log(0.4) + 2*log(0.529) + 1*log(0.399) + 0*log(0.072)
@@ -100,111 +100,111 @@ log P(not-spam | email) = log(0.6) + 2*log(0.051) + 1*log(0.093) + 0*log(0.856)
                         = -8.838
 ```
 
-垃圾邮件以大差距获胜.出现两次的"免费"字是垃圾邮件的强烈证据.注意,不出现的"会议"对两个日志数量 (0 * log(P)) 贡献了零 - 在多项名词NB中,缺失的单词没有影响.是伯诺利NB明确模拟词缺失.
+垃圾邮件以很大优势胜出。“free”出现两次，是支持垃圾邮件的强证据。注意，“meeting”没有出现，因此它对两个对数和的贡献都是零（0 * log(P)）。在多项式朴素贝叶斯中，未出现的单词没有影响；明确建模单词缺失的是伯努利朴素贝叶斯。
 
-### 三种方式
+### 三种变体
 
-简单的贝耶斯有三个口味.`P(feature | class)`没有什么不同.
+朴素贝叶斯有三种主要形式，区别在于它们对 `P(feature | class)` 的建模方式。
 
-#### 多数字 无明的贝斯
+#### 多项式朴素贝叶斯
 
-模型将每个特征作为一个数值.最适合文字数据,其中特征是单词频率或TF-IDF值.
+把每个特征建模为计数。最适合特征为词频或 TF-IDF 值的文本数据。
 
 ```
 P(word_i | class) = (count of word_i in class + alpha) / (total words in class + alpha * vocab_size)
 ```
 
-其他`alpha`拉普莱斯平滑 (下面解释). 这种变体是文本分类的工作马.
+其中的 `alpha` 是拉普拉斯平滑参数，稍后会详细解释。它是文本分类中最常用的朴素贝叶斯变体。
 
-#### 盖斯人天真的贝斯
+#### 高斯朴素贝叶斯
 
-模型将每个功能作为正常分布.
+把每个特征建模为正态分布，最适合连续特征。
 
 ```
 P(x_i | class) = (1 / sqrt(2 * pi * var)) * exp(-(x_i - mean)^2 / (2 * var))
 ```
 
-每个类别都有其各自的平均值和变异.
+每个类别都为每个特征拥有独立的均值和方差。当同一类别内的特征确实近似服从钟形曲线时，这种方法效果很好。
 
-#### 伯诺利天真的贝耶斯
+#### 伯努利朴素贝叶斯
 
-模型每个特征都作为二进制 (现或缺).最适合短文本或二进制特征向量.
+把每个特征建模为二元状态，即出现或未出现。最适合短文本或二元特征向量。
 
 ```
 P(word_i | class) = (docs in class containing word_i + alpha) / (total docs in class + 2 * alpha)
 ```
 
-与多个字母不同,伯诺利明确地惩罚了一个词的缺失.如果"免费"通常在垃圾邮件中出现,但不在这个电子邮件中,伯诺利将其视为反对垃圾邮件的证据.
+与多项式变体不同，伯努利朴素贝叶斯会明确惩罚某个单词的缺失。如果“free”通常会出现在垃圾邮件中，但当前邮件中没有它，伯努利朴素贝叶斯会把这一点计作反对垃圾邮件的证据。
 
-### 每种变体何时使用
+### 如何选择变体
 
-| Variant | Feature Type | Best For | Example |
+| 变体 | 特征类型 | 最适合 | 示例 |
 |---------|-------------|----------|---------|
-| Multinomial | Counts or frequencies | Text classification, bag-of-words | Email spam, topic classification |
-| Gaussian | Continuous values | Tabular data with normal-ish features | Iris classification, sensor data |
-| Bernoulli | Binary (0/1) | Short text, binary feature vectors | SMS spam, presence/absence features |
+| 多项式 | 计数或频率 | 文本分类、词袋模型 | 邮件垃圾分类、主题分类 |
+| 高斯 | 连续值 | 特征近似正态分布的表格数据 | 鸢尾花分类、传感器数据 |
+| 伯努利 | 二元值（0/1） | 短文本、二元特征向量 | 短信垃圾分类、出现/未出现特征 |
 
-### 拉普拉斯滑滑
+### 拉普拉斯平滑
 
-如果一个词出现在测试数据中,但从来没有出现在特定类的培训数据中,会发生什么?
+如果测试数据中出现了某个单词，但在某个类别的训练数据中从未出现过，会发生什么？
 
-没有滑滑:`P(word | class) = 0/N = 0`一个零乘以整个产品,`P(class | features) = 0`无论其他证据如何,一个单独的未见字都会摧毁整个预测,
+不使用平滑时，`P(word | class) = 0/N = 0`。整个连乘积中只要出现一个零，`P(class | features) = 0`，其他证据无论多么有力都无法挽救结果。一个未见过的单词就会摧毁整次预测。
 
-平的平增加了少量`alpha`(通常是1) 对每一个特征数量:
+拉普拉斯平滑为每个特征计数都加上一个较小值 `alpha`，通常取 1：
 
 ```
 P(word_i | class) = (count(word_i, class) + alpha) / (total_words_in_class + alpha * vocab_size)
 ```
 
-随着alpha=1,每个字至少得到一个微小的概率.在测试电子邮件中出现的"discombobulate"字不再杀死垃圾邮件概率.滑滑有贝耶斯解释:它相当于在词分布前放置统一的Dirichlet.
+当 alpha=1 时，每个单词至少都会获得一个很小的概率。这样一来，即使测试邮件中出现“discombobulate”，垃圾邮件概率也不会直接归零。从贝叶斯角度看，这种平滑等价于在单词分布上施加均匀 Dirichlet 先验。
 
-较高的阿尔法意味着更强的平滑 (更均的分布).较低的阿尔法意味着模型更信任数据.阿尔法是一个调节的超参数.
+alpha 越大，平滑越强，分布也越均匀；alpha 越小，模型就越相信数据。Alpha 是一个需要调节的超参数。
 
-艾尔法的作用:
+alpha 的影响如下：
 
-| Alpha | Effect | When to use |
+| Alpha | 效果 | 适用场景 |
 |-------|--------|-------------|
-| 0.001 | Almost no smoothing, trust the data | Very large training set, no unseen features expected |
-| 0.1 | Light smoothing | Large training set |
-| 1.0 | Standard Laplace smoothing | Default starting point |
-| 10.0 | Heavy smoothing, flattens distributions | Very small training set, many unseen features expected |
+| 0.001 | 几乎不平滑，高度相信数据 | 训练集非常大，预计不会出现未知特征 |
+| 0.1 | 轻度平滑 | 训练集较大 |
+| 1.0 | 标准拉普拉斯平滑 | 默认起点 |
+| 10.0 | 强平滑，使分布趋于平坦 | 训练集很小，预计会出现大量未知特征 |
 
-### 记录空间计算
+### 在对数空间中计算
 
-乘以数百个概率 (每一个小于1) 导致浮点下流. 产品在浮点变为零,尽管真实值是一个非常小的正数.
+把数百个都小于 1 的概率相乘，会导致浮点数下溢。即使真实结果是一个很小的正数，浮点表示中的乘积也可能变成零。
 
-解决方案:在日志空间中工作.
+解决方案是在对数空间中计算。与其把概率相乘，不如把它们的对数相加：
 
 ```
 log P(class | x1, x2, ..., xn) = log P(class) + sum_i log P(xi | class)
 ```
 
-这将预测变成一个点数:
+这样，预测就变成了点积：
 
 ```
 log_scores = X @ log_feature_probs.T + log_class_priors
 prediction = argmax(log_scores)
 ```
 
-这就是为什么天真贝叶斯的预测如此快速-- 它与单层线性模型相同的操作.
+归根结底就是矩阵乘法。这也是朴素贝叶斯预测如此之快的原因：它执行的操作与单层线性模型相同。
 
-### 简单的贝尔斯与物流回归
+### 朴素贝叶斯与逻辑回归
 
-它们的分类是线性,它们的模特是不同的.
+两者都是可用于文本的线性分类器，区别在于它们建模的对象不同。
 
-| Aspect | Naive Bayes | Logistic Regression |
+| 方面 | 朴素贝叶斯 | 逻辑回归 |
 |--------|------------|-------------------|
-| Type | Generative (models P(X\|Y)) | Discriminative (models P(Y\|X)) |
-| Training | Count frequencies | Optimize loss function |
-| Small data | Better (strong prior helps) | Worse (not enough to estimate weights) |
-| Large data | Worse (wrong assumption hurts) | Better (flexible boundary) |
-| Features | Assumes independence | Handles correlations |
-| Speed | Single pass, very fast | Iterative optimization |
-| Calibration | Poor probabilities | Better probabilities |
+| 类型 | 生成式（建模 P(X\|Y)） | 判别式（建模 P(Y\|X)） |
+| 训练 | 统计频率 | 优化损失函数 |
+| 小数据 | 更好（强先验有所帮助） | 更差（数据不足以估计权重） |
+| 大数据 | 更差（错误假设形成限制） | 更好（决策边界更灵活） |
+| 特征 | 假设相互独立 | 能处理相关性 |
+| 速度 | 单次遍历，速度极快 | 迭代优化 |
+| 校准 | 概率较差 | 概率更好 |
 
-基本规则:从天真的贝伊斯开始.如果你有足够的数据和NB高原,
+经验法则是：先使用朴素贝叶斯。如果数据足够多，而且朴素贝叶斯的性能不再提升，再切换到逻辑回归。
 
-### 类别管道
+### 分类流水线
 
 ```mermaid
 flowchart LR
@@ -219,7 +219,7 @@ flowchart LR
     style G fill:#9f9,stroke:#333
 ```
 
-实际上,我们在日志空间中工作,以避免浮点的下流.
+实践中，为避免浮点数下溢，我们会在对数空间中计算。也就是说，不再把大量微小概率相乘，而是把它们的对数相加：
 
 ```
 log P(class | features) = log P(class) + sum_i log P(feature_i | class)
@@ -229,19 +229,19 @@ log P(class | features) = log P(class) + sum_i log P(feature_i | class)
 naive-bayes
 ```
 
-## 建立它
+## 动手构建
 
-编码在`code/naive_bayes.py`实现了多项NB和高斯NB的基础.
+`code/naive_bayes.py` 中的代码会从零实现 MultinomialNB 和 GaussianNB。
 
-### 多号号NB
+### MultinomialNB
 
-从零开始实施:
+从零实现包含以下步骤：
 
-1. **fit(X, y)**对于每个类,计算每个特征的频率. 添加拉普莱斯平滑. 计算日志概率. 存储类先例 (类频率日志).
+1. **fit(X, y)**：针对每个类别，统计各特征出现的频率；加入拉普拉斯平滑；计算对数概率；保存类别先验，也就是类别频率的对数。
 
-2. **predict_log_proba(X)**对于每个样本,计算 log P(class) + log P(feature_i 类) 对所有类.这是一个矩阵乘法: X @ log_probs.T + log_priors.
+2. **predict_log_proba(X)**：针对每个样本和所有类别，计算 log P(class) 与各项 log P(feature_i | class) 之和。这就是一次矩阵乘法：X @ log_probs.T + log_priors。
 
-3. **predict(X)**返回具有最高日志概率的类.
+3. **predict(X)**：返回对数概率最高的类别。
 
 ```python
 class MultinomialNB:
@@ -266,11 +266,11 @@ class MultinomialNB:
         return self
 ```
 
-基本的见解是,在合适后,预测只是矩阵乘法加上偏见.
+关键之处在于：拟合完成后，预测只需要执行矩阵乘法再加上一个偏置项。这就是朴素贝叶斯速度如此之快的原因。
 
-### 盖斯尼NB
+### GaussianNB
 
-对于连续特征,我们估计每个特征的平均和变异:
+对于连续特征，我们会针对每个类别、每个特征分别估计均值和方差：
 
 ```python
 class GaussianNB:
@@ -293,34 +293,34 @@ class GaussianNB:
         return self
 ```
 
-预测使用每个特征的高斯式PDF,乘以各个特征 (在日志空间中添加).
+预测时，先针对每个特征计算高斯概率密度函数，再跨特征相乘；实际实现会在对数空间中把它们相加。
 
-### 演示:文本分类
+### 演示：文本分类
 
-代码生成合成的单词数据,模拟两个类 (技术文章与体育文章).每个类别都有不同的单词频率分布.多项NB使用单词数来分类它们.
+代码会生成合成词袋数据，模拟两个类别，即技术文章和体育文章。每个类别有不同的词频分布，MultinomialNB 根据单词计数对它们进行分类。
 
-合成数据的运作是这样的:我们创建了200个"字" (特征列). 0-39字在技术文章中频率高,体育中频率低. 80-119字在体育中频率高,技术中频率低. 40-79字在两种中都是中频.这创造了一个现实化的场景,其中一些字是强大的类别指标,而其他是噪音.
+合成数据的生成方式如下：我们创建 200 个“单词”，也就是 200 个特征列。编号 0–39 的单词在技术文章中频率较高，在体育文章中频率较低；编号 80–119 的单词在体育文章中频率较高，在技术文章中频率较低；编号 40–79 的单词在两类文章中都有中等频率。这个场景很接近真实情况：一部分词是强类别指标，其余词则是噪声。
 
-### 演示:连续功能
+### 演示：连续特征
 
-该代码生成类似于Iris的数据 (3类, 4个特征,高斯群).高斯NB使用每个类的平均和变异进行分类.每个类都有不同的中心 (平均向量) 和不同的扩散 (变异),模仿现实世界的数据,其中测量在类别之间有系统的差异.
+代码会生成类似鸢尾花的数据，其中有 3 个类别、4 个特征，并形成高斯簇。GaussianNB 使用每个类别的均值和方差进行分类。各类别拥有不同的中心，也就是均值向量，以及不同的分散程度，也就是方差，以此模拟现实中不同类别测量值存在系统性差异的情况。
 
-代码还表明:
-- **Smoothing comparison:**训练多号NB以不同的阿尔法值来显示滑动强度对精度的影响.
-- **Training size experiment:**随着训练数据的增长,NB的精度如何提高,从20个样本增长到1600个样本.
-- **Confusion matrix:**按班级精度,召回,F1分数显示NB犯错误的地方.
+代码还会演示：
+- **平滑强度比较：** 使用不同 alpha 训练 MultinomialNB，观察平滑强度对准确率的影响。
+- **训练规模实验：** 随着训练数据从 20 个样本增长到 1600 个样本，观察朴素贝叶斯准确率如何变化。即使样本很少，它也能达到不错的准确率，这正是其主要优势。
+- **混淆矩阵：** 计算每个类别的精确率、召回率和 F1 分数，展示朴素贝叶斯会在哪里犯错。
 
 ### 预测速度
 
-简单的贝叶斯预测是矩阵乘法.
-- 多数NB:一个矩阵乘以 (n x d) @ (d x k) = O(n * d * k)
-- 盖斯NB:n * k 盖斯PDF评估,每个都包含d特征 = O(n * d * k)
+朴素贝叶斯的预测就是一次矩阵乘法。对于包含 n 个样本、d 个特征和 k 个类别的问题：
+- MultinomialNB：一次矩阵乘法 (n x d) @ (d x k)，复杂度为 O(n * d * k)
+- GaussianNB：对 n * k 个组合分别计算一次覆盖 d 个特征的高斯概率密度，复杂度为 O(n * d * k)
 
-两者在每一个维度都是线性的.比较KNN (需要计算距离到所有训练点) 或SVM与RBF内核 (需要对所有支持向量的内核评估).NB在预测时间上以大小顺序更快.
+两者对每个维度的复杂度都是线性的。相比之下，KNN 需要计算到所有训练点的距离，使用 RBF 核的 SVM 则需要针对所有支持向量计算核函数。在预测阶段，朴素贝叶斯可以快上几个数量级。
 
-## 用它
+## 实际应用
 
-两种变体均为单线:
+使用 sklearn 时，两种变体都只需几行代码：
 
 ```python
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
@@ -334,7 +334,7 @@ mnb.fit(X_train_counts, y_train)
 print(f"MultinomialNB accuracy: {mnb.score(X_test_counts, y_test):.3f}")
 ```
 
-对于与 sklearn 的文本分类:
+使用 sklearn 进行文本分类：
 
 ```python
 from sklearn.feature_extraction.text import CountVectorizer
@@ -350,11 +350,11 @@ text_clf.fit(train_texts, train_labels)
 accuracy = text_clf.score(test_texts, test_labels)
 ```
 
-编码在`naive_bayes.py`根据相同数据进行零部实施与Skularn的比较,以验证正确性.
+`naive_bayes.py` 中的代码会在同一份数据上比较从零实现与 sklearn 实现，以验证结果是否正确。
 
-### 们在们的家里,
+### 将 TF-IDF 与朴素贝叶斯结合
 
-字数量为每一个字的重量等于每一个事件. 但"the"和"is"等常见字在每个类中经常出现 - - 它们没有信息.TF-IDF (Term Frequency - Inverse Document Frequency) 低于常见字,高于罕见的歧视性字.
+原始单词计数会让每个单词的每次出现都拥有相同权重。但“the”“is”之类常见词在每个类别中都会频繁出现，几乎不携带信息。TF-IDF（Term Frequency - Inverse Document Frequency，词频—逆文档频率）会降低常见词的权重，提高罕见且具有判别力的单词的权重。
 
 ```python
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -367,11 +367,11 @@ text_clf = Pipeline([
 ])
 ```
 
-TF-IDF值是非负的,因此它们与MultinomialNB一起工作.TF-IDF + MultinomialNB的组合是文本分类的最强的基线之一.它经常击败了不到10,000个训练样本的数据集上的更复杂的模型.
+TF-IDF 值都是非负数，因此可以与 MultinomialNB 配合使用。TF-IDF + MultinomialNB 是文本分类中最强的基线方案之一。在训练样本少于 10,000 条的数据集上，它经常能够击败更复杂的模型。
 
-### 简短文本的BernoulliNB
+### 用 BernoulliNB 处理短文本
 
-对于短文本 (推文,短信,聊天消息),BernoulliNB可以超过MultinomialNB.短文本的单词数量较低,因此MultinomialNB依赖于的频率信息很杂.BernoulliNB只关心存在或缺席,这更可靠于短文本.
+处理推文、短信、聊天消息等短文本时，BernoulliNB 可能优于 MultinomialNB。短文本中的单词计数很低，因此 MultinomialNB 依赖的频率信息噪声较大。BernoulliNB 只关心单词是否出现，这种信息对短文本更可靠。
 
 ```python
 from sklearn.naive_bayes import BernoulliNB
@@ -383,11 +383,11 @@ text_clf = Pipeline([
 ])
 ```
 
-其他`binary=True`没有它,BernoulliNB仍然运行,但看到它不是设计的数量.
+CountVectorizer 中的 `binary=True` 会把所有计数转换成 0/1。即使不使用它，BernoulliNB 仍能运行，但模型看到的将是它原本并非为之设计的计数值。
 
-### 校准NB概率
+### 校准朴素贝叶斯概率
 
-如果您需要可靠的概率估计 (例如,设定门值或与其他模型结合),请使用 sklearn 的校准分类CV:
+朴素贝叶斯输出的概率往往没有得到良好校准。它给出 P(spam) = 0.95 时，真实概率可能只有 0.7。如果你需要可靠的概率估计，例如设置阈值或与其他模型组合，可以使用 sklearn 的 CalibratedClassifierCV：
 
 ```python
 from sklearn.calibration import CalibratedClassifierCV
@@ -397,65 +397,65 @@ calibrated_nb.fit(X_train, y_train)
 proba = calibrated_nb.predict_proba(X_test)
 ```
 
-这符合NB的原始分数上的一次物流回归,使用交叉验证.结果的概率远接近真正的类频率.
+它通过交叉验证，在朴素贝叶斯的原始分数之上拟合逻辑回归。得到的概率会更接近真实类别频率。
 
-### 常见的古特哈
+### 常见陷阱
 
-1. **Negative feature values.**多数式NB需要非负值的特性.如果你有负值 (如TF-IDF,某些设置或标准化功能),请使用GaussianNB代替,或者将功能转换为正值.
+1. **负特征值。** MultinomialNB 要求特征非负。如果数据中存在负值，例如使用特定设置的 TF-IDF 或标准化后的特征，应改用 GaussianNB，或者把所有特征平移到正数范围。
 
-2. **Zero variance features.**盖斯NB按变异分为:如果一个特征为一个类别 (所有值均为相同) 具有零变异,概率计算会断裂.代码将一个小的平滑术语 (1e-9) 添加到所有变异中以防止这一点.
+2. **零方差特征。** GaussianNB 的计算中需要除以方差。如果某个类别下的某项特征方差为零，也就是所有值完全相同，概率计算就会失败。示例代码为所有方差加入了一个很小的平滑项 1e-9，以防止这种情况。
 
-3. **Class imbalance.**如果99%的电子邮件是非垃圾邮件,前 P(非垃圾邮件) = 0.99 非常强大,以至于它压倒了概率证据.你可以手动设置类优先级或在 sklearn 中使用class_prior参数.
+3. **类别不均衡。** 如果 99% 的邮件都不是垃圾邮件，先验 P(not-spam) = 0.99 就会强到压过似然提供的证据。可以手动设置类别先验，或者使用 sklearn 的 class_prior 参数。
 
-4. **Feature scaling.**多数项NB不需要扩展 (它运作在计算上).高斯式NB也不需要扩展 (它估计每个特征的统计).这是对物流回归和SVM的优势,这些特征规模很敏感.
+4. **特征缩放。** MultinomialNB 不需要缩放，因为它直接处理计数；GaussianNB 同样不需要缩放，因为它会估计每项特征自己的统计量。相比对特征尺度敏感的逻辑回归和 SVM，这是朴素贝叶斯的一项优势。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/skill-naive-bayes-chooser.md`-- 选择合适的NB变体的决策技能
-- `code/naive_bayes.py`--从零开始的多项NB和高斯NB,
+本课会产出：
+- `outputs/skill-naive-bayes-chooser.md`——用于选择合适朴素贝叶斯变体的决策技能
+- `code/naive_bayes.py`——从零实现的 MultinomialNB 与 GaussianNB，以及与 sklearn 的比较
 
-### 当天真的贝耶斯失败时
+### 朴素贝叶斯何时会失败
 
-独立假设导致错误排名 (不仅仅是错误的概率) 时,NB失败.
+当独立性假设导致类别排序错误，而不只是概率数值不准时，朴素贝叶斯就会失败。常见情形包括：
 
-1. **Strong feature interactions.**如果类别取决于两个特征的组合,但不是单独的组合 (XOR类似的模式),NB将完全错过它.单独的每个特征都没有证据,NB不能将它们结合非线性.
+1. **强特征交互。** 如果类别取决于两个特征的组合，而单独任何一个特征都不起作用，例如类似 XOR 的模式，朴素贝叶斯会完全漏掉这种关系。单个特征都无法提供证据，而朴素贝叶斯不能以非线性方式组合它们。
 
-2. **Highly correlated features with opposing evidence.**如果特征A表示"垃圾邮件",B表示"非垃圾邮件",但A和B完全相关 (在现实中总是一致),NB将看到没有的矛盾证据.
+2. **提供相反证据的高度相关特征。** 如果特征 A 指向“垃圾邮件”，特征 B 指向“非垃圾邮件”，但 A 和 B 又完全相关，也就是在现实中它们总是一致，朴素贝叶斯就会看到实际上并不存在的矛盾证据。
 
-3. **Very large training sets.**具有足够的数据,物流回归等歧视性模型学习了真正的决策界限,并超过了NB.
+3. **训练集非常大。** 数据足够多时，逻辑回归等判别式模型能够学到真实的决策边界，并超越朴素贝叶斯。此前在小数据场景中有所帮助的独立性假设，此时反而会限制模型。
 
-在实践中,这些失败模式对于文本分类很少见.文本特征是众多的,个别弱,独立假设的错误往往会被取消.对于少数强烈相关特征的表格数据,首先考虑物流回归或基于树的模型.
+实践中，这些失败模式在文本分类里并不常见。文本特征数量多、单个特征的信号弱，而且独立性假设造成的误差往往会相互抵消。对于只有少量强相关特征的表格数据，应优先考虑逻辑回归或树模型。
 
-## 运动
+## 练习
 
-1. **Smoothing experiment.**训练 MultinomialNB 在文字数据上,以0.01,0.1,1.0,10.0,和100.0的阿尔法值. 图谱精度与阿尔法. 性能最高点在哪里?
+1. **平滑实验。** 使用 0.01、0.1、1.0、10.0 和 100.0 作为 alpha，在文本数据上训练 MultinomialNB。绘制准确率随 alpha 变化的曲线。性能在哪里达到峰值？alpha 过高为何会损害性能？
 
-2. **Feature independence test.**拿一个真实的文本数据集. 选择两个明显相关的词语 ("机器"和"学习").计算P 字1类) *P 字2类) 和P 字1和字2类. 独立假设是多么错误的? 它是否影响了分类准确性?
+2. **特征独立性检验。** 选取一个真实文本数据集，再选两个明显相关的单词，例如“machine”和“learning”。计算 P(word1 | class) * P(word2 | class)，并与 P(word1 AND word2 | class) 比较。独立性假设错得有多严重？它是否影响了分类准确率？
 
-3. **Bernoulli implementation.**扩展代码使用BernoulliNB类.将字符包转换为二进制 (现/缺) 并对文本数据的MultinomialNB进行准确比较.Bernoulli什么时候获胜?
+3. **实现伯努利变体。** 扩展示例代码，加入 BernoulliNB 类。把词袋表示转换成二元值，即出现/未出现，再比较它与 MultinomialNB 在文本数据上的准确率。伯努利变体在什么时候胜出？
 
-4. **NB vs Logistic Regression.**训练两个在文本数据.从100个训练样本开始,增加到10,000. 剧情精度与训练集尺寸对两个. 在什么时候物流回归超过天真的贝斯?
+4. **朴素贝叶斯与逻辑回归。** 在文本数据上分别训练两种模型。从 100 个训练样本开始，逐步增加到 10,000 个。绘制两种模型的准确率随训练集大小变化的曲线。逻辑回归在什么时候超过朴素贝叶斯？
 
-5. **Spam filter.**建立一个完整的垃圾邮件分类器:标记原始电子邮件文本,建立词汇,创建字包功能,训练多维数NB,精确评估和回忆 (不仅仅是精确性 - 为什么?).
+5. **垃圾邮件过滤器。** 构建完整的垃圾邮件分类器：对原始邮件文本分词、建立词表、创建词袋特征、训练 MultinomialNB，并使用精确率和召回率评估，而不只是准确率。为什么？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| Naive Bayes | "Simple probabilistic classifier" | A classifier that applies Bayes' theorem with the assumption that features are conditionally independent given the class |
-| Conditional independence | "Features don't affect each other" | P(A, B \| C) = P(A \| C) * P(B \| C) -- knowing B tells you nothing new about A once you know C |
-| Laplace smoothing | "Add-one smoothing" | Adding a small count to every feature to prevent zero probabilities from dominating the prediction |
-| Prior | "What you believed before seeing data" | P(class) -- the probability of each class before observing any features |
-| Likelihood | "How well the data fits" | P(features \| class) -- the probability of observing these features if the class is known |
-| Posterior | "What you believe after seeing data" | P(class \| features) -- the updated probability of the class after observing the features |
-| Generative model | "Models how data is generated" | A model that learns P(X \| Y) and P(Y), then uses Bayes' theorem to get P(Y \| X) |
-| Discriminative model | "Models the decision boundary" | A model that directly learns P(Y \| X) without modeling how X is generated |
-| Log probability | "Avoid underflow" | Working with log P instead of P to prevent the product of many small numbers from becoming zero in floating point |
+| 朴素贝叶斯 | “简单的概率分类器” | 应用贝叶斯定理，并假设给定类别后各特征条件独立的分类器 |
+| 条件独立 | “特征互不影响” | P(A, B \| C) = P(A \| C) * P(B \| C)——已知 C 后，知道 B 不会为 A 提供任何新信息 |
+| 拉普拉斯平滑 | “加一平滑” | 为每个特征加入一个小计数，防止零概率主导整个预测 |
+| 先验 | “看到数据前的判断” | P(class)——观察任何特征前，每个类别的概率 |
+| 似然 | “数据与假设有多吻合” | P(features \| class)——已知类别时，观察到这些特征的概率 |
+| 后验 | “看到数据后的判断” | P(class \| features)——观察特征后更新得到的类别概率 |
+| 生成式模型 | “对数据如何产生建模” | 学习 P(X \| Y) 和 P(Y)，再使用贝叶斯定理得到 P(Y \| X) 的模型 |
+| 判别式模型 | “对决策边界建模” | 不对 X 的产生过程建模，而是直接学习 P(Y \| X) 的模型 |
+| 对数概率 | “避免下溢” | 使用 log P 而非 P 计算，防止许多小数相乘后在浮点表示中变成零 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [scikit-learn Naive Bayes docs](https://scikit-learn.org/stable/modules/naive_bayes.html)-- 所有三个变体都具有数学细节
-- [McCallum and Nigam, A Comparison of Event Models for Naive Bayes Text Classification (1998)](https://www.cs.cmu.edu/~knigam/papers/multinomial-aaaiws98.pdf)-- 对于文本来说,多项和伯诺利的经典比较
-- [Rennie et al., Tackling the Poor Assumptions of Naive Bayes Text Classifiers (2003)](https://people.csail.mit.edu/jrennie/papers/icml03-nb.pdf)-- 改进文本的NB
-- [Ng and Jordan, On Discriminative vs. Generative Classifiers (2001)](https://ai.stanford.edu/~ang/papers/nips01-discriminativegenerative.pdf)--证明NB比LR更快地相近,数据少
+- [scikit-learn 朴素贝叶斯文档](https://scikit-learn.org/stable/modules/naive_bayes.html)——包含三种变体及其数学细节
+- [McCallum 与 Nigam：《A Comparison of Event Models for Naive Bayes Text Classification》（1998）](https://www.cs.cmu.edu/~knigam/papers/multinomial-aaaiws98.pdf)——多项式与伯努利变体在文本任务上的经典比较
+- [Rennie 等：《Tackling the Poor Assumptions of Naive Bayes Text Classifiers》（2003）](https://people.csail.mit.edu/jrennie/papers/icml03-nb.pdf)——改进朴素贝叶斯文本分类器的方法
+- [Ng 与 Jordan：《On Discriminative vs. Generative Classifiers》（2001）](https://ai.stanford.edu/~ang/papers/nips01-discriminativegenerative.pdf)——证明在较少数据下，朴素贝叶斯比逻辑回归收敛得更快
