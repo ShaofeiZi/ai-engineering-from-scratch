@@ -1,52 +1,52 @@
-# 发展目标,国家,行动和奖励
+# MDP、状态、动作与奖励
 
-> 马科夫决策过程是五件事:状态,行动,转型,奖励,折扣.RL  Q-学习,PPO,DPO,GRPO 中的一切都优化了这个形式.一遍学习,免费阅读其他强化学习.
+> 马尔可夫决策过程由五样东西组成：状态、动作、转移、奖励和折扣。强化学习中的一切——Q-learning、PPO、DPO、GRPO——都在这个结构上做优化。只要学会一次，后面的强化学习内容都能轻松读懂。
 
-**Type:** Learn
+**Type:** 学习
 **Languages:** Python
-**Prerequisites:** Phase 1 · 06 (Probability & Distributions), Phase 2 · 01 (ML Taxonomy)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 1 · 06（概率与分布）、阶段 2 · 01（机器学习分类体系）
+**Time:** 约 45 分钟
 
 ## 问题
 
-你写着一个棋牌机器人,或者一个库存规划师,或者一个交易代理,或者一个训练推理模型的PPO循环.四个不同的领域,一个令人惊的事实:四个都崩到同一个数学对象.
+假设你正在编写国际象棋机器人、库存规划器、交易智能体，或训练推理模型的 PPO 循环。这四个领域截然不同，却有一个令人意外的共同点：都可以归结为同一个数学对象。
 
-监督学习给你`(x, y)`强化学习给你没有标签,只有一个流量的状态,你采取的行动,和一个 skalar 奖励. 这一举动赢得了比赛吗? 补充决定节省了钱吗? 贸易带来了利吗? 士刚刚生产的代币导致了更高的奖励吗?
+监督学习向你提供 `(x, y)` 数据对，并要求拟合一个函数。强化学习没有标签，只有一连串状态、采取的动作，以及一个标量奖励。那步棋赢得比赛了吗？补货决策省钱了吗？交易盈利了吗？大语言模型刚生成的词元是否让裁判给出了更高奖励？
 
-您不能从这个流中学习,直到您正式化. "我看到的", "我做了什么", "接下来发生了什么", "这么好" 每个都必须成为一个可以推理的对象.这种形式化是马科夫决策过程.这个阶段的每个RL算法,包括RLHF和GRPO循环在最后,优化了这个形状.
+在将这条数据流形式化之前，你无法从中学习。“我看到了什么”“我做了什么”“接下来发生了什么”“结果有多好”，都必须转化为可以推理的对象。这种形式化就是马尔可夫决策过程。本阶段中的每一种强化学习算法，包括最后的 RLHF 与 GRPO 循环，都在这个结构上进行优化。
 
 ## 概念
 
-![Markov decision process: states, actions, transitions, rewards, discount](../assets/mdp.svg)
+![马尔可夫决策过程：状态、动作、转移、奖励与折扣](../assets/mdp.svg)
 
-**The five objects.**
+**五个对象。**
 
-- **States** `S`在格里德世界,细胞,象棋,板块,在法学,文本窗口和任何记忆.
-- **Actions** `A`选择,向上/下/左/右,玩动,发行令牌.
-- **Transitions** `P(s' | s, a)`根据国家`s`行动`a`在棋牌中确定性,在库存中稳定性,在LLM解码中几乎确定性.
-- **Rewards** `R(s, a, s')`收益减成本,日志概率比率在GRPO中.
-- **Discount** `γ ∈ [0, 1)`未来的奖励与现在的奖励有多少?`γ = 0.99`购买一个水平的 ~ 100 步; `γ = 0.9`买了10个.
+- **状态** `S`。智能体做决策所需的一切信息。在 GridWorld 中是所在格子，在国际象棋中是棋盘，在大语言模型中则是上下文窗口及所有记忆。
+- **动作** `A`。可供选择的行为：向上/向下/向左/向右移动，走一步棋，或输出一个词元。
+- **转移** `P(s' | s, a)`。给定状态 `s` 与动作 `a` 后，下一状态的概率分布。国际象棋中的转移是确定性的，库存管理中是随机的，大语言模型解码中则近似确定。
+- **奖励** `R(s, a, s')`。标量反馈信号。胜利 = +1，失败 = -1；收入减成本；或者 GRPO 中的对数似然比项。
+- **折扣** `γ ∈ [0, 1)`。未来奖励相对于当前奖励的重要程度。`γ = 0.99` 对应约 100 步的视野，`γ = 0.9` 则约为 10 步。
 
-**The Markov property** `P(s_{t+1} | s_t, a_t) = P(s_{t+1} | s_0, a_0, …, s_t, a_t)`如果没有,国家代表性是不完整的,不是方法的失败,是国家的失败.
+**马尔可夫性质** `P(s_{t+1} | s_t, a_t) = P(s_{t+1} | s_0, a_0, …, s_t, a_t)`。未来只取决于当前状态。若事实并非如此，说明状态表示不完整——这不是方法失效，而是状态定义失效。
 
-**Policies and returns.**一个政策`π(a | s)`图表状态到行动分布. 返回`G_t = r_t + γ r_{t+1} + γ² r_{t+2} + …`价值: 未来奖励的折扣金额.`V^π(s) = E[G_t | s_t = s]`是从 开始的预期回报`s`政策`π`值`Q^π(s, a) = E[G_t | s_t = s, a_t = a]`每个RL算法估计其中一个,然后改进`π`根据此.
+**策略与回报。** 策略 `π(a | s)` 将状态映射为动作分布。回报 `G_t = r_t + γ r_{t+1} + γ² r_{t+2} + …` 是未来奖励的折扣和。价值 `V^π(s) = E[G_t | s_t = s]` 是从 `s` 出发、遵循策略 `π` 时的期望回报。Q 值 `Q^π(s, a) = E[G_t | s_t = s, a_t = a]` 是从某个特定动作开始的期望回报。每种强化学习算法都会估计这两者之一，再据此改进 `π`。
 
-**The Bellman equations.**在这个阶段使用的固定点方程:
+**贝尔曼方程。** 本阶段所有内容都会使用的固定点方程：
 
 `V^π(s) = Σ_a π(a|s) Σ_{s', r} P(s', r | s, a) [r + γ V^π(s')]`
 `Q^π(s, a) = Σ_{s', r} P(s', r | s, a) [r + γ Σ_{a'} π(a'|s') Q^π(s', a')]`
 
-这些预期的分化返回为"这个步骤的奖励"加上"你降落的地方的折扣值".反复性. 9 阶段的每个算法要么重复这个方程到融合 (动态编程),从它 (蒙特卡洛) 样本,或者将它启动一步 (时间差异).
+这些方程把期望回报拆成“当前步骤的奖励”加“到达状态的折扣价值”，并递归定义自身。本阶段中的每种算法，要么迭代这个方程直至收敛（动态规划），要么从中采样（蒙特卡洛），要么用一步结果自举（时序差分）。
 
 ```figure
 discount-horizon
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:一个小的确定性MDP
+### 第 1 步：一个微型确定性 MDP
 
-代理从左上开始,终端在右下,每步的奖励为 -1 个,行动`{up, down, left, right}`看到`code/main.py`现在,我们要去.
+构建一个 4×4 GridWorld。智能体从左上角出发，右下角为终止位置，每走一步获得 -1 奖励，动作集合为 `{up, down, left, right}`。参见 `code/main.py`。
 
 ```python
 GRID = 4
@@ -63,11 +63,11 @@ def step(state, action):
     return (nr, nc), -1.0, (nr, nc) == TERMINAL
 ```
 
-五条线,就是整个环境,确定性过渡,恒定的步骤惩罚,吸收终端状态.
+只用五行，这就是完整环境：确定性转移、固定步进惩罚，以及吸收终止状态。
 
-### 步骤2:制定政策
+### 第 2 步：运行一次策略轨迹
 
-政策是从状态到行动分布的函数.
+策略是一个从状态到动作分布的函数。最简单的策略是均匀随机。
 
 ```python
 def uniform_policy(state):
@@ -85,11 +85,11 @@ def rollout(policy, max_steps=200):
     return total, steps
 ```
 
-运行随机策略1000次.这个4×4板的平均回报率为 -60至 -80左右.最佳回报率是 -6 (直线路向右).关闭这一差距是9阶段的一切.
+运行随机策略 1000 次。在这个 4×4 棋盘上，平均回报约为 -60 到 -80。最优回报是 -6（直接向下、向右到达终点）。缩小这段差距，就是阶段 9 的全部内容。
 
-### 步骤3:计算`V^π`通过贝尔曼方程
+### 第 3 步：通过贝尔曼方程精确计算 `V^π`
 
-对于小 MDP 来说,贝尔曼方程是一个线性系统. 列出状态,应用预期,再重复直到值停止变化.
+对于小型 MDP，贝尔曼方程是一个线性方程组。枚举状态、计算期望并不断迭代，直到价值不再变化。
 
 ```python
 def policy_evaluation(policy, gamma=0.99, tol=1e-6):
@@ -109,39 +109,39 @@ def policy_evaluation(policy, gamma=0.99, tol=1e-6):
             return V
 ```
 
-这是一个反复的政策评估.这是萨顿和巴托的第一个算法,也是每种RL方法的理论基础.
+这就是迭代策略评估。它是 Sutton 与 Barto 教材中的第一个算法，也是后续每种强化学习方法的理论基础。
 
-### 步骤4:`γ`是一个具有物理意义的超参数
+### 第 4 步：`γ` 是具有物理含义的超参数
 
-实际水平大概是`1 / (1 - γ)`现在,我们要去.`γ = 0.9`十个步骤.`γ = 0.99`百步.`γ = 0.999`千个步骤.
+有效时域约为 `1 / (1 - γ)`。`γ = 0.9` → 10 步，`γ = 0.99` → 100 步，`γ = 0.999` → 1000 步。
 
-由于许多早期步骤都承担了远期奖励的责任,因此信用分配变得很杂.`γ = 1`控制任务使用`0.95–0.99`长视野战略游戏使用`0.999`现在,我们要去.
+取值太低，智能体会目光短浅；取值太高，信用分配会充满噪声，因为许多早期步骤都要为遥远未来的奖励共同负责。大语言模型 RLHF 通常使用 `γ = 1`，因为回合短且有明确上限。控制任务使用 `0.95–0.99`，长视野策略游戏则使用 `0.999`。
 
-## 陷
+## 陷阱
 
-- **Non-Markovian state.**如果您需要最后三个观察来决定,"状态"不仅仅是当前的观察. 修复:堆框架 (DQN在Atari堆 4) 或使用复制状态 (LSTM/GRU在观测上).
-- **Sparse rewards.**只有获奖奖使在大型状态空间中学习几乎不可能.
-- **Reward hacking.**优化代理奖励通常会产生病态行为.OpenAI的船只比赛代理在圈子里旋转,以收集力量而不是永远完成比赛.总是根据目标结果定义奖励,而不是代理.
-- **Discount mis-spec.** `γ = 1`在一个无限视野任务上,每个值都是无限的.`γ < 1`现在,我们要去.
-- **Reward scale.**奖励 {+100, -100} vs {+1, -1} 给出相同的最佳政策,但截然不同的梯度大小.`[-1, 1]`- 在连接到PPO/DQN之前.
+- **非马尔可夫状态。** 如果必须参考最近三次观测才能决策，那么“状态”就不只是当前观测。解决办法是堆叠帧（Atari 上的 DQN 会堆叠 4 帧），或使用循环状态（在观测序列上运行 LSTM/GRU）。
+- **稀疏奖励。** 在大型状态空间中，只有获胜时才给奖励会让学习几乎不可能。可以塑造奖励（提供中间信号），或先用模仿学习自举（阶段 9 · 09）。
+- **奖励黑客。** 优化代理奖励经常会产生病态行为。OpenAI 的赛艇智能体没有完成比赛，而是不断原地转圈收集加速道具。奖励必须根据目标结果定义，而不是根据代理指标定义。
+- **折扣设定错误。** 在无限视野任务中使用 `γ = 1`，会使所有价值变为无穷。必须设置有限视野或确保 `γ < 1`。
+- **奖励尺度。** {+100, -100} 与 {+1, -1} 会产生相同的最优策略，却导致截然不同的梯度幅度。在送入 PPO/DQN 前，应将其归一化到近似 `[-1, 1]` 的范围。
 
-## 用它
+## 学以致用
 
-2026堆将每一个RL管道降低到MDP,然后触摸代码:
+2026 年的技术栈会先把每个强化学习流水线归结为 MDP，再开始编写代码：
 
-| Situation | State | Action | Reward | γ |
+| 场景 | 状态 | 动作 | 奖励 | γ |
 |-----------|-------|--------|--------|---|
-| Control (locomotion, manipulation) | Joint angles + velocities | Continuous torques | Task-specific shaped | 0.99 |
-| Games (chess, Go, poker) | Board + history | Legal move | Win=+1 / loss=-1 | 1.0 (finite) |
-| Inventory / pricing | Stock + demand | Order qty | Revenue - cost | 0.95 |
-| RLHF for LLMs | Context tokens | Next token | Reward-model score at end | 1.0 (episode ~200 tokens) |
-| GRPO for reasoning | Prompt + partial response | Next token | Verifier 0/1 at end | 1.0 |
+| 控制（运动、操作） | 关节角度 + 速度 | 连续力矩 | 针对任务塑造 | 0.99 |
+| 游戏（国际象棋、围棋、扑克） | 棋盘/牌桌 + 历史 | 合法动作 | 胜=+1 / 负=-1 | 1.0（有限） |
+| 库存/定价 | 库存 + 需求 | 订购数量 | 收入 - 成本 | 0.95 |
+| 大语言模型 RLHF | 上下文词元 | 下一个词元 | 结束时的奖励模型分数 | 1.0（回合约 200 个词元） |
+| 推理任务 GRPO | 提示词 + 部分回答 | 下一个词元 | 结束时验证器给出 0/1 | 1.0 |
 
-在写任何训练循环之前,写出五个.大多数"RL不工作"错误报告追溯到纸上被打破的MDP公式.
+在编写任何训练循环之前，先写出这五元组。大多数“强化学习不起作用”的错误报告，最终都能追溯到纸面上就已经有问题的 MDP 定义。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/skill-mdp-modeler.md`其他:
+保存为 `outputs/skill-mdp-modeler.md`：
 
 ```markdown
 ---
@@ -164,29 +164,29 @@ Given a task (control / game / recommendation / LLM fine-tuning), output:
 Refuse to ship any MDP where the state is non-Markovian without explicit mention of frame-stacking or recurrent state. Refuse any reward that was not defined in terms of the target outcome. Flag any `γ ≥ 1.0` on an infinite-horizon task. Flag any reward range >100x the typical step reward as a likely gradient-explosion source.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**实现4×4格式世界和随机政策推广`code/main.py`运行1万集,报告回报的平均值和STD.
-2. **Medium.**跑步`policy_evaluation`随着`γ ∈ {0.5, 0.9, 0.99}`对于统一随机政策.`V`解释为什么终端附近的状态值越来越快`γ`现在,我们要去.
-3. **Hard.**转换格里德世界到静止状态:每个动作都会与概率相邻方向滑动`p = 0.1`重新评估制服政策.`V[start]`变得更好还是更糟?
+1. **简单。** 在 `code/main.py` 中实现 4×4 GridWorld 和随机策略轨迹。运行 10,000 个回合，报告回报的均值与标准差，并与最优回报（-6）比较。
+2. **中等。** 对均匀随机策略运行 `policy_evaluation`，分别使用 `γ ∈ {0.5, 0.9, 0.99}`。将每种情况下的 `V` 打印成 4×4 网格。解释为什么 `γ` 越大，终止位置附近的状态价值增长得越快。
+3. **困难。** 把 GridWorld 改成随机环境：每个动作都以 `p = 0.1` 的概率滑向相邻方向。重新评估均匀策略。`V[start]` 会变好还是变差？为什么？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| MDP | "Reinforcement learning setup" | Tuple `(S, A, P, R, γ)` satisfying the Markov property. |
-| State | "What the agent sees" | Sufficient statistic for future dynamics under the chosen policy class. |
-| Policy | "Agent's behavior" | Conditional distribution `π(a \| s)` or deterministic map `s → a`. |
-| Return | "Total reward" | Discounted sum `Σ γ^t r_t` from the current step. |
-| Value | "How good a state is" | Expected return under `π` starting from `s`. |
-| Q-value | "How good an action is" | Expected return under `π` starting from `s` with first action `a`. |
-| Bellman equation | "Dynamic programming recursion" | Fixed-point decomposition of value / Q into one-step reward plus discounted successor value. |
-| Discount `γ` | "Future vs present" | Geometric weight on far-future reward; effective horizon `~1/(1-γ)`. |
+| MDP | “强化学习问题设置” | 满足马尔可夫性质的五元组 `(S, A, P, R, γ)`。 |
+| 状态 | “智能体看到的内容” | 在所选策略类别下，足以描述未来动力学的统计量。 |
+| 策略 | “智能体的行为” | 条件分布 `π(a \| s)` 或确定性映射 `s → a`。 |
+| 回报 | “总奖励” | 从当前步骤开始的折扣和 `Σ γ^t r_t`。 |
+| 价值 | “一个状态有多好” | 在策略 `π` 下从 `s` 出发的期望回报。 |
+| Q 值 | “一个动作有多好” | 在策略 `π` 下从 `s` 出发并以 `a` 为首个动作时的期望回报。 |
+| 贝尔曼方程 | “动态规划递归” | 将价值/Q 分解为一步奖励加折扣后继价值的固定点关系。 |
+| 折扣 `γ` | “未来与现在” | 施加于远期奖励的几何权重；有效时域为 `~1/(1-γ)`。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Sutton & Barto (2018). Reinforcement Learning: An Introduction, 2nd ed.](http://incompleteideas.net/book/RLbook2020.pdf)课本.第3章涵盖MDP和贝尔曼方程;第1章激励了每次课程的奖励假设.
-- [Bellman (1957). Dynamic Programming](https://press.princeton.edu/books/paperback/9780691146683/dynamic-programming)贝尔曼方程的起源.
-- [OpenAI Spinning Up — Part 1: Key Concepts](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html)从深度RL角度来看简洁的MDP.
-- [Puterman (2005). Markov Decision Processes](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316887)关于MDP和精确解决方法的操作研究参考.
-- [Littman (1996). Algorithms for Sequential Decision Making (PhD thesis)](https://www.cs.rutgers.edu/~mlittman/papers/thesis-main.pdf)作为动态编程专业化的MDP最清洁的衍生.
+- [Sutton 与 Barto（2018），《强化学习：导论》第 2 版](http://incompleteideas.net/book/RLbook2020.pdf)——权威教材。第 3 章介绍 MDP 与贝尔曼方程，第 1 章阐述贯穿后续所有课程的奖励假说。
+- [Bellman（1957），《动态规划》](https://press.princeton.edu/books/paperback/9780691146683/dynamic-programming)——贝尔曼方程的起源。
+- [OpenAI Spinning Up——第 1 部分：核心概念](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html)——从深度强化学习角度给出的精炼 MDP 入门。
+- [Puterman（2005），《马尔可夫决策过程》](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316887)——关于 MDP 与精确求解方法的运筹学参考书。
+- [Littman（1996），《序贯决策算法》（博士论文）](https://www.cs.rutgers.edu/~mlittman/papers/thesis-main.pdf)——把 MDP 推导为动态规划特例的最清晰论述。
