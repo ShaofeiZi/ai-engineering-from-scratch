@@ -1,65 +1,65 @@
-# 后勤回归
+# 逻辑回归
 
-> 逻辑回归将直线曲线成S曲线,以回答与概率的"是"或"没有"问题.
+> 逻辑回归把直线弯成 S 形曲线，用概率回答“是或否”的问题。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 2 Lesson 1-2 (What Is ML, Linear Regression)
-**Time:** ~90 minutes
+**Prerequisites:** 阶段 2 第 1–2 课（什么是机器学习、线性回归）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 通过使用sigmoid函数和二进制交叉缩损失从零开始实现物流回归
-- 计算和解释精度,回忆,F1分数和二进制分类的混矩阵
-- 解释为什么MSE未能进行分类,以及为什么二进制交叉能产生曲的成本表面
-- 建立多类分类的软max回归模型,并评估值调整权衡
+- 使用 sigmoid 函数和二元交叉熵损失，从零实现逻辑回归
+- 计算并解释二分类的 precision、recall、F1 score 和 confusion matrix
+- 解释 MSE 为何不适合分类，以及二元交叉熵为何会产生凸代价曲面
+- 为多分类构建 softmax 回归模型，并评估阈值调节的取舍
 
 ## 问题
 
-根据其大小,你想预测瘤是否恶性或良性.你试图线性回归.它输出0.3或1.7或0.5等数字.这些数字意味着什么?1.7是"非常恶性"吗?0.5是"非常良性"吗?线性回归输出无限数量.分类需要0到1之间的有限概率,并明确决定:是否.
+你想根据肿瘤大小预测它是恶性还是良性，于是尝试线性回归。模型输出 0.3、1.7 或 -0.5。它们意味着什么？1.7 是“非常恶性”吗？-0.5 是“非常良性”吗？线性回归的输出没有上下界；分类任务需要 0 到 1 之间的有界概率，以及清楚的“是或否”决策。
 
-逻辑回归解决了这个问题.它采用相同的线性组合 (wx + b) 并通过sigmoid函数,将任何数量压缩到范围 (0, 1).输出是概率.你设定一个门 (通常是0.5) 并做出决定.
+逻辑回归解决了这个问题。它仍然计算线性组合 wx + b，但随后把结果传入 sigmoid 函数，将任意实数压缩到 (0, 1) 区间。输出可以解释为概率，再设置一个阈值（通常为 0.5）作出决策。
 
-尽管其名称,物流回归是一种分类算法,而不是回归算法.这个名称来自它使用的物流 (sigmoid) 函数.
+这是实践中使用最广泛的算法之一。尽管名称中含有“回归”，逻辑回归其实是分类算法。这个名称来自它使用的 logistic（sigmoid）函数。
 
-## 概念
+## 核心概念
 
-### 为什么线性回归不能分类
+### 线性回归为何不适合分类
 
-设想根据学习时间预测通过/失败 (1/0) 线性回归通过数据符合一个线:
+假设根据学习时长预测通过/不通过（1/0）。线性回归会在数据中拟合一条直线：
 
 ```
 hours:  1   2   3   4   5   6   7   8   9   10
 actual: 0   0   0   0   1   1   1   1   1   1
 ```
 
-线性合适可能会产生 -0.2在1小时和1.3在10小时等预测.这些值不是概率.它们低于0和以上 1.更糟糕的是,一个单个异常值 (有人研究了50小时) 将拖着整个线,改变预测对每个人都有.
+线性拟合可能在学习 1 小时时预测 -0.2，在学习 10 小时时预测 1.3。这些数值不是概率，会低于 0 或高于 1。更糟的是，一个极端异常点，例如学习 50 小时的人，会拖动整条直线，改变所有人的预测。
 
-类别需要一个函数:
-- 输出值在0到1之间 (概率)
-- 创造一个急剧的转型 (决定的边界)
-- 没有被远离边界的异常值扭曲
+分类需要一个满足以下条件的函数：
+- 输出 0 到 1 之间的值，也就是概率
+- 产生清晰转变，也就是决策边界
+- 不会被远离边界的异常点扭曲
 
-### 赛格莫ид功能
+### Sigmoid 函数
 
-状函数的作用是这样的:
+Sigmoid 函数恰好满足这些要求：
 
 ```
 sigmoid(z) = 1 / (1 + e^(-z))
 ```
 
-性能:
-- 当z是大且正的时,sigmoid(z) 接近1
-- 当z是大且负的时,sigmoid(z) 接近0
-- 当z=0时,sigmoid(z) =0.5时
-- 输出总是0到1之间
-- 功能在任何地方都很平滑,可区分
+性质：
+- z 很大且为正时，sigmoid(z) 趋近 1
+- z 很小且为负时，sigmoid(z) 趋近 0
+- z = 0 时，sigmoid(z) = 0.5
+- 输出始终位于 0 与 1 之间
+- 函数处处光滑且可微
 
-衍生物具有方便的形式:sigmoid'(z) =sigmoid(z) * (1 - sigmoid(z)). 这使得梯度计算效率高.
+其导数形式非常方便：sigmoid'(z) = sigmoid(z) * (1 - sigmoid(z))，因此梯度计算高效。
 
-### 后勤回归 =线性模型 + 形
+### 逻辑回归 = 线性模型 + Sigmoid
 
-模型计算z = wx + b (与线性回归相同),然后应用sigmoid:
+模型先计算 z = wx + b，与线性回归相同，再应用 sigmoid：
 
 ```mermaid
 flowchart LR
@@ -70,34 +70,34 @@ flowchart LR
     D -->|No| N[Predict 0]
 ```
 
-输出 p 解释为 P ((y=1 个 x),输入属于类1 的概率. 决策边界是wx + b = 0,这使得sigmoid输出完全是0.5.
+输出 p 可解释为 P(y=1 | x)，也就是输入属于类别 1 的概率。决策边界位于 wx + b = 0 的位置，此时 sigmoid 输出恰好为 0.5。
 
-### 双边交叉缩损失
+### 二元交叉熵损失
 
-对于物流回归,不能使用MSE.使用sigmoid的MSE创建了一个不曲的成本表面,具有许多本地最小值.
+逻辑回归不能使用 MSE。Sigmoid 与 MSE 结合后，会产生包含许多局部最小值的非凸代价曲面。应改用二元交叉熵，也称 log loss：
 
 ```
 Loss = -(1/n) * sum(y * log(p) + (1-y) * log(1-p))
 ```
 
-为什么这能有效:
-- 当 y=1 和 p 接近 1: log(1) = 0,所以损失接近 0 (正确,低成本)
-- 当 y=1 和 p 接近 0: log(0) 接近负无限时,因此损失是巨大的 (错误,高成本)
-- 当 y=0 和 p 接近 0: log(1) = 0,所以损失接近 0 (正确,成本低)
-- 当 y=0 和 p 接近 1: log(0) 接近负无限时,因此损失是巨大的 (错误,高成本)
+其工作方式如下：
+- y=1 且 p 接近 1：log(1) = 0，损失接近 0，预测正确、代价低
+- y=1 且 p 接近 0：log(0) 趋向负无穷，损失极大，预测错误、代价高
+- y=0 且 p 接近 0：log(1) = 0，损失接近 0，预测正确、代价低
+- y=0 且 p 接近 1：log(0) 趋向负无穷，损失极大，预测错误、代价高
 
-由于这种损失函数是逻辑回归的曲,确保了单一的全球最低值.
+对于逻辑回归，这个损失函数是凸的，因此只存在一个全局最小值。
 
-### 后勤回归的逐渐下降
+### 逻辑回归的梯度下降
 
-双向交叉透的梯度与sigmoid具有清洁的形式:
+Sigmoid 与二元交叉熵结合时，梯度形式非常简洁：
 
 ```
 dL/dw = (1/n) * sum((p - y) * x)
 dL/db = (1/n) * sum(p - y)
 ```
 
-这些看起来与线性回归梯度相同.区别是p = sigmoid(wx + b) 而不是p = wx + b.sigmoid引入非线性,但梯度更新规则保持不变.
+它们看起来与线性回归梯度完全相同。区别在于，p = sigmoid(wx + b)，而不是 p = wx + b。Sigmoid 引入非线性，但梯度更新规则保持不变。
 
 ```mermaid
 flowchart TD
@@ -110,72 +110,72 @@ flowchart TD
     F -->|Yes| G[Model trained]
 ```
 
-### 决策的界限
+### 决策边界
 
-对于2D输入 (两个特征),决策边界是:
+对于二维输入，也就是两个特征，决策边界是满足以下条件的直线：
 
 ```
 w1*x1 + w2*x2 + b = 0
 ```
 
-一边的点被分为1,另一边的点被分为0.物流回归总是产生线性决策边界.如果你需要一个曲线边界,你要么添加多项式特性,要么使用非线性模型.
+直线一侧的点被分类为 1，另一侧被分类为 0。逻辑回归始终产生线性决策边界。如果需要曲线边界，可以添加多项式特征，或改用非线性模型。
 
-### 多类分类与Softmax
+### 使用 Softmax 进行多分类
 
-对于k类,使用软max函数:
+二元逻辑回归处理两个类别；对于 k 个类别，应使用 softmax 函数：
 
 ```
 softmax(z_i) = e^(z_i) / sum(e^(z_j) for all j)
 ```
 
-每个类都有自己的权重向量.模型为每个类计算一个分数z_i,然后softmax将分数转换为概率,总数为1.预测的类是具有最高概率的类.
+每个类别都有自己的权重向量。模型为每个类别计算分数 z_i，再由 softmax 把分数转换成总和为 1 的概率。概率最高的类别就是预测类别。
 
-损失函数变成了类型的交叉:
+损失函数变为类别交叉熵：
 
 ```
 Loss = -(1/n) * sum(sum(y_k * log(p_k)))
 ```
 
-在此, y_k 为真类的1个,所有其他类型的0个 (单热编码).
+其中真实类别对应的 y_k 为 1，其他类别为 0，这就是 one-hot 编码。
 
 ### 评估指标
 
-对于一个数据集的95%负和5%正,一个总是预测负的模型得到了95%的准确性,但是无用的.
+只看准确率不够。如果数据集中 95% 为负类、5% 为正类，一个始终预测负类的模型可以达到 95% 准确率，却毫无用途。
 
-**Confusion Matrix**其他:
+**Confusion Matrix：**
 
-| | Predicted Positive | Predicted Negative |
+| | 预测为正 | 预测为负 |
 |---|---|---|
-| Actually Positive | True Positive (TP) | False Negative (FN) |
-| Actually Negative | False Positive (FP) | True Negative (TN) |
+| 实际为正 | True Positive (TP) | False Negative (FN) |
+| 实际为负 | False Positive (FP) | True Negative (TN) |
 
-**Precision**预测的积极因素中,实际上有多少是积极的?
+**Precision：**在所有预测为正的样本中，有多少实际为正？
 ```
 Precision = TP / (TP + FP)
 ```
 
-**Recall**(敏感性):从所有实际的积极因素中,我们抓到了多少?
+**Recall（Sensitivity）：**在所有实际为正的样本中，模型捕获了多少？
 ```
 Recall = TP / (TP + FN)
 ```
 
-**F1 Score**调整两个指标.
+**F1 Score：**precision 与 recall 的调和平均，用一个指标平衡二者。
 ```
 F1 = 2 * (Precision * Recall) / (Precision + Recall)
 ```
 
-什么时候优先考虑:
-- **Precision**:假阳性数据成本高昂 (垃圾邮件过器,你不想阻止合法电子邮件)
-- **Recall**:假消极结果成本高昂 (癌症查,你不想错过瘤)
-- **F1**:当你需要一个平衡的指标
+应优先考虑哪项指标：
+- **Precision：**假阳性代价高时，例如垃圾邮件过滤器不能误拦正常邮件
+- **Recall：**假阴性代价高时，例如癌症筛查不能漏掉肿瘤
+- **F1：**需要单一平衡指标时
 
 ```figure
 logistic-sigmoid
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:Sigmoid函数和数据生成
+### 第 1 步：Sigmoid 函数与数据生成
 
 ```python
 import random
@@ -212,7 +212,7 @@ for i in range(5):
     print(f"  Features: [{X[i][0]:.2f}, {X[i][1]:.2f}], Label: {y[i]}")
 ```
 
-### 步骤2:从零开始的物流回归
+### 第 2 步：从零实现逻辑回归
 
 ```python
 class LogisticRegression:
@@ -278,7 +278,7 @@ print(f"Weights: [{model.weights[0]:.4f}, {model.weights[1]:.4f}]")
 print(f"Bias: {model.bias:.4f}")
 ```
 
-### 步骤3:从零开始的混矩阵和指标
+### 第 3 步：从零实现 Confusion Matrix 与指标
 
 ```python
 class ClassificationMetrics:
@@ -326,7 +326,7 @@ metrics = ClassificationMetrics(y_test, y_pred_test)
 metrics.print_report()
 ```
 
-### 步骤4:决策边界分析
+### 第 4 步：分析决策边界
 
 ```python
 print("\n=== Decision Boundary ===")
@@ -350,7 +350,7 @@ for point in test_points:
     print(f"  [{point[0]}, {point[1]}] -> prob={prob:.4f}, class={pred}")
 ```
 
-### 步骤5:多级软max
+### 第 5 步：使用 Softmax 进行多分类
 
 ```python
 class SoftmaxRegression:
@@ -442,7 +442,7 @@ for i in range(5):
     print(f"  True: {y_test_3[i]}, Predicted: {pred}, Probs: [{', '.join(f'{p:.3f}' for p in probs)}]")
 ```
 
-### 步骤 6: 调整门
+### 第 6 步：调整阈值
 
 ```python
 print("\n=== Threshold Tuning ===")
@@ -458,9 +458,9 @@ for t in thresholds:
     print(f"{t:>10.1f} {m.accuracy():>10.4f} {m.precision():>10.4f} {m.recall():>10.4f} {m.f1():>10.4f}")
 ```
 
-## 用它
+## 实际使用
 
-现在,与子学习同样.
+下面使用 scikit-learn 完成相同工作。
 
 ```python
 from sklearn.linear_model import LogisticRegression as SklearnLR
@@ -495,32 +495,32 @@ print(f"\nConfusion Matrix:\n{confusion_matrix(y_te, y_pred)}")
 print(f"\nClassification Report:\n{classification_report(y_te, y_pred)}")
 ```
 
-您从零开始实现的决策界限和指标相同. Scikit-learn 添加解决方案 (liblinear, lbfgs, saga),自动规范化,多类策略 (one vs rest, multomial),以及数值稳定优化.
+从零实现会产生与 scikit-learn 相同的决策边界和指标。Scikit-learn 还提供多种求解器（liblinear、lbfgs、saga）、自动正则化、多分类策略（one-vs-rest、multinomial）和数值稳定优化。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `code/logistic_regression.py`- 从零开始的物流回归,使用指标
+本课会产出：
+- `code/logistic_regression.py`——带评估指标的从零逻辑回归实现
 
-## 运动
+## 练习
 
-1. 生成一个线性不可分离的数据集 (例如,两个集中圆).训练物流回归并观察其失败.然后添加多项函数 (x1^2, x2^2, x1*x2) 并再次训练. 显示精度提高.
-2. 实现3级软max模型的多类混矩阵.计算每个类的精度和回忆.哪个类是最难分类的?
-3. 建立一个ROC曲线从零开始.为100个从0到1的门值计算真正率和虚假正率.使用拖式规则计算AUC (曲线下面的区域).
+1. 生成一个线性不可分数据集，例如两个同心圆。训练逻辑回归并观察它失败；然后添加多项式特征（x1^2、x2^2、x1*x2）重新训练，展示准确率提高。
+2. 为三分类 softmax 模型实现多分类 confusion matrix，并计算每个类别的 precision 和 recall。哪个类别最难分类？
+3. 从零构建 ROC 曲线。针对从 0 到 1 的 100 个阈值，计算 true positive rate 与 false positive rate，再使用梯形法则计算 AUC（曲线下面积）。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Logistic regression | "Regression for classification" | A linear model followed by a sigmoid function that outputs class probabilities |
-| Sigmoid function | "The S-curve" | The function 1/(1+e^(-z)) that maps any real number to the range (0, 1) |
-| Binary cross-entropy | "Log loss" | The loss function -[y*log(p) + (1-y)*log(1-p)] that penalizes confident wrong predictions severely |
-| Decision boundary | "The dividing line" | The surface where the model's output probability equals 0.5, separating predicted classes |
-| Softmax | "Multi-class sigmoid" | A function that converts a vector of scores into probabilities that sum to 1 |
-| Precision | "How many selected are relevant" | TP / (TP + FP), the fraction of positive predictions that are actually positive |
-| Recall | "How many relevant are selected" | TP / (TP + FN), the fraction of actual positives that the model correctly identifies |
-| F1 score | "Balanced accuracy" | The harmonic mean of precision and recall: 2*P*R / (P+R) |
-| Confusion matrix | "The error breakdown" | A table showing TP, TN, FP, FN counts for each class pair |
-| Threshold | "The cutoff" | The probability value above which the model predicts class 1 (default 0.5, tunable) |
-| One-hot encoding | "Binary columns for categories" | Representing class k as a vector of zeros with a 1 at position k |
-| Categorical cross-entropy | "Multi-class log loss" | The extension of binary cross-entropy to k classes using one-hot encoded labels |
+| Logistic regression | “用于分类的回归” | 在线性模型后应用 sigmoid 函数，输出类别概率 |
+| Sigmoid function | “S 形曲线” | 函数 1/(1+e^(-z))，把任意实数映射到 (0, 1) 区间 |
+| Binary cross-entropy | “Log loss” | 损失函数 -[y*log(p) + (1-y)*log(1-p)]，会严厉惩罚置信度高却错误的预测 |
+| Decision boundary | “分界线” | 模型输出概率等于 0.5 的曲面，将预测类别分开 |
+| Softmax | “多分类 sigmoid” | 把分数组成的向量转换成总和为 1 的概率 |
+| Precision | “选中的样本有多少相关” | TP / (TP + FP)，所有正类预测中实际为正的比例 |
+| Recall | “相关样本有多少被选中” | TP / (TP + FN)，所有真实正类中被模型正确识别的比例 |
+| F1 score | “平衡准确率” | precision 与 recall 的调和平均：2*P*R / (P+R) |
+| Confusion matrix | “错误分解表” | 展示各类别对 TP、TN、FP、FN 数量的表格 |
+| Threshold | “截断值” | 模型预测类别 1 所需超过的概率值，默认 0.5，但可以调整 |
+| One-hot encoding | “类别的二进制列” | 使用只有第 k 个位置为 1、其余位置均为 0 的向量表示类别 k |
+| Categorical cross-entropy | “多分类 log loss” | 使用 one-hot 标签，把二元交叉熵推广到 k 个类别 |
