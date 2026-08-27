@@ -1,36 +1,36 @@
-# 从零开始构建一个标记器
+# 从零构建词元化器
 
-> 第1课给你玩具,这课给你武器.
+> 第 01 课给了你一个玩具，这一课则会给你一件利器。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 10, Lesson 01 (Tokenizers: BPE, WordPiece, SentencePiece)
-**Time:** ~90 minutes
+**Prerequisites:** 阶段 10 第 01 课（词元化器：BPE、WordPiece、SentencePiece）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 建立一个处理 Unicode,白色空间规范化和特殊代币的生产级 BPE 代币器
-- 实现字节级下降,以便代币器可以在未知的代币的情况下编码任何输入 (包括emoji,CJK和代码)
-- 在应用BPE合并之前添加预代币化regex模式,将文字分为词界限
-- 训练一个定制代码符号在一个体积上,并评估其压缩比与多语言文本上的代码符号
+- 构建生产级 BPE 词元化器，正确处理 Unicode、空白规范化和特殊词元
+- 实现字节级回退，使词元化器可以编码任何输入（包括表情符号、中日韩文字与代码），且不会产生未知词元
+- 添加预词元化正则表达式，在应用 BPE 合并前按词边界切分文本
+- 在语料库上训练自定义词元化器，并在多语言文本上对照 tiktoken 评估其压缩率
 
 ## 问题
 
-你从01课的BPE标记器使用英语文,现在把日本文写在上面,或者是爱默契,或者是Python代码,
+第 01 课的 BPE 词元化器可以处理英语文本。现在试着给它输入日语、表情符号，或混用制表符与空格的 Python 代码。
 
-它会破裂.
+它会坏掉。
 
-不是因为BPE是错误的,因为实现是不完整的.一个生产代币器处理任何编码中的原始字节,在分化之前将Unicode正常化,管理永远不会合并的特殊代币,
+问题不在 BPE，而在于实现并不完整。生产级词元化器要能处理任意编码的原始字节，在切分前规范化 Unicode，管理永远不会参与合并的特殊词元，将预词元化与子词切分串联起来，而且必须足够快，不能成为处理 15 万亿词元的训练流水线中的瓶颈。
 
-现在,我们可以看到一个新的代码. 拉马3号有128,256. GPT-4有大约10万个. 这些不是玩具号码. 这些词汇背后的结合表是用数百个千兆字节的文字训练的, 周围的机器 - - 正常化,预代币化,特殊代币注射,聊天模板格式化 - - 是区分一个处理"你好世界"的代币器与一个处理整个互联网的代币器的东西.
+GPT-2 的词表有 50,257 个词元，Llama 3 有 128,256 个，GPT-4 约有 100,000 个。这些并不是玩具规模。支撑这些词表的合并表在数百 GB 文本上训练，而词元化器外围的机制——规范化、预词元化、注入特殊词元、聊天模板格式化——决定了它只能处理“hello world”，还是能够处理整个互联网。
 
-你将建造那种机器.
+你将亲手构建这些机制。
 
 ## 概念
 
-### 整个管道
+### 完整流水线
 
-生产代币不是一个算法,而是五个阶段的管道,每个阶段都解决了不同的问题.
+生产级词元化器不是单一算法，而是由五个阶段组成的流水线，每个阶段解决不同问题。
 
 ```mermaid
 graph LR
@@ -48,64 +48,64 @@ graph LR
     style F fill:#1a1a2e,stroke:#e94560,color:#fff
 ```
 
-每个阶段都有一个特定的工作:
+每个阶段都有明确职责：
 
-| Stage | What It Does | Why It Matters |
+| 阶段 | 作用 | 重要性 |
 |-------|-------------|----------------|
-| Normalize | NFKC Unicode, lowercase optional, strip accents optional | "fi" ligature (U+FB01) becomes "fi" (two chars). Without this, same word gets different tokens. |
-| Pre-Tokenize | Split text into chunks before BPE | Prevents BPE from merging across word boundaries. "the cat" should never produce a token "e c". |
-| BPE Merge | Apply learned merge rules to byte sequences | The core compression. Turns raw bytes into subword tokens. |
-| Special Tokens | Inject [BOS], [EOS], [PAD], chat template markers | These tokens have fixed IDs. They never participate in BPE merges. The model needs them for structure. |
-| ID Mapping | Convert token strings to integer IDs | The model sees integers, not strings. |
+| 规范化 | NFKC Unicode；可选转小写；可选移除重音符号 | “fi”连字（U+FB01）会变成“fi”（两个字符）。若不处理，同一个词会得到不同词元。 |
+| 预词元化 | 在 BPE 前把文本切成片段 | 防止 BPE 跨越词边界合并。“the cat”绝不应产生“e c”这个词元。 |
+| BPE 合并 | 对字节序列应用学习得到的合并规则 | 核心压缩步骤，把原始字节转换为子词词元。 |
+| 特殊词元 | 注入 [BOS]、[EOS]、[PAD] 与聊天模板标记 | 这些词元拥有固定 ID，永远不参与 BPE 合并。模型依靠它们表达结构。 |
+| ID 映射 | 把词元字符串转换为整数 ID | 模型读取整数，而不是字符串。 |
 
-### 字节级BPE
+### 字节级 BPE
 
-课01的代币器运行在UTF-8字节.这是一个正确的呼叫.但我们错过了一些重要的事情:当这些字节不有效的UTF-8时会发生什么?
+第 01 课的词元化器处理 UTF-8 字节，这个选择是正确的。但我们跳过了一个重要问题：这些字节无法构成有效 UTF-8 时怎么办？
 
-字节级BPE通过将每一个可能的字节值 (0-255) 作为一个有效的代币来解决这个问题.你的基础词汇库是正确的 256 个条目.任何文件 - 文字,二进制,损坏 - 可以在没有产生未知的代币的情况下代币化.
+字节级 BPE 把每一种可能的字节值（0～255）都视为有效词元。基础词表恰好有 256 项。任何文件——文本、二进制文件、损坏的数据——都可以被词元化，而且不会产生未知词元。
 
-GPT-2 增加了一个技巧:将每个字节映射到可打印的 Unicode 字符,使词汇保持于人能读取的.字节0x20 (空间) 成为它们的映射中的字符"G".这纯粹是化品.算法不关心.
+GPT-2 还加入了一项技巧：把每个字节映射为可打印的 Unicode 字符，让词表便于阅读。在它的映射中，字节 0x20（空格）会变成字符“G”。这纯粹是显示层面的处理，算法并不关心。
 
-实际实力:字节级BPE处理地球上的每一种语言.中国字符每字母是3 UTF-8字节.日本字母可以是3-8字节.阿拉伯语,德瓦纳加里,爱莫吉语 - - 所有这些都是字节序列.BPE算法在这些字节序列中找到模式,就像它在英语ASCII字节中找到模式一样.
+真正的威力在于，字节级 BPE 能处理世界上的每种语言。一个汉字占 3 个 UTF-8 字节，日文字符可能占 3～4 个字节，阿拉伯文、天城文和表情符号也都只是字节序列。BPE 查找这些字节序列中的模式，与查找英语 ASCII 字节中的模式完全相同。
 
-### 预托克化
+### 预词元化
 
-在BPE触及你的文本之前,你需要将它分成块. 这阻止了合并算法创建跨越词界限的代币.
+在 BPE 接触文本之前，需要先把文本切成片段，以防合并算法生成跨越词边界的词元。
 
-通过使用regex模式来分开文本:
+GPT-2 使用一条正则表达式切分文本：
 
 ```
 '(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+
 ```
 
-这种模式分为缩写 ("don't"变成"don" + "'t"),有可选的领先空间,数字,分点和白色空间的单词.领先空间被附加到单词 - - 因此"猫"变成 ["the", "cat"],而不是 ["the", "", "cat"].
+这个表达式会切分缩写（“don't”变为“don”+“'t”）、可带前导空格的单词、数字、标点与空白。前导空格会保留在单词上——因此“the cat”变成 [“ the”, “ cat”]，而不是 [“the”, “ ”, “cat”]。
 
-拉马使用SentencePiece,它完全跳过regex.它将原始字节流作为一个长序列,并让BPE算法弄清楚边界.这更简单,但给BPE更多的自由创建交叉字符.
+Llama 使用 SentencePiece，完全跳过正则表达式。它把原始字节流视为一个长序列，让 BPE 算法自行找出边界。这种做法更简单，却给了 BPE 更大的自由，可以生成跨词词元。
 
-选择是重要的.GPT-2的regex阻止令牌商学习一个词的结尾和下一个词的开始应该合并.SentencePiece允许,这有时会产生更有效的压缩,但更不易解释的令牌.
+这个选择很重要。GPT-2 的正则表达式会阻止词元化器把一个单词末尾的“the”和下一个单词开头的“the”合并。SentencePiece 允许这种情况，因此有时压缩效率更高，但词元的可解释性更差。
 
-### 特殊的代币
+### 特殊词元
 
-每个生产代币商都保留了结构标记的代币ID:
+每个生产级词元化器都会为结构标记保留词元 ID：
 
-| Token | Purpose | Used By |
+| 词元 | 用途 | 使用者 |
 |-------|---------|---------|
-| `[BOS]` / `<s>` | Beginning of sequence | Llama 3, GPT |
-| `[EOS]` / `</s>` | End of sequence | All models |
-| `[PAD]` | Padding for batch alignment | BERT, T5 |
-| `[UNK]` | Unknown token (byte-level BPE eliminates this) | BERT, WordPiece |
-| `<\|im_start\|>` | Chat message boundary start | ChatGPT, Qwen |
-| `<\|im_end\|>` | Chat message boundary end | ChatGPT, Qwen |
-| `<\|user\|>` | User turn marker | Llama 3 |
-| `<\|assistant\|>` | Assistant turn marker | Llama 3 |
+| `[BOS]` / `<s>` | 序列开始 | Llama 3、GPT |
+| `[EOS]` / `</s>` | 序列结束 | 所有模型 |
+| `[PAD]` | 批次对齐所需的填充 | BERT、T5 |
+| `[UNK]` | 未知词元（字节级 BPE 不需要它） | BERT、WordPiece |
+| `<\|im_start\|>` | 聊天消息边界起点 | ChatGPT、Qwen |
+| `<\|im_end\|>` | 聊天消息边界终点 | ChatGPT、Qwen |
+| `<\|user\|>` | 用户轮次标记 | Llama 3 |
+| `<\|assistant\|>` | 助手轮次标记 | Llama 3 |
 
-特殊代币从来没有被BPE分开.它们在合并算法运行之前就匹配,用固定ID取代,周围的文本通常被代币化.
+特殊词元永远不会被 BPE 拆分。在运行合并算法之前，先进行精确匹配，用固定 ID 替换它们，再正常对周围文本进行词元化。
 
 ### 聊天模板
 
-这就是大多数人感到困惑的地方,
+这是最容易让人困惑、也是多数实现最容易出错的地方。
 
-当你发送消息给聊天模型时,API接受一个消息列表:
+向聊天模型发送消息时，API 接收的是消息列表：
 
 ```
 [
@@ -115,7 +115,7 @@ GPT-2 增加了一个技巧:将每个字节映射到可打印的 Unicode 字符,
 ]
 ```
 
-模型不看到JSON. 它看到一个平坦的代币序列.聊天模板将消息转换成那个平坦的序列使用特殊的代币.每个模型都会以不同的方式进行:
+模型看不到 JSON，只会看到展平后的词元序列。聊天模板使用特殊词元，把消息转换为这条平坦序列。每个模型的格式都不一样：
 
 ```
 Llama 3:
@@ -136,27 +136,27 @@ Hello<|im_end|>
 Hi there!<|im_end|>
 ```
 
-错误的模板,模型产生垃圾.它是训练在一个准确的格式.任何偏差 - - 缺失的新线,交换的代币,额外的空间 - - 将输入置于训练分布之外.
+如果模板不对，模型就会输出乱码。模型只在一种精确格式上训练，任何偏差——少一个换行、交换两个词元、多一个空格——都会让输入偏离训练分布。
 
 ### 速度
 
-对于生产代码化来说,Python太慢了.
+Python 的速度不足以承担生产级词元化。
 
-接脸标记器也叫做Rust.SentencePiece是C++.这些标记器可以实现10-100倍的速度.
+tiktoken（OpenAI）使用 Rust 编写，并提供 Python 绑定；HuggingFace tokenizers 同样使用 Rust；SentencePiece 则使用 C++。这些实现比纯 Python 快 10～100 倍。
 
-为了展望:在每秒100万代币 (Rust) 时,需要174天,在每秒15万代币 (Rust) 时,需要1.7天.
+换个角度看：如果以每秒 100 万个词元（较快的 Python）的速度，为 Llama 3 预训练处理 15 万亿个词元，需要 174 天；若使用 Rust 达到每秒 1 亿个词元，则只需 1.7 天。
 
-在制作中,你会使用编译的实现,只触摸Python包装.
+你在这里用 Python 构建，是为了理解算法。生产环境中应使用编译后的实现，只接触它的 Python 包装层。
 
 ```figure
 weight-tying
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:字节级编码
+### 第 1 步：字节级编码
 
-转换任何字符串为字节序列,将每个字节映射到可打印的字符中,然后逆转过程.
+从基础开始。把任意字符串转换为字节序列，将每个字节映射为可打印字符以供展示，再执行逆过程。
 
 ```python
 def bytes_to_tokens(text):
@@ -166,7 +166,7 @@ def tokens_to_text(token_bytes):
     return bytes(token_bytes).decode("utf-8", errors="replace")
 ```
 
-测试多语言文本,以查看字节数量:
+用多语言文本测试字节数量：
 
 ```python
 texts = [
@@ -181,11 +181,11 @@ for label, text in texts:
     print(f"{label}: {len(text)} chars -> {len(b)} bytes -> {b}")
 ```
 
-"hello"是5字节. "你好"是6字节 (3个字符).火焰的爱默契是4字节.字节级代币符号不关心它是什么语言.字节是字节.
+“hello”占 5 个字节，“你好”占 6 个字节（每个字符 3 字节），火焰表情占 4 个字节。字节级词元化器不关心它们属于哪种语言，字节就是字节。
 
-### 步骤2:使用 Regex 的预托克尼化器
+### 第 2 步：使用正则表达式的预词元化器
 
-通过GPT-2regex模式将文本分成块,每个部分由BPE独立地代码化.
+使用 GPT-2 正则表达式将文本切成片段，再由 BPE 分别处理每个片段。
 
 ```python
 import re
@@ -204,20 +204,20 @@ def pre_tokenize(text):
     return [match.group() for match in GPT2_PATTERN.finditer(text)]
 ```
 
-其他`regex`模块支持 Unicode 属性逃逸 (`\p{L}`对于信件,`\p{N}`标准图书馆`re`对于生产多语言代币器,安装 `regex`现在,我们要去.
+`regex` 模块支持 Unicode 属性转义（字母使用 `\p{L}`，数字使用 `\p{N}`），标准库 `re` 模块则不支持，因此我们会回退到 ASCII 字符类。生产级多语言词元化器应安装 `regex`。
 
-试试吧.
+试着运行：
 
 ```python
 print(pre_tokenize("Hello, world! Don't stop."))
 # [' Hello', ',', ' world', '!', " Don", "'t", ' stop', '.']
 ```
 
-位将保持与词的连接.缩写在位分开.点击成为自己的部分.BPE永远不会将代币融合在这些边界.
+前导空格仍附着在单词上，缩写会在撇号处分开，标点会成为单独片段。BPE 永远不会跨越这些边界合并词元。
 
-### 步骤3: 字节序列上的 BPE
+### 第 3 步：在字节序列上运行 BPE
 
-核心算法从课01中,但现在在预先代币的块上独立运行.
+沿用第 01 课的核心算法，但现在要分别处理预词元化后的每个片段。
 
 ```python
 from collections import Counter
@@ -243,9 +243,9 @@ def apply_merge(byte_seq, pair, new_id):
     return merged
 ```
 
-### 步骤4:特殊的标志处理
+### 第 4 步：处理特殊词元
 
-特殊的代币需要精确的匹配和固定的身份证.
+特殊词元需要精确匹配并使用固定 ID，完全绕过 BPE。
 
 ```python
 class SpecialTokenHandler:
@@ -273,9 +273,9 @@ class SpecialTokenHandler:
         return parts
 ```
 
-### 步骤5: 完整的标记器类
+### 第 5 步：完整的词元化器类
 
-链接所有东西:正常化,分成特殊代币,预代币化,BPE合并,地图到身份证.
+把所有步骤串起来：规范化、按特殊词元切分、预词元化、BPE 合并、映射为 ID。
 
 ```python
 import unicodedata
@@ -342,9 +342,9 @@ class ProductionTokenizer:
         return len(self.vocab)
 ```
 
-### 六步:多语言测试
+### 第 6 步：多语言测试
 
-试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试试
+这才是真正的测试：把英语、中文、表情符号和代码全都交给它。
 
 ```python
 corpus = (
@@ -379,13 +379,13 @@ for text in test_texts:
     print()
 ```
 
-汉字每字产生3字节. 情感符号产生4字节. 没有一个字符打破代币器. 没有一个字符产生未知的代币. 这就是字节级BPE的功率.
+汉字各产生 3 个字节，表情符号产生 4 个字节。它们都不会让词元化器崩溃，也都不会产生未知词元。这就是字节级 BPE 的力量。
 
-## 用它
+## 学以致用
 
-### 实际的代币交易者
+### 比较真实词元化器
 
-查看各个语言段落的处理方式.
+加载 Llama 3、GPT-4 与 Mistral 的真实词元化器，观察它们如何处理同一个多语言段落。
 
 ```python
 import tiktoken
@@ -411,37 +411,37 @@ for name, tok in [("Llama 3", llama_tok), ("Mistral", mistral_tok)]:
     print(f"{name} ({len(tokens)} tokens): {pieces[:20]}...")
 ```
 
-您将看到相同文本的代币数量不同. 128K 词汇的 Llama 3 在合并常见模式方面更具侵略性. 100K 的 GPT-4 在中间. 32K 的 Mistral 生产更多代币,但具有较小的嵌入层.
+同一段文本会产生不同的词元数量。Llama 3 拥有 128K 词表，因此会更积极地合并常见模式；GPT-4 的 100K 词表居中；Mistral 的 32K 词表会产生更多词元，但嵌入层更小。
 
-交易总是相同的:更大的词汇意味着更短的序列,但更多的参数.
+权衡始终相同：词表越大，序列越短，参数却越多。
 
-## 运送它
+## 交付成果
 
-这一课产生的提示是建立和调试生产代币.`outputs/prompt-tokenizer-builder.md`现在,我们要去.
+本课会生成一个用于构建和调试生产级词元化器的提示词。参见 `outputs/prompt-tokenizer-builder.md`。
 
-## 运动
+## 练习
 
-1. **Easy:**添加一个`get_token_bytes(id)`使用它检查您最常见的合并代币实际上代表什么.
-2. **Medium:**实现Llama式预代币器,它分为白色空间和数字,但保持领先空间. 比较其词汇与GPT-2regex方法在同一体.
-3. **Hard:**添加一个聊天模板方法,包含列表`{"role": ..., "content": ...}`通过"HuggingFace"实现,测试它.
+1. **简单：** 添加 `get_token_bytes(id)` 方法，显示任意词元 ID 对应的原始字节。用它检查最常用的合并词元究竟表示什么。
+2. **中等：** 实现 Llama 风格的预词元化器：按空白和数字切分，但保留前导空格。在相同语料上，将它的词表与 GPT-2 正则表达式方案比较。
+3. **困难：** 添加一个聊天模板方法，接收由 `{"role": ..., "content": ...}` 消息组成的列表，并生成符合 Llama 3 聊天格式的正确词元序列。用 HuggingFace 实现验证结果。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|----------------|----------------------|
-| Byte-level BPE | "Tokenizer that works on bytes" | BPE with a base vocabulary of 256 byte values -- handles any input without unknown tokens |
-| Pre-tokenization | "Splitting before BPE" | Regex or rule-based splitting that prevents BPE from merging across word boundaries |
-| NFKC normalization | "Unicode cleanup" | Canonical decomposition followed by compatibility composition -- "fi" ligature becomes "fi", fullwidth "A" becomes "A" |
-| Chat template | "How messages become tokens" | The exact format for converting a list of role/content messages into a flat token sequence -- model-specific and must match training format |
-| Special tokens | "Control tokens" | Reserved token IDs that bypass BPE -- [BOS], [EOS], [PAD], chat markers -- matched exactly before merge |
-| Fertility | "Tokens per word" | Ratio of output tokens to input words -- 1.3 for English in GPT-4, 2-3 for Korean, higher means wasted context |
-| tiktoken | "OpenAI tokenizer" | Rust BPE implementation with Python bindings -- 10-100x faster than pure Python |
-| Merge table | "The vocabulary" | Ordered list of byte-pair merges learned during training -- this IS the tokenizer's learned knowledge |
+| 字节级 BPE | “处理字节的词元化器” | 基础词表包含 256 种字节值的 BPE——可以处理任何输入且不会产生未知词元 |
+| 预词元化 | “在 BPE 前切分” | 基于正则或规则的切分，可防止 BPE 跨越词边界合并 |
+| NFKC 规范化 | “Unicode 清理” | 先进行规范分解，再进行兼容组合——“fi”连字会变成“fi”，全角“A”会变成“A” |
+| 聊天模板 | “消息如何变成词元” | 把角色/内容消息列表转换为平坦词元序列的精确格式——因模型而异，且必须匹配训练格式 |
+| 特殊词元 | “控制词元” | 绕过 BPE 的保留词元 ID——[BOS]、[EOS]、[PAD]、聊天标记——在合并前精确匹配 |
+| 词元膨胀率（fertility） | “每个单词的词元数” | 输出词元数与输入单词数的比值——GPT-4 的英语约为 1.3，韩语为 2～3；越高意味着浪费的上下文越多 |
+| tiktoken | “OpenAI 词元化器” | 带 Python 绑定的 Rust BPE 实现——比纯 Python 快 10～100 倍 |
+| 合并表 | “词表” | 训练中学到的有序字节对合并列表——它就是词元化器学到的知识 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [OpenAI tiktoken source](https://github.com/openai/tiktoken)-- GPT-3.5/4 所使用的性BPE实现
-- [HuggingFace tokenizers](https://github.com/huggingface/tokenizers)-- 支持BPE,WordPiece,Unigram的结代币库
-- [Llama 3 paper (Meta, 2024)](https://arxiv.org/abs/2407.21783)-- 128K词汇和代币化培训的详细信息
-- [SentencePiece (Kudo & Richardson, 2018)](https://arxiv.org/abs/1808.06226)--语言认知标记
-- [GPT-2 tokenizer source](https://github.com/openai/gpt-2/blob/master/src/encoder.py)-- 原始的字节到Unicode映射
+- [OpenAI tiktoken 源码](https://github.com/openai/tiktoken)——GPT-3.5/4 使用的 Rust BPE 实现
+- [HuggingFace tokenizers](https://github.com/huggingface/tokenizers)——支持 BPE、WordPiece 与 Unigram 的 Rust 词元化器库
+- [Llama 3 论文（Meta，2024）](https://arxiv.org/abs/2407.21783)——128K 词表与词元化器训练细节
+- [SentencePiece（Kudo 与 Richardson，2018）](https://arxiv.org/abs/1808.06226)——与语言无关的词元化方法
+- [GPT-2 词元化器源码](https://github.com/openai/gpt-2/blob/master/src/encoder.py)——最初的字节到 Unicode 映射
