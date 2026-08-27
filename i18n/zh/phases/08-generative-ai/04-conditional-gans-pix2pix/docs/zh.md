@@ -1,54 +1,54 @@
-# 条件GANs & Pix2Pix
+# 条件 GAN 与 Pix2Pix
 
-> 2014-2017年第一场大解锁是控制GAN的产品. 添加标签,图像或句子.Pix2Pix完成了图像版本,并且在狭窄的图像到图像任务上仍然击败了每个通用文本到图像模型.
+> 2014～2017 年间的首项重大突破，是控制 GAN 生成什么。附加一个标签、一张图像或一个句子即可。Pix2Pix 实现了图像版本；即使到了 2026 年，在狭窄的图像到图像任务上，它仍能胜过所有通用文本生成图像模型。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 8 · 03 (GANs), Phase 4 · 06 (U-Net), Phase 3 · 07 (CNNs)
-**Time:** ~75 minutes
+**Prerequisites:** 阶段 8 · 03（GAN）、阶段 4 · 06（U-Net）、阶段 3 · 07（CNN）
+**Time:** 约 75 分钟
 
 ## 问题
 
-无条件的GAN采样任意的面孔. 用于演示,无用在生产中.你想要: *将草图映射到照片中*, *将地图映射到空中照片中*, *日间场景映射到夜间*, *将灰色图像染色.在所有这些中,你得到一个输入图像`x`必须输出`y`许多可行的方法`y`个性`x`平均平方错误会使它们平坦成.
+无条件 GAN 会随机生成人脸。它适合演示，却不适合生产。你想实现的是：*把草图映射成照片*、*把地图映射成航拍图*、*把白天场景映射成夜景*、*为灰度图像上色*。在这些任务中，你会得到一张输入图像 `x`，并且必须输出 `y`，二者存在某种语义对应关系。一个合理的 `y` 并不唯一，每个 `x` 都可能对应许多结果。均方误差会把它们平均成一团模糊，而对抗损失不会，因为“看起来真实”意味着清晰。
 
-条件GAN (Mirza & Osindero, 2014) 增加了一个条件`c`作为两者都的输入`G`其他`D`皮克斯2皮克斯 (伊索拉等人,2017) 专业化了这一点:条件是一个完整的输入图像,生成器是U-Net,歧视器是一个基于补丁的*分类器 (PatchGAN),损失是对立的+L1.该配方甚至在2026年也超过了从零开始的文本到图像模型,因为它是训练在 *对数据* 你有了你需要的信号.
+条件 GAN（Mirza 与 Osindero，2014）把条件 `c` 同时作为 `G` 和 `D` 的输入。Pix2Pix（Isola 等，2017）进一步将其专门化：条件是一张完整输入图像，生成器是 U-Net，判别器是*基于图块*的分类器（PatchGAN），损失为对抗损失 + L1。即使到 2026 年，这套方法在狭窄图像到图像领域仍胜过从零训练的文本生成图像模型，因为它使用*配对数据*训练——你拥有的正是任务所需的信号。
 
 ## 概念
 
-![Pix2Pix: U-Net generator, PatchGAN discriminator](../assets/pix2pix.svg)
+![Pix2Pix：U-Net 生成器、PatchGAN 判别器](../assets/pix2pix.svg)
 
-**Conditional G.** `G(x, z) → y`在Pix2Pix中,`z`在G内出现 (没有输入噪音 发现明确的噪音被忽略).
+**条件生成器 G。** `G(x, z) → y`。在 Pix2Pix 中，`z` 来自 G 内部的 dropout（没有显式输入噪声——Isola 发现模型会忽略这种噪声）。
 
-**Conditional D.** `D(x, y) → [0, 1]`输入是*对* (条件,输出).这是关键的区别:D必须判断是否`y`符合`x`不仅仅是`y`看起来是真的.
+**条件判别器 D。** `D(x, y) → [0, 1]`。输入是（条件，输出）这一*组合*。这是关键区别：D 必须判断 `y` 是否与 `x` 一致，而不只是 `y` 看起来是否真实。
 
-**U-Net generator.**编码器-解码器,通过瓶跳转连接.输入和输出共享低层次结构 (边缘,外形).没有跳转,高频细节消失.
+**U-Net 生成器。** 带跨瓶颈跳跃连接的编码器—解码器。对于输入与输出共享低层结构（边缘、轮廓）的任务，它至关重要。没有跳跃连接，高频细节就会消失。
 
-**PatchGAN discriminator.**结果是: 结果是:`N×N`平均值.这是一个马科夫随机场假设:现实主义是本地.训练速度更快,参数更少,输出更敏捷.
+**PatchGAN 判别器。** D 不输出单一真假分数，而是输出 `N×N` 网格，其中每个单元判断约 70×70 像素的感受野，最后取平均。这相当于一种马尔可夫随机场假设：真实感是局部的。它训练快得多，参数更少，输出也更清晰。
 
-**Loss.**
+**损失。**
 
 ```
 loss_G = -log D(x, G(x)) + λ · ||y - G(x)||_1
 loss_D = -log D(x, y) - log (1 - D(x, G(x)))
 ```
 
-术语L1稳定了训练,并将G推向已知目标.L1比L2 (中介,而不是中介) 提供了更尖的边缘.`λ = 100`现在,我们在使用Pix2Pix的默认版本.
+L1 项稳定训练，并推动 G 接近已知目标。L1 产生的边缘比 L2 更清晰（中位数，而不是均值）。Pix2Pix 默认使用 `λ = 100`。
 
-##  CycleGAN  当你没有双子
+## CycleGAN——没有配对数据时
 
-Pix2Pix需要配对`(x, y)`循环GAN (Zhu等人,2017) 通过额外的损失降低了这一要求: *循环一致性损失.`G: X → Y`其他`F: Y → X`训练他们.`F(G(x)) ≈ x`其他`G(F(y)) ≈ y`这让你把马转换为斑马,夏天转换为冬天,没有双双的例子.
+Pix2Pix 需要配对的 `(x, y)` 数据。CycleGAN（Zhu 等，2017）增加一种损失，换来不再需要配对数据：*循环一致性*损失。使用两个生成器 `G: X → Y` 和 `F: Y → X`，训练它们满足 `F(G(x)) ≈ x` 与 `G(F(y)) ≈ y`。这样，无须配对样本就能把马变成斑马、把夏天变成冬天。
 
-2026年,未对成的图像到图像主要通过扩散 (ControlNet,IP-Adapter) 而不是CycleGAN进行,但循环一致性概念几乎在每一个未对成的域调整论文中都存活下来.
+到 2026 年，无配对图像到图像任务大多使用扩散方法（ControlNet、IP-Adapter），而不是 CycleGAN；但循环一致性的思想仍存在于几乎每篇无配对领域适配论文中。
 
 ```figure
 gx-patchgan
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`根据1D数据的条件,`c`任务:为给定的类型从条件分布中制造样本.
+`code/main.py` 在一维数据上实现了一个微型条件 GAN。条件 `c` 是类别标签（0 或 1）。任务是从给定类别对应的条件分布中生成样本。
 
-### 步骤1:将条件添加到G和D输入
+### 第 1 步：把条件附加到 G 与 D 的输入
 
 ```python
 def G(z, c, params):
@@ -58,9 +58,9 @@ def D(x, c, params):
     return mlp(concat([x, one_hot(c)]), params)
 ```
 
-单热编码是最简单的方法.较大的模型使用学习嵌入,FiLM调节或交叉注意.
+独热编码是最简单的方法。更大的模型会使用学习式嵌入、FiLM 调制或交叉注意力。
 
-### 步骤2:火车条件
+### 第 2 步：条件式训练
 
 ```python
 for step in range(steps):
@@ -70,9 +70,9 @@ for step in range(steps):
     update_G(noise, c)
 ```
 
-发电机必须与给定的条件的实际分布相匹配,而不是边缘分布.
+生成器必须匹配*给定条件下*的真实分布，而不是边缘分布。
 
-### 步骤3:验证每个类输出
+### 第 3 步：验证逐类别输出
 
 ```python
 for c in [0, 1]:
@@ -81,71 +81,71 @@ for c in [0, 1]:
     assert_near(mean_c, real_mean_for_class_c)
 ```
 
-## 陷
+## 陷阱
 
-- **Condition ignored.**修复:条件D更积极 (早期层,不仅仅是晚期),使用投影歧视器 (Miyato & Koyama 2018).
-- **L1 weight too low.**开始 λ≈100为Pix2Pix类型的任务.
-- **L1 weight too high.**部下降,训练稳定.
-- **Ground-truth leakage in D.**酸`(x, y)`作为D输入,不仅仅是`y`没有这个D,不能检查一致性.
-- **Mode collapse per class.**每个类都可以独立崩. 进行类条件的多样性检查.
+- **条件被忽略。** G 学会了对条件做边缘化，而 D 因条件信号太弱没有惩罚它。修复方法：在较早层而不只是后期层更强地为 D 注入条件，或使用投影判别器（Miyato 与 Koyama，2018）。
+- **L1 权重太低。** G 会偏向任意看起来真实的输出，而不忠于输入。Pix2Pix 风格任务可从 λ≈100 开始。
+- **L1 权重太高。** G 会生成模糊输出，因为 L1 仍是一种 L_p 范数。训练稳定后逐渐降低它。
+- **D 中泄漏真实目标。** D 的输入应拼接 `(x, y)`，而不是只提供 `y`。否则 D 无法检查二者是否一致。
+- **逐类别模式坍塌。** 每个类别都可能独立发生坍塌。应运行条件于类别的多样性检查。
 
-## 用它
+## 学以致用
 
-2026 图像到图像任务状态:
+2026 年图像到图像任务的技术版图：
 
-| Task | Best approach |
+| 任务 | 最佳方法 |
 |------|---------------|
-| Sketch → photo, same domain, paired data | Pix2Pix / Pix2PixHD (still fast, still sharp) |
-| Sketch → photo, unpaired | ControlNet with a Scribble conditioning model |
-| Semantic seg → photo | SPADE / GauGAN2 or SD + ControlNet-Seg |
-| Style transfer | Diffusion with IP-Adapter or LoRA; GAN methods are legacy |
-| Depth → photo | ControlNet-Depth over Stable Diffusion |
-| Super-resolution | Real-ESRGAN (GAN), ESRGAN-Plus, or SD-Upscale (diffusion) |
-| Colorization | ColTran, diffusion-based colorizers, or Pix2Pix-color |
-| Daytime → nighttime, seasons, weather | CycleGAN or ControlNet-based |
+| 草图 → 照片、同一领域、有配对数据 | Pix2Pix / Pix2PixHD（仍然快速、清晰） |
+| 草图 → 照片、无配对数据 | 使用 Scribble 条件模型的 ControlNet |
+| 语义分割图 → 照片 | SPADE / GauGAN2 或 SD + ControlNet-Seg |
+| 风格迁移 | 使用 IP-Adapter 或 LoRA 的扩散模型；GAN 方法已经过时 |
+| 深度图 → 照片 | Stable Diffusion 上的 ControlNet-Depth |
+| 超分辨率 | Real-ESRGAN（GAN）、ESRGAN-Plus 或 SD-Upscale（扩散） |
+| 上色 | ColTran、基于扩散的上色器或 Pix2Pix-color |
+| 白天 → 夜晚、季节、天气 | CycleGAN 或基于 ControlNet 的方法 |
 
-在 (a) 拥有数千个对式示例时, (b) 任务是狭窄的,可重复的, (c) 需要快速推断时,Pix2Pix仍然是正确的工具.在通用开放域任务上,扩散获胜.
+当以下条件同时成立时，Pix2Pix 仍是正确工具：（a）拥有数千个配对样本；（b）任务范围狭窄且可重复；（c）需要快速推理。通用开放域任务则应使用扩散模型。
 
-## 运送它
+## 交付成果
 
-保存`outputs/skill-img2img-chooser.md`技能采用任务描述,数据可用性 (对与对的,N样本),延迟/质量预算,然后输出:方法 (Pix2Pix,CycleGAN,ControlNet变体,SDXL+IP-Adapter),培训数据要求,推断成本和评估协议 (LPIPS,FID,任务特定).
+保存 `outputs/skill-img2img-chooser.md`。该技能接收任务描述、数据可用性（配对/无配对、样本数 N）以及延迟/质量预算，然后输出：方法（Pix2Pix、CycleGAN、ControlNet 变体、SDXL + IP-Adapter）、训练数据要求、推理成本与评估方案（LPIPS、FID、任务专用指标）。
 
-## 运动
+## 练习
 
-1. **Easy.**修改`code/main.py`确认G仍然将每个类的噪音映射到正确的模式.
-2. **Medium.**在1D设置中,取代L1以感知式损失 (例如作为特征提取器的小结D).它是否改变条件分布的敏度?
-3. **Hard.**在1D设置中绘制一个CycleGAN:两个分布,两个发电机,周期损失. 显示它学习在没有对数据之间映射.
+1. **简单。** 修改 `code/main.py`，增加第三个类别。确认 G 仍能把每个类别的噪声映射到正确模式。
+2. **中等。** 在一维设置中，用感知式损失替换 L1（例如把一个冻结的小型 D 当作特征提取器）。条件分布的清晰度会发生变化吗？
+3. **困难。** 在一维设置中勾勒 CycleGAN：两个分布、两个生成器、循环损失。展示它如何在没有配对数据的情况下学习二者之间的映射。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| Conditional GAN | "GAN with labels" | G(z, c), D(x, c). Both networks see the condition. |
-| Pix2Pix | "Image-to-image GAN" | Paired cGAN with U-Net G and PatchGAN D + L1 loss. |
-| U-Net | "Encoder-decoder with skips" | Symmetric conv network; skips preserve high-freq. |
-| PatchGAN | "Local-realism classifier" | D outputs per-patch score instead of global score. |
-| CycleGAN | "Unpaired image translation" | Two G's + cycle-consistency loss; no paired data. |
-| SPADE | "GauGAN" | Normalizes intermediate activations with the semantic map; segmentation-to-image. |
-| FiLM | "Feature-wise linear modulation" | Per-feature affine transform from the condition; cheap conditioning. |
+| 条件 GAN | “带标签的 GAN” | G(z, c)、D(x, c)，两个网络都看到条件。 |
+| Pix2Pix | “图像到图像 GAN” | 配对 cGAN，使用 U-Net 生成器、PatchGAN 判别器与 L1 损失。 |
+| U-Net | “带跳跃连接的编码器—解码器” | 对称卷积网络；跳跃连接保留高频信息。 |
+| PatchGAN | “局部真实感分类器” | D 输出逐图块分数，而不是全局分数。 |
+| CycleGAN | “无配对图像翻译” | 两个 G + 循环一致性损失；不需要配对数据。 |
+| SPADE | “GauGAN” | 使用语义图对中间激活进行归一化；用于分割图生成图像。 |
+| FiLM | “逐特征线性调制” | 由条件生成的逐特征仿射变换；低成本条件机制。 |
 
-## 制作注:Pix2Pix作为延迟限制的基线
+## 生产说明：Pix2Pix 是受延迟约束任务的基线
 
-当你对数据和狭窄任务 (sketch → render,语义地图 →照片,白天 →夜) 时,Pix2Pix的一次性推断比延迟扩散量更高.
+当你拥有配对数据且任务范围狭窄（草图 → 渲染图、语义图 → 照片、白天 → 夜晚）时，Pix2Pix 的单步推理延迟比扩散模型低一个数量级。典型生产对比如下：
 
-| Path | Steps | Typical latency at 512² on a single L4 |
+| 路径 | 步数 | 单张 L4 上以 512² 生成的典型延迟 |
 |------|-------|----------------------------------------|
-| Pix2Pix (U-Net forward) | 1 | ~30 ms |
-| SD-Inpaint or SD-Img2Img | 20 | ~1.2 s |
-| SDXL-Turbo Img2Img | 1-4 | ~0.15-0.35 s |
-| ControlNet + SDXL base | 20-30 | ~3-5 s |
+| Pix2Pix（U-Net 前向传播） | 1 | 约 30 毫秒 |
+| SD-Inpaint 或 SD-Img2Img | 20 | 约 1.2 秒 |
+| SDXL-Turbo Img2Img | 1～4 | 约 0.15～0.35 秒 |
+| ControlNet + SDXL base | 20～30 | 约 3～5 秒 |
 
-二皮克斯在静态批量中获胜于吞吐量 (每个请求都是相同的FLOP).二皮克斯在质量和通用化上获胜.现代游戏通常是为狭窄任务运送Pix2Pix式蒸模型,而尾入输出则为二皮克斯式蒸模型.
+Pix2Pix 在静态批处理的吞吐量上胜出（每个请求的 FLOPs 都相同），扩散模型则在质量与泛化能力上胜出。现代做法通常是：为狭窄任务交付 Pix2Pix 风格蒸馏模型，并用扩散模型处理尾部输入。
 
-## 进一步阅读
+## 延伸阅读
 
-- [Mirza & Osindero (2014). Conditional Generative Adversarial Nets](https://arxiv.org/abs/1411.1784) 关于该公司的文件.
-- [Isola et al. (2017). Image-to-Image Translation with Conditional Adversarial Networks](https://arxiv.org/abs/1611.07004)   
-- [Zhu et al. (2017). Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks](https://arxiv.org/abs/1703.10593)     
-- [Wang et al. (2018). High-Resolution Image Synthesis with Conditional GANs](https://arxiv.org/abs/1711.11585)    
-- [Park et al. (2019). Semantic Image Synthesis with Spatially-Adaptive Normalization](https://arxiv.org/abs/1903.07291)   / 
-- [Miyato & Koyama (2018). cGANs with Projection Discriminator](https://arxiv.org/abs/1802.05637)投影D
+- [Mirza 与 Osindero（2014），条件生成对抗网络](https://arxiv.org/abs/1411.1784)——cGAN 论文。
+- [Isola 等（2017），使用条件对抗网络进行图像到图像转换](https://arxiv.org/abs/1611.07004)——Pix2Pix。
+- [Zhu 等（2017），使用循环一致性对抗网络进行无配对图像到图像转换](https://arxiv.org/abs/1703.10593)——CycleGAN。
+- [Wang 等（2018），使用条件 GAN 进行高分辨率图像合成](https://arxiv.org/abs/1711.11585)——Pix2PixHD。
+- [Park 等（2019），使用空间自适应归一化进行语义图像合成](https://arxiv.org/abs/1903.07291)——SPADE / GauGAN。
+- [Miyato 与 Koyama（2018），使用投影判别器的 cGAN](https://arxiv.org/abs/1802.05637)——投影式判别器。
