@@ -1,81 +1,82 @@
-# 法定学的终点 单位经济和多租户分配
+# LLM 的 FinOps：单位经济与多租户归因
 
-> 传统的FinOps在LLM支出上断绝.成本是代币交易,而不是资源上班时间.标签不映射API调用是一个交易,而不是资产.工程决策 (即时设计,文本窗口,输出长度) 是财务决策.2026年游戏册在第一天对仪器的三个属性维度:每个用户 (`user_id`) 对于座位定价和扩展,每任务 (`task_id`其他`route`) 对于产品表面成本和优先级,`tenant_id`) 单位经济和更新. 两个代币层,一个藏的钱. 多租户产品的执行梯度:每租户的利率限制 (2-3倍预期峰值,清除429+再试);每日支出限额 (1.5-3倍合约的上限;触发加紧速度+警报);消耗点 z-score > 4 (自动暂停+开启页面). 归类模式:标签和汇总,远程测量连接器 (追踪ID →发票;最高精度),采样和抽象,基于模型的分配,事件来源,实时流媒体. 单位指标:每个解决查询的成本,每一个生成的文物的成本  不是$/M代币. 复制标签总是错失; 要求创建工具.
+> 传统 FinOps 放到 LLM 支出上会失效。成本不是资源运行时长，而是 token transaction。标签也不会天然映射，因为一次 API call 是交易，不是资产。工程决策，例如 prompt 设计、context window、输出长度，本质上也是财务决策。2026 年的实践里，有三个必须从第一天就埋点的归因维度：按用户（`user_id`），用于 seat pricing 与客户增购；按任务（`task_id` + `route`），用于衡量各产品功能的成本与确定功能优先级；按租户（`tenant_id`），用于单位经济和续约决策。Token 至少要拆成四层：prompt、tool、memory、response。全部塞进一个桶里，你就看不见钱花在哪。对多租户产品，常见的 enforcement ladder 是：按租户 rate limit（设为预期峰值的 2-3 倍，并返回清晰的 429 + retry-after）；每日 spend cap（合同上限的 1.5-3 倍，触发限流收紧与告警）；当 spend z-score > 4 时触发 kill switch（自动暂停并 page on-call）。常见归因模式包括：tag-and-aggregate、telemetry-joiner（trace-ID → billing，精度最高）、sampling-and-extrapolation、model-based allocation、event-sourced、real-time streaming。单位指标应该是每个 resolved query 或每个生成 artifact 的成本，而不是 $/M tokens。事后补标签永远会漏，必须在 request 创建时就埋点。
 
-**Type:** Learn
-**Languages:** Python (stdlib, toy cost-attribution simulator with kill switch)
-**Prerequisites:** Phase 17 · 13 (Observability), Phase 17 · 14 (Caching)
-**Time:** ~60 minutes
+**Type:** 学习
+**Languages:** Python（标准库，带 kill switch 的玩具级成本归因模拟器）
+**Prerequisites:** 阶段 17 · 13（可观测性）、阶段 17 · 14（缓存）
+**Time:** 约 60 分钟
 
 ## 学习目标
 
-- 解释传统的FinOps (标签+层次) 为什么不适用于LLM支出,并列出三个新的归属尺寸.
-- 列出四个代币层 (即时,工具,内存,响应) 以及为什么单桶支付隐藏成本.
-- 设计一个多租户产品的执行梯度 (利率 →支出 cap →杀死开关).
-- 选择单位指标 (每个解决的查询/文物的成本) 而不是$/M代币.
+- 解释为什么传统 FinOps（标签 + 层级）在 LLM 支出场景下会失效，并说出三个新的归因维度。
+- 列出四层 token 成本（prompt、tool、memory、response），并解释为什么单桶计费会遮蔽成本结构。
+- 为多租户产品设计一套 enforcement ladder（rate → spend cap → kill switch）。
+- 选择 cost per resolved query / artifact 这样的单位指标，而不是只看 $/M tokens。
 
 ## 问题
 
-你的账单上写着4万美元.
-- 租户花了它.
-- 哪个产品特征驱动它.
-- 任何个人使用者是否虐待.
-- 无论是快速膨胀,工具调用,还是提升记忆力,
+你的账单写着 $40,000，但你不知道：
 
-标签和集成在提供商侧工作云资源 (EC2,S3) 标签扩散到线条项目.LLM API呼叫不自动标签.
+- 哪个租户花掉了这笔钱。
+- 哪个产品功能把成本推高了。
+- 是否有某个单独用户在滥用系统。
+- 真正的问题出在 prompt 膨胀、tool 调用，还是 memory 放大。
+
+在 provider 侧做 tag-and-aggregate，对云资源（例如 EC2、S3）是有效的，因为标签会传递到 line item。可 LLM API 调用不会自动带标签，你必须在调用点把 user/task/tenant 打上去并一路传下去。事后再做归因，边角情况一定会漏。
 
 ## 概念
 
-### 属性三维度
+### 三个归因维度
 
-**Per-user**(`user_id`):谁是什么成本. 驱动座位的定价,扩张对话,识别电源用户.
+**按用户**（`user_id`）：谁在花钱。它驱动 seat pricing、客户增购沟通，也能识别 power users。
 
-**Per-task**(`task_id`其他`route`车辆具有优先级,杀死成本的决定.
+**按任务**（`task_id` + `route`）：哪个产品功能在花钱。它驱动功能优先级，以及是否需要砍掉昂贵功能。
 
-**Per-tenant**(`tenant_id`):哪个客户是利的. 驱动单位经济,续航定价,层次门.
+**按租户**（`tenant_id`）：哪个客户真正赚钱。它驱动单位经济、续约报价与层级阈值。
 
-仪器三位都在电话站第一天.
+这三个维度都要在调用点从第一天开始埋。事后补做只会更差。
 
-### 象征的四层
+### 四层 token
 
-| Layer | Example | Typical % of total |
+| 层级 | 示例 | 常见占比 |
 |-------|---------|---------------------|
-| Prompt | system + user input | 40-60% |
-| Tool | tool-call results fed back | 20-40% (agent workloads) |
-| Memory | prior conversation / retrieved docs | 10-30% |
-| Response | model output | 10-30% |
+| 提示词 | 系统提示词 + 用户输入 | 40-60% |
+| 工具 | 回填的工具调用结果 | 20-40%（智能体工作负载） |
+| 记忆 | 先前对话 / 检索到的文档 | 10-30% |
+| 响应 | 模型输出 | 10-30% |
 
-它们在属性方案中被分解.
+把这四层全部并到一个桶里，你就无法做有效优化。归因 schema 里必须把它们拆开。
 
-### 执行阶梯
+### 分级管控措施
 
-1. **Rate limit**预期峰值的2~3倍. 返回429个`Retry-After`租户看到摩擦,没有意外账单.
+1. **Rate limit**，按租户限流。阈值设在预期峰值的 2-3 倍。返回 429 和 `Retry-After`。租户感受到的是摩擦，而不是一张意外账单。
 
-2. **Daily spend cap**预测,每租户的收费率为1.5-3倍,
+2. **Daily spend cap**，按租户设每日支出上限。通常是合同上限的 1.5-3 倍。触发后收紧 rate limit，并通知 customer-success。
 
-3. **Kill switch**租户自动暂停租户; 电话页面;升级到运营+CS.
+3. **Kill switch**，当租户支出相对自身基线的 z-score > 4 时触发。自动暂停该租户，page on-call，并升级给 ops 与 CS。
 
 ### 归因模式
 
-- **Tag-and-aggregate**简单,粗略. 简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单,简单
-- **Telemetry joiner**通过追踪身份证将痕迹连接到账单.
-- **Sampling + extrapolation**平均成本: 样本5-10%,乘以. 成本效益较高,不用排尾.
-- **Model-based allocation**对于没有标签的遗留数据.
-- **Event-sourced**实时的事件 (Kafka/Kinesis).
-- **Real-time streaming**仪表板更新次下.
+- **Tag-and-aggregate**：请求上打元数据，后续聚合。最简单，但比较粗糙。
+- **Telemetry joiner**：通过 trace ID 把 trace 和账单关联起来。精度最高，成熟团队通常用这个。
+- **Sampling + extrapolation**：采样 5-10%，再做外推。适合粗略估算，但会漏掉长尾。
+- **Model-based allocation**：用回归或其他模型推断成本驱动因素。适合没有标签的遗留数据。
+- **Event-sourced**：把成本作为流里的事件（Kafka / Kinesis）。适合实时场景。
+- **Real-time streaming**：亚秒级更新 dashboard。
 
-### 每个X的成本是单位指数
+### 每个 X 的成本才是单位指标
 
-货币的价格是卖家的价格.
+$/M tokens 是 vendor 视角。产品真正关心的是：
 
-- 解决的支持票的成本.
-- 产品成本
-- 通过成功的代理任务的成本.
-- 按用户会议分钟的成本.
+- 每个已解决 support ticket 的成本。
+- 每篇生成文章的成本。
+- 每个成功 agent task 的成本。
+- 每个用户会话分钟的成本。
 
-关键成本与产品结果,否则优化是无关的.
+必须把成本绑到产品结果上，否则优化就没有锚点。
 
-### 成本归因的痕迹形状
+### 成本归因 trace 形状
 
 ```
 trace_id: abc123
@@ -93,62 +94,63 @@ trace_id: abc123
   batch: false
 ```
 
-通过每次通话发射. 存储在数据湖中. 按维度汇总. 17 期 13 期可观测性堆是这个生活的地方.
+每次调用都要发出这一类事件，存进 data lake，再按维度聚合。Phase 17 · 13 的 observability stack 就是它落地的地方。
 
-### 合金储蓄堆
+### 复合节省栈
 
-堆积:缓存+批量+路线+网关.
-- 缓存 L2 (阶段17 · 14):输入价格低于10倍.
-- 批量 (阶段17·15):50%折扣.
-- 路线到廉价型号 (阶段17·16):成本降低60%.
-- 网关效率 (阶段17·19):冗余性+重试.
+栈的组成是：cache + batch + route + gateway。四者都启用时：
 
-最好的情况: 起的基线是5-10%. 大多数团队都使用了2-3个杆;少数团队都使用了四个杆.
+- Cache L2（Phase 17 · 14）：输入成本大约可降到原来的 1/10。
+- Batch（Phase 17 · 15）：打 5 折。
+- Route 到便宜模型（Phase 17 · 16）：成本再降约 60%。
+- Gateway efficiency（Phase 17 · 19）：提供冗余与重试能力。
+
+理想情况下，叠加后总成本可能只剩 naive baseline 的约 5-10%。大多数团队只用到 2-3 个杠杆，四个都叠满的很少。
 
 ### 你应该记住的数字
 
-- 分配尺寸:每用户,每任务,每租户.
-- 快速,工具,内存,响应.
-- 关闭开关:使用z分数> 4.
-- 单位指标:每个解决查询的成本,而不是$/M代币.
-- 堆积优化:可能的基线5%~10%
+- 归因维度：按用户、按任务、按租户。
+- 四层 token：prompt、tool、memory、response。
+- Kill switch：spend z-score > 4。
+- 单位指标：cost per resolved query，而不是 $/M tokens。
+- 叠加优化后：理论上可降到 baseline 的约 5-10%。
 
 ```figure
 i4-spend-ladder
 ```
 
-## 用它
+## 用起来
 
-`code/main.py`模拟一个多租户的LLM服务,使用三层级的执行梯度. 注射一个虐待租户,并证明杀死开关的射击.
+`code/main.py` 会模拟一个多租户 LLM 服务，并实现三层 enforcement ladder。它会注入一个滥用型租户，演示 kill switch 被触发的过程。
 
-## 运送它
+## 交付物
 
-这一课产生了`outputs/skill-finops-plan.md`根据产品和规模,设计了归属方案和执行阶梯.
+这一课会产出 `outputs/skill-finops-plan.md`。它会根据产品形态和规模，设计归因 schema 与 enforcement ladder。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`杀人开关在哪个点射?
-2. 设计一个每租户,每任务成本仪表板.
-3. 你最大的租户是单位经济负, 根据客户影响,提出三个干预措施.
-4. 计算支持产品的解决门票的成本: 3M代币/门票,每天约800门票,GPT-5缓存率.
-5. 提议是否可以回归标签.
+1. 运行 `code/main.py`。kill switch 在什么 z-score 上触发？这个阈值应该如何选择？
+2. 设计一个按租户、按任务的成本 dashboard。你最先会做哪 5 个视图？
+3. 你最大的租户已经是单位经济负值。请按客户影响从低到高，提出三个干预方案。
+4. 为一个客服产品计算每张已解决工单的成本：3M tokens/ticket、约 800 tickets/day、GPT-5 cached rate。
+5. 论证事后补标签是否真的可行。什么情况下它还能被接受？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们怎么说 | 它实际意味着什么 |
 |------|----------------|------------------------|
-| Per-user attribution | "user-level cost" | `user_id` stamped on every call |
-| Per-task attribution | "feature cost" | `task_id` + `route` identify product surface |
-| Per-tenant attribution | "customer cost" | `tenant_id`; drives unit economics |
-| Four token layers | "cost layers" | prompt + tool + memory + response |
-| Rate limit | "429 guard" | Per-tenant ceiling enforced at gateway |
-| Daily spend cap | "daily ceiling" | Tenant-scoped budget with alert |
-| Kill switch | "auto-pause" | Spend z-score > 4 triggers auto-suspension |
-| Cost per resolved | "product unit metric" | Cost tied to product outcome, not tokens |
-| Telemetry joiner | "trace-to-billing" | Highest-accuracy attribution pattern |
-| Stacked optimization | "cache+batch+route+gateway" | Compounding savings to ~5-10% baseline |
+| 按用户归因 | “用户级成本” | 每次调用都要带上 `user_id` |
+| 按任务归因 | “功能成本” | 用 `task_id` + `route` 标识产品功能 |
+| 按租户归因 | “客户成本” | 用 `tenant_id` 驱动单位经济分析 |
+| 四层 token | “成本层” | prompt + tool + memory + response |
+| Rate limit | “429 护栏” | 在 gateway 上按租户强制上限 |
+| Daily spend cap | “每日天花板” | 以租户为范围的预算与告警 |
+| Kill switch | “自动暂停” | spend z-score > 4 时自动停用 |
+| Cost per resolved | “产品单位指标” | 成本必须绑定到产品结果，而不是 token 数 |
+| Telemetry joiner | “trace 对账单” | 精度最高的归因模式 |
+| Stacked optimization | “cache+batch+route+gateway” | 组合后可把成本压到 baseline 的约 5-10% |
 
-## 进一步阅读
+## 延伸阅读
 
 - [FinOps Foundation — FinOps for AI Overview](https://www.finops.org/wg/finops-for-ai-overview/)
 - [FinOps School — Cost per Unit 2026 Guide](https://finopsschool.com/blog/cost-per-unit/)
