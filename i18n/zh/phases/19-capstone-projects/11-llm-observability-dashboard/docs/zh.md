@@ -1,28 +1,28 @@
-#                   
+# 综合项目 11——LLM 可观测性与评估仪表盘
 
-> 兰格斯是开放的. 亚里兹·尼克斯发表了2026年GenAI Semconv映射. 机和BrainTrust都增加了每用户成本的倍率. 特拉塞洛普的OpenLLMetry成为了实际的SDK仪器. 制作形式是ClickHouse为痕迹,Postgres为元数据,Next.js为UI,以及一个小规模的评估工作 (DeepEval,RAGAS,LLM-judge) 通过样本的痕迹. 建立一个自主托管,从至少四个SDK家庭中摄入,并在不到五分钟内证明了接入后退.
+> Langfuse 转向了开放核心模式，Arize Phoenix 发布了 2026 年 GenAI 语义约定映射，Helicone 和 Braintrust 都进一步投入逐用户成本归因，Traceloop 的 OpenLLMetry 则成为事实上的 SDK 插桩方案。生产系统的典型形态已经明确：用 ClickHouse 存储追踪数据，用 Postgres 存储元数据，用 Next.js 构建界面，再让一批评估作业（DeepEval、RAGAS、LLM 裁判）在采样后的追踪记录上运行。请自行托管这样一套系统，从至少四类 SDK 摄取数据，并演示它能在五分钟内发现一项人为注入的回归。
 
-**Type:** Capstone
-**Languages:** TypeScript (UI), Python / TypeScript (ingest + evals), SQL (ClickHouse)
-**Prerequisites:** Phase 11 (LLM engineering), Phase 13 (tools), Phase 17 (infrastructure), Phase 18 (safety)
-**Phases exercised:**子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子子
-**Time:** 25 hours
+**Type:** 综合项目
+**Languages:** TypeScript（UI）、Python / TypeScript（摄取 + 评估）、SQL（ClickHouse）
+**Prerequisites:** 第 11 阶段（LLM 工程）、第 13 阶段（工具）、第 17 阶段（基础设施）、第 18 阶段（安全）
+**Phases exercised:** P11 · P13 · P17 · P18
+**Time:** 25 小时
 
 ## 问题
 
-每个在2026年运行生产流量的人工智能团队都会在模型旁边保持可观测平面. 成本归因. 发现幻觉. 水监测. 入监狱的信号. 机器的仪表板. 信息泄露警报. 开源引用 兰格斯,尼克斯,OpenLLMetry 作为摄入方案融合在OpenTelemetry GenAI语义公约. 现在可以使用一个SDK和运输兼容的跨度工具 OpenAI,Anthropic,Google,LangChain,LlamaIndex和vLLM.
+到 2026 年，所有承载生产流量的 AI 团队都会在模型旁运行一套可观测性平面，用于成本归因、幻觉检测、漂移监控、越狱信号识别、SLO 仪表盘和 PII 泄漏告警。Langfuse、Phoenix 与 OpenLLMetry 等开源参考实现已经围绕 OpenTelemetry GenAI 语义约定，统一了数据摄取模式。现在只需一套 SDK，就能为 OpenAI、Anthropic、Google、LangChain、LlamaIndex 和 vLLM 插桩，并发送彼此兼容的跨度（span）数据。
 
-测量:在有意注入回归 (一个提示开始产生 PII) 时,仪表板抓住它并在不到五分钟内发出警报.
+你将构建一个自托管仪表盘，从至少四类 SDK 摄取数据，在采样后的追踪记录上运行一组精简的评估作业，检测漂移并发出告警。验收标准是：故意注入一项回归，例如让某个提示开始生成 PII，仪表盘必须在五分钟内发现问题并触发告警。
 
 ## 概念
 
-输入是OTLP HTTP. SDK生成了GenAI-semconv跨度: `gen_ai.system`现在`gen_ai.request.model`现在`gen_ai.usage.input_tokens`现在`gen_ai.response.id`现在`llm.prompts`现在`llm.completions`对于列分析,ClickHouse的地址;对元数据 (用户,会议,应用程序) 的地址是Postgres.
+系统通过 OTLP HTTP 摄取数据。SDK 会生成符合 GenAI 语义约定的 span，包括 `gen_ai.system`、`gen_ai.request.model`、`gen_ai.usage.input_tokens`、`gen_ai.response.id`、`llm.prompts` 和 `llm.completions`。这些 span 进入 ClickHouse 做列式分析，用户、会话和应用等元数据则进入 Postgres。
 
-根据Eval的数据,Eval 测量了数据的数据,并将其运行在数据库中.Eval 测量了数据库中的数据库.Eval 测量了数据库中的数据库.Eval 测量了数据库中的数据库.Eval 测量了数据库中的数据库.Eval 测量了数据库中的数据库.Eval 测量了数据库中的数据库.Eval 测量了数据库中的数据库.Eval 测量了数据库的数据库.Eval 测量了数据库的数据库.Eval 测量了数据库的数据库.Eval 测量数据库的数据库的数据库.Eval 测量数据库的数据库的数据库.Eval 测量数据库的数据库的数据库的数据库.Eval 测量数据库的数据库的数据库的数据库的数据库.Eval 测量数据库的数据库的数据库的数据库的数据库的数据库的数据库的数据库,数据库的数据库的数据库的数据库,数据库的数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库,数据库
+评估器以批处理作业的形式处理采样后的追踪记录。DeepEval 为忠实度、毒性和答案相关性评分；追踪记录包含检索上下文时，RAGAS 还会计算检索指标；自定义 LLM 裁判则执行领域专属检查，例如识别 PII 泄漏和违反策略的响应。评估结果会以评估 span 的形式写回同一个 ClickHouse，并链接到原始追踪记录的父 span。
 
-漂移检测时间内嵌入空间分布 (PSI或KL差异在快速嵌入) 加上评估分数趋势.警报输送Prometheus Alertmanager然后Slack / PagerDuty.用户界面是Next.js 15与Recharts.
+漂移检测同时监控嵌入空间的分布变化和评估分数趋势：前者通过提示词嵌入上的 PSI 或 KL 散度衡量。告警先进入 Prometheus Alertmanager，再转发到 Slack 或 PagerDuty。界面使用 Next.js 15 和 Recharts 构建。
 
-## 建筑
+## 架构
 
 ```
 production apps:
@@ -52,42 +52,42 @@ production apps:
    Next.js 15 dashboard (Recharts)
 ```
 
-## 堆
+## 技术栈
 
-- 吞:OpenTelemetry SDK+GenAI语义公约;OTLP HTTP运输
-- 收藏器:OpenTelemetry收藏器,配备尾样处理器 (用于成本控制)
-- 存储:ClickHouse为跨度,Postgres为元数据,S3为原始事件档案
-- 值:深度值,RAGAS 0.2,Ariz Phoenix评价器包,定制的LLM法官
-- 漂移:PSI/KL每周的集成快速嵌入 (句子转换器)
-- 警告: 预告警报管理器 ->  Slack / PagerDuty
-- 接口:下一个.js 15 应用程序路由器 + 调用器 + 服务器操作
-- 支持的 SDK:OpenAI,人类,谷歌GenAI,兰格链,LlamaIndex,vLLM
+- 摄取：OpenTelemetry SDK + GenAI 语义约定；OTLP HTTP 传输
+- 收集器：OpenTelemetry Collector，并启用用于控制成本的尾部采样处理器
+- 存储：ClickHouse 存放 span，Postgres 存放元数据，S3 归档原始事件
+- 评估：DeepEval、RAGAS 0.2、Arize Phoenix 评估器套件，以及自定义 LLM 裁判
+- 漂移：每周在池化后的提示词嵌入上计算 PSI / KL
+- 告警：Prometheus Alertmanager -> Slack / PagerDuty
+- 界面：Next.js 15 App Router + Recharts + Server Actions
+- 开箱即用的 SDK：OpenAI、Anthropic、Google GenAI、LangChain、LlamaIndex、vLLM
 
 ```figure
 ce-otel-drift
 ```
 
-## 建立它
+## 动手构建
 
-1. **Collector config.**带有OTLP HTTP接收器,一个尾标记器,保持100%的错误痕迹和10%的成功,以及出口到ClickHouse和S3.
+1. **收集器配置。** 为 OpenTelemetry Collector 配置 OTLP HTTP 接收器；尾部采样器保留 100% 的错误追踪和 10% 的成功追踪；导出器将数据发送到 ClickHouse 与 S3。
 
-2. **ClickHouse schema.**表`spans`具有反射GENAI semconv的列: `gen_ai_system`现在`gen_ai_request_model`现在`input_tokens`现在`output_tokens`现在`latency_ms`现在`prompt_hash`现在`trace_id`现在`parent_span_id`添加使用者_id 和app_id 的二级索引.
+2. **ClickHouse 数据表结构。** 创建 `spans` 表，其列与 GenAI 语义约定对应：`gen_ai_system`、`gen_ai_request_model`、`input_tokens`、`output_tokens`、`latency_ms`、`prompt_hash`、`trace_id`、`parent_span_id`，另加一个保存长载荷的 JSON 字段。为 user_id 和 app_id 添加二级索引。
 
-3. **SDK coverage test.**使用OpenLLMetry自动仪器编写一个小客户端应用程序,使用每个SDK (OpenAI,Anthropic,Google,LangChain,LlamaIndex,vLLM).检查每个产生的可行的GenAI跨度,登陆ClickHouse.
+3. **SDK 覆盖测试。** 分别使用 OpenAI、Anthropic、Google、LangChain、LlamaIndex 和 vLLM SDK 编写小型客户端应用，并通过 OpenLLMetry 自动插桩。验证每个客户端都能生成规范的 GenAI span，并成功写入 ClickHouse。
 
-4. **Eval jobs.**预定工作会读取最后15分钟的样本痕迹,并运行DeepEval忠诚度,毒性和答案相关性.输出是与母体痕迹相关的评估范围.
+4. **评估作业。** 定时作业读取过去 15 分钟内采样的追踪记录，运行 DeepEval 的忠实度、毒性和答案相关性评估。输出以评估 span 写回，并链接到父追踪记录。
 
-5. **Custom LLM-judge.**答案给出,请调用警卫的法学士,以评分PII泄漏的可能性.
+5. **自定义 LLM 裁判。** 构建一个 PII 泄漏裁判：给定响应后，调用防护 LLM 对泄漏 PII 的可能性评分，高分响应进入分诊队列。
 
-6. **Drift detection.**星期工作计算了本周的集成快速嵌入和下来的4周基线之间的PSI. 如果PSI超过门,请警报.
+6. **漂移检测。** 每周作业计算本周池化后的提示词嵌入与过去四周基线之间的 PSI，并在 PSI 超过阈值时发出告警。
 
-7. **Dashboard.**下一页:概述 (跨度/秒,成本/用户,p95延迟),追踪 (搜索+布),评估 (忠诚度趋势,毒性),漂移 (随着时间的推移),警报.
+7. **仪表盘。** 使用 Next.js 15 构建以下页面：概览（每秒 span 数、逐用户成本、p95 延迟）、追踪（搜索和瀑布图）、评估（忠实度趋势和毒性）、漂移（PSI 时间序列）以及告警。
 
-8. **Alerting chain.**报警管理器向Slack进行警告,而对于关键违规则则则向PagerDuty进行访问.
+8. **告警链。** Prometheus 导出器读取评估分数聚合值和延迟分位数；Alertmanager 将警告路由到 Slack，将严重事件路由到 PagerDuty。
 
-9. **Regression probe.**注入 bug:评估的聊天机器人开始泄漏假SSN1%的时间.测量MTTR:从 bug部署到 Slack警报.
+9. **回归探针。** 注入一个缺陷：被评估的聊天机器人开始以 1% 的概率泄漏虚假 SSN。测量 MTTR，即从缺陷部署到 Slack 告警的时间。
 
-## 用它
+## 运行示例
 
 ```
 $ curl -X POST https://my-otel-collector/v1/traces -d @trace.json
@@ -98,50 +98,50 @@ $ curl -X POST https://my-otel-collector/v1/traces -d @trace.json
 [ui]         live at https://obs.example.com
 ```
 
-## 运送它
+## 交付成果
 
-`outputs/skill-llm-observability.md`根据LLM应用程序,仪表板将其痕迹吸收,运行评估,漂移警报,并在Next.js中显示成本/用户分类.
+`outputs/skill-llm-observability.md` 是最终交付物。接入一个 LLM 应用后，仪表盘会摄取其追踪数据、运行评估、对漂移发出告警，并在 Next.js 中呈现逐用户成本明细。
 
-| Weight | Criterion | How it is measured |
+| 权重 | 标准 | 测量方式 |
 |:-:|---|---|
-| 25 | Trace-schema coverage | Number of SDK families producing canonical GenAI spans (target: 6+) |
-| 20 | Eval correctness | DeepEval / RAGAS scores vs hand-labeled set |
-| 20 | Dashboard UX | MTTR on injected regression (under 5 minutes target) |
-| 20 | Cost / scale | Sustained ingest at 1k spans/sec without backlog |
-| 15 | Alerting + drift detection | Prometheus/Alertmanager chain exercised end to end |
+| 25 | 追踪数据结构覆盖范围 | 能产生规范 GenAI span 的 SDK 类别数（目标：6 类以上） |
+| 20 | 评估正确性 | DeepEval / RAGAS 分数与人工标注集比较 |
+| 20 | 仪表盘体验 | 注入回归后的 MTTR（目标低于 5 分钟） |
+| 20 | 成本与规模 | 持续摄取速率达到每秒 1,000 个 span，且不产生积压 |
+| 15 | 告警 + 漂移检测 | 端到端执行 Prometheus / Alertmanager 链路 |
 | **100** | | |
 
-## 运动
+## 练习
 
-1. 添加自定义仪器用于Haystack框架. 验证可нони卡通范围登陆ClickHouse与信徒`gen_ai.*`它们的属性.
+1. 为 Haystack 框架添加自定义插桩。验证规范的 span 已写入 ClickHouse，且 `gen_ai.*` 属性准确反映原始调用。
 
-2. 换取城评测器的深度评测率, 测量两个评测引擎之间的分数漂移.
+2. 在同一批追踪记录上用 Phoenix 评估器替换 DeepEval，测量两个评估引擎之间的分数差异。
 
-3. 提高漂移探测器:计算每个应用程序ID的PSI,而不是全球.
+3. 增强漂移检测器：按应用 ID 计算 PSI，而不是全局计算，并展示每个应用的漂移轨迹。
 
-4. 添加一个"用户影响"页面:每用户成本和每用户失败率,
+4. 添加“用户影响”页面：展示逐用户成本和逐用户失败率，并配备迷你趋势图（sparkline）。
 
-5. 建立一个尾巴样本政策,以保持100%的毒性超过0.5的痕迹,再加上10%的分层样本.
+5. 构建尾部采样策略，保留 100% 毒性分数大于 0.5 的追踪记录，并对其余记录做 10% 的分层采样。测量由此引入的采样偏差。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|-----------------|------------------------|
-| GenAI semconv | "OTel LLM attributes" | 2025 OpenTelemetry spec for LLM span attributes (system, model, tokens) |
-| Tail sampling | "Post-trace sample" | Collector decides to keep or drop a trace after it completes (can peek errors) |
-| PSI | "Population stability index" | Drift metric comparing two distributions; > 0.2 typically signals meaningful drift |
-| LLM-judge | "Eval as model" | An LLM scoring another LLM's output on a rubric (faithfulness, toxicity, PII) |
-| Tail-sampling policy | "Keep-rule" | Rule that decides which traces to persist vs drop; errored + sample-rate |
-| Eval span | "Linked eval trace" | Child span carrying an eval score linked to the original LLM call span |
-| Cost per user | "Unit economics" | Dollar cost attributed to a user_id over a window; key product metric |
+| GenAI semconv | “OTel LLM 属性” | 2025 年用于 LLM span 属性（系统、模型、token）的 OpenTelemetry 规范 |
+| 尾部采样 | “追踪完成后采样” | Collector 在追踪完成后决定保留还是丢弃，因此可以先检查其中是否有错误 |
+| PSI | “群体稳定性指数” | 比较两个分布的漂移指标；大于 0.2 通常表示显著漂移 |
+| LLM 裁判（LLM-judge） | “以模型做评估” | LLM 按评分准则评估另一个 LLM 的输出（忠实度、毒性、PII） |
+| 尾部采样策略 | “保留规则” | 根据错误条件与采样率，决定保存或丢弃哪些追踪记录 |
+| 评估 span | “关联的评估追踪” | 携带评估分数，并链接到原始 LLM 调用 span 的子 span |
+| 逐用户成本 | “单位经济效益” | 在一个时间窗口内归因到 user_id 的美元成本，是关键产品指标 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Langfuse](https://github.com/langfuse/langfuse) 参考开放核心可观测平台
-- [Arize Phoenix](https://github.com/Arize-ai/phoenix)具有强大的漂移支持的替代参考
-- [OpenLLMetry (Traceloop)](https://github.com/traceloop/openllmetry)自动仪器 SDK 家庭
-- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)摄入方案
-- [Helicone](https://www.helicone.ai)可替代托管可观测性
-- [Braintrust](https://www.braintrust.dev)替代的第一评估平台
-- [ClickHouse documentation](https://clickhouse.com/docs) 专跨度存储
-- [DeepEval](https://github.com/confident-ai/deepeval)评价者图书馆
+- [Langfuse](https://github.com/langfuse/langfuse)——参考性的开放核心可观测性平台
+- [Arize Phoenix](https://github.com/Arize-ai/phoenix)——在漂移支持方面表现突出的另一参考实现
+- [OpenLLMetry (Traceloop)](https://github.com/traceloop/openllmetry)——自动插桩 SDK 家族
+- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)——数据摄取结构
+- [Helicone](https://www.helicone.ai)——另一种托管式可观测性方案
+- [Braintrust](https://www.braintrust.dev)——另一种评估优先平台
+- [ClickHouse documentation](https://clickhouse.com/docs)——span 的列式存储方案
+- [DeepEval](https://github.com/confident-ai/deepeval)——评估器库
