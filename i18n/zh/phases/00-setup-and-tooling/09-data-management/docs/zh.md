@@ -1,24 +1,24 @@
 # 数据管理
 
-> 数据是燃料,你如何管理它,
+> 数据是燃料。管理数据的方式决定了你能前进多快。
 
-**Type:** Build
-**Language:**字符串
-**Prerequisites:** Phase 0, Lesson 01
-**Time:** ~45 minutes
+**Type:** 构建
+**Language:** Python
+**Prerequisites:** 第 0 阶段，第 01 课
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 使用拥抱面孔的数据集,流,缓存`datasets`图书馆
-- 转换CSV,JSON,Parquet和Arrow格式,并解释它们的交易
-- 创建可复制的火车/验证/测试分区,使用固定的随机种子
-- 使用 管理大型模型和数据集文件`.gitignore`关键字:
+- 使用 Hugging Face `datasets` 库加载、流式读取和缓存数据集
+- 在 CSV、JSON、Parquet 和 Arrow 格式之间转换，并说明各自的取舍
+- 使用固定随机种子创建可复现的训练集、验证集和测试集划分
+- 使用 `.gitignore`、Git LFS 或 DVC 管理大型模型与数据集文件
 
 ## 问题
 
-每个人工智能项目都从数据开始.你需要找到数据集,下载它们,将它们转换成格式,将它们分为训练和评估,并将它们版本化,使实验可重复.每次手动完成这项工作都是缓慢的,容易犯错误的.你需要一个可重复的工作流程.
+每个 AI 项目都始于数据。你需要寻找并下载数据集、转换格式、划分训练集和评估集，还要对数据进行版本管理，以便复现实验。如果每次都手工完成这些工作，不仅速度慢，也很容易出错。你需要一套可重复执行的流程。
 
-## 概念
+## 核心概念
 
 ```mermaid
 graph TD
@@ -30,21 +30,21 @@ graph TD
     F --> G["Your Training Pipeline"]
 ```
 
-拥抱的脸`datasets`库是人工智能工作中加载数据的标准方式. 它处理下载,缓存,格式转换和流出.
+Hugging Face `datasets` 库是 AI 工作中加载数据的标准方式。下载、缓存、格式转换和流式读取等能力都已内置其中。
 
 ```figure
 s0-data-pipeline
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:安装数据集库
+### 第 1 步：安装 datasets 库
 
 ```bash
 pip install datasets huggingface_hub
 ```
 
-### 步骤 2: 装载数据集
+### 第 2 步：加载数据集
 
 ```python
 from datasets import load_dataset
@@ -54,11 +54,11 @@ print(dataset)
 print(dataset["train"][0])
 ```
 
-导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航导航`~/.cache/huggingface/datasets/`现在,我们要去.
+这段代码会下载 IMDB 影评数据集。首次下载完成后，后续会从 `~/.cache/huggingface/datasets/` 中的缓存加载。
 
-### 步骤3: 流动大型数据集
+### 第 3 步：流式读取大型数据集
 
-流媒体将它们排列一排,而没有下载完整的东西.
+有些数据集大到无法全部存入磁盘。流式读取无需下载完整数据集，而是逐行加载数据。
 
 ```python
 dataset = load_dataset("wikimedia/wikipedia", "20220301.en", split="train", streaming=True)
@@ -69,11 +69,11 @@ for i, example in enumerate(dataset):
         break
 ```
 
-流媒体给你一个`IterableDataset`记忆使用不变,不管数据集的尺寸.
+流式模式会返回 `IterableDataset`。数据到达一行，就处理一行，因此无论数据集多大，内存占用都能保持稳定。
 
-### 步骤 4:数据集格式
+### 第 4 步：数据集格式
 
-其他`datasets`根据您的管道需要的,您可以将其转换到其他格式.
+`datasets` 库在底层使用 Apache Arrow。你可以根据流水线的需求，将数据转换为其他格式。
 
 ```python
 dataset = load_dataset("stanfordnlp/imdb", split="train")
@@ -83,26 +83,26 @@ dataset.to_json("imdb_train.json")
 dataset.to_parquet("imdb_train.parquet")
 ```
 
-格式比较:
+格式对比：
 
-| Format | Size | Read Speed | Best For |
+| 格式 | 体积 | 读取速度 | 最适合的场景 |
 |--------|------|-----------|----------|
-| CSV | Large | Slow | Human readability, spreadsheets |
-| JSON | Large | Slow | APIs, nested data |
-| Parquet | Small | Fast | Analytics, columnar queries |
-| Arrow | Small | Fastest | In-memory processing (what `datasets` uses internally) |
+| CSV | 大 | 慢 | 便于人工阅读和使用电子表格 |
+| JSON | 大 | 慢 | API 和嵌套数据 |
+| Parquet | 小 | 快 | 分析和列式查询 |
+| Arrow | 小 | 最快 | 内存内处理（`datasets` 内部使用的格式） |
 
-对于人工智能工作,Parquet是最好的存储格式.箭头是你在内存中使用的.CSV和JSON是交换的.
+对于 AI 工作，Parquet 通常是最佳存储格式，Arrow 则适合在内存中处理。CSV 和 JSON 更适合数据交换。
 
-### 步骤5:数据分开
+### 第 5 步：划分数据集
 
-每个ML项目都需要三个分区:
+每个机器学习项目都需要三类数据划分：
 
-- **Train**模型从此学习 (通常是80%).
-- **Validation**您在培训期间检查进展 (通常是10%).
-- **Test**毕业后的最终评估 (通常是10%)
+- **训练集**：模型从中学习，通常占 80%
+- **验证集**：训练期间用来检查进展，通常占 10%
+- **测试集**：训练完成后用于最终评估，通常占 10%
 
-某些数据集是预分的,如果没有,你自己分开它们:
+有些数据集已经预先完成划分；如果没有，就需要自己划分：
 
 ```python
 dataset = load_dataset("stanfordnlp/imdb", split="train")
@@ -117,11 +117,11 @@ test_ds = split["test"]
 print(f"Train: {len(train_ds)}, Val: {len(val_ds)}, Test: {len(test_ds)}")
 ```
 
-总是设定一个种子,以确保可复制性.
+请始终设置随机种子，以保证结果可复现。同一个种子每次都会产生相同的数据划分。
 
-### 步骤 6: 下载和缓存模型
+### 第 6 步：下载并缓存模型
 
-模型是大型文件.`huggingface_hub`图书馆处理下载和缓存.
+模型通常是大型文件。`huggingface_hub` 库负责下载和缓存它们。
 
 ```python
 from huggingface_hub import hf_hub_download, snapshot_download
@@ -136,13 +136,13 @@ model_dir = snapshot_download("sentence-transformers/all-MiniLM-L6-v2")
 print(f"Full model at: {model_dir}")
 ```
 
-模特缓存到`~/.cache/huggingface/hub/`一旦下载,它们会立即上传.
+模型会缓存在 `~/.cache/huggingface/hub/`。下载一次后，后续运行就能立即从本地加载。
 
-### 步骤 7:处理大型文件
+### 第 7 步：处理大文件
 
-模型重量和大型数据集不应进入 git.
+模型权重和大型数据集不应该直接加入 Git。你有三种选择：
 
-**Option A: .gitignore (simplest)**
+**方案 A：.gitignore（最简单）**
 
 ```
 *.bin
@@ -154,7 +154,7 @@ data/*.csv
 models/
 ```
 
-**Option B: Git LFS (track large files in git)**
+**方案 B：Git LFS（在 Git 中跟踪大文件）**
 
 ```bash
 git lfs install
@@ -163,9 +163,9 @@ git lfs track "*.safetensors"
 git add .gitattributes
 ```
 
-基特LFS存储在您的备忘录中指针和实际文件在单独的服务器上.GitHub为您提供1GB免费.
+Git LFS 在仓库中保存指针，把实际文件存放在单独的服务器上。GitHub 免费提供 1GB 配额。
 
-**Option C: DVC (data version control)**
+**方案 C：DVC（数据版本控制）**
 
 ```bash
 pip install dvc
@@ -175,21 +175,21 @@ git add data/training_set.parquet.dvc data/.gitignore
 git commit -m "Track training data with DVC"
 ```
 
-化品制造小`.dvc`数据本身存储在S3,GCS或其他远程存储后端.
+DVC 会创建小型 `.dvc` 文件来指向数据；数据本身存储在 S3、GCS 或其他远程存储后端。
 
-| Approach | Complexity | Best For |
+| 方案 | 复杂度 | 最适合的场景 |
 |----------|-----------|----------|
-| .gitignore | Low | Personal projects, downloaded data you can re-fetch |
-| Git LFS | Medium | Teams sharing model weights via git |
-| DVC | High | Reproducible experiments, large datasets, teams |
+| .gitignore | 低 | 个人项目，以及可重新下载的数据 |
+| Git LFS | 中 | 团队通过 Git 共享模型权重 |
+| DVC | 高 | 可复现实验、大型数据集和团队协作 |
 
-为了这门课程,`.gitignore`需要在机器上复制精确的实验时使用DVC.
+对本课程而言，`.gitignore` 已经足够。需要跨机器精确复现实验时，再使用 DVC。
 
-### 步骤 8: 存储模式
+### 第 8 步：存储模式
 
-**Local storage**对于10GB以下的数据集来说,HF缓存将自动处理.
+**本地存储**适合小于约 10GB 的数据集，HF 缓存会自动处理它们。
 
-**Cloud storage**适用于任何更大或在机器之间共享的东西:
+**云存储**适合更大的数据集，或需要在多台机器之间共享的数据：
 
 ```python
 import os
@@ -200,59 +200,59 @@ local_path = os.path.expanduser("~/.cache/huggingface/datasets/")
 # gcs_path = "gs://my-bucket/datasets/"
 ```
 
-体与S3和GCS直接集成:
+DVC 可以直接与 S3 和 GCS 集成：
 
 ```bash
 dvc remote add -d myremote s3://my-bucket/dvc-store
 dvc push
 ```
 
-云存储是当你调整远程GPU实例时变得相关的.
+本课程使用本地存储即可。当你在远程 GPU 实例上进行微调时，云存储才会变得重要。
 
-## 在本课程中使用的数据集
+## 本课程使用的数据集
 
-| Dataset | Lessons | Size | What It Teaches |
+| 数据集 | 涉及课程 | 大小 | 学习内容 |
 |---------|---------|------|----------------|
-| IMDB | Tokenization, classification | 84 MB | Text classification basics |
-| WikiText | Language modeling | 181 MB | Next-token prediction |
-| SQuAD | QA systems | 35 MB | Question answering, spans |
-| Common Crawl (subset) | Embeddings | Varies | Large-scale text processing |
-| MNIST | Vision basics | 21 MB | Image classification fundamentals |
-| COCO (subset) | Multimodal | Varies | Image-text pairs |
+| IMDB | 分词、分类 | 84 MB | 文本分类基础 |
+| WikiText | 语言建模 | 181 MB | 下一个 token 预测 |
+| SQuAD | 问答系统 | 35 MB | 问答与文本跨度 |
+| Common Crawl（子集） | 嵌入 | 不定 | 大规模文本处理 |
+| MNIST | 视觉基础 | 21 MB | 图像分类基础 |
+| COCO（子集） | 多模态 | 不定 | 图文配对 |
 
-现在不必下载所有这些,每一堂课都说明了需要的内容.
+现在无需下载所有这些数据集，每节课都会说明自己的具体需求。
 
-## 用它
+## 实际使用
 
-运行实用程序脚本来验证一切工作:
+运行工具脚本，验证一切是否正常：
 
 ```bash
 python code/data_utils.py
 ```
 
-这将下载一个小数据集,转换它,分开它,
+该脚本会下载一个小型数据集、转换格式、完成划分并输出摘要。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `code/data_utils.py`- 可重复使用的数据加载和缓存工具
-- `outputs/prompt-data-helper.md`- 提示找到合适的数据集
+本课会产出：
+- `code/data_utils.py`——可复用的数据加载与缓存工具
+- `outputs/prompt-data-helper.md`——帮助你为任务寻找合适数据集的提示词
 
-## 运动
+## 练习
 
-1. 装载`glue`数据集`mrpc`配置和检查前5个例子
-2. 播放`c4`数据集,并计算在10秒内可以处理多少个例子
-3. 将数据集转换为Parquet,并将文件大小进行比较为CSV
-4. 创建一个70/15/15火车/值/测试分区,使用固定种子,并验证尺寸
+1. 加载 `glue` 数据集的 `mrpc` 配置，并检查前 5 条样本
+2. 流式读取 `c4` 数据集，统计 10 秒内能够处理多少条样本
+3. 将一个数据集转换为 Parquet，并比较它与 CSV 的文件大小
+4. 使用固定随机种子创建 70/15/15 的训练集、验证集和测试集划分，并验证各部分大小
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Dataset split | "Training data" | A named subset (train/val/test) used at different stages of the ML lifecycle |
-| Streaming | "Load it lazily" | Processing data row by row from a remote source without downloading the full dataset |
-| Parquet | "Compressed CSV" | A columnar file format optimized for analytical queries and storage efficiency |
-| Arrow | "Fast dataframe" | An in-memory columnar format used internally by the datasets library for zero-copy reads |
-| Git LFS | "Git for big files" | An extension that stores large files outside the git repo while keeping pointers in version control |
-| DVC | "Git for data" | A version control system for datasets and models that integrates with cloud storage |
-| Cache | "Already downloaded" | A local copy of previously fetched data, stored at ~/.cache/huggingface/ by default |
+| Dataset split | “训练数据” | 在机器学习生命周期的不同阶段使用的命名子集（train/val/test） |
+| Streaming | “惰性加载” | 不下载整个数据集，而是从远程来源逐行处理数据 |
+| Parquet | “压缩版 CSV” | 针对分析查询和存储效率优化的列式文件格式 |
+| Arrow | “高速 dataframe” | datasets 库内部使用的内存列式格式，支持零复制读取 |
+| Git LFS | “面向大文件的 Git” | 将大文件存储在 Git 仓库之外、同时在版本控制中保留指针的扩展 |
+| DVC | “面向数据的 Git” | 与云存储集成、用于数据集和模型的版本控制系统 |
+| Cache | “已经下载过” | 已获取数据的本地副本，默认存储在 ~/.cache/huggingface/ |
