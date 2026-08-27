@@ -81,7 +81,7 @@ Llama 3.1 的 128K context 是数据中心特性。放到一台只有 8 GB RAM �
 ### 你需要记住的数字
 
 - Apple M4 / A18 ANE: 38 TOPS。
-- Qualcomm Hexagon SD X Elite: 45 TOPS。
+- Qualcomm Hexagon SD X Elite：45 TOPS。
 - WebLLM M3 Max: 在 Llama 3.1 8B Q4 上约 41 tok/s。
 - AGX Orin: 通过 vLLM 跑 gpt-oss-20b 时约 40 tok/s。
 - 数据中心与边缘之间的带宽差距：30-50 倍。
