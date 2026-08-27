@@ -1,34 +1,34 @@
-# 欧CR和文件理解
+# OCR 与文档理解
 
-> 任何现代的OCR系统都会重新排序这些阶段或将它们合并.
+> OCR 是一条三阶段流水线——检测文本框、识别字符、再恢复版面。每一种现代 OCR 系统，都只是在重新排列这些阶段或把它们合并起来。
 
-**Type:** Learn + Use
+**Type:** 学习 + 使用
 **Languages:** Python
-**Prerequisites:** Phase 4 Lesson 06 (Detection), Phase 7 Lesson 02 (Self-Attention)
-**Time:** ~45 minutes
+**Prerequisites:** 第 4 阶段第 06 课（目标检测）、第 7 阶段第 02 课（自注意力）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 追踪经典的OCR管道 (检测 ->识别 ->布局) 和现代端到端替代方案 (Donut,Qwen-VL-OCR)
-- 实现连接器时间分类 (CTC) 损失对序列到序列OCR培训
-- 使用PaddleOCR或EasyOCR进行无需培训的生产文件分析
-- 区分OCR,布局分析和文档理解,并选择每项任务的正确工具
+- 追踪经典 OCR 流水线（检测 -> 识别 -> 版面），并理解现代端到端替代方案（Donut、Qwen-VL-OCR）
+- 实现用于序列到序列 OCR 训练的 CTC（连接时序分类）损失
+- 使用 PaddleOCR 或 EasyOCR，无需训练即可完成生产级文档解析
+- 区分 OCR、版面解析与文档理解，并为每种任务选择正确工具
 
-## 问题
+## 问题所在
 
-图像中包含文本的图像遍布各处:收据,账单,身份证,扫描书,表格,白板,标志,截图.从中提取结构化数据不仅是字符,而且"这是总数"是应用视觉中最具价值的一个问题.
+包含大量文字的图像随处可见：收据、发票、身份证件、扫描书籍、表单、白板、招牌和截图。从中提取结构化数据——不仅识别字符，还要判断“这是总金额”——是应用视觉中价值最高的问题之一。
 
-专业分为三个技能层次:
+这个领域可以分成三层能力：
 
-1. **OCR proper**转换像素成文字.
-2. **Layout parsing**: 集团 OCR输出按区域 (标题,体格,表格,标题).
-3. **Document understanding**:从布局中提取结构化字段 ("发票_总额 = 42.50美元").
+1. **OCR 本身：** 把像素转换成文字。
+2. **版面解析：** 把 OCR 输出组合成区域，例如标题、正文、表格和页眉。
+3. **文档理解：** 从版面中提取结构化字段，例如“invoice_total = $42.50”。
 
-每层都有经典和现代的方法, "我想要图像中的文字"和"我需要这个收件的总数"之间的差距比大多数团队所意识到的更大.
+每一层都有经典方法和现代方法，而且“我想从图像中获取文本”与“我需要这张收据的总金额”之间的差距，比大多数团队意识到的更大。
 
-## 概念
+## 核心概念
 
-### 经典管道
+### 经典流水线
 
 ```mermaid
 flowchart LR
@@ -45,50 +45,50 @@ flowchart LR
     style OUT fill:#dcfce7,stroke:#16a34a
 ```
 
-- **Text detection**产生每行或每字四边形.
-- **Recognition**运行一个CNN+BiLSTM+CTC,以产生一个字符序列.
-- **Layout**修复阅读顺序 (拉丁语的左到右,阿拉伯语,日本语的不同).
+- **文本检测**会生成逐行或逐词的四边形区域。
+- **文本识别**把每个区域裁剪到固定高度，再运行 CNN + BiLSTM + CTC，生成字符序列。
+- **版面处理**重建阅读顺序。拉丁文字通常从上到下、从左到右，阿拉伯语和日语等语言则使用不同规则。
 
-### 单段中CTC
+### 一段话理解 CTC
 
-基于CTC (Graves等,2006) 的功能,您可以在没有字符级调整的情况下训练.模型在每一步都输出了分布 (语音+空白);CTC损失将所有在重复和删除空白后减少到目标文本的调整进行边缘化.
+OCR 识别需要从固定长度的特征图生成长度可变的序列。CTC（Graves 等，2006）允许在没有字符级对齐信息时训练这种模型。模型会在每个时间步输出涵盖“词表 + 空白符”的概率分布；CTC Loss 会枚举并汇总所有经过“合并重复项、移除空白符”后能够还原目标文本的对齐路径。
 
 ```
 raw output: "h h h _ _ e e l l _ l l o _ _"
 after merge repeats and remove blanks: "hello"
 ```
 
-根据CTC的规定,CRNN在2015年工作,并仍在2026年培训大多数生产OCR模型.
+CTC 让 CRNN 在 2015 年取得成功，到 2026 年仍用于训练大多数生产级 OCR 模型。
 
-### 现代端到端型号
+### 现代端到端模型
 
-- **Donut** ViT编码器 + 文本解码器; 读取图像并直接发射JSON. 没有文本探测器,没有布局模块.
-- **TrOCR** ViT+变压器解码器用于线级OCR.
-- **Qwen-VL-OCR / InternVL**完整的视觉语言模型,为OCR任务进行精细调节;在2026年,对复杂文件提供最佳准确性.
-- **PaddleOCR**经典的DB+CRNN管道在成熟的生产包中;仍然是开源工作马.
+- **Donut**（Kim 等，2022）——ViT 编码器 + 文本解码器；读取图像并直接输出 JSON，不需要文本检测器，也不需要版面模块。
+- **TrOCR**——用于行级 OCR 的 ViT + Transformer 解码器。
+- **Qwen-VL-OCR / InternVL**——针对 OCR 任务微调的完整视觉语言模型，在 2026 年的复杂文档上准确率最高。
+- **PaddleOCR**——成熟生产套件中的经典 DB + CRNN 流水线，至今仍是开源主力。
 
-端到端模型需要更多的数据和计算,但避免多阶段管道的错误积累.
+端到端模型需要更多数据和计算资源，但避免了多阶段流水线中的误差累积。
 
-### 布局分析
+### 版面解析
 
-对于结构文件,运行一个布局检测器 (LayoutLMv3, DocLayNet) 将每个区域标记为:标题,段落,图形,表格,脚注.读取顺序将成为"通过布局顺序区域进行反复,连接".
+处理结构化文档时，应运行版面检测器（LayoutLMv3、DocLayNet），为每个区域标记 Title、Paragraph、Figure、Table 或 Footnote。阅读顺序随后就变成“按照版面顺序遍历各个区域并拼接”。
 
-关于表格的使用**Key-Value extraction**模型 (可视化丰富的文件,LayoutLMv3可用于简单扫描).它们采集图像+检测的文本+位置,并预测结构化的键值对.
+对于表单，应使用**键值提取**模型：视觉信息丰富的文档使用 Donut，普通扫描件使用 LayoutLMv3。它们接收图像、检测文本及其位置，并预测结构化键值对。
 
 ### 评估指标
 
-- **Character Error Rate (CER)** 莱文施泰因距离/参考长度.较低更好.生产目标:在清洁扫描中< 2%.
-- **Word Error Rate (WER)**字面上也是如此.
-- **F1 on structured fields**关键价值任务;`{invoice_total: 42.50}`似乎是正确的.
-- **Edit distance on JSON**用于端到端的文件分析;唐草纸引入了标准化的树编辑距离.
+- **字符错误率（CER）**——Levenshtein 距离 / 参考文本长度，越低越好。干净扫描件的生产目标是低于 2%。
+- **词错误率（WER）**——同一指标，但在单词层面计算。
+- **结构化字段 F1**——用于键值任务，衡量 `{invoice_total: 42.50}` 等结构是否正确出现。
+- **JSON 编辑距离**——用于端到端文档解析；Donut 论文提出了归一化树编辑距离。
 
 ```figure
 cv3-ctc-collapse
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:CTC损失+贪的解码器
+### 第 1 步：CTC Loss 与贪心解码器
 
 ```python
 import torch
@@ -125,11 +125,11 @@ def greedy_ctc_decode(log_probs, blank=0):
     return out
 ```
 
-`F.ctc_loss`利的解码器比光束搜索更简单,通常在 1% 的CER内.
+`F.ctc_loss` 会在可用时采用高效的 CuDNN 实现。贪心解码器比 Beam Search 简单，而且 CER 通常只比它差 1% 以内。
 
-### 步骤2:小的CRNN识别器
+### 第 2 步：微型 CRNN 识别器
 
-对于线路OCR的最低CNN+BiLSTM.
+这是用于行级 OCR 的最小 CNN + BiLSTM。
 
 ```python
 class TinyCRNN(nn.Module):
@@ -156,11 +156,11 @@ class TinyCRNN(nn.Module):
         return F.log_softmax(self.head(h).transpose(0, 1), dim=-1)  # (W', N, vocab)
 ```
 
-固定高度输入 (CNN最大积分高度为 1).宽度是CTC的时间尺寸.
+输入高度固定，CNN 通过最大池化把高度压到 1，宽度则成为 CTC 的时间维度。
 
-### 步骤3:合成OCR
+### 第 3 步：合成 OCR
 
-产生黑色到白色的数字字符串,
+生成白底黑字的数字字符串，完成一次端到端冒烟测试。
 
 ```python
 import numpy as np
@@ -194,9 +194,9 @@ imgs, targets, lengths = build_batch(["hello", "world"], vocab)
 print(f"images: {imgs.shape}   targets: {targets.shape}   lengths: {lengths.tolist()}")
 ```
 
-实际的OCR数据集添加字体,噪音,旋转,模糊和颜色.上面的管道是相同的.
+真实 OCR 数据集还会加入字体、噪声、旋转、模糊和颜色变化，但使用的流水线完全相同。
 
-### 步骤4:培训草图
+### 第 4 步：训练概要
 
 ```python
 model = TinyCRNN(vocab_size=len(vocab))
@@ -211,17 +211,17 @@ for step in range(200):
     opt.zero_grad(); loss.backward(); opt.step()
 ```
 
-在这次微不足道的合成数据上,损失应该从3到0.2以上降低.
+在这份简单合成数据上，200 步内损失应该从约 3 降低到约 0.2。
 
-## 用它
+## 实际应用
 
-生产的三个途径:
+生产环境有三条常见路径：
 
-- **PaddleOCR**成熟,快速,多语言. 一行使用: `paddleocr.PaddleOCR(lang="en").ocr(image_path)`现在,我们要去.
-- **EasyOCR** 字符串原生,多语言,PyTorch脊柱.
-- **Tesseract**经典;在模型难以完成时,仍然适用于旧扫描文件.
+- **PaddleOCR**——成熟、快速、支持多语言。一行即可调用：`paddleocr.PaddleOCR(lang="en").ocr(image_path)`。
+- **EasyOCR**——原生 Python、多语言、使用 PyTorch 骨干网络。
+- **Tesseract**——经典方案；模型难以处理旧扫描文档时仍然有用。
 
-对于端到端文件分析,使用Donut或VLM:
+端到端文档解析可以使用 Donut 或 VLM：
 
 ```python
 from transformers import DonutProcessor, VisionEncoderDecoderModel
@@ -230,37 +230,37 @@ processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base-finetuned-
 model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-cord-v2")
 ```
 
-对于可重复结构的收据,发票和表格,请调整Donut.对于任意文件或有理由的OCR,如Qwen-VL-OCR这样的VLM是当前默认的.
+对于结构重复的收据、发票和表单，应微调 Donut；对于任意文档或需要推理的 OCR，Qwen-VL-OCR 等 VLM 是当前默认选择。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-ocr-stack-picker.md`一个提示,选择 Tesseract / PaddleOCR / Donut / VLM-OCR 给定的文档类型,语言和结构.
-- `outputs/skill-ctc-decoder.md`从零开始编写贪和光束搜索的CTC解码器的技能,包括长度规范化.
+- `outputs/prompt-ocr-stack-picker.md`——根据文档类型、语言和结构，在 Tesseract / PaddleOCR / Donut / VLM-OCR 中作出选择的提示词。
+- `outputs/skill-ctc-decoder.md`——从零编写贪心和 Beam Search CTC 解码器，并包含长度归一化的技能。
 
-## 运动
+## 练习
 
-1. **(Easy)**训练TinyCRNN在500步的5位数字随机数字串上.
-2. **(Medium)**报道 CER 德尔塔. 在哪些输入中,beam 搜索获胜?
-3. **(Hard)**根据"项目名称,价格"对,使用PaddleOCR在20个收据,提取线条项的集合上,并计算F1与手标记的地面真相.
+1. **（简单）** 在 5 位随机数字字符串上训练 TinyCRNN 500 步，报告保留集上的 CER。
+2. **（中等）** 用 Beam Search（beam_width=5）替换贪心解码，报告 CER 变化。Beam Search 在哪些输入上胜出？
+3. **（困难）** 在一组 20 张收据上运行 PaddleOCR，提取明细项目，并根据手工标注的 {item_name, price} 真值对计算 F1。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| OCR | "Text from pixels" | Turning image regions into character sequences |
-| CTC | "Alignment-free loss" | Loss that trains a sequence model without per-timestep labels; marginalises over alignments |
-| CRNN | "Classic OCR model" | Conv feature extractor + BiLSTM + CTC; the 2015 baseline still used in production |
-| Donut | "End-to-end OCR" | ViT encoder + text decoder; emits JSON directly from image |
-| Layout parsing | "Find regions" | Detect and label Title/Table/Figure/Paragraph regions in a document |
-| Reading order | "Text sequence" | Ordering of recognised regions into a sentence; trivial for Latin, non-trivial for mixed layouts |
-| CER / WER | "Error rates" | Levenshtein distance / reference length at character or word granularity |
-| VLM-OCR | "LLM that reads" | A vision-language model trained or prompted for OCR tasks; current SOTA on complex documents |
+| OCR | “从像素中读取文本” | 把图像区域转换成字符序列 |
+| CTC | “无需对齐的损失” | 无需逐时间步标签即可训练序列模型，并对所有可能对齐求和的损失 |
+| CRNN | “经典 OCR 模型” | 卷积特征提取器 + BiLSTM + CTC；2015 年提出的基线，至今仍用于生产 |
+| Donut | “端到端 OCR” | 直接从图像输出 JSON 的 ViT 编码器 + 文本解码器；无需传统 OCR |
+| 版面解析 | “寻找区域” | 检测文档中的标题、表格、图形、段落区域并分类 |
+| 阅读顺序 | “文本序列” | 把识别出的区域排列成句子的规则；拉丁文本较简单，混合版面则很复杂 |
+| CER / WER | “错误率” | 在字符或单词粒度上计算的 Levenshtein 距离 / 参考长度 |
+| VLM-OCR | “会阅读的 LLM” | 经过 OCR 训练或提示的视觉语言模型，是复杂文档上的当前最佳方案 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [CRNN (Shi et al., 2015)](https://arxiv.org/abs/1507.05717)原始的CNN+RNN+CTC架构
-- [CTC (Graves et al., 2006)](https://www.cs.toronto.edu/~graves/icml_2006.pdf)原始的CTC纸;密集包装了算法的想法
-- [Donut (Kim et al., 2022)](https://arxiv.org/abs/2111.15664)无OCR文件理解变压器
-- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)开源生产OCR堆
+- [《CRNN》（Shi 等，2015）](https://arxiv.org/abs/1507.05717)——CNN + RNN + CTC 原始架构
+- [《CTC》（Graves 等，2006）](https://www.cs.toronto.edu/~graves/icml_2006.pdf)——CTC 原始论文，密集呈现了算法思想
+- [《Donut》（Kim 等，2022）](https://arxiv.org/abs/2111.15664)——无需 OCR 的文档理解 Transformer
+- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)——开源生产级 OCR 技术栈
