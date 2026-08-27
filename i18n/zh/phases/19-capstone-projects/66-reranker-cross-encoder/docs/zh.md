@@ -126,7 +126,7 @@ python3 code/main.py
 | Bi-encoder | "Vector retriever" | 独立编码 query 和 doc；再按 cosine 排序 |
 | Cross-encoder | "Reranker" | 联合编码 (query, doc)；输出单个相关性标量 |
 | Two-stage pipeline | "先检索再重排" | 廉价 retriever 返回 N，昂贵 reranker 保留 K |
-| N (candidate budget) | "重排候选池" | cross-encoder 每个 query 要打分的候选数 |
+| 候选预算 N | "重排候选池" | cross-encoder 每个 query 要打分的候选数 |
 | Mean-pooling head | "最后一层隐藏状态取均值" | 对 encoder 最后一层输出取平均，得到一个向量 |
 
 ## 进一步阅读

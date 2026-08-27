@@ -12,7 +12,7 @@
 - 定义 (epsilon, delta)-differential privacy，并说出 DP-SGD 的标准配方。
 - 解释 2024-2025 年的关键张力：canary MIA 与 training-data extraction 为什么会得出不同结论。
 - 描述 PMixED，并说明为什么 inference-time private prediction 可以作为 DP training 的替代路线。
-- 描述 Differential Privacy Reversal via LLM Feedback 这一攻击。
+- 描述通过大模型反馈逆转差分隐私这一攻击。
 
 ## 问题
 
@@ -62,7 +62,7 @@ Abadi et al. 2016 提出的标准配方如下：
 
 这两条路线都绕开了 full DP training 的高昂效用成本，但代价是它们针对的是不同的 threat model。
 
-### Differential Privacy Reversal via LLM Feedback
+### 通过大模型反馈逆转差分隐私
 
 这是 2025 年出现的一类新攻击。攻击者把 DP-trained model 的 confidence scores 当成 oracle，借此重新识别个体信息。也就是说，即便最终输出文本本身没有直接泄漏，confidence distribution 仍然可能成为泄漏通道。
 

@@ -20,7 +20,7 @@
 
 ## 概念
 
-### Pipecat (pipecat-ai/pipecat)
+### Pipecat（仓库：pipecat-ai/pipecat）
 
 - 一个基于 Python 的 frame 化管线框架。
 - 以 `Frame` → `FrameProcessor` 的链式结构组织处理流程。
@@ -39,7 +39,7 @@ VAD (Silero) → STT → LLM (context alternates user/assistant) → TTS → tra
 
 Pipecat Flows 在此基础上增加了结构化会话能力，本质上是状态机；Pipecat Cloud 则是它的托管运行时。
 
-### LiveKit Agents (livekit/agents)
+### LiveKit Agents（仓库：livekit/agents）
 
 - 负责通过 WebRTC 把 AI 模型连接到最终用户。
 - 核心概念包括：`Agent`、`AgentSession`、`entrypoint`、`AgentServer`。
