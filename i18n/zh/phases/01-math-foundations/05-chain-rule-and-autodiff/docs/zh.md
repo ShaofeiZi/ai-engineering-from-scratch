@@ -1,42 +1,42 @@
-# 链条规则和自动区分
+# 链式法则与自动微分
 
-> 链条规则是学习的每个神经网络背后的引擎.
+> 链式法则是每个能够学习的神经网络背后的引擎。
 
-**Type:** Build
-**Language:**字符串
-**Prerequisites:** Phase 1, Lesson 04 (Derivatives & Gradients)
-**Time:** ~90 minutes
+**Type:** 构建
+**Language:** Python
+**Prerequisites:** 第 1 阶段，第 04 课（Derivatives & Gradients）
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 建立一个最小的自行调节引擎 (值类),通过反向模式自动调节记录操作和计算梯度
-- 实现前后的通行通过使用拓类的计算图
-- 通过使用从零开始的自动化发动机,在XOR上构建和训练多层的感知器
-- 通过对数值有限差异进行梯度检查来验证自动调整的正确性
+- 构建一个最小自动微分引擎（Value 类），记录运算并通过反向模式自动微分计算梯度
+- 使用拓扑排序实现计算图的前向传播与反向传播
+- 仅使用从零实现的自动微分引擎，构建并训练一个解决 XOR 问题的多层感知机
+- 将自动微分结果与数值有限差分对照，验证梯度计算是否正确
 
 ## 问题
 
-网络是一个函数,它是数百个函数组成的:矩阵乘法,添加偏见,应用激活,矩阵再乘法,软max,交叉缩损失.输出是函数的函数.
+你已经能够计算简单函数的导数，但神经网络并不是简单函数。它由数百个函数组合而成：矩阵乘法、添加偏置、应用激活函数、再次进行矩阵乘法、softmax，再计算交叉熵损失。最终输出是函数的函数的函数。
 
-为了训练网络,你需要对每一个重量进行减轻的梯度.手动完成这一过程对于数百万参数来说是不可能的.数量 (有限差异) 进行太慢.
+要训练网络，你必须计算损失相对于每一个权重的梯度。面对数百万个参数，手工计算不可能完成；使用数值方法（有限差分）则慢得无法接受。
 
-链条规则给你数学.自动分化给你算法. 它们一起让你通过任意的函数组成计算准确的梯度,在时间中与单个前进传递相比例.
+链式法则提供数学原理，自动微分提供实现算法。二者结合后，你可以用与一次前向传播成正比的时间，准确计算任意复合函数的梯度。
 
-像 PyTorch, TensorFlow 和 JAX 一样,你将从零开始构建一个小型版本.
+PyTorch、TensorFlow 和 JAX 都采用这一原理。本课将从零构建一个微型版本。
 
-## 概念
+## 核心概念
 
-### 链条规则
+### 链式法则
 
-如果`y = f(g(x))`产品的衍生品`y`关于`x`是:
+如果 `y = f(g(x))`，那么 `y` 对 `x` 的导数为：
 
 ```
 dy/dx = dy/dg * dg/dx = f'(g(x)) * g'(x)
 ```
 
-通过链接的衍生品,每个链接都会贡献其本地衍生品.
+沿函数链逐项相乘，每个环节都贡献自己的局部导数。
 
-举个例子:`y = sin(x^2)`
+示例：`y = sin(x^2)`
 
 ```
 g(x) = x^2       g'(x) = 2x
@@ -45,7 +45,7 @@ f(g) = sin(g)     f'(g) = cos(g)
 dy/dx = cos(x^2) * 2x
 ```
 
-对于更深层次的作曲,链接延伸到:
+面对更深的复合关系，链条会继续延伸：
 
 ```
 y = f(g(h(x)))
@@ -53,13 +53,13 @@ y = f(g(h(x)))
 dy/dx = f'(g(h(x))) * g'(h(x)) * h'(x)
 ```
 
-网络中的每个层都是这个链中的一个环节.
+神经网络中的每一层都是这条函数链上的一个环节。
 
-### 计算图表
+### 计算图
 
-计算图表使链条规则视觉化. 每个操作都变成节点. 数据通过图表向前流动.梯度向后流动.
+计算图把链式法则直观地呈现出来。每个运算都是一个节点：数据沿图向前流动，梯度则反向传播。
 
-**Forward pass (compute values):**
+**前向传播（计算数值）：**
 
 ```mermaid
 graph TD
@@ -71,7 +71,7 @@ graph TD
     relu -->|"y = 7"| y["output y"]
 ```
 
-**Backward pass (compute gradients):**
+**反向传播（计算梯度）：**
 
 ```mermaid
 graph TD
@@ -82,13 +82,13 @@ graph TD
     da -->|"da/dx2 = x1 = 2"| dx2["dy/dx2 = 2"]
 ```
 
-后行通过在每个节点上应用链条,从输出到输入的梯度传播.
+反向传播会在每个节点应用链式法则，把梯度从输出传回输入。
 
-### 前向模式与逆向模式
+### 前向模式与反向模式
 
-通过图表应用链条有两种方法.
+沿计算图应用链式法则有两种方式。
 
-**Forward mode**通过计算,它可以将其运用到`dx/dx = 1`只有一个输入,而且输出量很少.
+**前向模式**从输入出发，将导数向前传递。它先设定 `dx/dx = 1`，再经过每个运算传播导数。输入很少、输出很多时，这种方式更合适。
 
 ```
 Forward mode: seed dx/dx = 1, propagate forward
@@ -98,7 +98,7 @@ Forward mode: seed dx/dx = 1, propagate forward
   y = sin(a)  (dy/dx = cos(a) * da/dx = cos(4) * 4 = -2.615)
 ```
 
-**Reverse mode**开始于输出,然后拉向后梯度.`dy/dy = 1`并且通过每个操作反向传播.
+**反向模式**从输出出发，将梯度向后拉回。它先设定 `dy/dy = 1`，然后按相反顺序经过每个运算传播梯度。输入很多、输出很少时，这种方式更合适。
 
 ```
 Reverse mode: seed dy/dy = 1, propagate backward
@@ -108,16 +108,16 @@ Reverse mode: seed dy/dy = 1, propagate backward
   x = 2       (dy/dx = dy/da * da/dx = -0.654 * 4 = -2.615)
 ```
 
-神经网络有数百万的输入 (权重) 和一个输出 (损失).反向模式在一个倒退通道中计算所有梯度.这就是为什么反向传播使用反向模式.
+神经网络有数百万个输入（权重），却只有一个输出（损失）。反向模式能够在一次反向传播中计算全部梯度，因此反向传播采用这种模式。
 
-| Mode | Seed | Direction | Best when |
+| 模式 | 种子 | 方向 | 最适用的场景 |
 |------|------|-----------|-----------|
-| Forward | `dx_i/dx_i = 1` | Input to output | Few inputs, many outputs |
-| Reverse | `dy/dy = 1` | Output to input | Many inputs, few outputs (neural nets) |
+| 前向模式 | `dx_i/dx_i = 1` | 从输入到输出 | 输入少、输出多 |
+| 反向模式 | `dy/dy = 1` | 从输出到输入 | 输入多、输出少（神经网络） |
 
-### 双数字前进模式
+### 用双数实现前向模式
 
-双数模式可以以优雅的方式实现.`a + b*epsilon`在哪里`epsilon^2 = 0`现在,我们要去.
+双数能够优雅地实现前向模式。双数的形式是 `a + b*epsilon`，其中 `epsilon^2 = 0`。
 
 ```
 Dual number: (value, derivative)
@@ -130,21 +130,21 @@ Arithmetic rules:
   sin(a, a')         = (sin(a), cos(a)*a')
 ```
 
-通过每一个操作,衍生品自动扩散.
+将输入变量的导数设为 1，导数就会自动经过每一个运算向前传播。
 
-### 建造一个自动化发动机
+### 构建自动微分引擎
 
-一台自动化发动机需要三个东西:
+一个自动微分引擎需要三项能力：
 
-1. **Value wrapping.**包装一个物体中的每个数字,
-2. **Graph recording.**每个操作都记录其输入和本地梯度函数.
-3. **Backward pass.**按地形排序图,然后逆行,在每个节点上应用链条.
+1. **封装数值。**把每个数字包装成同时保存数值与梯度的对象。
+2. **记录计算图。**每个运算都记录自己的输入和局部梯度函数。
+3. **执行反向传播。**对计算图进行拓扑排序，再逆序遍历，在每个节点应用链式法则。
 
-这就是PyTorch的特点.`autograd`没有.`torch.Tensor`类包裹值,记录操作时`requires_grad=True`在电话中计算梯度`.backward()`现在,我们要去.
+PyTorch 的 `autograd` 所做的正是这些。`torch.Tensor` 类封装数值；当 `requires_grad=True` 时，它会记录运算；调用 `.backward()` 时，它会计算梯度。
 
-### 皮托尔奇自动化器在帽子下如何工作
+### PyTorch Autograd 的底层工作方式
 
-当你写PyTorch代码时:
+当你编写以下 PyTorch 代码时：
 
 ```python
 x = torch.tensor(2.0, requires_grad=True)
@@ -153,23 +153,23 @@ y.backward()
 print(x.grad)  # 7.0 = 2*x + 3 = 2*2 + 3
 ```
 
-内部 PyTorch:
+PyTorch 在内部会执行以下步骤：
 
-1. 创造了一个`Tensor`节点`x`随着`requires_grad=True`
-2. 每次操作 (`**`现在`*`现在`+`) 创建一个新的节点并记录了后期函数
-3. `y.backward()`引发反向模式自动通过记录的图表
-4. 每个节点的`grad_fn`计算本地梯度并将它们传递到母节点
-5. 度积聚在`.grad`通过添加 (而不是替代) 的属性
+1. 创建一个 `Tensor` 节点来表示 `x`，并设置 `requires_grad=True`
+2. 每个运算（`**`、`*`、`+`）都会创建新节点，并记录反向函数
+3. `y.backward()` 触发计算图上的反向模式自动微分
+4. 每个节点的 `grad_fn` 计算局部梯度，并将它传递给父节点
+5. 梯度通过加法累积到 `.grad` 属性中，而不是覆盖原值
 
-图表是动态 (定义-by-run).每次前进传输都建立了一个新的图表.这就是为什么PyTorch支持模型内部的控制流 (如果/否则,循环).
+该计算图是动态的（define-by-run）：每次前向传播都会重新构建一张图。因此，PyTorch 模型内部可以使用 if/else 和循环等控制流。
 
 ```figure
 chain-rule
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1: 价值类
+### 第 1 步：Value 类
 
 ```python
 class Value:
@@ -184,9 +184,9 @@ class Value:
         return f"Value(data={self.data:.4f}, grad={self.grad:.4f})"
 ```
 
-每一个`Value`存储其数值数据,其梯度 (最初是零),一个倒退函数,并指向产生它的儿童节点.
+每个 `Value` 都会保存数值数据、梯度（初始值为零）、反向函数，以及生成它的子节点引用。
 
-### 步骤2: 梯度跟踪的算术操作
+### 第 2 步：跟踪梯度的算术运算
 
 ```python
     def __add__(self, other):
@@ -215,9 +215,9 @@ class Value:
         return out
 ```
 
-每个操作都会创造一个结尾,它知道如何计算本地梯度,并乘以上游梯度 (`out.grad`它们是`+=`处理一个值在多次操作中使用的情况.
+每个运算都会创建一个闭包，它知道如何计算局部梯度，并将其乘以上游梯度（`out.grad`）。使用 `+=` 是为了正确处理同一个值参与多个运算、需要汇总多路梯度的情况。
 
-### 步骤3: 倒车
+### 第 3 步：反向传播
 
 ```python
     def backward(self):
@@ -236,11 +236,11 @@ class Value:
             v._backward()
 ```
 
-拓类别确保每个节点的梯度在扩散到其子女之前得到充分计算.
+拓扑排序确保一个节点的梯度完全计算完成后，才会继续传播到它的子节点。种子梯度设为 1.0（dy/dy = 1）。
 
-### 步骤4:为完整的发动机提供更多操作
+### 第 4 步：为完整引擎补充更多运算
 
-基本的值类处理加算,乘法和连接.一个真正的自动化引擎需要更多.
+基础 Value 类已经支持加法、乘法和 ReLU。真正的自动微分引擎还需要更多操作。以下是构建神经网络所需的运算：
 
 ```python
     def __neg__(self):
@@ -295,22 +295,22 @@ class Value:
         return out
 ```
 
-**Why each operation matters:**
+**每项运算的重要性：**
 
-| Operation | Backward rule | Used in |
+| 运算 | 反向规则 | 用途 |
 |-----------|--------------|---------|
-| `__sub__` | Reuses add + neg | Loss computation (pred - target) |
-| `__pow__` | n * x^(n-1) | Polynomial activations, MSE (error^2) |
-| `__truediv__` | Reuses mul + pow(-1) | Normalization, learning rate scaling |
-| `exp` | exp(x) * upstream | Softmax, log-likelihood |
-| `log` | (1/x) * upstream | Cross-entropy loss, log probabilities |
-| `tanh` | (1 - tanh^2) * upstream | Classic activation function |
+| `__sub__` | 复用加法与取负 | 损失计算（pred - target） |
+| `__pow__` | n * x^(n-1) | 多项式激活、MSE（error^2） |
+| `__truediv__` | 复用乘法与 pow(-1) | 归一化、学习率缩放 |
+| `exp` | exp(x) * upstream | softmax、对数似然 |
+| `log` | (1/x) * upstream | 交叉熵损失、对数概率 |
+| `tanh` | (1 - tanh^2) * upstream | 经典激活函数 |
 
-聪明的部分:`__sub__`其他`__truediv__`它们可以免费获得正确的梯度,因为链条规则通过底层的加/多/操作构成.
+巧妙之处在于，`__sub__` 和 `__truediv__` 都通过已有运算定义。链式法则会沿底层的 add、mul 和 pow 运算自动组合，因此它们无需额外工作就能获得正确梯度。
 
-### 步骤5:从零开始的小型MLP
+### 第 5 步：从零构建迷你 MLP
 
-通过完整的值类,你可以建立一个神经网络. 没有 PyTorch. 没有 NumPy. 只有值和链条规则.
+拥有完整的 Value 类后，就可以构建神经网络。不使用 PyTorch，也不使用 NumPy，只依赖 Value 与链式法则。
 
 ```python
 import random
@@ -350,9 +350,9 @@ class MLP:
         return [p for layer in self.layers for p in layer.parameters()]
 ```
 
-`Neuron`计算器`tanh(w1*x1 + w2*x2 + ... + b)` `Layer`它们是神经元的列表.`MLP`子子,每一个重量都是一个`Value`现在我在电话中`loss.backward()`它们将变 gradients 传播到每个参数.
+一个 `Neuron` 计算 `tanh(w1*x1 + w2*x2 + ... + b)`，一个 `Layer` 是一组神经元，一个 `MLP` 则把多层连接起来。每个权重都是 `Value`，因此调用 `loss.backward()` 会把梯度传播到所有参数。
 
-**Training on XOR:**
+**在 XOR 上训练：**
 
 ```python
 random.seed(42)
@@ -381,11 +381,11 @@ for x, y in zip(xs, ys):
     print(f"  input={x}  target={y:2d}  pred={model(x).data:6.3f}")
 ```
 
-这是一个微级.纯Python中完整的神经网络训练循环,自动区分.
+这就是 micrograd：一个使用纯 Python 和自动微分实现的完整神经网络训练循环。所有商业深度学习框架在大规模场景中执行的也是同一套原理。
 
-### 步骤 6: 渐进检查
+### 第 6 步：梯度检查
 
-如何知道你的自动变量是正确的? 比较它与数值衍生品.这是梯度检查.
+怎样确认自动微分实现正确？将结果与数值导数进行比较，这就是梯度检查。
 
 ```python
 def gradient_check(build_expr, x_val, h=1e-7):
@@ -402,7 +402,7 @@ def gradient_check(build_expr, x_val, h=1e-7):
     return autodiff_grad, numerical_grad, diff
 ```
 
-试试一个复杂的表达式:
+用一个复杂表达式测试它：
 
 ```python
 def expr(x):
@@ -415,18 +415,18 @@ print(f"Difference: {diff:.2e}")
 # Difference should be < 1e-5
 ```
 
-对于实现新操作,渐进检查是必不可少的.如果你的后期通行有错误,数值检查会发现它.每一个认真的深度学习实现都在开发过程中进行渐进检查.
+实现新运算时，梯度检查必不可少。如果反向传播存在缺陷，数值检查就能将它捕获。所有严肃的深度学习实现都会在开发阶段执行梯度检查。
 
-**When to use gradient checking:**
+**何时使用梯度检查：**
 
-| Situation | Do gradient check? |
+| 场景 | 是否进行梯度检查？ |
 |-----------|-------------------|
-| Adding a new operation to your autograd | Yes, always |
-| Debugging a training loop that won't converge | Yes, check gradients first |
-| Production training | No, too slow (2x forward passes per parameter) |
-| Unit tests for autograd code | Yes, automate it |
+| 向自动微分引擎添加新运算 | 是，始终需要 |
+| 调试无法收敛的训练循环 | 是，先检查梯度 |
+| 生产训练 | 否，速度太慢（每个参数都需要两次前向传播） |
+| 自动微分代码的单元测试 | 是，应将其自动化 |
 
-### 步骤7:与手动计算进行验证
+### 第 7 步：与手工计算进行验证
 
 ```python
 x1 = Value(2.0)
@@ -442,12 +442,12 @@ print(f"dy/dx1 = {x1.grad}")   # 3.0 (= x2)
 print(f"dy/dx2 = {x2.grad}")   # 2.0 (= x1)
 ```
 
-手动检查:`y = relu(x1*x2 + 1)`自从那以后`x1*x2 + 1 = 7 > 0`是个性.
-`dy/dx1 = x2 = 3`现在,我们要去.`dy/dx2 = x1 = 2`发动机匹配.
+手工检查：`y = relu(x1*x2 + 1)`。由于 `x1*x2 + 1 = 7 > 0`，ReLU 等同于恒等函数。
+`dy/dx1 = x2 = 3`，`dy/dx2 = x1 = 2`，引擎的结果与之相符。
 
-## 用它
+## 实际使用
 
-### 检查PyTorch
+### 与 PyTorch 对照验证
 
 ```python
 import torch
@@ -463,9 +463,9 @@ print(f"PyTorch dy/dx1 = {x1.grad.item()}")  # 3.0
 print(f"PyTorch dy/dx2 = {x2.grad.item()}")  # 2.0
 ```
 
-发动机计算出与 PyTorch 的结果相同,因为数学是相同的:通过链条规则进行反向模式自动调节.
+梯度完全相同。你的引擎与 PyTorch 得到相同结果，因为二者使用的数学原理一致：通过链式法则执行反向模式自动微分。
 
-### 更加复杂的表达
+### 更复杂的表达式
 
 ```python
 a = Value(2.0)
@@ -479,43 +479,43 @@ print(f"df/db = {b.grad}")  #  2.0 (= a)
 print(f"df/dc = {c.grad}")  #  1.0
 ```
 
-## 运送它
+## 交付成果
 
-这一课产生了:
-- `outputs/skill-autodiff.md`-- 建立和调试自动级系统的技能
-- `code/autodiff.py`-- 您可以扩展的最小自动化引擎
+本课会产出：
+- `outputs/skill-autodiff.md`——用于构建和调试自动微分系统的技能
+- `code/autodiff.py`——可以继续扩展的最小自动微分引擎
 
-在此构建的值类是第三阶段神经网络训练循环的基础.
+这里构建的 Value 类，是第 3 阶段神经网络训练循环的基础。
 
-## 运动
+## 练习
 
-1. 加入`__pow__`运行到值类,以便您计算`x ** n`检查一下`d/dx(x^3)`在`x=2`相当于`12.0`现在,我们要去.
+1. 为 Value 类添加 `__pow__`，使其能够计算 `x ** n`。验证 `d/dx(x^3)` 在 `x=2` 时等于 `12.0`。
 
-2. 加入`tanh`检查一下`tanh'(0) = 1`其他`tanh'(2) = 0.0707`现在,我们要做什么?
+2. 添加 `tanh` 激活函数。验证 `tanh'(0) = 1`，并验证 `tanh'(2) = 0.0707`（近似值）。
 
-3. 构建一个单个神经元的计算图:`y = relu(w1*x1 + w2*x2 + b)`计算五个梯度,并对 PyTorch 进行验证.
+3. 为单个神经元构建计算图：`y = relu(w1*x1 + w2*x2 + b)`。计算全部五个梯度，并与 PyTorch 的结果进行验证。
 
-4. 实现前进模式自动调用使用双号码.`Dual`检查它与反向模式发动机相同的衍生品.
+4. 使用双数实现前向模式自动微分。创建一个 `Dual` 类，并验证它得到的导数与反向模式引擎一致。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Chain rule | "Multiply the derivatives" | The derivative of composed functions equals the product of each function's local derivative, evaluated at the right point |
-| Computational graph | "The network diagram" | A directed acyclic graph where nodes are operations and edges carry values (forward) or gradients (backward) |
-| Forward mode | "Push derivatives forward" | Autodiff that propagates derivatives from inputs to outputs. One pass per input variable. |
-| Reverse mode | "Backpropagation" | Autodiff that propagates gradients from outputs to inputs. One pass per output variable. |
-| Autograd | "Automatic gradients" | A system that records operations on values, builds a graph, and computes exact gradients via the chain rule |
-| Dual numbers | "Value plus derivative" | Numbers of the form a + b*epsilon (epsilon^2 = 0) that carry derivative information through arithmetic |
-| Topological sort | "Dependency order" | Ordering graph nodes so every node comes after all its dependencies. Required for correct gradient propagation. |
-| Gradient accumulation | "Add, don't replace" | When a value feeds into multiple operations, its gradient is the sum of all incoming gradient contributions |
-| Dynamic graph | "Define by run" | A computation graph rebuilt on every forward pass, allowing Python control flow inside models (PyTorch style) |
-| Gradient checking | "Numerical verification" | Comparing autodiff gradients against numerical finite-difference gradients to verify correctness. Essential for debugging. |
-| MLP | "Multi-layer perceptron" | A neural network with one or more hidden layers of neurons. Each neuron computes a weighted sum plus bias, then applies an activation function. |
-| Neuron | "Weighted sum + activation" | The basic unit: output = activation(w1*x1 + w2*x2 + ... + b). The weights and bias are learnable parameters. |
+| Chain rule | “把导数乘起来” | 复合函数的导数等于各函数在正确位置的局部导数之积 |
+| Computational graph | “网络图” | 节点表示运算、边在前向传播时传递数值并在反向传播时传递梯度的有向无环图 |
+| Forward mode | “向前推导数” | 将导数从输入传播到输出的自动微分方式；每个输入变量需要一次传播 |
+| Reverse mode | “反向传播” | 将梯度从输出传播到输入的自动微分方式；每个输出变量需要一次传播 |
+| Autograd | “自动梯度” | 记录数值上的运算、构建计算图并通过链式法则计算精确梯度的系统 |
+| Dual numbers | “数值加导数” | 形如 a + b*epsilon（epsilon^2 = 0）的数，可在算术运算中携带导数信息 |
+| Topological sort | “依赖顺序” | 对图节点排序，使每个节点都位于其所有依赖之后；正确传播梯度需要这种顺序 |
+| Gradient accumulation | “累加，不要覆盖” | 当一个值进入多个运算时，它的梯度等于所有传入梯度贡献之和 |
+| Dynamic graph | “运行时定义” | 每次前向传播都会重建的计算图，使模型内部可以使用 Python 控制流（PyTorch 风格） |
+| Gradient checking | “数值验证” | 将自动微分梯度与数值有限差分梯度比较以验证正确性，是重要的调试方法 |
+| MLP | “多层感知机” | 包含一个或多个隐藏神经元层的网络；每个神经元计算加权和与偏置，再应用激活函数 |
+| Neuron | “加权和 + 激活” | 基本计算单元：output = activation(w1*x1 + w2*x2 + ... + b)，其中权重和偏置是可学习参数 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [3Blue1Brown: Backpropagation calculus](https://www.youtube.com/watch?v=tIeHLnjs5U8)-- 视觉解释神经网络中的链条规则
-- [PyTorch Autograd mechanics](https://pytorch.org/docs/stable/notes/autograd.html)实际系统是如何运作的
-- [Baydin et al., Automatic Differentiation in Machine Learning: a Survey](https://arxiv.org/abs/1502.05767)-- 综合参考
+- [3Blue1Brown：反向传播微积分](https://www.youtube.com/watch?v=tIeHLnjs5U8)——神经网络中链式法则的可视化解释
+- [PyTorch Autograd 机制](https://pytorch.org/docs/stable/notes/autograd.html)——真实系统的工作原理
+- [Baydin 等：《机器学习中的自动微分综述》](https://arxiv.org/abs/1502.05767)——全面的参考资料
