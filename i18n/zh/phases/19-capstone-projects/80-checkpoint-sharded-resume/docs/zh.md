@@ -1,24 +1,24 @@
-# 核核复核和核核复核
+# 分片检查点与原子恢复
 
-> 节点失败每隔几小时就会停止70B参数训练工作. 检查点的格式决定你是否会失去30分钟或30小时. 一个分碎的检查站,并列写每个级别的分碎,并记录所有权在公开表中. 恢复将每个级别的分片从其自己的文件中加载, 重建状态在相同的世界尺寸, 原子写法可以防止一个半完成的检查点毒害下一个简历.
+> 一个 70B 参数训练任务每隔几小时就可能被节点故障打断。检查点格式决定你损失的是 30 分钟，还是 30 小时。分片检查点会让每个 rank 并行写出自己的分片，并在 manifest 中记录所有权。恢复时，每个 rank 只从自己的文件加载自己的分片，在相同的 world size 上重建状态，优化器可以像什么都没发生过一样继续执行。原子写则保证一个写到一半的检查点不会污染下一次恢复。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 19 Track C lessons 42-49
-**Time:** ~90 min
+**Prerequisites:** 第 19 阶段 Track C 第 42–49 课
+**Time:** 约 90 分钟
 
 ## 学习目标
 
-- 保存一个多级检查点作为一个每级分片文件加上一个记录哪个级别拥有什么的表格.
-- 使用原子写模式 (写到临时路径,然后更名),这样一个崩盘中写永远不会产生半完成的检查点.
-- 从表格中恢复,验证对 fp16参数和Zero优化器状态的字节等级状态.
-- 保护表达式方案免受三种失败模式:世界规模变化,碎片数量不匹配和部分写.
+- 把多 rank 检查点保存为“每个 rank 一个分片文件”加上一份记录各分片归属的 manifest。
+- 使用原子写模式，也就是先写临时路径再 rename，保证写到一半时崩溃也不会留下半成品检查点。
+- 从 manifest 恢复，并验证 fp16 参数和 ZeRO 优化器状态在每个 rank 上都能逐字节一致。
+- 说明 manifest schema 如何防御三种故障模式：world size 变化、分片数量不匹配，以及部分写入。
 
 ## 问题
 
-尼拉检查站将所有参数和优化状态读取到0级,收集,并编写一个文件. 对于70B模型来说,一个级别的网络端口是1.1TB的状态. 写作者阻碍了其他等级,因为他们忙等待聚会.  IO 带宽是单个GPU的网络链接最慢,而不是总数. 在实体集群中,收集然后写的步骤可能比上一次培训时间更长,这意味着工作人员每天都会出差不多一个检查点.
+传统检查点的做法是：把所有参数和优化器状态都 gather 到 rank 0，然后写成一个大文件。对于 70B 模型，这意味着要把 1.1 TB 状态全都压过一个 rank 的网络口。其他 rank 会因为等待 gather 而空闲，IO 带宽受限于最慢那条单链路，而不是集群总带宽。在真实集群里，这一步 gather 再写出的耗时，可能比之前整整一小时训练还长，于是一天内连一个完整检查点都很难稳定产出。
 
-碎片化检查站翻转了模式:每个级别都在平行地写出自己的碎片. 任何一块的记录可以让每块回归原来的位置. 总体写带宽尺度与集群. 一个1TB检查点需要4个小时通过一个排名,需要4分钟通过64个排名. 另外,手表给你一份不兼容的简历合同: 随着世界规模的变化, 部分写字可以检测到,
+分片检查点正好把模式反过来：每个 rank 并行写出自己的那一片状态，manifest 记录哪个 rank 拥有哪个分片，因此恢复时也能把这些分片准确放回原来的位置。总写带宽随着集群规模提升。一个通过单 rank 需要 4 小时写完的 1 TB 检查点，通过 64 个 rank 并行写可能只需要 4 分钟。此外，manifest 还给了你一份恢复契约：world size 变化能被检测，部分写入能被检测，load 路径可以“响亮失败”，而不是悄悄加载陈旧或损坏数据。
 
 ## 概念
 
@@ -33,7 +33,7 @@ flowchart TD
   R --> Done[checkpoint complete]
 ```
 
-### 显现式方案
+### Manifest 结构
 
 ```json
 {
@@ -48,91 +48,91 @@ flowchart TD
 }
 ```
 
-现在有三个场面承载.`world_size`让一个不同尺寸的简历大声失败而不是默默腐败.`sha256`部分或腐败的写作.`param_shard_offset`其他`param_shard_numel`按分片,让载体在正确位置重建平面参数子.
+有三个字段是承重件。`world_size` 用来保证在不同 world size 上恢复时直接报错，而不是静默损坏；`sha256` 用来检测部分写入或文件损坏；`param_shard_offset` 与 `param_shard_numel` 则告诉加载器每个分片应当放回扁平参数张量的哪个位置。
 
 ### 原子写
 
-标准模式:写每一个碎片到`<name>.tmp`写下明文给`manifest.json.tmp`由于在一个文件系统中,一个文件的重命名是原子的.新文件完全存在或旧文件是.在最后的重命名之前的崩离开了前一个检查点,作为现实.没有原子写,一个崩可以留下一个部分碎片,一个现有表格指向它,负载破坏了恢复的优化状态.
+标准模式是：先把每个分片写到 `<name>.tmp`，再把 manifest 写到 `manifest.json.tmp`，对每个文件执行 fsync，然后再 rename。POSIX 在同一文件系统内的 rename 是原子的：要么你看到的是旧文件，要么你看到的是完整的新文件。若在最后 rename 之前发生崩溃，活着的仍然是上一版检查点。没有原子写的话，就可能留下一个只有一半内容的分片文件，manifest 却已经指向了它，恢复时就会把优化器状态带着损坏继续加载进去。
 
-### 系统必须防范三个故障模式
+### 结构必须防住的三种故障模式
 
-| Failure | Symptom | Defence |
+| 故障 | 表现 | 防线 |
 |---------|---------|---------|
-| World-size change | resume on N=8 with manifest from N=4 | world_size mismatch in manifest, fail loudly |
-| Shard count mismatch | resume sees fewer rank*.bin files than shards in manifest | enumerate shards, verify every one exists |
-| Partial write | shard file truncated mid-flush | sha256 verification on load |
+| world size 变化 | 在 N=8 上加载来自 N=4 的 manifest | 在 manifest 中检查 world_size 不匹配并直接报错 |
+| 分片数量不匹配 | 恢复时看到的 rank*.bin 文件少于 manifest 记录的 shards 数量 | 枚举所有分片并验证每一个都存在 |
+| 部分写入 | 分片文件在 flush 过程中被截断 | 加载时执行 sha256 校验 |
 
-每个辩护都早些时候拒绝了坏负担; 替代方案是沉默的腐败,
+每种防线都应该尽早拒绝坏恢复。另一种选择是“静默损坏”，而那类问题往往要等到 100 步之后 loss 变成 NaN 时才会显现。
 
-### 为什么每位档案,而不是一个大档案
+### 为什么要每个 rank 一个文件，而不是一个大文件
 
-通过一个文件同时写`O_APPEND`在POSIX上使用字节一致的写字,但实际上,一个片段内的偏移跨度是MB大小区域,锁定占主导地位.当底层文件系统平行时,每级文件没有争议,并且从条纹中获益 (Lustre,GPFS).生产堆 (DeepSpeed,FSDP,NeMo) 都使用每级文件.
+在 POSIX 上使用 `O_APPEND` 对一个大文件并发写，理论上对字节追加是可行的；但现实里，每个分片对应的是 MB 级偏移区间，锁竞争会迅速变成瓶颈。每个 rank 各写各的文件，则完全没有写锁争用；若底层文件系统本身支持并行条带化，例如 Lustre 或 GPFS，这种布局还能天然受益。DeepSpeed、FSDP、NeMo 等生产系统都采用逐 rank 文件，原因就在这里。
 
 ```figure
 ci-sharded-checkpoint
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`执行:
+`code/main.py` 实现了：
 
-- `ShardManifest`上面的方案加上数据类`to_json`现在,我们要去.`from_json`现在,我们要去.
-- `save_sharded(state_dict_per_rank, dir, step)`通过原子的时间,然后重命名模式,然后写出表格.
-- `load_sharded(dir, expected_world_size)`检查每个碎片的 sha256 ,并返回每级状态指令.
-- 复程测试:构建每级状态,保存,加载,断定字节等等.
+- `ShardManifest` 数据类，承载上述 schema，并提供 `to_json` 与 `from_json`。
+- `save_sharded(state_dict_per_rank, dir, step)`：使用“先写临时文件再 rename”的原子模式，把每个 rank 的二进制状态写到自己的文件，再写出 manifest。
+- `load_sharded(dir, expected_world_size)`：读取 manifest、校验每个分片的 sha256，并返回逐 rank 的状态字典。
+- 一个 round-trip 测试：构造逐 rank 状态，保存，再加载，并断言结果逐字节相等。
 
-运行它:
+运行它：
 
 ```bash
 python3 code/main.py
 ```
 
-输出: 4 个分片文件加上写出表格,然后用字节等等验证重新加载.
+输出会显示：4 个分片文件和 manifest 被写出，随后再被加载回来，并完成逐字节一致性验证。
 
-## 野生生产模式
+## 生产环境中的常见模式
 
-只有三个模式使检查站变得硬得可以运输.
+有三种模式会把检查点机制从“可用”推进到“可交付”。
 
-**Async write.**生产堆发出检查点写在单独的线程或过程,因此训练继续. 屏障在下一个检查点:不要开始下一个保存直到之前的完成.`async_io`课程保持写作同步,让步骤是可见的.
+**Async write。** 生产系统通常把检查点写入放到单独线程或进程中，让训练可以继续推进。真正的 barrier 出现在下一个检查点开始前：只有上一次写完，才允许开始下一次保存。DeepSpeed 的 `async_io` 做的就是这件事。本课刻意保持同步写入，让步骤更容易观察。
 
-**Local fast disk first, then async upload.**写到本地NVMe (快速) 然后与S3或GCS进行同步上传. 两层格式模式使集群中检查点保持恢复速度,同时将持久的副本出于集群用于档案.表格载有本地路径;上传表格载有远程路径.
+**先写本地快盘，再异步上传。** 先写到本地 NVMe，速度快；随后异步上传到 S3 或 GCS。两层存储模式让集群内恢复仍然保持高速，同时也把一份持久副本送到集群外做归档。manifest 记录本地路径；上传 manifest 则记录远端路径。
 
-**Rotation matters.**生产运行保持最后的K检查点 (通常是3-5),并旋转最旧的.没有旋转,磁盘填满了运行中期,下一个检查点失败了.随着旋转,下一个保存首先删除了最旧的,从而释放了预算.
+**Rotation 很重要。** 生产任务通常只保留最近 K 个检查点，一般是 3 到 5 个，并在写新检查点前先删除最旧的。如果没有 rotation，磁盘会在训练进行到一半时被写满，下一次保存直接失败。有了 rotation，新的保存会先释放预算，再写入新版本。
 
-## 用它
+## 实际应用
 
-生产模式:
+生产模式：
 
-- **DeepSpeed checkpointing.** `deepspeed.save_checkpoint(tag=step)`编写每级文件和一个`latest`文件指向活跃标签.
-- **PyTorch FSDP checkpointing.** `torch.distributed.checkpoint`保存碎片状态`Planner`根据每位排名的排名.
-- **NeMo.**绕着深速和FSDP的制服`save_to_checkpoint`增加元数据的API.
+- **DeepSpeed checkpointing。** `deepspeed.save_checkpoint(tag=step)` 会写出逐 rank 文件，并维护一个指向当前活动 tag 的 `latest` 文件。
+- **PyTorch FSDP checkpointing。** `torch.distributed.checkpoint` 会保存分片状态，并通过 `Planner` 决定每个 rank 的布局。
+- **NeMo。** 在 DeepSpeed 和 FSDP 之上提供统一的 `save_to_checkpoint` API，并附加更多元数据。
 
-## 运送它
+## 交付成果
 
-课81节节省了DDP+ZeRO的端到端运行的一个分断检查点,并将其重新加载到相同的世界规模,以证明简历合同有效.
+第 81 课会在端到端 DDP + ZeRO 演示中保存一份分片检查点，并在相同的 world size 上把它加载回来，证明恢复契约成立。
 
-## 运动
+## 练习
 
-1. 添加异步写:启动一个线程中的保存,让训练继续. 阻止下一个保存直到之前的保存完成.
-2. 添加一个`last_5_steps`转换:保持最新的5个检查点,在保存新的之前删除最旧的检查点.
-3. 加入仅使用CRC的快速验证路径,用于内部循环重装 (旋转将检查点转换为新的活跃点,没有完整 sha256).
-4. 通过阅读表格,连接和重新分割,从N=4到N=8的碎片重平衡.
-5. 添加一个上传到一个假的S3 (第二个目录) 和写上传说明书. 捍卫两层存储政策.
+1. 添加异步写：在一个线程里启动保存，让训练继续进行；直到上一次保存完成前，阻止下一次保存开始。
+2. 添加 `last_5_steps` 轮转：只保留最近 5 个检查点，在保存新检查点前删除最旧的那个。
+3. 添加只用 CRC 的快速校验路径，用于内部循环中的快速恢复；rotation 把旧检查点切成新活动版本时，不必每次都跑完整 sha256。
+4. 添加跨 world size 加载：读取 manifest，拼接原有分片，再把它们从 N=4 重新切分到 N=8。
+5. 添加上传到一个假的 S3，也就是第二个目录，并为上传过程写出 upload manifest。说明为什么两层存储策略合理。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|------------------------|
-| Sharded checkpoint | "Per-rank save" | Each rank writes its own shard file in parallel |
-| Manifest | "Index" | JSON file recording shard paths, offsets, and sha256 |
-| Atomic write | "tmp then rename" | Write to .tmp then POSIX rename so a crash leaves the previous file live |
-| Partial write | "Truncated shard" | A crash during write produces a corrupt shard; sha256 catches it |
-| Rotation | "Keep last K" | Delete oldest checkpoint before writing new one to bound disk usage |
+| Sharded checkpoint | “逐 rank 保存” | 每个 rank 并行写出自己的分片文件 |
+| Manifest | “索引文件” | 一份记录分片路径、偏移和 sha256 的 JSON 文件 |
+| Atomic write | “先写 tmp 再 rename” | 先写临时文件，再做 POSIX rename，因此崩溃时上一版本仍保持有效 |
+| Partial write | “截断分片” | 写到一半崩溃会产生损坏分片；sha256 可以把它抓出来 |
+| Rotation | “保留最近 K 个” | 在写新检查点前删除最旧检查点，以控制磁盘占用 |
 
-## 进一步阅读
+## 延伸阅读
 
 - [DeepSpeed checkpointing](https://deepspeed.readthedocs.io/en/latest/model-checkpointing.html)
 - [PyTorch torch.distributed.checkpoint](https://pytorch.org/docs/stable/distributed.checkpoint.html)
 - [POSIX rename atomicity](https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html)
-- 阶段19课程78 - 泽罗状态这个检查站是以保存
-- 第19阶段 第81课 - - 终端到终端的演示,回复保存的状态
+- 第 19 阶段第 78 课：这个检查点正是按 ZeRO 状态的布局来保存
+- 第 19 阶段第 81 课：端到端演示会对保存后的状态做完整 round-trip
