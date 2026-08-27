@@ -1,64 +1,64 @@
-# 转变器之前的文字生成  N-gram语言模型
+# Transformer 之前的文本生成——N 元语言模型
 
-> 如果一个字令人惊,模型是坏的. 困惑使一个数字惊. 滑滑使它有限.
+> 如果一个词令人意外，说明模型还不够好。困惑度把意外量化，平滑则让这个数值保持有限。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python
-**Prerequisites:** Phase 5 · 01 (Text Processing), Phase 2 · 14 (Naive Bayes)
-**Time:** ~45 minutes
+**Prerequisites:** 阶段 5 · 01（文本处理）、阶段 2 · 14（朴素贝叶斯）
+**Time:** 约 45 分钟
 
 ## 问题
 
-在变压器之前,RNN之前,词嵌入之前,一个语言模型通过计算它跟上之前的词的频率来预测下一个词`n-1`字数"猫" → "坐" 47 次,"猫" → "跳" 12 次,"猫" → "冰箱" 0 次.正常化以获得概率分布.
+在 Transformer、RNN 和词嵌入出现之前，语言模型通过统计一个词跟在前 `n-1` 个词之后的频率来预测下一个词。统计“the cat”→“sat”出现 47 次，“the cat”→“jumped”出现 12 次，“the cat”→“refrigerator”出现 0 次，再归一化成概率分布。
 
-这是一个n-gram语言模型. 它运行了每一个语音识别器,每一个拼音检查器,以及每一个基于短语的机器翻译系统, 从1980年到2015年.
+这就是 n 元语言模型。从 1980 年到 2015 年，每个语音识别器、拼写检查器和基于短语的机器翻译系统都依赖它。如今，当你需要廉价的设备端语言建模时，它仍在发挥作用。
 
-问题是如何处理未见的n-gram.一个基于原始数值的模型将未见的任何东西的概率分配为零,这是灾难性的,因为句子长,几乎每个长句子至少包含一个未见的序列.五十年的平滑研究解决了这一问题.Kneser-Ney平滑是结果,现代深度学习继承了它的经验传统.
+真正有趣的问题是如何处理未见过的 n 元语法。原始计数模型会为所有未在训练中出现过的模式分配零概率。这是灾难性的，因为句子很长，几乎每个长句都会包含至少一个未见序列。五十年的平滑研究解决了这个问题，结果便是 Kneser-Ney 平滑；现代深度学习也继承了这种重视实证的传统。
 
 ## 概念
 
-![N-gram model: count, smooth, generate](../assets/ngram.svg)
+![N 元模型：计数、平滑、生成](../assets/ngram.svg)
 
 ### 预测游戏
 
-在这种机器出现之前,有一次实验定义了语言模型. 覆盖一个英语句子的下一个字母. 要求别人猜测,一次猜测,直到他们做得好. 写下猜测数量. 重复几百个字母.
+在任何这类机制出现之前，有一项实验定义了什么是语言模型。遮住一个英语句子的下一个字母，让参与者逐个猜测，直到猜中为止，并记录猜测次数；对几百个字母重复这一过程。
 
-猜测数量不是小事.它们是文本的无损重新编码:把数量序列交给第二个相同的猜测器,他们可以重建每个字母,因为在每个位置,他们知道哪些猜测是第一.一个可以重新编码的信息,在更少的符号中,每个符号的信息都少,所以猜测数量统计对英语的位上设置了一个限.
+猜测次数并非无关紧要的统计。它们是文本的一种无损重新编码：把次数序列交给第二位采用相同策略的猜测者，对方就能还原每个字母，因为他在每个位置都知道猜测的先后顺序。一条消息若能用更少符号重新编码，每个符号所携带的信息就更少，因此猜测次数的统计结果给出了英语熵的上限。
 
-农在1951年进行了这个测试,并得到了一个数字,它仍然统治这个领域.一个27个符号的字母 (26个字母加上空间) 可以携带`log2(27) ≈ 4.75`字母中每位位数.人类猜测100字母的文本,每字母中降落在0.6到1.3位之间.英语是约四分之三的强迫动作.模型必须学习的结构在任何模型都学会之前被测量.
+Shannon 在 1951 年进行了这项实验，得出的数字至今仍支配着这个领域。由 27 个符号（26 个字母加空格）组成的字母表，每个字母最多可以携带 `log2(27) ≈ 4.75` 比特。拥有 100 个字母上下文的人类猜测者，只需每个字母 0.6～1.3 比特。英语大约四分之三的字符都近乎是必然选择。早在任何模型有能力学习这种结构之前，人们已经测量出了模型需要学习的结构。
 
-每个语言模型都是这个游戏的机械玩家,
+此后的每个语言模型都在机械地玩这场游戏，本课的每个评估数字都在为它计分：
 
-- **Cross-entropy loss**训练一个LM字面上是减少猜测游戏的分数.
-- **Perplexity**是`2^bits`(或`e^nats`选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是: 选的方法是:
-- **Context length is the player's memory.**两种记忆代币可以使用,一个变压器可以使用100万代币玩,规则从来没有改变,玩家变得更好.
+- **交叉熵损失**是模型表示每个符号平均需要的比特数。训练语言模型，本质上就是尽量降低它在猜测游戏中的分数。
+- **困惑度**是 `2^bits`（或 `e^nats`）：模型完成猜测后仍面对的分支因子。在 27 个符号上均匀猜测时，困惑度为 27；每个字母只需 1 比特的玩家，困惑度为 2。
+- **上下文长度就是玩家的记忆。** 三元模型只带两个词元的记忆，Transformer 则带着 10 万词元玩同一场游戏。规则从未改变，只是玩家变强了。
 
-一个单元转换到轨道:每字母的游戏分数 (`log2`),而下面的n-gram公式在 nats (自然日志) 中每字符标记分数,并且由于困难`e^H`在纳斯等级中`2^H`在位中,两个视图在不同的单位中是相同的测量.
+需要留意一次单位切换：这场游戏以比特（`log2`）衡量每个字母，而下面的 n 元语法公式使用自然对数，以纳特衡量每个词元——由于以纳特计算的困惑度 `e^H` 等于以比特计算的 `2^H`，二者只是用不同单位表示同一个测量结果。
 
 ```figure
 prediction-game
 ```
 
-**N-gram probability:** `P(w_i | w_{i-n+1}, ..., w_{i-1})`修复`n`根据数值计算:
+**N 元概率：** `P(w_i | w_{i-n+1}, ..., w_{i-1})`。固定 `n`（三元模型通常取 3，四元模型取 4），再根据计数计算：
 
 ```text
 P(w | context) = count(context, w) / count(context)
 ```
 
-**The zero-count problem.**任何在训练中没有看到的 n-gram 得到了零的概率.2007年对布朗体的研究发现,即使是4克模型的30%的4克在训练中没有看到.你不能在没有平滑的情况下评估任何真实文本.
+**零计数问题。** 任何训练中未出现的 n 元语法都会得到零概率。2007 年针对 Brown 语料库的一项研究发现，即使使用四元模型，留出数据中仍有 30% 的四元语法没有在训练中出现。如果不进行平滑，就无法在任何真实文本上评估。
 
-**Smoothing approaches, in order of sophistication:**
+**平滑方法，按复杂程度排列：**
 
-1. **Laplace (add-one).**增加一个每次数量.
-2. **Good-Turing.**根据频率的频率,将更高频率事件的概率量重新分配到未见的事件.
-3. **Interpolation.**结合 n-gram, (n-1)-gram等估计和调节可的重量.
-4. **Backoff.**如果 n-gram 算是零,则回到 (n-1) - gram.
-5. **Absolute discounting.**减去固定折扣`D`对于所有人来说,
-6. **Kneser-Ney.**绝对折扣加上低级模型的聪明选择:使用 *延续概率* (单词出现在多少场合) 而不是原始频率.
+1. **拉普拉斯（加一）。** 为每个计数加 1。简单，但在罕见事件上表现很差。
+2. **Good-Turing。** 根据频数的频数，把概率质量从高频事件重新分配给未见事件。
+3. **插值。** 使用可调权重组合 n 元、(n-1) 元等不同阶数的估计。
+4. **回退。** 如果 n 元语法的计数为零，就回退到 (n-1) 元语法。Katz 回退对此进行归一化。
+5. **绝对折扣。** 从所有计数中减去固定折扣 `D`，把释放的概率质量重新分配给未见事件。
+6. **Kneser-Ney。** 使用绝对折扣，并巧妙地选择低阶模型：不使用原始频率，而使用*延续概率*（某个词出现在多少种上下文中）。
 
-子-子的洞察力深深. "旧金山"是一个普通的字母. 单形"弗朗西斯科"主要出现在"圣." 无常的绝对折扣给"弗朗西斯科"高单形概率 (因为数量很高). 克内塞-尼指出",弗朗西斯科"只出现在一个背景下,因此降低了其延续可能性. 结果:以"弗朗西斯科"结束的小说大图得到适当的低概率.
+Kneser-Ney 的洞见非常深刻。“San Francisco”是常见二元语法，一元词“Francisco”却几乎只出现在“San”后面。朴素绝对折扣会因为“Francisco”计数很高而赋予它较高的一元概率。Kneser-Ney 注意到“Francisco”只出现在一种上下文中，于是相应降低它的延续概率。结果是，以“Francisco”结尾的新二元语法会得到恰当的低概率。
 
-**Evaluation: perplexity.**平均负记载概率的指数是每一个字的平均负记载概率.较低的比较好.一个困难度为100意味着模型是像它一样混的,它会在100个字中选择均.
+**评估：困惑度。** 在留出测试集上，逐词平均负对数似然的指数。越低越好。困惑度为 100，意味着模型的迷茫程度相当于从 100 个词中均匀选择一个。
 
 ```text
 perplexity = exp(- (1/N) * Σ log P(w_i | context_i))
@@ -68,9 +68,9 @@ perplexity = exp(- (1/N) * Σ log P(w_i | context_i))
 ngram-backoff
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:三重数
+### 第 1 步：三元语法计数
 
 ```python
 from collections import Counter, defaultdict
@@ -96,9 +96,9 @@ def raw_probability(ngrams, contexts, context, word):
     return ngrams.get(ctx + (word,), 0) / contexts[ctx]
 ```
 
-输入是标记式句子的列表. 输出是 n 克数和文本数. `<s>`其他`</s>`它们是句子的边界.
+输入是一组已经分词的句子，输出是 n 元语法计数与上下文计数。`<s>` 和 `</s>` 是句子边界。
 
-### 步骤2: 拉普拉斯平滑
+### 第 2 步：拉普拉斯平滑
 
 ```python
 def laplace_probability(ngrams, contexts, vocab_size, context, word):
@@ -108,9 +108,9 @@ def laplace_probability(ngrams, contexts, vocab_size, context, word):
     return numerator / denominator
 ```
 
-增加1个数量, 顺利,但过度分配质量, 给未见的事件,
+为每个计数加 1。这样可以平滑概率，却会为未见事件分配过多质量，同时损害已见罕见事件。
 
-### 步骤3:Kneser-Ney (大图,插入)
+### 第 3 步：Kneser-Ney（二元、插值式）
 
 ```python
 def kneser_ney_bigram_model(corpus_tokens, discount=0.75):
@@ -152,9 +152,9 @@ def kneser_ney_bigram_model(corpus_tokens, discount=0.75):
     return prob
 ```
 
-三个移动部分.`continuation_prob`现在,我们在研究中发现了"这个词在多少不同的环境中出现?" (Kneser-Ney创新).`lambda_prev`基本的概率是减产的主要术语加上加权延续术语.
+这里有三个关键部分。`continuation_prob` 表示“这个词出现在多少种不同上下文中？”（Kneser-Ney 的创新）。`lambda_prev` 是折扣释放出的概率质量，用于给回退项加权。最终概率等于经过折扣的主项，加上经过加权的延续项。
 
-### 步骤4:通过采样生成文本
+### 第 4 步：通过采样生成文本
 
 ```python
 import random
@@ -178,9 +178,9 @@ def generate(prob_fn, vocab, prefix, max_len=30, seed=0):
     return tokens
 ```
 
-采样与概率相对.每种种子总是产生不同的输出. 为了像光束搜索的输出,在每个步骤中选择 argmax (贪) 并添加一个小的随机性按 (温度).
+按概率成比例采样。使用不同随机种子时，输出始终不同。如果希望得到类似束搜索的输出，就在每一步选择 argmax（贪心），再加入一个小型随机性旋钮（温度）。
 
-### 步骤5:困惑
+### 第 5 步：困惑度
 
 ```python
 import math
@@ -198,18 +198,18 @@ def perplexity(prob_fn, sentences):
     return math.exp(-total_log_prob / total_tokens)
 ```
 
-对于布朗体,一个精确调整的4克KN模型达到140左右的困难.一个变压器LM在同一测试组上达到15-30分.差距大约是10倍.这差距是为什么场移动.
+越低越好。在 Brown 语料库上，调优良好的四元 KN 模型可以达到约 140 的困惑度，Transformer 语言模型在同一测试集上则能达到 15～30，差距约为 10 倍。这就是整个领域转向新架构的原因。
 
-## 用它
+## 学以致用
 
-- **Classical NLP teaching.**您可以得到最明显的光滑,MLE和困惑.
-- **KenLM.**作为语音和MT系统的回数器,低延迟的重要.
-- **On-device autocomplete.**键盘中的三重图模型.
-- **Baselines.**如果你的变压器没有超过KN,那么有些问题.
+- **经典自然语言处理教学。** 这是学习平滑、最大似然估计和困惑度最清晰的途径。
+- **KenLM。** 生产级 n 元语法库，用于低延迟语音与机器翻译系统的重打分。
+- **设备端自动补全。** 键盘里至今仍在使用三元模型。
+- **基线。** 在宣布神经语言模型表现良好之前，务必先计算 n 元语言模型的困惑度。如果 Transformer 没有大幅胜过 KN，一定有哪里出了问题。
 
-## 运送它
+## 交付成果
 
-保存如`outputs/prompt-lm-baseline.md`其他:
+保存为 `outputs/prompt-lm-baseline.md`：
 
 ```markdown
 ---
@@ -229,28 +229,28 @@ Given a corpus and target use (next-word prediction, rescoring, perplexity basel
 Refuse to report perplexity computed with different tokenization between systems being compared — perplexity numbers are comparable only under identical tokenization. Flag OOV rate in test set; KN handles OOV poorly unless you reserve a special <UNK> token during training.
 ```
 
-## 运动
+## 练习
 
-1. **Easy.**训练一个三重形 LM 在一个1000句的莎士比亚体. 产生20句. 他们将是本地可信的,但全球不一致.这是正宗的演示.
-2. **Medium.**根据Shakespeare的分数,将KN模型的复杂性实现.
-3. **Hard.**建立一个三重形字母拼写校正器:给出错误拼写的词及其背景,在LM下生成对照和根据背景概率排名.
+1. **简单。** 在包含 1000 个莎士比亚句子的语料库上训练三元语言模型，生成 20 个句子。它们会在局部看似合理，整体却缺乏连贯性。这是经典演示。
+2. **中等。** 在莎士比亚留出集上实现 KN 模型的困惑度计算，并与拉普拉斯方法比较。你应当看到 KN 的困惑度低 30%～50%。
+3. **困难。** 构建三元拼写纠正器：给定拼错的词及其上下文，生成候选修正，并按照语言模型中的上下文概率排序。在公开的 Birkbeck 拼写语料库上评估。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们通常怎么说 | 实际含义 |
 |------|-----------------|-----------------------|
-| N-gram | Word sequence | Sequence of `n` consecutive tokens. |
-| Smoothing | Avoiding zeros | Reallocating probability mass so unseen events get non-zero probability. |
-| Perplexity | LM quality metric | `exp(-average log-prob)` on held-out data. Lower is better. |
-| Backoff | Fallback to shorter context | If trigram count is zero, use bigram. Katz backoff formalizes this. |
-| Kneser-Ney | Best smoothing for n-grams | Absolute discounting + continuation probability for the lower-order model. |
-| Continuation probability | KN-specific | `P(w)` weighted by number of contexts `w` appears in, not by raw count. |
-| Entropy of text | Information per symbol | Average bits needed to encode the next symbol given the context. Shannon's 1951 estimate for printed English with up to 100 letters of context: 0.6-1.3 bits/letter, measured before any model existed. |
+| N 元语法 | 词序列 | 由连续 `n` 个词元组成的序列。 |
+| 平滑 | 避免零值 | 重新分配概率质量，使未见事件得到非零概率。 |
+| 困惑度 | 语言模型质量指标 | 在留出数据上计算 `exp(-average log-prob)`，越低越好。 |
+| 回退 | 使用更短上下文兜底 | 三元语法计数为零时使用二元语法，Katz 回退对此进行了形式化。 |
+| Kneser-Ney | 最佳 n 元语法平滑 | 绝对折扣 + 用于低阶模型的延续概率。 |
+| 延续概率 | KN 专用概念 | `P(w)` 按 `w` 出现的上下文数量加权，而不是按原始计数加权。 |
+| 文本熵 | 每个符号的信息量 | 给定上下文后，编码下一个符号平均所需的比特数。Shannon 在 1951 年估算：对于最多提供 100 个字母上下文的印刷英语，每个字母为 0.6～1.3 比特；这一结果在任何模型出现前就已经测得。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Shannon (1951). Prediction and Entropy of Printed English](https://www.princeton.edu/~wbialek/rome/refs/shannon_51.pdf)每种语言模型都能优化目标的猜测游戏实验.
-- [Jurafsky and Martin — Speech and Language Processing, Chapter 3 (2026 draft)](https://web.stanford.edu/~jurafsky/slp3/3.pdf)可视化处理 n 克LM和滑滑.
-- [Chen and Goodman (1998). An Empirical Study of Smoothing Techniques for Language Modeling](https://dash.harvard.edu/handle/1/25104739)是确定Kneser-Ney为最好的 n-gram平滑的论文.
-- [Kneser and Ney (1995). Improved Backing-off for M-gram Language Modeling](https://ieeexplore.ieee.org/document/479394)原始 KN 纸.
-- [KenLM](https://kheafield.com/code/kenlm/)快速生产n克LM,仍在2026年用于延迟敏感应用.
+- [Shannon（1951），印刷英语的预测与熵](https://www.princeton.edu/~wbialek/rome/refs/shannon_51.pdf)——定义了至今所有语言模型都在优化的目标的猜测游戏实验。
+- [Jurafsky 与 Martin——《语音与语言处理》第 3 章（2026 草稿）](https://web.stanford.edu/~jurafsky/slp3/3.pdf)——n 元语言模型与平滑的权威讲解。
+- [Chen 与 Goodman（1998），语言建模平滑技术的实证研究](https://dash.harvard.edu/handle/1/25104739)——确立 Kneser-Ney 为最佳 n 元语法平滑方法的论文。
+- [Kneser 与 Ney（1995），用于 M 元语言建模的改进回退方法](https://ieeexplore.ieee.org/document/479394)——KN 原始论文。
+- [KenLM](https://kheafield.com/code/kenlm/)——快速的生产级 n 元语言模型，2026 年仍用于延迟敏感型应用。
