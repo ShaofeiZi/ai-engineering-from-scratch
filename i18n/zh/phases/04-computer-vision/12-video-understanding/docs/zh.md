@@ -1,30 +1,30 @@
-# 视频理解 暂时模拟
+# 视频理解——时间建模
 
-> 视频是一个连接图像的序列,加上它们的物理.每个视频模型都将时间视为额外的轴 (3D conv),一个随访的序列 (变压器),或一个提取一次和池的功能 (2D+池).
+> 视频是一连串图像，再加上连接这些图像的物理规律。每种视频模型要么把时间视为额外维度（3D 卷积），要么视为可供注意力处理的序列（Transformer），要么只提取一次特征后进行汇聚（2D + Pool）。
 
-**Type:** Learn + Build
+**Type:** 学习 + 构建
 **Languages:** Python
-**Prerequisites:** Phase 4 Lesson 03 (CNNs), Phase 4 Lesson 04 (Image Classification)
-**Time:** ~45 minutes
+**Prerequisites:** 第 4 阶段第 03 课（CNN）、第 4 阶段第 04 课（图像分类）
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 区分三个主要的视频建模方法 (2D+pool,3D conv,空间时间变压器) 并预测其成本和精度的折衷
-- 在 PyTorch 中实施框架样本,时间聚合和2D+pool基线分类器
-- 解释为什么I3D的"膨胀"3D内核从ImageNet权重中转移得很好,以及一个因子化 (2+1)D conv的作用是什么?
-- 阅读标准的行动识别数据集和指标:kinetics-400/600,UCF101,Something-Something V2;在剪辑和视频水平上,最准确的1
+- 区分三种主要视频建模方法（2D + Pool、3D 卷积、时空 Transformer），并预测它们的成本与准确率权衡
+- 使用 PyTorch 实现帧采样、时间汇聚和 2D + Pool 基线分类器
+- 解释 I3D 的“膨胀”三维卷积核为何能很好地迁移 ImageNet 权重，以及分解式 (2+1)D 卷积有何不同
+- 阅读标准动作识别数据集与指标：Kinetics-400/600、UCF101、Something-Something V2，以及片段级与视频级 top-1 准确率
 
-## 问题
+## 问题所在
 
-30秒钟的视频以30fps的速度达到900图像.天真的是,视频分类是运行900次的图像分类,然后是某种类型的集成.当行动几乎在每个框架中 (体育,,运动视频) 显现时,它就会很糟糕地失败,当行动由运动本身定义时:"从左向右推东西"看起来像每个框架中的两个静止物体.
+一段 30 秒、30 fps 的视频包含 900 张图像。最朴素的视频分类，就是把图像分类运行 900 次，再以某种方式汇总结果。当动作几乎在每一帧中都清晰可见时，例如体育、烹饪或健身视频，这种方法有效；当动作由运动本身定义时，它就会严重失效。例如，“把某物从左向右推动”在每一张静止画面中看起来都只是两个静止物体。
 
-每个视频架构的核心问题是:时间结构是什么时候建模的,以及如何?答案驱动着其他一切 计算成本,预训练策略,是否可以重复使用 ImageNet 重量,模型训练的数据集.
+每种视频架构都要回答一个核心问题：何时、以何种方式对时间结构建模？答案会决定其他一切，包括计算成本、预训练策略、能否复用 ImageNet 权重，以及应在哪些数据集上训练。
 
-视频理解主要是关于时间故事:采样,建模和集成.
+本课特意比静态图像课程更短，因为图像处理的核心机制已经具备，视频理解主要需要补充时间维度的故事：采样、建模和汇聚。
 
-## 概念
+## 核心概念
 
-### 建筑的三个家庭
+### 三类架构
 
 ```mermaid
 flowchart LR
@@ -41,91 +41,91 @@ flowchart LR
     style A3 fill:#dcfce7,stroke:#16a34a
 ```
 
-### 两维+游泳池
+### 2D + Pool
 
-运行一个2DCNN (ResNet,EfficientNet,ViT).在每个采样框架上独立运行.平均 (或最大池,或注意池) 每个框架嵌入.将集成向量输送到一个分类器.
+使用二维 CNN，例如 ResNet、EfficientNet 或 ViT，独立处理每个采样帧。再对逐帧嵌入取平均、最大池化或注意力汇聚，最后把汇聚后的向量交给分类器。
 
-优势:
-- 直接转移到Imagnet.
-- 实现最简单.
-- 廉价:T框架 *单图像推断成本.
+优点：
+- 可以直接迁移 ImageNet 预训练权重。
+- 实现最简单。
+- 成本低：T 帧 * 单张图像推理成本。
 
-缺点:
-- 动作=外观的总数.
-- 时间聚合是不变的;"开门"和"关门"看起来是一样的.
+缺点：
+- 无法对运动建模，动作只是多帧外观的汇总。
+- 时间汇聚与顺序无关，“打开门”和“关上门”看起来完全相同。
 
-使用时间:外观重任务,在小视频数据集上转移学习,初始基线.
+适用场景：以外观为主的任务、小型视频数据集上的迁移学习、初始基线。
 
-### 转型
+### 三维卷积
 
-网络在空间和时间中卷积.早期家族:C3D,I3D,SlowFast.
+用三维 (T, H, W) 卷积核替代二维 (H, W) 卷积核，让网络同时跨空间与时间进行卷积。早期代表家族包括 C3D、I3D、SlowFast。
 
-:使用预训练的2D图像网模型,通过在新的时间轴上复制每个2D内核,将其"膨胀".一个3x3 2D conv 变成3x3 3D conv. 这使得3D模型具有强大的预训练的重量,而不是从零开始训练.
+I3D 的技巧是：取一个经过 ImageNet 预训练的二维模型，通过沿新增时间轴复制每个二维卷积核，将其“膨胀”为三维。一个 3x3 二维卷积会变成 3x3x3 三维卷积。这样，三维模型无需从零训练，就能获得强大的预训练权重。
 
-优势:
-- 直接模拟运动.
-- 国际3D通胀提供了免费的转移学习.
+优点：
+- 直接对运动建模。
+- I3D 膨胀可以免费获得迁移学习能力。
 
-缺点:
-- 超过2D对应的T/8FLOP (对于3个堆叠的时间内核3次).
-- 时间内核是小的;长距离运动需要金字塔或双流方法.
+缺点：
+- FLOPs 比对应二维模型高 T/8 倍，这里假设时间卷积核为 3，并堆叠三次。
+- 时间卷积核较小，要处理长距离运动，需要金字塔或双流方法。
 
-使用时:运动是信号的行动识别 (Something-Something V2,运动重类的运动学).
+适用场景：运动本身就是信号的动作识别，例如 Something-Something V2，以及 Kinetics 中依赖运动的类别。
 
-### 空间时间变压器
+### 时空 Transformer
 
-让视频成为空间时间补丁的格格,并通过它们进行观看.
+把视频切分成时空 Patch 网格，并在所有 token 之间计算注意力。代表模型包括 TimeSformer、ViViT、Video Swin 和 VideoMAE。
 
-关注的模式:
-- **Joint**一个大注意力 (t, h, w).`T*H*W`价格很高.
-- **Divided**每块两个注意力:一个时间,一个空间.
-- **Factorised**时间注意与空间注意在区块之间交替.
+需要关注的注意力模式：
+- **联合式**——一次在 (t, h, w) 上计算大型注意力，复杂度相对于 `T*H*W` 呈平方增长，成本高昂。
+- **分离式**——每个模块包含两次注意力：一次沿时间，一次沿空间，扩展复杂度近似线性。
+- **分解式**——不同模块交替执行时间注意力与空间注意力。
 
-优势:
-- 在每个主要基准指数上,SOTA准确性.
-- 通过补丁通胀,从图像转换器 (ViT) 转移.
-- 支持通过稀疏的关注的长文本视频.
+优点：
+- 在每个主要基准上都达到当前最佳准确率。
+- 可以通过 Patch 膨胀迁移图像 Transformer（ViT）的权重。
+- 可以借助稀疏注意力支持长上下文视频。
 
-缺点:
-- 计算机渴望.
-- 需要仔细的注意力选择模式或运行时间气球.
+缺点：
+- 需要大量计算资源。
+- 必须谨慎选择注意力模式，否则运行成本会急剧膨胀。
 
-使用时间:大数据集,高效视频理解,多模式视频+文本任务.
+适用场景：大型数据集、高保真视频理解、多模态视频 + 文本任务。
 
-### 片样本
+### 帧采样
 
-通过30fps的10秒剪辑,就能达到300个;给任何模型提供300个都是浪费的.
+一段 10 秒、30 fps 的片段包含 300 帧，把 300 帧全部输入任何模型都很浪费。标准策略包括：
 
-- **Uniform sampling** 按均选择T框架. 默认为2D+pool.
-- **Dense sampling**随机连接T框架窗口.常见于3D轮,因为运动需要邻近的框架.
-- **Multi-clip**从同一视频中采样多个T框架窗户,分类每个,测试时平均预测.
+- **均匀采样**——在整段视频中均匀选取 T 帧，是 2D + Pool 的默认方式。
+- **密集采样**——随机选择连续 T 帧窗口。3D 卷积常用这种方式，因为运动需要相邻帧。
+- **多片段采样**——从同一个视频中抽取多个 T 帧窗口，分别分类，再在测试时平均预测。
 
-平均值为 8, 16, 32 或 64. 较高的T = 较高的时间信号.
+T 通常取 8、16、32 或 64。T 越大，时间信号越多，计算量也越高。
 
 ### 评估
 
-两个级别:
-- **Clip-level accuracy**模型看到一个T-框架片段,报道顶-k.
-- **Video-level accuracy**每视频的多个视频的平均剪辑水平预测;更高,更稳定.
+评估分为两个层级：
+- **片段级准确率**——模型只看到一个 T 帧片段，并报告 top-k。
+- **视频级准确率**——对同一个视频中的多个片段预测取平均，结果更高也更稳定。
 
-总是报道两者.一个获得78%的剪辑 / 82%的视频模型严重依赖于测试时间平均;一个获得80% / 81%的模型则更强.
+两者都应报告。如果一个模型达到 78% 片段准确率 / 82% 视频准确率，说明它高度依赖测试时平均；另一个模型达到 80% / 81%，则逐片段表现更稳健。
 
-### 您将会遇到的数据集
+### 常见数据集
 
-- **Kinetics-400 / 600 / 700**一般用途的行动数据集. 400万条剪辑;YouTubeURL (现在已经死了很多).
-- **Something-Something V2** 动作定义的操作 ("从左转右转X").不能通过2D+pool来解决.
-- **UCF-101**现在**HMDB-51**年龄较大,较小,仍报告.
-- **AVA**空间和时间中的行动 *定位化*;比分类更难.
+- **Kinetics-400 / 600 / 700**——通用动作数据集，包含 40 万个片段；使用 YouTube URL，其中许多现在已经失效。
+- **Something-Something V2**——动作由运动定义，例如“把 X 从左向右移动”，无法只靠 2D + Pool 解决。
+- **UCF-101**、**HMDB-51**——更早、更小，但仍经常用于报告结果。
+- **AVA**——在空间和时间上进行动作*定位*，比分类更难。
 
 ```figure
 v4-video-temporal
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:框架样本
+### 第 1 步：帧采样器
 
-单一和密集的样本器,它们在框架列表上工作 (或视频子).
+下面是适用于帧列表或视频张量的均匀采样器和密集采样器。
 
 ```python
 import numpy as np
@@ -145,11 +145,11 @@ def sample_dense(num_frames_total, T, rng=None):
     return list(range(start, start + T))
 ```
 
-两人都回来了`T`它们是指数,用于切割视频子.
+两个函数都返回 `T` 个索引，可用来切片视频张量。
 
-### 步骤2: 2D+池的基线
+### 第 2 步：2D + Pool 基线
 
-运行一个2DResNet-18在每个图片,平均池特征,分类.
+用二维 ResNet-18 处理每一帧，对特征进行平均汇聚，再执行分类。
 
 ```python
 import torch
@@ -178,11 +178,11 @@ print(f"output: {model(x).shape}")
 print(f"params: {sum(p.numel() for p in model.parameters()):,}")
 ```
 
-根据图像网预训练的1100万参数,每一个框架运行,平均,分类.这个基线通常在外观重任务的适当3D模型的5-10点内,因为它重复使用更强的图像网脊柱.
+模型有 1100 万参数，使用 ImageNet 预训练，逐帧运行、平均再分类。在以外观为主的任务上，这个基线与真正三维模型往往只差 5–10 个百分点，有时甚至更好，因为它复用了更强的 ImageNet 骨干网络。
 
-### 步骤3:一个I3D式的膨胀3D
+### 第 3 步：I3D 风格的膨胀三维卷积
 
-通过重复重量沿着新的时间轴,将单个2D卷积转换为3D卷积.
+沿新的时间轴重复权重，把单个二维卷积转换成三维卷积。
 
 ```python
 def inflate_2d_to_3d(conv2d, time_kernel=3):
@@ -204,11 +204,11 @@ x = torch.randn(1, 3, 8, 56, 56)
 print(f"3D output shape:  {tuple(conv3d(x).shape)}")
 ```
 
-通过`time_kernel`保持激活大小大致恒定, 重要的是,在第一次通过时不打破批量标准的统计数据.
+除以 `time_kernel` 可以让激活幅度大致保持不变，这对避免第一次前向传播就破坏批归一化统计量非常重要。
 
-### 步骤4: 因素化 (2+1)D集
+### 第 4 步：分解式 (2+1)D 卷积
 
-分开3D卷入2D (空间) 和1D (时间)卷入.相同的接收场,参数较少,在一些基准上更准确.
+把一个三维卷积分解成二维空间卷积和一维时间卷积。感受野相同，参数更少，在一些基准上准确率更好。
 
 ```python
 class Conv2Plus1D(nn.Module):
@@ -231,46 +231,46 @@ x = torch.randn(1, 3, 8, 56, 56)
 print(f"(2+1)D output: {tuple(c(x).shape)}")
 ```
 
-一个完整的R(2+1)D网络与ResNet-18相同,每一个3x3 conv都被替换为`Conv2Plus1D`现在,我们要去.
+完整 R(2+1)D 网络，就是把 ResNet-18 中的每个 Conv2d 都替换成 `Conv2Plus1D`。
 
-## 用它
+## 实际应用
 
-两家图书馆涵盖了制作视频工作:
+两个库覆盖了生产级视频工作：
 
-- `torchvision.models.video` R(2+1) D,MViT,Swin3D,具有预训练的动力学权重.与图像模型相同的API.
-- `pytorchvideo`动物园模型,动力学/SSv2/AVA数据加载器,标准变化.
+- `torchvision.models.video`——提供带 Kinetics 预训练权重的 R(2+1)D、MViT 和 Swin3D，API 与图像模型相同。
+- `pytorchvideo`（Meta）——提供模型库、Kinetics / SSv2 / AVA 数据加载器和标准变换。
 
-视频语言视频模型 (视频标题,视频质量评测),使用 `transformers`(`VideoMAE`现在`VideoLLaMA`现在`InternVideo`)
+对于视觉—语言视频模型，例如视频字幕与视频问答，应使用 `transformers`（`VideoMAE`、`VideoLLaMA`、`InternVideo`）。
 
-## 运送它
+## 交付成果
 
-这一课产生了:
+本课会产出：
 
-- `outputs/prompt-video-architecture-picker.md`一个提示,根据外观与运动,数据集尺寸和计算预算,选择2D+pool/I3D/ (2+1)D/变压器.
-- `outputs/skill-frame-sampler-auditor.md`检查视频管道的样本采集器和标记常见错误的技能:单独指数,不均的样本采集`num_frames < T`缺乏保护面的作物等
+- `outputs/prompt-video-architecture-picker.md`——根据任务偏重外观还是运动、数据集大小和计算预算，在 2D + Pool / I3D / (2+1)D / Transformer 中作出选择。
+- `outputs/skill-frame-sampler-auditor.md`——检查视频流水线中的采样器，并标记常见缺陷，例如索引差一、`num_frames < T` 时采样不均匀，以及缺少保持宽高比的裁剪。
 
-## 运动
+## 练习
 
-1. **(Easy)**计算FLOP (大约) 对于T=8的 FramePool与T=8的I3D式3D ResNet. 证明为什么2D+pool比3-5倍便宜.
-2. **(Medium)**生成合成视频数据集:随机球在随机方向移动,标记着运动方向 ("左到右","右到左","斜面上").将 FramePool 运用在上面. 显示它实现了近巧率准确性,证明仅仅外观不足以完成运动任务.
-3. **(Hard)**通过将 ResNet-18 中的每个 Conv2d 换成一个R(2+1) D-18`Conv2Plus1D`训练运动数据集从练习2和击败FramemPool.
+1. **（简单）** 近似计算 T=8 的 FramePool 与 T=8 的 I3D 风格三维 ResNet 的 FLOPs，说明为什么 2D + Pool 的计算量低 3–5 倍。
+2. **（中等）** 生成一个合成视频数据集：随机小球向随机方向移动，并按运动方向标记，例如“从左到右”“从右到左”“斜向上”。在其上训练 FramePool，证明准确率接近随机水平，从而说明只看外观不足以解决运动任务。
+3. **（困难）** 把 ResNet-18 中的每个 Conv2d 替换成 `Conv2Plus1D`，构建 R(2+1)D-18。使用 ImageNet 预训练 ResNet-18 的权重膨胀初始化第一个卷积。在练习 2 的运动数据集上训练，并击败 FramePool。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 实际含义 |
 |------|----------------|----------------------|
-| 2D + pool | "Per-frame classifier" | Run a 2D CNN on every sampled frame, average-pool features across time, classify |
-| 3D convolution | "Spatio-temporal kernel" | Kernel that convolves over (T, H, W); can model motion natively |
-| Inflation | "Lift 2D weights to 3D" | Initialise 3D conv weights by repeating a 2D conv's weights along the new time axis, then divide by kernel_T to preserve activation scale |
-| (2+1)D | "Factorised conv" | Split 3D into 2D spatial + 1D temporal; fewer parameters, extra non-linearity between |
-| Divided attention | "Time then space" | Transformer block with two attentions per layer: one over tokens at the same frame, one over tokens at the same position |
-| Clip | "T-frame window" | A sampled subsequence of T frames; the unit a video model consumes |
-| Clip vs video accuracy | "Two eval settings" | Clip = one sample per video, video = average across multiple sampled clips |
-| Kinetics | "The ImageNet of video" | 400-700 action classes, 300k+ YouTube clips, the standard video pretraining corpus |
+| 2D + Pool | “逐帧分类器” | 在每个采样帧上运行二维 CNN，再跨时间平均汇聚特征并分类 |
+| 三维卷积 | “时空卷积核” | 在 (T, H, W) 上执行卷积、能够原生建模运动的卷积核 |
+| 膨胀 | “把二维权重提升为三维” | 沿新时间轴重复二维卷积权重，再除以 kernel_T 以保持激活尺度，从而初始化三维卷积 |
+| (2+1)D | “分解式卷积” | 把三维卷积分成二维空间卷积 + 一维时间卷积；参数更少，中间多一次非线性 |
+| 分离式注意力 | “先时间，后空间” | 每层包含两次注意力的 Transformer 模块：一次处理同一帧中的 token，一次处理同一位置上的 token |
+| 片段 | “T 帧窗口” | 由 T 帧组成的采样子序列，是视频模型处理的基本单位 |
+| 片段准确率与视频准确率 | “两种评估设置” | 片段准确率每个视频只取一个样本，视频准确率则平均多个采样片段 |
+| Kinetics | “视频领域的 ImageNet” | 包含 400–700 个动作类别和 30 万条以上 YouTube 片段的标准视频预训练语料库 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [I3D: Quo Vadis, Action Recognition (Carreira & Zisserman, 2017)](https://arxiv.org/abs/1705.07750)引入通胀和动力学数据集
-- [R(2+1)D: A Closer Look at Spatiotemporal Convolutions (Tran et al., 2018)](https://arxiv.org/abs/1711.11248)因子化结合,仍然是强的基线
-- [TimeSformer: Is Space-Time Attention All You Need? (Bertasius et al., 2021)](https://arxiv.org/abs/2102.05095)第一台强大的视频变压器
-- [VideoMAE (Tong et al., 2022)](https://arxiv.org/abs/2203.12602)隐藏自动编码器预训练视频;目前的主导预训练配方
+- [《I3D: Quo Vadis, Action Recognition》（Carreira 与 Zisserman，2017）](https://arxiv.org/abs/1705.07750)——提出权重膨胀并发布 Kinetics 数据集
+- [《R(2+1)D: A Closer Look at Spatiotemporal Convolutions》（Tran 等，2018）](https://arxiv.org/abs/1711.11248)——分解式卷积，至今仍是强基线
+- [《TimeSformer: Is Space-Time Attention All You Need?》（Bertasius 等，2021）](https://arxiv.org/abs/2102.05095)——第一个性能强劲的视频 Transformer
+- [《VideoMAE》（Tong 等，2022）](https://arxiv.org/abs/2203.12602)——面向视频的掩码自编码器预训练，是目前占主导地位的预训练方案
