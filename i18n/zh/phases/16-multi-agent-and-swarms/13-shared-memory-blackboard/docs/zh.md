@@ -1,25 +1,25 @@
-# 共同记忆和黑板图案
+# 共享记忆与黑板模式
 
-> 在2026年多代理系统中,存在两个方法:**message pool**(每个人都能看到每个人的信息,如在AutoGen GroupChat或MetaGPT)**blackboard with subscription**两个是多代理系统的唯一状态部分,这意味着两个都是有趣的错误居住的地方.参考故障模式是**memory poisoning**另一种方法是:一个代理人幻觉化一个"事实",其他代理人将其视为验证,准确性逐渐衰退,比即时崩更难进行调试.
+> 到了 2026 年，多代理系统里主要并存两条路线：**message pool**（所有人都能看到所有人的消息，例如 AutoGen GroupChat 或 MetaGPT），以及 **blackboard with subscription**（agent 只订阅与自己相关的事件，例如 Context-Aware MCP 或 Matrix framework）。这两者几乎就是多代理系统里唯一真正“有状态”的部分，因此也正是最容易藏复杂 bug 的地方。这里最典型的失败模式叫 **memory poisoning**：某个 agent 幻觉出了一个“事实”，其他 agent 把它当成已验证信息继续传播，准确率会以一种远比立即崩溃更难排查的方式缓慢衰退。本课会用 stdlib 分别实现这两种结构，注入一次 poisoning attack，并展示在生产环境里真正有效的三种缓解手段。
 
-**Type:** Learn + Build
-**Languages:** Python (stdlib, `threading`)
-**Prerequisites:** Phase 16 · 04 (Primitive Model), Phase 16 · 09 (Parallel Swarm Networks)
-**Time:** ~75 minutes
+**Type:** 学习 + 构建
+**Languages:** Python（标准库，`threading`）
+**Prerequisites:** 第 16 阶段 · 04（原语模型），第 16 阶段 · 09（并行 / Swarm / 网络化架构）
+**Time:** 约 75 分钟
 
 ## 问题
 
-多代理系统需要一个代理分享事实的地方.一个字面上的选择是"通过信息",但这重新发明了共享状态,并增加了复制.另一个是"给每个人都提供全球日志",但全球日志会无限增长并很容易被毒害.第三个是"每代理的项目"可扩展但重于方案.
+多代理系统需要一个地方让 agent 共享事实。最直观的方式是“什么都通过消息传”，但这其实是在用额外复制重新发明共享状态。另一种方式是“给所有人一个全局日志”，但全局日志会无限增长，也非常容易被污染。第三种方式是“给每个 agent 投射一个定制视图”，它更可扩展，但会对 schema 设计提出更高要求。
 
-当一个代理人幻觉并写幻觉到共享状态时,每一个读到该状态的下游代理都会把幻觉作为事实.人类注意到的时候,推理链已经深入了五步,根源是有史以来第三个消息.调整多代理精度衰退比调整崩更难.
+一旦某个 agent 产生幻觉，并把这条幻觉写进共享状态，后续所有读取这块状态的下游 agent 都会把它当成事实。等到人类察觉时，推理链可能已经深入了五层，而根因只是第三条写入的消息。调试多代理系统里的准确率衰退，通常比调试一次 crash 要难得多。
 
-这是一种记忆中毒.这是MAST类别中第二大记录的失败家族 (Cemri等人, arXiv:2503.13657) ,它是结构性的:任何没有来源的共享记忆设计和不可编写的验证器最终将显示它.
+这就是 memory poisoning。根据 MAST taxonomy（Cemri et al., arXiv:2503.13657），它属于记录最充分的失败家族之一，而且它是结构性的：任何没有 provenance、又没有只读 verifier 的共享记忆设计，最终都会暴露出这一问题。
 
 ## 概念
 
-### 两个主要的拓物
+### 两种主要拓扑
 
-**Full message pool.**每个代理都会阅读每一个消息.AutoGen GroupChat和MetaGPT都使用这种方法.简单,透明,可检查,但不会超过10个代理,因为每个代理的文本充满了其他代理的工作.
+**Full message pool。** 每个 agent 都读取每一条消息。AutoGen GroupChat 和 MetaGPT 都采用这一思路。它的优点是简单、透明、容易检查；缺点是很难扩展到大约 10 个以上 agent，因为每个 agent 的上下文都会被其他人的工作塞满。
 
 ```
 agent-A ──write──▶ ┌────────────────┐ ◀──read── agent-D
@@ -29,7 +29,7 @@ agent-B ──write──▶ │                │ ◀──read── agent-E
 agent-C ──write──▶ └────────────────┘ ◀──read── agent-F
 ```
 
-**Blackboard with subscription.**代理人表示对主题的兴趣;基板路线只传递相关信息.CA-MCP (arXiv:2601.11595) 和矩阵分散框架 (arXiv:2511.21686) 使用此.进一步扩展,但需要先前的方案设计,使订阅有意义.
+**Blackboard with subscription。** 每个 agent 声明自己关心哪些 topics，底层系统只把相关消息路由给对应订阅者。CA-MCP（arXiv:2601.11595）和 Matrix 去中心化框架（arXiv:2511.21686）采用这一路线。它扩展性更好，但前提是你要先把 schema 设计清楚，让“订阅 topic”真正有意义。
 
 ```
                    ┌─ topic: prices ──┐
@@ -41,129 +41,129 @@ agent-C ──pub────▶ │                  │ ──▶ agent-F (sub
                    └──────────────────┘
 ```
 
-### 当每个人都赢得
+### 各自适合什么场景
 
-- **Full pool**只有在代理人少 (<10),不均的情况下,谈话是短视线的.
-- **Blackboard**通过线路调节节节省代码成本和环境污染.
+- **Full pool** 适合 agent 数量少于 10、角色差异较大、会话跨度较短的场景。因为所有人都看到全部上下文，所以“谁说了什么”非常容易追踪。
+- **Blackboard** 适合 agent 数量很多、角色较同质但实例数量庞大（例如 swarms）、任务周期较长的场景。路由机制能明显节省 token 成本并减少上下文污染。
 
-生产系统通常混合:顶部有一个小的完整池 (规划层),下面是黑板 (工人层).
+很多生产系统会混合使用：上层规划层用一个较小的 full pool，下层 worker 层则用 blackboard。
 
-### 记忆中毒,在一个场景中
+### 一个记忆污染场景
 
-现在,我们有三名特工在研究任务上,A特工是检索特工,B特工是总结者,C特工是分析师.
+假设三名 agent 正在做一个研究任务。Agent A 负责检索，Agent B 负责总结，Agent C 负责分析。
 
-1. 一个人拿到一个页面,然后写一个信息给共享状态:"研究报告了42%的准确性改善.
-2. 收到的页面实际上说"4.2%的改善". 一个幻觉了一个十数.
-3. 报告的准确度增加了42% (来源:A).
-4. ,阅读共享状态,写道:"建议采用 42%升高是转型的.
-5. 报告指出,这一数字从未存在过的42%.
+1. A 抓取网页后向共享状态写入：“这项研究报告了 42% 的准确率提升。”
+2. 实际网页写的是 “4.2% improvement”，A 把小数点幻觉掉了。
+3. B 读取共享状态后写入：“报告显示存在显著的 42% 准确率提升（来源：A）。”
+4. C 继续读取共享状态后写入：“建议采用该方案，42% 的提升具有变革性。”
+5. 最终报告引用了一个根本不存在的 42% 数字。
 
-没有任何代理毁,没有任何测试失败,系统"工作了",幻觉从一个代理的背景到每个下游代理的推理通过共享状态.
+整个过程中，没有任何 agent 崩溃，没有任何测试失败，系统表面上“正常工作”。但这条幻觉通过共享状态，从 A 的上下文一路洗白成了所有下游 agent 的“事实”。
 
-### 为什么这是结构性的
+### 为什么这是结构性问题
 
-没有共享状态,A代理的幻觉仍然存在于A的背景下.下游代理会重新搜索或重新推导,可能会发现错误. 通过天真共享状态,A的背景成为每个人的背景,幻觉被洗成事实.
+如果没有共享状态，A 的幻觉最多停留在 A 的本地上下文里。其他 agent 可能会重新检索、重新推导，并在某个环节发现错误。但如果共享状态设计得过于天真，A 的上下文就会直接变成所有人的上下文，幻觉也就被洗成了事实。
 
-问题不是一个共享国家本身**without provenance and without an independent verifier**三个减轻措施解决了这一问题:
+问题并不在于共享状态本身，而在于共享状态**缺少来源信息，也缺少独立验证者**。真正有效的三种缓解手段是：
 
-1. **Attribute provenance on every write.**根据什么提示,如果适用,代理引用哪个来源. 下游代理阅读怀疑,关键是来源.
-2. **Version writes; treat them as append-only.**修改是取代旧的新条目,而不是现场更新.
-3. **Keep at least one agent that cannot write to shared state.**仅读的验证器检测到输入,重新查找来源,并标记不一致.
+1. **每次写入都记录来源。** 共享状态中的每条记录都应包含谁写的、何时写的、基于什么提示，以及引用了什么来源。下游智能体应根据来源信息审慎读取。
+2. **所有写入都仅追加并做版本化。** 更正不应覆盖原条目，而应作为替代旧版本的新条目追加写入，从而保留审计轨迹。
+3. **至少保留一个不能写共享状态的智能体。** 这个只读验证者会抽样读取共享状态、重新获取来源并标记不一致。由于它没有写权限，因此不会把自身判断回灌到共享池。
 
-### 黑板先例 (海斯-罗思,1985年)
+### 黑板模式的历史先例（Hayes-Roth，1985）
 
-黑板模式比法师事务所代理人早了四十年. 哈伊斯-罗思 (1985,"控制的黑板架构") 描述了观察全球黑板的专业知识来源,贡献部分解决方案,并触发其他来源. 2026年黑板 (CA-MCP,矩阵) 与知识来源和部分解决方案的JSON片一样,具有LLM代理. 旧文献记录了写作争端,机会主义控制和一致性的解决方案,
+黑板模式比 LLM agent 早了四十年。Hayes-Roth 在 1985 年的 “A Blackboard Architecture for Control” 中提出了 specialist Knowledge Sources：它们观察全局 blackboard、贡献部分解，并进一步触发其他知识源。2026 年的 blackboard（CA-MCP、Matrix）本质上还是同一个模式，只不过 Knowledge Sources 变成了 LLM agents，部分解变成了 JSON blobs。旧文献对写入争用、机会式控制、一致性维护的讨论，今天依然适用。
 
-### 投影与全景
+### 投影视图与完整视图
 
-纯黑板给每个用户提供相同的投影 (主题范围).**per-agent projection**根据LangGraph的状态减小器是2026年可行的实现.
+纯 blackboard 给所有订阅者的是相同的 topic-scoped 投影视图。更激进的设计则是 **per-agent projection**：每个 agent 都拿到一份专门按自己角色裁剪过的视图。LangGraph 的 state reducers 就是 2026 年这一思路的经典实现，它通过 reducer 把全局状态折叠成角色特定切片。
 
-没有一个,你在每个代理的提示中重建了临时投影.
+这种 per-agent projection 的扩展性更强，但它依赖 schema。没有 schema，你最后只会在每个 agent 的 prompt 里手工重复构建这些投影视图。
 
-### 写内容模式
+### 写入争用模式
 
-许多代理人同时写作是一个同时问题,而不是仅仅是一个LLM问题.
+多个 agent 同时写共享状态，本质上是并发问题，而不只是 LLM 问题。通常有三种可行模式：
 
-- **Sequential writer (single producer).**所有的写作都通过一个编辑代理来进行序列化.
-- **Optimistic concurrency with versioning.**每个条目都有版本;编写者失败于版本不匹配和重新尝试.
-- **Topic partitioning.**不同的代理人拥有不同的主题,没有跨主题争端,需要设计的分区边界.
+- **Sequential writer（single producer）。** 所有写入都经由一个协调 agent 串行化。简单，但容易形成瓶颈。
+- **Optimistic concurrency with versioning。** 每个 entry 带版本号；版本不匹配则写失败并重试。这是经典数据库策略。
+- **Topic partitioning。** 不同 agent 各自拥有不同 topics，没有跨 topic 冲突。但这要求你先设计好边界。
 
-由于LLM电话速度足够慢,争端很少,瓶不会伤害.
+大多数 2026 框架默认使用 sequential writer，因为 LLM 调用本来就慢，写冲突通常没那么频繁，瓶颈反而不明显。
 
-### 无法写的验证器
+### 只读验证者
 
-最有效的减轻是仅可读的验证器.
+这里最关键的缓解措施其实就是只读 verifier。实现上需要满足几条规则：
 
-- 验证者与团队分享状态 (阅读黑板或池).
-- 验证器没有写字柄,只能将状态分享到单独的验证道.
-- 验证者独立搜索在书中引用的来源.
-- 验证器的输出被转移到人类或单独的决策代理,
+- Verifier 与团队共享状态，也就是它能读取 blackboard 或 message pool。
+- Verifier 没有写共享状态的句柄，它只能向单独的 verification channel 输出。
+- Verifier 会独立重取各条写入里引用的 source，并在发现矛盾时发出标记。
+- Verifier 的输出应该送给人类或单独的决策 agent，而不是重新喂回共享池。
 
-没有这种分离,验证器的输出将成为池中的新输入,这意味着受毒的池中会毒害验证器,从而毒害其验证.
+如果做不到这种隔离，verifier 的输出也会变成共享池中的新输入，最终结果就是：被污染的 pool 污染 verifier，verifier 再污染自己的验证输出。
 
 ```figure
 swarm-blackboard
 ```
 
-## 建立它
+## 动手构建
 
-`code/main.py`在Stlib Python中实现了两个拓,加上玩具毒害攻击和三种减轻.
+`code/main.py` 用 stdlib Python 同时实现了两种拓扑、一个 toy poisoning attack，以及前面提到的三种缓解手段。
 
-- `MessagePool` 连接单独登录,全读取.
-- `Blackboard`主题关键的酒吧/子酒店,每位代理订阅.
-- `ProvenanceEntry`每一个写记录 (作者,时间标签, prompt_hash, source_uri).
-- `PoisoningScenario`执行一个三位代理的研究任务,其中A位代理幻觉化一个十位数.
-- `Verifier`只能读取的代理,重新查找来源并标记不一致. 运行相同的情况,验证器存在.
+- `MessagePool`：线程安全、append-only 的全量日志。
+- `Blackboard`：按 topic 做 pub/sub，并支持每个 agent 的 subscriptions。
+- `ProvenanceEntry`：每次写入都会记录 writer、timestamp、prompt_hash、source_uri。
+- `PoisoningScenario`：运行一个三 agent 研究流程，其中 agent A 幻觉掉一个小数点，并打印最终报告。
+- `Verifier`：一个只读 agent，会重新抓取来源并标记不一致，然后在 verifier 存在的情况下再跑同一场景。
 
-运行:
+运行：
 
 ```
 python3 code/main.py
 ```
 
-预期产量:
-- 运行1 (没有验证器):幻的42%传播到最终报告.
-- 运行2 (与验证器):验证器标记不一致性,池被标记为"标记",最终报告包括撤销.
+预期输出：
+- Run 1（no verifier）：幻觉的 42% 会一路传播进最终报告。
+- Run 2（with verifier）：verifier 会标出不一致，pool 被标记为 “flagged”，最终报告会包含撤回说明。
 
-## 用它
+## 实际使用
 
-`outputs/skill-memory-auditor.md`通过多代理系统的共享内存设计来审核原产,版本化和验证器分离. 在生产前运行它在新的多代理架构上.
+`outputs/skill-memory-auditor.md` 是一个审计技能，用来检查任意多代理系统的 shared-memory 设计是否具备 provenance、versioning 与 verifier separation。在新的多代理架构上线前，应该先跑一次这种审计。
 
-## 运送它
+## 交付成果
 
-对于任何共享内存设计:
+对于任何 shared-memory 设计：
 
-- 每次写的记录来源: `(writer, timestamp, prompt_hash, tool_calls_cited, source_uri)`现在,我们要去.
-- 修改是指指新录取的录取.
-- 部署至少一个具有独立源访问的仅读验证器.
-- 路由验证器输出到单独的频道,而不是返回共享池中.
-- 记录那些写作的比例是变异 一个增加的比例是幻觉模式的早期证据.
+- 每次写入都记录 provenance：`(writer, timestamp, prompt_hash, tool_calls_cited, source_uri)`。
+- 让日志保持 append-only。所有更正都以引用旧条目的新 entry 形式追加。
+- 至少部署一个具备独立 source access 的只读 verifier agent。
+- 把 verifier 的输出路由到独立 channel，而不是回灌进共享 pool。
+- 记录 supersession 写入的比例。这个比例上升，往往是 hallucination pattern 的早期信号。
 
-## 运动
+## 练习
 
-1. 跑步`code/main.py`确认第一个运行传播幻觉,第二次运行捕捉.
-2. 另外一个幻觉:B代理发明了一个数据集尺寸.验证器应该捕获两者,而不需要手动调整任何一个.
-3. 转换整个池块为一个有主题分区的黑板 (`prices`现在`summaries`现在`analyses`问题是,在哪些情况下,分区更难解决,
-4. 阅读Hayes-Roth (1985,"控制的黑板架构"). 鉴定2026年系统将受益于本课中未讨论的两个控制模式.
-5. 读取CA-MCP (arXiv:2601.11595). 映射其共享文本存储器到 either MessagePool或黑板类中.`code/main.py`什么原始的CA-MCP添加到上面?
+1. 运行 `code/main.py`，确认 run 1 会传播幻觉，run 2 能抓到它。
+2. 再增加一个幻觉：让 agent B 编造一个 dataset size。Verifier 应该在不针对任何单独错误手工调参的情况下抓到这两类问题。
+3. 把 full pool 改成按 topic 分区的 blackboard（`prices`、`summaries`、`analyses`）。哪些 poisoning 场景会因此更难实现，哪些则几乎不受影响？
+4. 阅读 Hayes-Roth（1985, “A Blackboard Architecture for Control”）。指出文中两个本课没有展开、但 2026 系统仍值得借鉴的控制模式。
+5. 阅读 CA-MCP（arXiv:2601.11595）。把它的 Shared Context Store 映射到 `code/main.py` 中的 MessagePool 或 Blackboard。CA-MCP 在这两个原语之上又增加了哪些机制？
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 常见说法 | 实际含义 |
 |------|----------------|------------------------|
-| Message pool | "Shared chat history" | Append-only log that every agent reads. Full transparency, poor scaling. |
-| Blackboard | "Shared workspace" | Topic-keyed pub/sub. Agents subscribe to relevant topics. Scales farther. |
-| Provenance | "Who wrote what" | Metadata on each write: writer, timestamp, prompt, sources. |
-| Memory poisoning | "Hallucinations spreading" | One agent's error enters shared state, downstream agents adopt it as fact. |
-| Append-only | "No in-place updates" | Corrections are new entries that supersede. Preserves audit trail. |
-| Unwritable verifier | "Independent auditor" | Read-only agent that re-fetches sources and flags inconsistencies. |
-| Projection | "Scoped view" | Per-agent view computed from global state. LangGraph reducers are the canonical case. |
-| Knowledge Source | "Specialist agent" | Hayes-Roth's 1985 term for a blackboard participant. |
+| 消息池 | “共享聊天历史” | 所有智能体都能读取的仅追加全局日志；透明，但扩展性差。 |
+| 黑板 | “共享工作区” | 按主题划分的发布／订阅系统；智能体只订阅相关主题，扩展性更好。 |
+| 来源信息 | “谁写了什么” | 每次写入的元数据，包括写入者、时间戳、提示和来源。 |
+| 记忆污染 | “幻觉扩散” | 一个智能体的错误进入共享状态，下游智能体将其当作事实继续传播。 |
+| 仅追加 | “不做原地更新” | 更正通过新增替代条目实现，而不覆盖原条目。 |
+| 只读验证者 | “独立审计员” | 只读智能体，会重新获取来源并标记不一致。 |
+| 投影视图 | “限定范围的视图” | 从全局状态中为每个智能体计算出的专属视图；LangGraph Reducer 是典型实现。 |
+| 知识源 | “专家智能体” | Hayes-Roth 在 1985 年对黑板参与者使用的术语。 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Cemri et al. — Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/abs/2503.13657) MAST类别;记忆中毒是一种协调失败子组
-- [CA-MCP — Context-Aware Multi-Server MCP](https://arxiv.org/abs/2601.11595)共享MCP服务器的语境存储
-- [Matrix — decentralized multi-agent framework](https://arxiv.org/abs/2511.21686)没有中央管弦乐器的消息队列基于黑板
-- [LangGraph state and reducers](https://docs.langchain.com/oss/python/langgraph/workflows-agents)生产中每剂投影模式
-- [Anthropic — How we built our multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)生产部署的来源和验证说明
+- [Cemri et al. — Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/abs/2503.13657) — MAST taxonomy；memory poisoning 属于 coordination-failure 子类
+- [CA-MCP — Context-Aware Multi-Server MCP](https://arxiv.org/abs/2601.11595) — 面向协同 MCP servers 的 Shared Context Store
+- [Matrix — decentralized multi-agent framework](https://arxiv.org/abs/2511.21686) — 没有中心 orchestrator 的消息队列式 blackboard
+- [LangGraph state and reducers](https://docs.langchain.com/oss/python/langgraph/workflows-agents) — 生产环境中的 per-agent projection 模式
+- [Anthropic — How we built our multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system) — 来自真实部署的 provenance 与 verification 实践
