@@ -1,28 +1,28 @@
 # 开发环境
 
-> 你的工具塑造了你的思维, 设置它们一次,设置它们正确.
+> 工具会塑造你的思考方式。一次配置到位，并把它配置正确。
 
-**Type:** Build
+**Type:** 构建
 **Languages:** Python, Node.js, Rust
-**Prerequisites:** None
-**Time:** ~45 minutes
+**Prerequisites:** 无
+**Time:** 约 45 分钟
 
 ## 学习目标
 
-- 设置Python 3.11+,Node.js 20+,以及Rust工具链从零开始
-- 配置可复制的构建的虚拟环境和包管理器
-- 通过CUDA/MPS验证GPU访问并执行测试子操作
-- 了解四层堆:系统,包,运行时间,人工智能库
+- 从零搭建 Python 3.11+、Node.js 20+ 和 Rust 工具链
+- 配置虚拟环境和包管理器，实现可复现的构建
+- 通过 CUDA/MPS 验证 GPU 访问，并运行一次张量运算测试
+- 理解由系统、包管理器、语言运行时和 AI 库组成的四层技术栈
 
 ## 问题
 
-你即将学习人工智能工程,使用Python,TypeScript,Rust和Julia的500多个课程. 如果你的环境被破坏,
+接下来，你将在 500 多节课程中使用 Python、TypeScript、Rust 和 Julia 学习 AI 工程。如果开发环境有问题，每一节课都会变成与工具较劲，而不是专注于学习。
 
-大多数人会跳过环境设置,然后花费数小时检查进口错误,版本冲突,以及缺失的CUDA驱动程序.
+很多人会跳过环境配置，随后却花费数小时排查导入错误、版本冲突和缺失的 CUDA 驱动。我们现在一次把它正确配置好。
 
-## 概念
+## 核心概念
 
-人工智能工程环境有四层:
+一个 AI 工程环境包含四层：
 
 ```mermaid
 graph TD
@@ -31,17 +31,17 @@ graph TD
     C --> D["1. System Foundation\nOS, shell, git, editor, GPU drivers"]
 ```
 
-我们安装下层,每个层取决于下层.
+安装时应自底向上进行，因为每一层都依赖它下面的层。
 
 ```figure
 s0-env-stack
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:系统基础
+### 第 1 步：系统基础
 
-检查系统,安装基本知识.
+检查你的系统并安装基础工具。
 
 ```bash
 # macOS
@@ -55,9 +55,9 @@ sudo apt update && sudo apt install -y build-essential git curl wget
 wsl --install -d Ubuntu-24.04
 ```
 
-### 步骤2:使用UV的Python
+### 第 2 步：使用 uv 管理 Python
 
-我们使用`uv`它比Pip快10-100倍,并且自动处理虚拟环境.
+我们使用 `uv`：它比 pip 快 10–100 倍，并且能自动管理虚拟环境。
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -70,7 +70,7 @@ source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 uv pip install numpy matplotlib jupyter
 ```
 
-检查:
+验证安装：
 
 ```python
 import sys
@@ -82,9 +82,9 @@ a = np.array([1, 2, 3])
 print(f"Vector: {a}, dot product with itself: {np.dot(a, a)}")
 ```
 
-### 步骤3: Node.js 与 pnpm
+### 第 3 步：使用 pnpm 管理 Node.js
 
-对于TypeScript课程 (代理,MCP服务器,网络应用).
+TypeScript 课程（智能体、MCP 服务器和 Web 应用）会用到它。
 
 ```bash
 curl -fsSL https://fnm.vercel.app/install | bash
@@ -96,7 +96,7 @@ npm install -g pnpm
 node -e "console.log('Node', process.version)"
 ```
 
-**macOS / Apple Silicon (M1/M2/M3/M4):**如果安装器停止使用`Error: Cannot install under Rosetta 2 in ARM default prefix (/opt/homebrew)`您的终端正在Rosetta 2下运行`arch`印记`i386`安装Fnm强迫Arm64,将其插入你的子中,然后从上面的命令重启`fnm install 22`其他:
+**macOS / Apple Silicon（M1/M2/M3/M4）：**如果安装器报错 `Error: Cannot install under Rosetta 2 in ARM default prefix (/opt/homebrew)`，说明你的终端运行在 Rosetta 2 下（`arch` 输出 `i386`），而 Homebrew 是原生 arm64 版本。请强制使用 arm64 安装 fnm，将它接入 shell，然后从上面的 `fnm install 22` 开始重新执行命令：
 
 ```bash
 arch -arm64 brew install fnm
@@ -104,9 +104,9 @@ echo 'eval "$(fnm env --use-on-cd)"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-### 步骤4: 
+### 第 4 步：Rust
 
-对于性能关键的课程 (推理,系统).
+性能敏感的课程（如推理和系统）会用到 Rust。
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -115,9 +115,9 @@ rustc --version
 cargo --version
 ```
 
-### 步骤5:朱莉亚 (可选)
+### 第 5 步：Julia（可选）
 
-对于朱莉亚耀的数学课程.
+Julia 很适合数学计算密集型课程。
 
 ```bash
 curl -fsSL https://install.julialang.org | sh
@@ -125,9 +125,9 @@ curl -fsSL https://install.julialang.org | sh
 julia -e 'println("Julia ", VERSION)'
 ```
 
-### 步骤 6: 设置GPU (如果您有一个)
+### 第 6 步：配置 GPU（如果有）
 
-**NVIDIA (Linux / Windows):**
+**NVIDIA（Linux / Windows）：**
 
 ```bash
 nvidia-smi
@@ -136,13 +136,13 @@ nvidia-smi
 uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 ```
 
-**macOS / Apple Silicon (M1/M2/M3/M4):**没有一个Mac上 CUDA 预期,没有失败.**not**通过`--index-url .../cuXXX`安装简单的构建,其中包括果的MPS (金属) GPU后端:
+**macOS / Apple Silicon（M1/M2/M3/M4）：**Mac 没有 CUDA，这是正常情况，并非配置失败。请**不要**传入 `--index-url .../cuXXX`（这些 wheel 只适用于 Linux/Windows，会导致安装失败）。直接安装普通版本即可，其中已经包含 Apple 的 MPS（Metal）GPU 后端：
 
 ```bash
 uv pip install torch torchvision torchaudio
 ```
 
-验证 (在任何平台上都能工作):
+验证安装（适用于所有平台）：
 
 ```python
 import torch
@@ -152,22 +152,19 @@ if torch.cuda.is_available():
     print(f"GPU: {torch.cuda.get_device_name(0)}")
 ```
 
-没有GPU?没有问题.大多数课程都在CPU上进行.对于训练重的课程,请使用Google Colab或云GPU.
+没有 GPU 也没关系。大多数课程都能在 CPU 上运行；训练量较大的课程可以使用 Google Colab 或云端 GPU。
 
-### 步骤 7: 验证您想要开始的路线
+### 第 7 步：验证你准备开始的学习路线
 
-运行本课中的每个命令从库根,目录中运行
-含有`README.md`其他`phases/`飞行前检查你需要的东西
-默认情况下,它会跳过后来的工具,这样一个新学习者会看到
-只是一个明确的答案,而不是一个警告墙.
+请从仓库根目录（即包含 `README.md` 和 `phases/` 的目录）运行本课中的所有命令。预检程序只检查启动所选路线所需的内容，默认跳过以后才会使用的工具，让新学习者看到一个明确结论，而不是面对满屏警告。
 
-开始全新手序列:
+启动完整的初学者学习序列：
 
 ```bash
 python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner
 ```
 
-或只查看你想要的路线:
+或者只检查你想学习的路线：
 
 ```bash
 python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route ml-foundations
@@ -178,43 +175,36 @@ python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route ag
 python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route certification
 ```
 
-加入`--show-later`当你想要相同的飞行前检查可选的工具时
-后期工具永远不会阻止学习.
-选择的路线.
+如果希望同一套预检同时检查后续课程使用的可选工具和依赖，请添加 `--show-later`。缺少后续工具绝不会阻止你开始当前选择的路线。
 
-每次未能执行的检查都包括检测到的路径或进口错误以及
-代理技能和认证路线也显示
-由于Python脚本不能证明AI主机有
-您发现了技能或您选择的技能范围可写.
+每个未通过的必检项都会给出检测到的路径或导入错误，以及准确的修复命令。Agent Skills 和认证路线还会显示需要人工完成的宿主检查，因为 Python 脚本无法证明 AI 宿主是否已经发现某项技能，也无法证明你选择的技能作用域是否可写。
 
-开始飞行前,它打印出了第一课:
+初学者预检通过后，会输出第一节可直接运行的课程：
 
 ```text
 Ready to start Beginner course.
 Next: python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py
 ```
 
-## 用它
+## 实际使用
 
-您的环境准备好启动您检查的路线.
-当一个课时要求他们,而不是完全阻止你的第一课时
-您将在整个课程中使用的内容是:
+现在，你的环境已经可以启动刚刚检查的路线。等课程真正需要某项后续工具时再安装，不必为了整个技术栈阻塞第一节课。以下是各语言在课程中的用途：
 
-| Language | Used In | Package Manager |
+| 语言 | 使用阶段 | 包管理器 |
 |----------|---------|-----------------|
-| Python | Phases 1-12 (ML, DL, NLP, Vision, Audio, LLMs) | uv |
-| TypeScript | Phases 13-17 (Tools, Agents, Swarms, Infra) | pnpm |
-| Rust | Phases 12, 15-17 (Performance-critical systems) | cargo |
-| Julia | Phase 1 (Math foundations) | Pkg |
+| Python | 第 1–12 阶段（ML、DL、NLP、计算机视觉、音频、LLM） | uv |
+| TypeScript | 第 13–17 阶段（工具、智能体、群体智能、基础设施） | pnpm |
+| Rust | 第 12、15–17 阶段（性能敏感型系统） | cargo |
+| Julia | 第 1 阶段（数学基础） | Pkg |
 
-## 运送它
+## 交付成果
 
-这一课产生的验证脚本,任何人都可以运行来检查他们的设置.
+本课会产出一个验证脚本，任何人都可以用它检查自己的开发环境。
 
-看到`outputs/prompt-env-check.md`为了帮助人工智能助理诊断环境问题.
+`outputs/prompt-env-check.md` 中还提供了一份提示词，用于帮助 AI 助手诊断环境问题。
 
-## 运动
+## 练习
 
-1. 运行验证脚本,修复任何故障
-2. 创建一个Python虚拟环境,并安装PyTorch
-3. 在四种语言中写一个"世界好"并运行每一个
+1. 运行验证脚本，并修复所有失败项
+2. 为本课程创建一个 Python 虚拟环境并安装 PyTorch
+3. 分别用四种语言编写并运行一个“Hello, world”程序
