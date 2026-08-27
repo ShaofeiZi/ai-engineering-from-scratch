@@ -1,40 +1,40 @@
-# 信息理论
+# 信息论
 
-> 信息理论是惊喜的,损失函数是基于它.
+> 信息论衡量意外程度，损失函数就建立在它之上。
 
-**Type:** Learn
-**Language:**字符串
-**Prerequisites:** Phase 1, Lesson 06 (Probability)
-**Time:** ~60 minutes
+**Type:** 学习
+**Language:** Python
+**Prerequisites:** 第 1 阶段，第 06 课（Probability）
+**Time:** 约 1 小时
 
 ## 学习目标
 
-- 从零开始计算进化,交叉进化和KL分离,并解释它们的关系
-- 推导为什么减少交叉缩损失等于最大化日志概率
-- 计算特征和目标之间的互通信息,以排名特征的重要性
-- 解释一个语言模型选择的有效词汇量
+- 从零计算熵、交叉熵和 KL 散度，并解释三者之间的关系
+- 推导为何最小化交叉熵损失等价于最大化对数似然
+- 计算特征与目标之间的互信息，据此排列特征重要性
+- 将困惑度解释为语言模型实际面对的候选词表大小
 
 ## 问题
 
-你给我打电话`CrossEntropyLoss()`在每一个你训练的分类模型中,你会看到"困惑"在每一个语言模型论文中.你读到关于KL分歧的VAE,蒸和RLHF. 这些不是离散的概念.它们都是一样的想法穿着不同的帽子.
+训练每个分类模型时，你都会调用 `CrossEntropyLoss()`；每篇语言模型论文都会提到“困惑度”；VAE、知识蒸馏和 RLHF 中又会出现 KL 散度。这些概念并非彼此割裂，它们其实是同一个思想的不同表现形式。
 
-信息理论让你能够理解不确定性,压缩和预测.克劳德·尚农于1948年发明了这个语言,以解决通信问题.结果,训练神经网络是一种通信问题:模型试图通过学习的杂权重的道传输正确的标签.
+信息论为不确定性、压缩和预测提供了一套推理语言。Claude Shannon 在 1948 年创立了它，用来解决通信问题。事实证明，训练神经网络也是一个通信问题：模型试图通过由学习权重构成的有噪信道，传递正确标签。
 
-这一课将每一个公式从头开始,让你看看它们来自哪里,以及它们为什么运作.
+本课将从零构建每个公式，让你看清它们从何而来，又为何有效。
 
-## 概念
+## 核心概念
 
-### 信息内容 (惊喜)
+### 信息量（意外程度）
 
-什么不太可能发生,它带有更多信息. 一个硬币登陆头? 不奇怪. 抽奖胜利?
+一件低概率事件发生时，它携带的信息更多。硬币落到正面并不意外；彩票中奖则非常意外。
 
-具有p概率的事件的信息内容为:
+概率为 p 的事件，其信息量为：
 
 ```
 I(x) = -log(p(x))
 ```
 
-运用日志基础2给你比特,运用自然日志给你纳茨.
+以 2 为底的对数得到 bit，以自然对数计算则得到 nat。思想相同，只是单位不同。
 
 ```
 Event              Probability    Surprise (bits)
@@ -44,104 +44,104 @@ Rolling a 6        0.167          2.58
 Certain event      1.0            0.0
 ```
 
-某些事件没有信息,你已经知道它们会发生.
+必然事件的信息量为零，因为你早就知道它会发生。
 
-### 体 (平均惊喜)
+### 熵（平均意外程度）
 
-透是分布的所有可能结果中所预期的惊喜.
+熵是一个分布中所有可能结果的期望意外程度。
 
 ```
 H(P) = -sum( p(x) * log(p(x)) )  for all x
 ```
 
-公平硬币对二进制变量具有最大的进化值:1位.偏见硬币 (99%头) 的进化值低:0.08位.你已经知道会发生什么,所以每次翻转几乎什么都不告诉你.
+对二元变量而言，公平硬币的熵最大，为 1 bit。偏置硬币（99% 为正面）的熵很低，只有 0.08 bit。你几乎已经知道结果，因此每次抛掷提供的信息很少。
 
 ```
 Fair coin:    H = -(0.5 * log2(0.5) + 0.5 * log2(0.5)) = 1.0 bit
 Biased coin:  H = -(0.99 * log2(0.99) + 0.01 * log2(0.01)) = 0.08 bits
 ```
 
-透是指分布中不可减小的不确定性.
+熵衡量分布中无法消除的不确定性。任何压缩都不可能突破这一理论下限。
 
-### 交叉透 (你每天使用的损失功能)
+### 交叉熵（每天都会使用的损失函数）
 
-交叉透量度是平均惊喜的,当你使用分布Q来编码实际来自分布P的事件时.
+如果真实事件来自分布 P，而你使用分布 Q 对它们编码，交叉熵衡量由此产生的平均意外程度。
 
 ```
 H(P, Q) = -sum( p(x) * log(q(x)) )  for all x
 ```
 
-是你模型的预测.如果Q与P完美匹配,交叉为.任何不匹配都会使它变得更大.
+P 是真实分布（标签），Q 是模型的预测。如果 Q 与 P 完全一致，交叉熵就等于熵；任何偏差都会使交叉熵增大。
 
-在分类中,P是一个单热向量 (真实类别的概率为 1,其他的一切都是0).这简化了交叉缩为:
+在分类任务中，P 是 one-hot 向量：真实类别的概率为 1，其余类别为 0。交叉熵因此可以简化为：
 
 ```
 H(P, Q) = -log(q(true_class))
 ```
 
-它们是对类别的整个交叉缩损失公式.
+这就是分类任务完整的交叉熵损失公式：让正确类别的预测概率尽可能大。
 
-### 基因分歧 (分布之间的距离)
+### KL 散度（分布之间的差异）
 
-基因分离量测量使用Q而不是P给你带来了多大的额外惊喜.
+KL 散度衡量使用 Q 代替 P 时额外产生了多少意外信息。
 
 ```
 D_KL(P || Q) = sum( p(x) * log(p(x) / q(x)) )  for all x
              = H(P, Q) - H(P)
 ```
 
-交叉缩是缩加上KL分离.因为正确分布的缩在训练过程中是恒定的,减少交叉缩就等于减少KL分离.你正在推动模型的分布向正确分布.
+交叉熵等于熵加 KL 散度。训练期间，真实分布的熵保持不变，因此最小化交叉熵就等价于最小化 KL 散度。你正在把模型分布推向真实分布。
 
- KL分离不对称:D_KL(P  Q) !=D_KL(Q  P).它不是真正的距离指标.
+KL 散度不对称：D_KL(P || Q) != D_KL(Q || P)，所以它并不是真正的距离度量。
 
-### 互通信息
+### 互信息
 
-相互信息衡量知道一个变量告诉你关于另一个变量的程度.
+互信息衡量：知道一个变量后，能够获得多少关于另一个变量的信息。
 
 ```
 I(X; Y) = H(X) - H(X|Y)
         = H(X) + H(Y) - H(X, Y)
 ```
 
-如果X和Y是独立的,互通信息是零的.知道一个对另一个什么都不告诉你.如果它们完全相关,互通信息等于任何变量的.
+如果 X 与 Y 相互独立，互信息为零，因为其中一个变量无法提供另一个变量的信息。如果二者完全相关，互信息就等于任一变量的熵。
 
-在特征选择中,特征与目标之间的互通信息很高,意味着特征是有用的.
+在特征选择中，特征与目标之间的互信息较高，意味着这个特征有用；互信息较低，则意味着它更像噪声。
 
-### 条件性
+### 条件熵
 
-测量了观察X后对Y的不确定性.
+H(Y|X) 衡量观察到 X 后，关于 Y 还剩多少不确定性。
 
 ```
 H(Y|X) = H(X,Y) - H(X)
 ```
 
-两种极端:
-- 如果X完全确定Y,那么H(Y 则X) = 0.知道X消除了Y的所有不确定性.
-- 如果X对Y没有告诉你什么,那么H(YX的说法) =H(Y).知道X根本不会减少你的不确定性.
+来看两个极端情况：
+- 如果 X 完全决定 Y，那么 H(Y|X) = 0。知道 X 后，关于 Y 的不确定性全部消失。例如 X 是摄氏温度，Y 是华氏温度。
+- 如果 X 无法提供任何关于 Y 的信息，那么 H(Y|X) = H(Y)。知道 X 并不会降低对 Y 的不确定性。例如 X 是一次抛硬币结果，Y 是明天的天气。
 
-条件性透总是非负,从来不超过H(Y):
+条件熵始终非负，并且不会超过 H(Y)：
 
 ```
 0 <= H(Y|X) <= H(Y)
 ```
 
-在机器学习中,决定树中出现了条件的透.在每个分区时,算法选择了最小化H(Y) 的X特征 - - 消除了Y标签的最不确定性.
+在机器学习中，决策树会用到条件熵。每次分裂时，算法会选择使 H(Y|X) 最小的特征 X，也就是能够消除最多标签 Y 不确定性的特征。
 
-### 关联
+### 联合熵
 
- (X,Y) 是 X 和 Y 的联合分布的.
+H(X,Y) 是 X 与 Y 联合分布的熵。
 
 ```
 H(X,Y) = -sum sum p(x,y) * log(p(x,y))   for all x, y
 ```
 
-关键属性:
+它具有以下重要性质：
 
 ```
 H(X,Y) <= H(X) + H(Y)
 ```
 
-如果 X 和 Y 具有独立性,则同等性存在.如果它们共享信息,则联合体积比单个体积少. "缺失"的体积是完全相互信息.
+当 X 与 Y 相互独立时取等号。如果二者共享信息，联合熵就小于各自熵之和；“缺少”的那部分恰好就是互信息。
 
 ```mermaid
 graph TD
@@ -166,14 +166,14 @@ graph TD
     HXY -.- HYgX
 ```
 
-关系:
-- , =  + 
--  () =  () -  () =  () -  ()
-- , =+
+这些量之间的关系为：
+- H(X,Y) = H(X) + H(Y|X) = H(Y) + H(X|Y)
+- I(X;Y) = H(X) - H(X|Y) = H(Y) - H(Y|X)
+- H(X,Y) = H(X) + H(Y) - I(X;Y)
 
-### 互通信息 (深入潜水)
+### 深入理解互信息
 
-相互信息 I  X  Y) 量化了知道一个变量有多大程度上减少了对另一个变量的不确定性.
+互信息 I(X;Y) 对“知道一个变量后，另一个变量的不确定性减少多少”进行量化。
 
 ```
 I(X;Y) = H(X) - H(X|Y)
@@ -182,61 +182,61 @@ I(X;Y) = H(X) - H(X|Y)
        = sum sum p(x,y) * log(p(x,y) / (p(x) * p(y)))
 ```
 
-性能:
-- 总是输出 0 信息,因为观察到东西.
-- 如果和Y是独立的,
-- 它们是对称的,而不是KL差距.
-- 一个变量与自己分享所有信息.
+它具有以下性质：
+- I(X;Y) 始终 >= 0。观察某个变量不会使你损失信息。
+- 当且仅当 X 与 Y 相互独立时，I(X;Y) = 0。
+- I(X;Y) = I(Y;X)。互信息是对称的，这一点与 KL 散度不同。
+- I(X;X) = H(X)。一个变量与自身共享全部信息。
 
-**Mutual information for feature selection.**在ML中,你需要有关目标的信息功能.互通信息为你提供了原则性地排名功能的方式:
+**用互信息选择特征。**在机器学习中，你希望找到能够提供目标信息的特征。互信息提供了一种有原则的排序方式：
 
-1. 对于每个特征 X_i,计算I(X_i;Y) 时,Y是目标变量.
-2. 根据MI分数的排名.
-3. 保持上部的K特征.
+1. 对每个特征 X_i，计算它与目标变量 Y 之间的 I(X_i; Y)。
+2. 按 MI 分数对特征排序。
+3. 保留前 k 个特征。
 
-这适用于任何功能与目标之间的关系--线性,非线性,单调,或者不.
+无论特征与目标之间是线性、非线性、单调还是非单调关系，这种方法都适用。相关系数只能发现线性关系，互信息则能发现任何统计依赖。
 
-| Method | Detects | Computational cost | Handles categorical? |
+| 方法 | 能检测的关系 | 计算成本 | 支持类别变量？ |
 |--------|---------|-------------------|---------------------|
-| Pearson correlation | Linear relationships | O(n) | No |
-| Spearman correlation | Monotonic relationships | O(n log n) | No |
-| Mutual information | Any statistical dependency | O(n log n) with binning | Yes |
+| Pearson 相关系数 | 线性关系 | O(n) | 否 |
+| Spearman 相关系数 | 单调关系 | O(n log n) | 否 |
+| 互信息 | 任意统计依赖 | 使用分箱时为 O(n log n) | 是 |
 
-### 标签滑滑和交叉透
+### 标签平滑与交叉熵
 
-标准分类使用硬目标: [0, 0, 1, 0].真正类得到概率 1,其他所有得到0.标签平滑取代这些软目标:
+标准分类使用硬目标，例如 [0, 0, 1, 0]：真实类别的概率为 1，其他类别为 0。标签平滑会将其替换成软目标：
 
 ```
 soft_target = (1 - epsilon) * hard_target + epsilon / num_classes
 ```
 
-具有epsilon = 0.1 和4类:
-- 强度目标: [0, 0, 1, 0]
-- 软目标: [0.025,0.025,0.925,0.025]
+当 epsilon = 0.1 且共有 4 个类别时：
+- 硬目标：[0, 0, 1, 0]
+- 软目标：[0.025, 0.025, 0.925, 0.025]
 
-从信息理论的角度来看,标签平滑增加了目标分布的缩.硬的单热目标具有缩0.没有不确定性.软的目标具有积极的缩.
+从信息论角度看，标签平滑提高了目标分布的熵。硬 one-hot 目标的熵为 0，不存在任何不确定性；软目标则具有正熵。
 
-为什么这有帮助:
-- 防止模型将高位数推向极端值 (在交叉值下,将无限高位数需要完美匹配一个热点目标)
-- 作为规律化:模型不能100%自信
-- 提高校准:预测概率更好地反映了真实的不确定性
-- 减少训练和推断行为之间的差距
+它能带来以下好处：
+- 防止模型把 logits 推到极端值（若要让交叉熵下的预测与 one-hot 目标完全一致，就需要无限大的 logits）
+- 起到正则化作用：模型无法达到 100% 的置信度
+- 改善校准：预测概率能够更准确地反映真实不确定性
+- 缩小训练行为与推理行为之间的差距
 
-标签滑滑的交叉缩损失变为:
+加入标签平滑后的交叉熵损失为：
 
 ```
 L = (1 - epsilon) * CE(hard_target, prediction) + epsilon * H_uniform(prediction)
 ```
 
-第二个术语惩罚了远非统一的预测,
+第二项会惩罚远离均匀分布的预测，相当于直接对置信度施加正则化。
 
-### 为什么跨是分类的损失
+### 为什么交叉熵是分类任务的核心损失
 
-只有三个观点,同一个结论.
+从三种视角出发，会得到相同结论。
 
-**Information theory view.**通过使用模型的分布而不是真正的分布来测量你浪费多少位.
+**信息论视角。**交叉熵衡量使用模型分布代替真实分布时浪费了多少 bit。将它最小化，就是让模型成为对现实最高效的编码器。
 
-**Maximum likelihood view.**对于真实类 y_i 的N训练样本:
+**最大似然视角。**对于真实类别为 y_i 的 N 个训练样本：
 
 ```
 Likelihood     = product( q(y_i) )
@@ -244,13 +244,13 @@ Log-likelihood = sum( log(q(y_i)) )
 Negative log-likelihood = -sum( log(q(y_i)) )
 ```
 
-减少交叉缩 = 最大化训练数据的可能性.
+最后一行就是交叉熵损失。因此，最小化交叉熵等价于最大化训练数据在模型下的似然。
 
-**Gradient view.**对于位的交叉位梯度简单 (预测 - 确实).清洁,稳定,快速计算.这就是为什么它与软max完美结合.
+**梯度视角。**交叉熵相对于 logits 的梯度就是 predicted - true，简洁、稳定，而且计算迅速。这正是它与 softmax 完美搭配的原因。
 
-### 子与子
+### Bit 与 Nat
 
-唯一的区别是木材的基础.
+二者唯一的区别是对数底数。
 
 ```
 log base 2   -> bits      (information theory tradition)
@@ -258,28 +258,28 @@ log base e   -> nats      (machine learning convention)
 log base 10  -> hartleys  (rarely used)
 ```
 
-根据PyTorch和TensorFlow的默认使用自然日志 (nats).
+1 nat = 1/ln(2) bit = 1.4427 bit。PyTorch 和 TensorFlow 默认使用自然对数，也就是以 nat 为单位。
 
-### 困惑
+### 困惑度
 
-杂度是交叉透的指数,它告诉你模型不确定的同样可能的实际数量.
+困惑度是交叉熵的指数，用来表示模型实际上在多少个等概率选项之间犹豫。
 
 ```
 Perplexity = 2^H(P,Q)   (if using bits)
 Perplexity = e^H(P,Q)   (if using nats)
 ```
 
-语言模型中50个难以理解的模特,平均是像必须从50个可能的下一个代币中均地选择一样困惑.
+语言模型的困惑度为 50，表示它在平均意义上就像每一步都要从 50 个概率相等的候选 token 中选择。困惑度越低越好。
 
-现代模型在一个数字中表达了很好的域名.
+GPT-2 在常用基准上的困惑度约为 30；在数据覆盖充分的领域，现代模型已经能达到个位数。
 
 ```figure
 entropy-kl
 ```
 
-## 建立它
+## 动手构建
 
-### 步骤1:信息内容和透
+### 第 1 步：信息量与熵
 
 ```python
 import math
@@ -304,7 +304,7 @@ print(f"Biased coin entropy: {entropy(biased_coin):.4f} bits")
 print(f"Fair die entropy:    {entropy(fair_die):.4f} bits")
 ```
 
-### 步骤2:跨和KL分离
+### 第 2 步：交叉熵与 KL 散度
 
 ```python
 def cross_entropy(p, q, base=2):
@@ -330,7 +330,7 @@ print(f"KL divergence (good):     {kl_divergence(true_dist, good_model):.4f} bit
 print(f"KL divergence (bad):      {kl_divergence(true_dist, bad_model):.4f} bits")
 ```
 
-### 阶段3: 交叉缩作为分类损失
+### 第 3 步：把交叉熵用作分类损失
 
 ```python
 def softmax(logits):
@@ -356,7 +356,7 @@ print(f"Loss:        {loss:.4f} nats")
 print(f"Perplexity:  {math.exp(loss):.2f}")
 ```
 
-### 步骤4:交叉缩等于负记记概率
+### 第 4 步：交叉熵等于负对数似然
 
 ```python
 import random
@@ -383,7 +383,7 @@ print(f"Negative log-likelihood: {nll:.6f}")
 print(f"Difference:              {abs(ce_loss - nll):.2e}")
 ```
 
-### 步骤5:相互信息
+### 第 5 步：互信息
 
 ```python
 def mutual_information(joint_probs, base=2):
@@ -408,9 +408,9 @@ print(f"MI (independent): {mutual_information(independent):.4f} bits")
 print(f"MI (dependent):   {mutual_information(dependent):.4f} bits")
 ```
 
-## 用它
+## 实际使用
 
-实际上,你将使用的方法:
+下面使用 NumPy 实现相同概念，这也是实践中的常见写法：
 
 ```python
 import numpy as np
@@ -437,35 +437,35 @@ print(f"Cross-ent:  {np_cross_entropy(true, pred):.4f} nats")
 print(f"KL div:     {np_kl_divergence(true, pred):.4f} nats")
 ```
 
-你从零开始建造了什么?`torch.nn.CrossEntropyLoss()`现在你知道训练期间的损失为什么会减少:模型的预测分布接近真实的分布,
+你刚刚从零实现了 `torch.nn.CrossEntropyLoss()` 的底层工作。现在你知道训练期间损失为什么会下降：以浪费的信息量（nat）衡量，模型预测分布正在不断接近真实分布。
 
-## 运动
+## 练习
 
-1. 根据英语字母的统一分布 (26 字母) 来计算英语字母的缩.然后使用实际字母频率来估算它.
+1. 假设英文字母表中的 26 个字母服从均匀分布，计算其熵；再使用真实的字母频率估算熵。哪一个更高？为什么？
 
-2. 一个模型输出对真类型的样本的 logits [5.0, 2.0, 0.5] 1. 手动计算交叉缩损失,然后用你的 `cross_entropy_loss`什么地址会产生零损失?
+2. 对于真实类别为 1 的样本，某模型输出 logits [5.0, 2.0, 0.5]。手工计算交叉熵损失，再使用你的 `cross_entropy_loss` 函数验证。怎样的 logits 才能产生零损失？
 
-3. 证明KL分离不对称. 选择两个分布 P 和 Q,计算D_KL_P  Q) 和DL  Q  P).解释为什么它们不同.
+3. 证明 KL 散度不对称。任选两个分布 P 和 Q，分别计算 D_KL(P || Q) 与 D_KL(Q || P)，并解释结果为何不同。
 
-4. 构建一个函数,计算一个符号预测序列的困难. 给出 (true_token_index, predicted_logits) 对的列表,返回序列的困难.
+4. 编写一个函数，计算一系列 token 预测的困惑度。给定若干 (true_token_index, predicted_logits) 对，返回整个序列的困惑度。
 
-## 关键词
+## 关键术语
 
-| Term | What people say | What it actually means |
+| 术语 | 人们常说 | 准确含义 |
 |------|----------------|----------------------|
-| Information content | "Surprise" | The number of bits (or nats) needed to encode an event: -log(p) |
-| Entropy | "Randomness" | The average surprise across all outcomes of a distribution. Measures irreducible uncertainty. |
-| Cross-entropy | "The loss function" | Average surprise when using model distribution Q to encode events from true distribution P. |
-| KL divergence | "Distance between distributions" | Extra bits wasted by using Q instead of P. Equals cross-entropy minus entropy. Not symmetric. |
-| Mutual information | "How related are X and Y" | Reduction in uncertainty about X from knowing Y. Zero means independent. |
-| Softmax | "Turn logits into probabilities" | Exponentiate and normalize. Maps any real-valued vector to a valid probability distribution. |
-| Perplexity | "How confused the model is" | Exponential of cross-entropy. The effective vocabulary size the model is choosing from at each step. |
-| Bits | "Shannon's unit" | Information measured with log base 2. One bit resolves one fair coin flip. |
-| Nats | "ML's unit" | Information measured with natural log. Used by PyTorch and TensorFlow by default. |
-| Negative log-likelihood | "NLL loss" | Identical to cross-entropy loss for one-hot labels. Minimizing it maximizes the probability of correct predictions. |
+| Information content | “意外程度” | 编码一个事件所需的 bit（或 nat）数：-log(p) |
+| Entropy | “随机性” | 分布中所有结果的平均意外程度，衡量无法消除的不确定性 |
+| Cross-entropy | “损失函数” | 使用模型分布 Q 编码来自真实分布 P 的事件时，产生的平均意外程度 |
+| KL divergence | “分布之间的距离” | 使用 Q 代替 P 时浪费的额外 bit，等于交叉熵减熵，并且不对称 |
+| Mutual information | “X 与 Y 有多相关” | 知道 Y 后，X 的不确定性减少多少；为零表示二者独立 |
+| Softmax | “把 logits 变成概率” | 对数值取指数并归一化，将任意实数向量映射成有效概率分布 |
+| Perplexity | “模型有多困惑” | 交叉熵的指数，表示模型在每一步实际面对的候选词表大小 |
+| Bits | “Shannon 的单位” | 以 2 为底的对数衡量的信息量；1 bit 可以消除一次公平抛硬币的不确定性 |
+| Nats | “机器学习的单位” | 使用自然对数衡量的信息量；PyTorch 和 TensorFlow 默认使用该单位 |
+| Negative log-likelihood | “NLL 损失” | 对 one-hot 标签而言与交叉熵损失完全相同；将其最小化就是让正确预测的概率最大化 |
 
-## 进一步阅读
+## 延伸阅读
 
-- [Shannon 1948: A Mathematical Theory of Communication](https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf)- 原文,仍可读
-- [Visual Information Theory (Chris Olah)](https://colah.github.io/posts/2015-09-Visual-Information/)- 能对和KL分离进行最佳视觉解释
-- [PyTorch CrossEntropyLoss docs](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html)- 框架如何实现你刚刚构建的
+- [Shannon 1948：《通信的数学理论》](https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf)——信息论的原始论文，至今仍很易读
+- [可视化信息论（Chris Olah）](https://colah.github.io/posts/2015-09-Visual-Information/)——熵与 KL 散度的优秀可视化讲解
+- [PyTorch CrossEntropyLoss 文档](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html)——框架如何实现你刚刚从零构建的内容
