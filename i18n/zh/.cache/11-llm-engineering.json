@@ -1,6 +1,6 @@
 {
   "phases/11-llm-engineering/01-prompt-engineering/docs/en.md": "cd2886a19bdcb3f8faed3810a1297f820f3ab0b9d9fdfc22479619303bba9425",
-  "phases/11-llm-engineering/02-few-shot-cot/docs/en.md": "402278b0cc2b303ef9dfddb3e13d5101c02b2aed9a1b0f4fcb83f21a02795b5e",
+  "phases/11-llm-engineering/02-few-shot-cot/docs/en.md": "cf6f1c6cfb2fb4b6b1fb3674ba5b481c1e88944a2c9d831afec65947d7eee299",
   "phases/11-llm-engineering/03-structured-outputs/docs/en.md": "6d310ae5ce8f771c5668d8742f1d1b1c922e738c087225d7c4b31eed492e43d7",
   "phases/11-llm-engineering/04-embeddings/docs/en.md": "9c3115093f152ce871351f278f9e08a2322849bfaa9af54bb5339b5874f2b401",
   "phases/11-llm-engineering/05-context-engineering/docs/en.md": "778ebedaa18baad1af5409b500b174f1809d215fcc20a48960e8ad6324eb50a6",
