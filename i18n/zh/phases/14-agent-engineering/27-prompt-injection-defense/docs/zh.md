@@ -12,7 +12,7 @@
 - 说明 Greshake 等人提出的间接 prompt injection 威胁模型。
 - 说出论文中演示的五类攻击：数据窃取、worming、持续性记忆投毒、信息生态污染、任意工具调用。
 - 描述 2026 年形成共识的防御原则：不可信内容、allowlist 导航、逐步安全检查、guardrails、human-in-the-loop、外部捕获。
-- 实现 PVE（Prompt-Validator-Executor）验证模式：在昂贵主模型真正执行工具调用前，先用廉价快速的验证器拦截风险动作。
+- 实现 PVE（Prompt-Validator-Executor）验证模式：主模型提出候选工具调用，廉价快速的验证器随后检查，只有获批后 executor 才会执行。
 
 ## 问题
 
@@ -54,9 +54,9 @@ LLM 无法稳定地区分“这条指令来自用户”还是“这条指令来�
 
 在本课中，PVE 始终指 **Prompt-Validator-Executor 验证模式**。它不同于 Phase 05, Lesson 17 中的 **Plan-Verify-Execute 规划模式**：后者依据商定好的计划验证动作，而本课的模式会在执行前把每个候选动作交给独立的 validator 检查。
 
-- 在每次候选工具调用发生前，先让一个**廉价、快速**的 validator 模型检查，再决定是否允许**昂贵的主模型**真正执行。
+- **主模型**先提出候选工具调用；随后由一个**廉价、快速**的 validator 模型进行检查，executor 只有在获批后才能执行该调用。
 - Validator 重点检查：这个动作是否符合用户声明的意图？是否触碰敏感面？参数里是否出现类似注入的内容？
-- 如果 validator 拒绝，主模型会收到“该动作被拒绝，请换一种方式”的反馈。
+- 如果 validator 批准，executor 就执行该调用；如果拒绝，则不会执行任何操作，主模型会收到“该动作被拒绝，请换一种方式”的反馈。
 
 代价是每次工具调用都多一次推理。但对绝大多数代理产品来说，这是一笔很便宜的保险费。
 
@@ -112,7 +112,7 @@ python3 code/main.py
 |------|----------|----------|
 | 间接提示注入 | "检索内容中的注入" | 指令被嵌入到代理检索到的数据中 |
 | 直接提示注入 | "越狱" | 用户直接提供 prompt 来绕过 guardrail |
-| PVE | "Prompt-Validator-Executor 验证模式" | 在昂贵主推理前先跑廉价快速验证器；不同于 Plan-Verify-Execute 规划模式 |
+| PVE | "Prompt-Validator-Executor 验证模式" | 主模型提出候选工具调用，廉价快速的验证器进行检查，executor 只有在获批后才会执行；不同于 Plan-Verify-Execute 规划模式 |
 | Source tag | "Content provenance" | 标记内容来源的元数据 |
 | Allowlist navigation | "URL whitelist" | 代理只能访问被批准的目的地 |
 | Worming | "Self-replicating exploit" | 注入内容带有自我传播指令 |
