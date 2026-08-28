@@ -204,7 +204,7 @@ def is_destructive_action(text):
 
   攻击成功率会随场景变化。在通用工具使用和编码基准中，前沿模型的实测成功率约为 0.5%～8.5%；在某些高风险设置中（针对 AI 编码智能体的自适应攻击、存在漏洞的编排机制），成功率曾达到约 84%。真实生产 CVE 包括 EchoLeak（CVE-2025-32711，CVSS 9.3）：Microsoft 365 Copilot 中的零点击数据外泄漏洞，可由攻击者控制的电子邮件触发。
 
-  缓解方法：在整个循环中始终把用户输入视为不可信；调用工具前进行净化；将工具输出与主提示隔离；使用“规划—验证—执行”（PVE）模式，让智能体先规划，再在执行前对照计划验证每个动作（这样可以阻止工具结果注入计划外的新动作）；破坏性操作必须由用户确认；对工具权限采用最小权限原则。
+  缓解方法：在整个循环中始终把用户输入视为不可信；调用工具前进行净化；将工具输出与主提示隔离；使用 **Plan-Verify-Execute（规划—验证—执行）规划模式**，让智能体先制定计划，再在执行前对照该计划验证每个动作（这样可以阻止工具结果注入计划外的新动作）；破坏性操作必须由用户确认；对工具权限采用最小权限原则。在本课中，PVE 指 Plan-Verify-Execute。它不同于 Phase 14, Lesson 27 中的 **Prompt-Validator-Executor（提示—验证器—执行器）验证模式**；后者会在工具执行前插入一个独立的验证器。
 
   再多的提示工程也无法彻底消除这一风险。必须使用外部运行时防御层（LLM Guard、允许列表验证、语义异常检测）。
 - **范围蔓延。** 工具调用返回了旁支信息，智能体因而偏离任务。缓解方法：缩小工具契约；保持系统提示聚焦；增加偏题率评估。
@@ -231,6 +231,7 @@ Given a product context (user need, compliance constraints, available tools, dat
 2. LLM choice if applicable. Name the model family (Claude, GPT-4, Llama-3.1, Mixtral). Match to tool-use quality and cost.
 3. Grounding strategy. RAG sources, retrieval method (see lesson 14), tool contracts.
 4. Evaluation plan. Task success rate, tool-call correctness, off-task rate, hallucination rate on held-out dialogs.
+5. Execution control. For a tool-using agent, apply the **Plan-Verify-Execute planning pattern**: agree on a plan, verify each proposed action against it, then execute. In this lesson, PVE means Plan-Verify-Execute; do not confuse it with Phase 14's **Prompt-Validator-Executor validation pattern**, which places a separate validator before tool execution.
 
 Refuse to recommend a pure-LLM agent for any destructive action (payments, account deletion, data modification) without a structured confirmation flow. Refuse to skip the prompt-injection audit if the agent has write access to anything.
 ```
@@ -262,5 +263,5 @@ Refuse to recommend a pure-LLM agent for any destructive action (payments, accou
 - [Anthropic 构建高效智能体指南](https://www.anthropic.com/research/building-effective-agents)——2024 年的生产指南，到 2026 年仍然适用。
 - [Greshake 等（2023），这不是你预想的结果：通过间接提示注入攻破现实世界中的大语言模型集成应用](https://arxiv.org/abs/2302.12173)——提示注入论文。
 - [OWASP 2025 年大语言模型应用十大风险——LLM01 提示注入](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)——让提示注入成为首要安全问题的排名。
-- [AWS——保护 Amazon Bedrock Agent 免受间接提示注入](https://aws.amazon.com/blogs/machine-learning/securing-amazon-bedrock-agents-a-guide-to-safeguarding-against-indirect-prompt-injections/)——实用的编排层防御，包括规划—验证—执行和用户确认流程。
+- [AWS——保护 Amazon Bedrock Agent 免受间接提示注入](https://aws.amazon.com/blogs/machine-learning/securing-amazon-bedrock-agents-a-guide-to-safeguarding-against-indirect-prompt-injections/)——实用的编排层防御，包括 Plan-Verify-Execute（规划—验证—执行）规划模式和用户确认流程。
 - [EchoLeak（CVE-2025-32711）](https://www.vectra.ai/topics/prompt-injection)——由间接提示注入导致的经典零点击数据外泄 CVE，说明拥有写权限的智能体为何需要运行时防御。
