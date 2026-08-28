@@ -161,7 +161,7 @@ def elo_update(r_a, r_b, winner, k=32):
 | FID | “弗雷歇 Inception 距离” | 真实与生成图像的 Inception 特征各自拟合高斯后，两者之间的弗雷歇距离。 |
 | CLIP Score | “图文相似度” | CLIP 图像嵌入与文本嵌入之间的余弦相似度。 |
 | CMMD | “FID 的替代品” | 基于 CLIP 特征的 MMD；偏差更小，也不假设高斯分布。 |
-| IS | “Inception Score” | Exp KL(p(y\|x) \|\| p(y))；与现代模型的相关性很差，已被淘汰。 |
+| IS | “Inception Score” | exp(E_x[KL(p(y\|x) \|\| p(y))])；与现代模型的相关性很差，已被淘汰。 |
 | HPSv2 / ImageReward / PickScore | “学习得到的偏好代理指标” | 在人类偏好数据上训练的小模型，用作自动裁判。 |
 | Elo | “国际象棋等级分” | 对成对胜负执行 Bradley-Terry 汇总。 |
 | PartiPrompts | “基准提示词集” | Google 精选的 1600 条提示词，覆盖 12 个类别。 |
