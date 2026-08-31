@@ -44,5 +44,6 @@
   "phases/14-agent-engineering/43-frame-the-task-before-code/docs/en.md": "b5ebe37b63dd21d1abba0472c8abf6b07c070b321b17d3cda1c4e216e1a7e32d",
   "phases/14-agent-engineering/44-plan-from-evidence/docs/en.md": "1018b075aafa5bb25c695859db764d57a00d1991c450c75511ce0bc3cb6c8139",
   "phases/14-agent-engineering/45-delegate-with-isolation/docs/en.md": "cdd379d9f31f811933d4ab1897e7c95b3f7e2e84f4d418d4fa6ebae2d1559dfb",
-  "phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md": "81837f3007e77e0b884dd874912d4dba14eaf81b739fb866e78149af241a2c56"
+  "phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md": "81837f3007e77e0b884dd874912d4dba14eaf81b739fb866e78149af241a2c56",
+  "phases/14-agent-engineering/47-outcomes-before-output/docs/en.md": "05407df34f766e1b5a350b70940c149db317c87c3571dcd37926f0acd1772706"
 }
