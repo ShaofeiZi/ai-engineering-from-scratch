@@ -221,7 +221,7 @@ ReAct 是现代 AI 智能体的基础。每种智能体框架（LangChain、Crew
 随着提示词变得复杂，结构可以防止模型混淆不同部分。常见方法有三种：
 
 **XML 标签**（Claude 上效果最佳，在其他模型上也很稳）：
-```
+```text
 <context>
 You are reviewing a pull request.
 The codebase uses TypeScript and React.
@@ -241,7 +241,7 @@ List each issue with: file, line, severity (critical/warning/info), description.
 ```
 
 **Markdown 标题**（通用）：
-```
+```text
 ## Role
 Senior security engineer at a fintech company.
 
@@ -258,7 +258,7 @@ Analyze this API endpoint for vulnerabilities.
 ```
 
 **分隔符**（简洁而有效）：
-```
+```text
 ---INPUT---
 {user_text}
 ---END INPUT---

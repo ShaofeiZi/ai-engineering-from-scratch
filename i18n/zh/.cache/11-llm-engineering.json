@@ -5,8 +5,8 @@
     "provider": "manual"
   },
   "phases/11-llm-engineering/02-few-shot-cot/docs/en.md": {
-    "source_sha256": "cf6f1c6cfb2fb4b6b1fb3674ba5b481c1e88944a2c9d831afec65947d7eee299",
-    "output_sha256": "2775df1208a91059ba866c62446d740dc0809d2e0fe6dd21be59323312acb74e",
+    "source_sha256": "a22c6ca21b19d79dbd4c2e3085f1a32a0b6a8ece3e55839bccb06127bdcbb392",
+    "output_sha256": "dc8aaf5d1353b4355a6b88151a6832e8d32d83d21625062f4eccc195807041e4",
     "provider": "manual"
   },
   "phases/11-llm-engineering/03-structured-outputs/docs/en.md": {
