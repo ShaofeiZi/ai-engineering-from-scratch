@@ -42,5 +42,6 @@
   "phases/14-agent-engineering/41-workbench-for-real-repos/docs/en.md": "75d2298297ec8a23832dea06df7e12a448e1030b265465aac178dc914b881d27",
   "phases/14-agent-engineering/42-agent-workbench-capstone/docs/en.md": "50733fd8456af91cd7f7cd39bc02e984be10cc85f0c3d886ba60abfa46e24d21",
   "phases/14-agent-engineering/43-frame-the-task-before-code/docs/en.md": "b5ebe37b63dd21d1abba0472c8abf6b07c070b321b17d3cda1c4e216e1a7e32d",
-  "phases/14-agent-engineering/44-plan-from-evidence/docs/en.md": "1018b075aafa5bb25c695859db764d57a00d1991c450c75511ce0bc3cb6c8139"
+  "phases/14-agent-engineering/44-plan-from-evidence/docs/en.md": "1018b075aafa5bb25c695859db764d57a00d1991c450c75511ce0bc3cb6c8139",
+  "phases/14-agent-engineering/45-delegate-with-isolation/docs/en.md": "cdd379d9f31f811933d4ab1897e7c95b3f7e2e84f4d418d4fa6ebae2d1559dfb"
 }
