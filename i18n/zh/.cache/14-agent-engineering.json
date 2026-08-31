@@ -47,5 +47,6 @@
   "phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md": "81837f3007e77e0b884dd874912d4dba14eaf81b739fb866e78149af241a2c56",
   "phases/14-agent-engineering/47-outcomes-before-output/docs/en.md": "05407df34f766e1b5a350b70940c149db317c87c3571dcd37926f0acd1772706",
   "phases/14-agent-engineering/48-discover-the-real-workflow/docs/en.md": "8ee8e7fa91e4ed6674f286de9cbdf05e1c2b141c61af1585c46c54a4b512f34b",
-  "phases/14-agent-engineering/49-map-assumptions-and-risk/docs/en.md": "7c8381be49ff8b9c8b4e9f8100c338936d993f68cbcd9e988e4f0831ff33ab43"
+  "phases/14-agent-engineering/49-map-assumptions-and-risk/docs/en.md": "7c8381be49ff8b9c8b4e9f8100c338936d993f68cbcd9e988e4f0831ff33ab43",
+  "phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md": "8dcdf1ba55e1b58f5ceb019de63ab5be3006b51e051e7acfa4e5cbd6f40149ab"
 }
