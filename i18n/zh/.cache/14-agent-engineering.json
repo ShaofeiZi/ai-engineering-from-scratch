@@ -48,5 +48,6 @@
   "phases/14-agent-engineering/47-outcomes-before-output/docs/en.md": "05407df34f766e1b5a350b70940c149db317c87c3571dcd37926f0acd1772706",
   "phases/14-agent-engineering/48-discover-the-real-workflow/docs/en.md": "8ee8e7fa91e4ed6674f286de9cbdf05e1c2b141c61af1585c46c54a4b512f34b",
   "phases/14-agent-engineering/49-map-assumptions-and-risk/docs/en.md": "7c8381be49ff8b9c8b4e9f8100c338936d993f68cbcd9e988e4f0831ff33ab43",
-  "phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md": "8dcdf1ba55e1b58f5ceb019de63ab5be3006b51e051e7acfa4e5cbd6f40149ab"
+  "phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md": "8dcdf1ba55e1b58f5ceb019de63ab5be3006b51e051e7acfa4e5cbd6f40149ab",
+  "phases/14-agent-engineering/51-write-specifications-that-preserve-judgment/docs/en.md": "3d5976c2d6cc99bbd6f4660d73e52a78a4b6ee171bd2a3b295c7d2b1ff35582f"
 }
