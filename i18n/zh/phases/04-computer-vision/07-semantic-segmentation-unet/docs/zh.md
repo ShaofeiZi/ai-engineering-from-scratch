@@ -89,7 +89,7 @@ flowchart LR
 
 对于包含 C 个类别的语义分割任务，模型输出形状为 `(N, C, H, W)`，目标形状为 `(N, H, W)`，其中包含整数类别 ID。交叉熵与分类任务完全相同，只是应用于每个空间位置：
 
-```
+```text
 Loss = mean over (n, h, w) of -log( softmax(logits[n, :, h, w])[target[n, h, w]] )
 ```
 
@@ -101,7 +101,7 @@ PyTorch 中的 `F.cross_entropy` 原生支持这种形状，无需重塑。
 
 Dice Loss 通过直接优化预测掩码与真实掩码的重叠程度解决这个问题：
 
-```
+```text
 Dice(p, y) = 2 * sum(p * y) / (sum(p) + sum(y) + epsilon)
 Dice_loss = 1 - Dice
 ```
@@ -110,7 +110,7 @@ Dice_loss = 1 - Dice
 
 实践中应使用**组合损失**：
 
-```
+```text
 L = L_cross_entropy + lambda * L_dice       (lambda ~ 1)
 ```
 
@@ -261,47 +261,58 @@ Dice 会先按类别分别计算，再取平均，也就是宏平均 Dice。`eps
 
 ```python
 @torch.no_grad()
-def iou_per_class(logits, targets, num_classes):
+def intersection_union_per_class(logits, targets, num_classes):
     preds = logits.argmax(dim=1)
-    ious = torch.zeros(num_classes)
+    intersections = torch.zeros(num_classes, device=logits.device)
+    unions = torch.zeros(num_classes, device=logits.device)
     for c in range(num_classes):
         pred_c = (preds == c)
         true_c = (targets == c)
-        inter = (pred_c & true_c).sum().float()
-        union = (pred_c | true_c).sum().float()
-        ious[c] = (inter / union) if union > 0 else torch.tensor(float("nan"))
+        intersections[c] = (pred_c & true_c).sum()
+        unions[c] = (pred_c | true_c).sum()
+    return intersections, unions
+
+
+def iou_from_counts(intersections, unions):
+    ious = torch.full_like(intersections, float("nan"), dtype=torch.float32)
+    present = unions > 0
+    ious[present] = intersections[present].float() / unions[present].float()
     return ious
 ```
 
-它会返回长度为 C 的向量。`nan` 表示当前批次中没有该类别；计算 mIoU 时，不应把这些项纳入平均。
+先在所有验证批次上累计交集与并集向量，再调用一次 `iou_from_counts`。这样会让每个像素获得相同权重，避免样本较少的最后一个批次与完整批次产生同等影响。`nan` 表示整个已评估数据集中都没有该类别。
 
 ### 第 6 步：用于端到端验证的合成数据集
 
-在彩色背景上生成不同形状，迫使网络学习形状，而不是像素颜色。
+在独立随机生成的彩色背景上创建一到三个形状。形状颜色与圆形/方形类别彼此独立采样，因此模型无法通过记住固定配色来解决任务；同一场景中也可以同时包含两种类别。
 
 ```python
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
 def synthetic_segmentation(num_samples=200, size=64, seed=0):
+    if size < 16:
+        raise ValueError("size must be at least 16 pixels")
+
     rng = np.random.default_rng(seed)
     images = np.zeros((num_samples, size, size, 3), dtype=np.float32)
     masks = np.zeros((num_samples, size, size), dtype=np.int64)
+    yy, xx = np.meshgrid(np.arange(size), np.arange(size), indexing="ij")
+    min_radius = max(3, size // 16)
+    max_radius = max(min_radius + 1, size // 5)
     for i in range(num_samples):
-        bg = rng.uniform(0, 1, (3,))
-        images[i] = bg
-        masks[i] = 0
-        num_shapes = rng.integers(1, 4)
+        images[i] = rng.uniform(0.1, 0.9, size=3)
+        num_shapes = int(rng.integers(1, 4))
         for _ in range(num_shapes):
             cls = int(rng.integers(1, 3))
-            color = rng.uniform(0, 1, (3,))
-            cx, cy = rng.integers(10, size - 10, size=2)
-            r = int(rng.integers(4, 12))
-            yy, xx = np.meshgrid(np.arange(size), np.arange(size), indexing="ij")
+            color = rng.uniform(0.05, 0.95, size=3)
+            radius = int(rng.integers(min_radius, max_radius + 1))
+            cx = int(rng.integers(radius, size - radius))
+            cy = int(rng.integers(radius, size - radius))
             if cls == 1:
-                mask = (xx - cx) ** 2 + (yy - cy) ** 2 < r ** 2
+                mask = (xx - cx) ** 2 + (yy - cy) ** 2 < radius ** 2
             else:
-                mask = (np.abs(xx - cx) < r) & (np.abs(yy - cy) < r)
+                mask = (np.abs(xx - cx) < radius) & (np.abs(yy - cy) < radius)
             images[i][mask] = color
             masks[i][mask] = cls
         images[i] += rng.normal(0, 0.02, images[i].shape)
@@ -331,7 +342,6 @@ class SegDataset(Dataset):
 def train_one_epoch(model, loader, optimizer, device, num_classes):
     model.train()
     loss_sum, total = 0.0, 0
-    iou_sum = torch.zeros(num_classes)
     for x, y in loader:
         x, y = x.to(device), y.to(device)
         logits = model(x)
@@ -341,11 +351,25 @@ def train_one_epoch(model, loader, optimizer, device, num_classes):
         optimizer.step()
         loss_sum += loss.item() * x.size(0)
         total += x.size(0)
-        iou_sum += iou_per_class(logits, y, num_classes).nan_to_num(0)
-    return loss_sum / total, iou_sum / len(loader)
+    return loss_sum / total
+
+
+@torch.no_grad()
+def evaluate_iou(model, loader, device, num_classes):
+    model.eval()
+    intersections = torch.zeros(num_classes, device=device)
+    unions = torch.zeros(num_classes, device=device)
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
+        batch_intersections, batch_unions = intersection_union_per_class(
+            model(x), y, num_classes
+        )
+        intersections += batch_intersections
+        unions += batch_unions
+    return iou_from_counts(intersections, unions)
 ```
 
-在合成数据集上运行 10–30 个 epoch，可以看到形状类别的 mIoU 上升到 0.9 以上。注意，`nan_to_num(0)` 会把当前批次中缺失的类别视为零；若要准确计算逐类别 IoU，评估时应根据类别是否存在进行掩码处理，并使用 `torch.nanmean` 跨批次平均，而不是像这里一样直接求平均。
+在合成数据集上运行 10–30 个 epoch，可以看到形状类别的 mIoU 逐步改善。基于整个数据集累计计数，可确保批次大小以及某个批次中类别缺失的情况不会扭曲所报告的 IoU。
 
 ## 实际应用
 

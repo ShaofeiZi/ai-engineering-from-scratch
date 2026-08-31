@@ -30,8 +30,8 @@
     "provider": "manual"
   },
   "phases/04-computer-vision/07-semantic-segmentation-unet/docs/en.md": {
-    "source_sha256": "7470d67edf0cf2a46debab0ca1e52fa255926e5c121ef17e665112790102f29f",
-    "output_sha256": "fde22cd54c58f0d47efcf00075f4ff9d8a7d8a29f2ecb11577748b897c788f49",
+    "source_sha256": "6e603ea64ac5d9fda97e57acb2972ae371f353d84b18d29adbef7559d6278718",
+    "output_sha256": "1f82544a147fe833e92b0f9eff93137de8bd587fbd96caad227c7f7464023d32",
     "provider": "manual"
   },
   "phases/04-computer-vision/08-instance-segmentation-mask-rcnn/docs/en.md": {
