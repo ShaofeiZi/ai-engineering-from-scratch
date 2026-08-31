@@ -11,45 +11,45 @@
 
 एक अंत-से-अंत सहायक बनाएंः
 
-1. माइक्रो इनपुट (16 kHz mono) कैप्चर करता है।
+1. माइक्रो इनपुट कैप्चर करता है (16 kHz मोनो) ।
 2. उपयोगकर्ता भाषण की शुरुआत/अंत का पता लगाता है।
 3. स्ट्रीमिंग का अनुवाद करता है।
-4. एक LLM में ट्रांसक्रिप्ट पास करता है जो उपकरण (टाइमर, मौसम, कैलेंडर) को कॉल कर सकता है।
-5. एक टीटीएस को LLM पाठ प्रसारित करता है।
+4. एक पर ट्रांसक्रिप्ट पारित करता है LLM जो उपकरण (टाइमर, मौसम, कैलेंडर) बुला सकता है।
+5. धाराएं LLM एक को पाठ TTS.
 6. उपयोगकर्ता को ऑडियो वापस चलाता है।
 7. यदि उपयोगकर्ता मध्य-उत्तर में बाधित करता है तो रोकता है।
 
-लटेंसी लक्ष्यः उपयोगकर्ता द्वारा लैपटॉप सीपीयू पर अपना भाषण समाप्त करने के 800 एमएस के भीतर पहला टीटीएस ऑडियो बाइट। गुणवत्ता लक्ष्यः कोई याद किए गए शब्द नहीं, मौन पर कोई भ्रमपूर्ण उपशीर्षक नहीं, कोई आवाज क्लोनिंग लीक नहीं, कोई त्वरित इंजेक्शन सफलता नहीं।
+विलंबता लक्ष्य: प्रथम TTS उपयोगकर्ता द्वारा लैपटॉप पर अपना भाषण समाप्त करने के 800 एमएस के भीतर ऑडियो बाइट CPU. गुणवत्ता लक्ष्य: कोई याद किए गए शब्द, कोई भ्रमपूर्ण उपशीर्षक चुपचाप, कोई आवाज क्लोनिंग लीक, कोई त्वरित इंजेक्शन सफलता नहीं।
 
 ## अवधारणा
 
-![Voice assistant pipeline: mic → VAD → STT → LLM+tools → TTS → speaker](../assets/voice-assistant.svg)
+![आवाज सहायक पाइपलाइनः माइक्रो → VAD → STT → LLM+tools → TTS → वक्ता](../assets/voice-assistant.svg)
 
 ### सात घटक
 
-1. **Audio capture.**माइक्रो → 16 kHz मोनो → 20 ms टुकड़े। आमतौर पर `sounddevice`पायथन या मूल AudioUnit/ALSA/WASAPI में उत्पादन में।
-2. **VAD (Lesson 11).**Silero VAD @ threshold 0.5, मिन भाषण 250 ms, मौन hangover 500 ms. संकेत "शुरू" और "अंत"
-3. **Streaming STT (Lesson 4-5).**विस्पर-स्ट्रीमिंग, पैराकीट-टीडीटी, या डीपग्राम नोवा-3 (एपीआई) । आंशिक + अंतिम प्रतिलेखन।
-4. **LLM with tool calling.**GPT-4o / Claude 3.5 / Gemini 2.5 फ्लैश. उपकरण के लिए JSON योजना. स्ट्रीम टोकन.
-5. **Streaming TTS (Lesson 7).**कोकोरो-82एम (सबसे तेज़ खोलने) या कार्टेशिया सोनिक (व्यावसायिक) 20 एलएलएम टोकन के बाद टीटीएस शुरू करें।
-6. **Playback.**स्पीकर आउट; कम बैंडविड्थ नेटवर्क के लिए अपस-कोड।
-7. **Interruption handler.**यदि TTS प्लेबैक के दौरान VAD फायर करता है, प्लेबैक बंद करो, LLM रद्द करो, STT को पुनरारंभ करो।
+1. **ऑडियो कैप्चर.** माइक → 16 kHz mono → 20 ms टुकड़े। आमतौर पर `sounddevice` में Python या स्वदेशी AudioUnit/ALSA/WASAPI उत्पादन में।
+2. **VAD (पाठ 11)** सिलेरो VAD @ threshold 0.5, मिन भाषण 250 एमएस, मौन लटकन 500 एमएस. संकेत "शुरू" और "अंत"
+3. **स्ट्रीमिंग STT (पाठ ४-५)** चुप्पी प्रवाह, परकीट-TDT, या डीपग्राम नोवा-3 (API). Partial + final transcripts.
+4. **LLM उपकरण कॉल के साथ।** GPT-4o / Claude 3.5 / Gemini 2.5 Flash. JSON उपकरण के लिए योजना. स्ट्रीम टोकन.
+5. **स्ट्रीमिंग TTS (पाठ 7)** कोकोरो-82एम (सबसे तेज़ खोलने) या कार्टेशिया सोनिक (व्यावसायिक) शुरू करें TTS 20 के बाद LLM टोकन.
+6. **प्लेबैक.** स्पीकर आउट; कम बैंडविड्थ नेटवर्क के लिए अपस-कोड।
+7. **विराम के प्रबंधक.** यदि VAD आग के दौरान TTS प्लेबैक, प्लेबैक बंद, रद्द LLM, पुनः आरंभ STT.
 
 ### तीन विफलता मोड आप हिट करेंगे
 
-1. **First-word clip.**VAD बहुत देर से एक धड़कन शुरू करता है. उपयोगकर्ता का "हे" गायब है. 0.3 पर शुरू करने की सीमा, 0.5 नहीं.
-2. **Mid-response interrupt confusion.**एलएलएम उपयोगकर्ता के विराम के बाद उत्पन्न करता रहता है; सहायक उपयोगकर्ता पर बातचीत करता है।
-3. **Silence hallucination.**चुपके वार्म-अप फ्रेम पर चुप्पी "देखने के लिए धन्यवाद" आउटपुट। हमेशा VAD-गेट।
+1. **पहले शब्द क्लिप.** VAD एक धड़कन बहुत देर से शुरू होता है. उपयोगकर्ता का "हे" गायब है. 0.3 पर शुरू करने की सीमा, 0.5 नहीं.
+2. **मध्य प्रतिक्रिया भ्रम को बाधित करती है।** LLM उपयोगकर्ता के अंतराल के बाद उत्पन्न करता रहता है; सहायक उपयोगकर्ता के ऊपर बात करता है। तार VAD → रद्द-LLM.
+3. **मौन भ्रम।** चुपके वार्मअप फ्रेम पर "देखने के लिए धन्यवाद" चुप्पी आउटपुट। हमेशा VAD-gate.
 
 ### 2026 उत्पादन संदर्भ स्टैक
 
-| Stack | Latency | License | Notes |
+| स्टैक | विलंबता | लाइसेंस | नोट्स |
 |-------|---------|---------|-------|
-| LiveKit + Deepgram + GPT-4o + Cartesia | 350-500 ms | commercial API | Industry default 2026 |
-| Pipecat + Whisper-streaming + GPT-4o + Kokoro | 500-800 ms | mostly open | DIY-friendly |
-| Moshi (full-duplex) | 200-300 ms | CC-BY 4.0 | Single-model; different architecture, lesson 15 |
-| Vapi / Retell (managed) | 300-500 ms | commercial | Fastest to launch; limited customization |
-| Whisper.cpp + llama.cpp + Kokoro-ONNX | offline | open | Privacy / edge |
+| LiveKit + Deepgram + GPT-4o + Cartesia | 350-500 ms | वाणिज्यिक API | उद्योग डिफ़ॉल्ट 2026 |
+| Pipecat + Whisper-streaming + GPT-4o + Kokoro | 500-800 ms | अधिकतर खुला | DIY-friendly |
+| मोशी (पूर्ण-डप्लक्स) | 200-300 ms | CC-BY 4.0 | एकल मॉडल; विभिन्न वास्तुकला, पाठ 15 |
+| Vapi / रिटेल (प्रबंधित) | 300-500 ms | वाणिज्यिक | लॉन्च करने के लिए सबसे तेज; सीमित अनुकूलन |
+| Whisper.cpp + llama.cpp + Kokoro-ONNX | ऑफ़लाइन | खुला | गोपनीयता / बढ़त |
 
 ```figure
 v4-voice-latency
@@ -71,7 +71,7 @@ def mic_stream(chunk_ms=20, sr=16000):
             yield q.get()
 ```
 
-### चरण 2: VAD-गेटेड टर्न कैप्चर
+### चरण 2: VAD-gated घुमाव पकड़े
 
 ```python
 def capture_turn(stream, vad, pre_roll_ms=300, silence_ms=500):
@@ -102,7 +102,7 @@ async def turn(audio_bytes):
             await speaker.play(audio)
 ```
 
-### चरण 4: LLM लूप के अंदर उपकरण कॉल
+### चरण 4: उपकरण अंदर कॉल LLM लूप
 
 ```python
 tools = [
@@ -133,49 +133,49 @@ while True:
 
 ## इसका प्रयोग करें
 
-देखो`code/main.py`एक चलाने योग्य सिमुलेशन के लिए जो सभी सात घटकों को स्टब मॉडल के साथ तार करता है, ताकि आप हार्डवेयर के बिना भी पाइपलाइन आकार देख सकें। एक वास्तविक कार्यान्वयन के लिए, स्टब को स्विच करेंः
+देखिये `code/main.py` एक चलाने योग्य सिमुलेशन के लिए जो सभी सात घटकों को स्टब मॉडल के साथ तार करता है, ताकि आप हार्डवेयर के बिना भी पाइपलाइन आकार देख सकें। एक वास्तविक कार्यान्वयन के लिए, स्टब को स्विच करेंः
 
-- `silero-vad`(`pip install silero-vad`)
-- `deepgram-sdk`या `openai-whisper`
-- `openai`(`gpt-4o`) या `anthropic`
-- `kokoro`या `cartesia`
-- `sounddevice`I/O के लिए
+- `silero-vad` (`pip install silero-vad`)
+- `deepgram-sdk` या `openai-whisper`
+- `openai` (`gpt-4o`) या `anthropic`
+- `kokoro` या `cartesia`
+- `sounddevice` I/O के लिए
 
 ## फंदे
 
-- **Logging PII forever.**पूर्ण-चक्र ऑडियो अधिकांश न्यायालयों में पीआईडी है. 30 दिनों के लिए भंडारण, आराम में एन्क्रिप्टेड.
-- **No barge-in.**उपयोगकर्ता बाधित करेंगे. आपके सहायक को बोलना बंद करना चाहिए.
-- **TTS that blocks.**समवर्ती TTS घटना लूप को अवरुद्ध करता है. असिनक्रोनस या एक अलग धागा का उपयोग करें.
-- **No tool-call error handling.**उपकरण विफल. LLM त्रुटि वापस मिलना चाहिए + एक बार फिर से प्रयास, फिर gracefully degraded.
-- **Overzealous hallucination filters.**ओवर-फिल्टर और सहायक दोहराता है "मैं इसके साथ मदद नहीं कर सकता है।" नीचे-फिल्टर और यह कुछ भी कहता है. एक पकड़ सेट पर माप.
-- **No wake-word option.**हमेशा सुनना गोपनीयता दायित्व है. एक जागृति शब्द गेट (पोर्किपिन या ओपनवैकवर्ड) जोड़ें।
+- **लकड़ी का उत्पादन PII हमेशा के लिए.** पूर्ण-टर्न ऑडियो है PII अधिकांश न्यायालयों में 30 दिनों के लिए भंडारण, आराम में एन्क्रिप्टेड।
+- **कोई घुसपैठ नहीं.** उपयोगकर्ता बाधित करेंगे. आपके सहायक को बोलना बंद करना चाहिए.
+- **TTS यह ब्लॉक करता है।** समकालिक TTS घटना लूप को अवरुद्ध करता है. असिनक्रोनस या एक अलग धागा का उपयोग करें.
+- **कोई उपकरण कॉल त्रुटि हैंडलिंग नहीं।** उपकरण विफल हो जाते हैं। LLM त्रुटि + एक बार पुनः प्रयास करना चाहिए, फिर gracefully degraded.
+- **अति उत्साही पगडंडी फिल्टर।** ओवर-फिल्टर और सहायक दोहराता है "मैं इसके साथ मदद नहीं कर सकता है।" नीचे-फिल्टर और यह कुछ भी कहता है. एक पकड़ सेट पर माप.
+- **कोई चेतावनी नहीं है।** हमेशा सुनना एक गोपनीयता दायित्व है. एक जागृति शब्द गेट (पोर्किपिन या openWakeWord).
 
 ## इसे भेजें
 
-`outputs/skill-voice-assistant-architect.md`. बजट + पैमाने + भाषा + अनुपालन संबंधी बाधाओं को देखते हुए, एक पूर्ण स्टैक विनिर्देश तैयार करें।
+के रूप में सहेजें `outputs/skill-voice-assistant-architect.md`. बजट + पैमाने + भाषा + अनुपालन संबंधी बाधाओं को देखते हुए, एक पूर्ण स्टैक विनिर्देश तैयार करें।
 
 ## व्यायाम
 
-1. **Easy.**दौड़ें`code/main.py`यह स्टब मॉड्यूल और प्रति चरण विलंबता के साथ एक पूर्ण बारी अंत-से-अंत अनुकरण करता है।
-2. **Medium.**पूर्व-रिकॉर्ड पर एक असली विस्पर मॉडल के साथ STT स्टब की जगह `.wav`. WER और अंत-से-अंत विलंबता का माप करें.
-3. **Hard.**उपकरण कॉल जोड़ेंः लागू करें `get_weather`(किसी भी एपीआई) और `set_timer`. LLM को टूल के माध्यम से रूट करें और सत्यापित करें कि जब उपयोगकर्ता कहता है "5 मिनट का टाइमर सेट करें" तो सही फ़ंक्शन चलाता है और बोलने वाले उत्तर इसकी पुष्टि करते हैं।
+1. **- आराम से।** दौड़ें `code/main.py`यह स्टब मॉड्यूल और प्रति चरण विलंबता के साथ एक पूर्ण बारी अंत-से-अंत अनुकरण करता है।
+2. **मध्यम।** प्रतिस्थापन STT पूर्व-रिकॉर्ड पर एक असली विस्पर मॉडल के साथ स्टब `.wav`. माप WER और अंत-से-अंत विलंबता.
+3. **कठिन.** उपकरण कॉल जोड़ेंः लागू करें `get_weather` (किसी भी API) तथा `set_timer`. मार्ग LLM उपकरण के माध्यम से और सत्यापित करें कि जब उपयोगकर्ता कहता है "5 मिनट टाइमर सेट करें" सही फ़ंक्शन फायर करता है और बोली प्रतिक्रिया इसकी पुष्टि करती है।
 
 ## प्रमुख शर्तें
 
-| Term | What people say | What it actually means |
+| अवधि | लोग क्या कहते हैं | इसका क्या मतलब है |
 |------|-----------------|-----------------------|
-| Turn | A user + assistant round-trip | One VAD-bounded user speech + one LLM-TTS response. |
-| Barge-in | Interruption | User speaks while assistant talks; assistant stops. |
-| Wake word | "Hey assistant" | Short keyword detector; Porcupine, Snowboy, openWakeWord. |
-| End-pointing | Turn ending | VAD + min-silence decision that user has finished. |
-| Pre-roll | Pre-speech buffer | Keep 200-400 ms of audio before VAD fires to avoid first-word clip. |
-| Tool call | Function invocation | LLM emits JSON; runtime dispatches; result feeds back in-loop. |
+| घुमाओ | A user + assistant round-trip | एक VAD-bounded user speech + one LLM-TTS प्रतिक्रिया। |
+| नौकायन | विराम | उपयोगकर्ता बोलता है जबकि सहायक बोलता है; सहायक रुकता है। |
+| जागने की खबर | "हे सहायक" | लघु कीवर्ड डिटेक्टर; पोर्किपिन, स्नोबॉय, openWakeWord. |
+| अंत की ओर संकेत | मोड़ समाप्त | VAD + min-silence decision that user has finished. |
+| पूर्व-रोल | भाषण से पहले बफर | पहले 200-400 एमएस ऑडियो रखें VAD पहले शब्द क्लिप से बचने के लिए आग लगाना। |
+| उपकरण कॉल | फ़ंक्शन का आह्वान | LLM उत्सर्जन JSON; रनटाइम डिस्पैच; परिणाम लूप में वापस फीड करता है। |
 
 ## आगे पढ़ना
 
-- [LiveKit — voice agent quickstart](https://docs.livekit.io/agents/) उत्पादन स्तर का संदर्भ।
-- [Pipecat — voice agent examples](https://github.com/pipecat-ai/pipecat) DIY के अनुकूल ढांचा।
-- [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime) प्रबंधित आवाज-मौलिक पथ।
-- [Kyutai Moshi](https://github.com/kyutai-labs/moshi) पूर्ण डुप्लेक्स संदर्भ (पाठ 15)
-- [Porcupine wake-word](https://picovoice.ai/products/porcupine/) जागने के शब्द गेटिंग।
-- [Anthropic — tool use guide](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) LLM कार्य कॉल।
+- [LiveKit आवाज एजेंट त्वरित प्रारंभ](https://docs.livekit.io/agents/) उत्पादन स्तर का संदर्भ।
+- [पिकपेट  आवाज एजेंट उदाहरण](https://github.com/pipecat-ai/pipecat) — DIY-friendly ढांचा।
+- [OpenAI वास्तविक समय API](https://platform.openai.com/docs/guides/realtime) प्रबंधित आवाज-मौलिक पथ।
+- [क्युताई मोशी](https://github.com/kyutai-labs/moshi) पूर्ण डुप्लेक्स संदर्भ (पाठ 15)
+- [सुअर की जागृति शब्द](https://picovoice.ai/products/porcupine/) जागने के शब्द गेटिंग।
+- [Anthropic उपकरण उपयोग गाइड](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) — LLM कार्य कॉल।
