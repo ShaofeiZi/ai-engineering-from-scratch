@@ -130,8 +130,8 @@
     "provider": "manual"
   },
   "phases/14-agent-engineering/27-prompt-injection-defense/docs/en.md": {
-    "source_sha256": "ca3e8c0cd275d0db735e7731ae4fd6bcf0569b71b6e5e9673f43c538bbe1c8a4",
-    "output_sha256": "c54387b7846a77c2de8c808f4192d57ab2656949651e095947715fbe635c8035",
+    "source_sha256": "f757e559f588589504a66809d4e90b9b9c09b47db62a8b160867d3b82b6cca03",
+    "output_sha256": "1f3dbb1f12f6aa82d074e3c4e6e4864d35622fd204417ad9e9d6d4cf1d2a42a9",
     "provider": "manual"
   },
   "phases/14-agent-engineering/28-orchestration-patterns/docs/en.md": {
