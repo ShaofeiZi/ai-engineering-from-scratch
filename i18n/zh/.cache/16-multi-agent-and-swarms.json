@@ -1,27 +1,127 @@
 {
-  "phases/16-multi-agent-and-swarms/01-why-multi-agent/docs/en.md": "43afcd0c4577433cf152e33711cdee7dc0a0625a37b01a3d30c1588d52dd952e",
-  "phases/16-multi-agent-and-swarms/02-fipa-acl-heritage/docs/en.md": "234056963823e7433e031e18b2d7513c4dfbb778753155bd869af6bbda0df241",
-  "phases/16-multi-agent-and-swarms/03-communication-protocols/docs/en.md": "d5d9ba70c17739fb06beac988da30c61f5f050f5fb19004b4c4e6f293e2ac126",
-  "phases/16-multi-agent-and-swarms/04-primitive-model/docs/en.md": "3b17765b0944dce19879fea690146703bead63f48a52d2d7d4c5667ac84b166f",
-  "phases/16-multi-agent-and-swarms/05-supervisor-orchestrator-pattern/docs/en.md": "f21e9026c0cf79b00c0027cf0391ff2dc2b760ec28a4a7989f46d5fc4d37ef50",
-  "phases/16-multi-agent-and-swarms/06-hierarchical-architecture/docs/en.md": "a69fd17a7a64d415f29b9a69a73a7219460ded9a316f05e44c2802be68a611f6",
-  "phases/16-multi-agent-and-swarms/07-society-of-mind-debate/docs/en.md": "ccc605702faab9d27161e7c162849c32bd1659aad0c2cd82647ad0d8bc969a15",
-  "phases/16-multi-agent-and-swarms/08-role-specialization/docs/en.md": "50c791bf5867a18c6d0621942fe7fc2e62f417bfa9c71b523f05ee9b2310273a",
-  "phases/16-multi-agent-and-swarms/09-parallel-swarm-networks/docs/en.md": "2dde437ce309db7e43e69e34bb091b8ca019d5e4c55293e582f7497776dd21c9",
-  "phases/16-multi-agent-and-swarms/10-group-chat-speaker-selection/docs/en.md": "cb20c86f615eac8c5d965b4469eb737401e21b92e94ad8360fdac07d144a0c03",
-  "phases/16-multi-agent-and-swarms/11-handoffs-and-routines/docs/en.md": "87bf3b0e0988f7b46dfb666e546210d339b7cd640e840cb49152a19e1521674b",
-  "phases/16-multi-agent-and-swarms/12-a2a-protocol/docs/en.md": "88e30cad22423a230c73859d2151de5eaddc78936b5a11c840ddf753d2fa284c",
-  "phases/16-multi-agent-and-swarms/13-shared-memory-blackboard/docs/en.md": "7e7a61e06f94de6a99a218705ffcb297058136ace1c363d03e0dce8896a9b8e8",
-  "phases/16-multi-agent-and-swarms/14-consensus-and-bft/docs/en.md": "6dc4dab48994111b84688ebf3d53c594380464634f725fe46f09aa4ce2b745bd",
-  "phases/16-multi-agent-and-swarms/15-voting-debate-topology/docs/en.md": "d7696a6e00496b73229ba5b9344d386a790acfccf4211aab16f5acf433af2f1e",
-  "phases/16-multi-agent-and-swarms/16-negotiation-bargaining/docs/en.md": "82443b4ceb00092856951f3fd422664295b574470a9f87704df1076b8724c41c",
-  "phases/16-multi-agent-and-swarms/17-generative-agents-simulation/docs/en.md": "5de483c6c4ba56ee5b39eec136b74c0be65943e7654d57d01d4225b5e195dbe7",
-  "phases/16-multi-agent-and-swarms/18-theory-of-mind-coordination/docs/en.md": "c532428bcba5a72f41f9872ea69b03b68ea454ce56ed9febc5489a9e33697e85",
-  "phases/16-multi-agent-and-swarms/19-swarm-optimization-pso-aco/docs/en.md": "f2c7e71f6be630b8aef8efbf47ff81552acd735e193160fe93ce4d0897ca621d",
-  "phases/16-multi-agent-and-swarms/20-marl-maddpg-qmix-mappo/docs/en.md": "77aa03c7a2d275a2459e0bf2153ec6059b438f6fa97e68d208716531ea0e9caf",
-  "phases/16-multi-agent-and-swarms/21-agent-economies/docs/en.md": "0f033e2c2a20d36b6eb6bddb6b3c0a1984bcb813f9714cc4deb503eca7add32b",
-  "phases/16-multi-agent-and-swarms/22-production-scaling-queues-checkpoints/docs/en.md": "f35e11480b186e03dd8652f0775a8f23e890d03863539e654b00ddc9a9d21d09",
-  "phases/16-multi-agent-and-swarms/23-failure-modes-mast-groupthink/docs/en.md": "01c36d0c07b02e58865546546e120a469f9bd58b1123aba79c3d0bccb13b6840",
-  "phases/16-multi-agent-and-swarms/24-evaluation-coordination-benchmarks/docs/en.md": "1cef5b611082650577f0de25b71a4a0569a3559687c02cd081f28258922f66d0",
-  "phases/16-multi-agent-and-swarms/25-case-studies-2026-sota/docs/en.md": "6510b5b866402fd265d55f0f9c8fcc69646f71bb82828c1ac684150b58793b96"
+  "phases/16-multi-agent-and-swarms/01-why-multi-agent/docs/en.md": {
+    "source_sha256": "43afcd0c4577433cf152e33711cdee7dc0a0625a37b01a3d30c1588d52dd952e",
+    "output_sha256": "b5ccb1bda3a673e227c1df6b555cd6532635147d152bedaec3269589f8799b0e",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/02-fipa-acl-heritage/docs/en.md": {
+    "source_sha256": "234056963823e7433e031e18b2d7513c4dfbb778753155bd869af6bbda0df241",
+    "output_sha256": "27c0957f8fcd3e9b8e34ea4b35bcb88c7d5a6a3fafe38ea3e89593e8fd54a7fd",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/03-communication-protocols/docs/en.md": {
+    "source_sha256": "d5d9ba70c17739fb06beac988da30c61f5f050f5fb19004b4c4e6f293e2ac126",
+    "output_sha256": "616f2bca4c47f6d410422494855de3a3290b44a03fc5182d48d24592f8bfe4d7",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/04-primitive-model/docs/en.md": {
+    "source_sha256": "3b17765b0944dce19879fea690146703bead63f48a52d2d7d4c5667ac84b166f",
+    "output_sha256": "d4e5378678df59d3e948b3ef2f75bbc6b31b2b6d7fc4f8954fb1a1603bfca789",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/05-supervisor-orchestrator-pattern/docs/en.md": {
+    "source_sha256": "f21e9026c0cf79b00c0027cf0391ff2dc2b760ec28a4a7989f46d5fc4d37ef50",
+    "output_sha256": "d806ad2eb4ae255791ceb4b9eb5c81137349c7a7990e7c6a775e5dc1a5b13a51",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/06-hierarchical-architecture/docs/en.md": {
+    "source_sha256": "a69fd17a7a64d415f29b9a69a73a7219460ded9a316f05e44c2802be68a611f6",
+    "output_sha256": "2bc62178117ba3a4fd297613584348640601f591814c0cedb0fd29ab099494d6",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/07-society-of-mind-debate/docs/en.md": {
+    "source_sha256": "ccc605702faab9d27161e7c162849c32bd1659aad0c2cd82647ad0d8bc969a15",
+    "output_sha256": "69fec0a6fa8a51048a21bc860ad11052471c79e8c3107cf411b2f6c041e3f2fa",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/08-role-specialization/docs/en.md": {
+    "source_sha256": "50c791bf5867a18c6d0621942fe7fc2e62f417bfa9c71b523f05ee9b2310273a",
+    "output_sha256": "fa145d04044b8b0d186ab1a29585994b367111dc89f7af6bfad685280e45b010",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/09-parallel-swarm-networks/docs/en.md": {
+    "source_sha256": "2dde437ce309db7e43e69e34bb091b8ca019d5e4c55293e582f7497776dd21c9",
+    "output_sha256": "3e457f2b29a689f11084b8555fd989c0f32bcc1275adb79714638ecd862b5a2b",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/10-group-chat-speaker-selection/docs/en.md": {
+    "source_sha256": "cb20c86f615eac8c5d965b4469eb737401e21b92e94ad8360fdac07d144a0c03",
+    "output_sha256": "6670e05264fc469639b6c1aa0f43ce726915e913846ffc91ddc74fe2cbf4b8bd",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/11-handoffs-and-routines/docs/en.md": {
+    "source_sha256": "87bf3b0e0988f7b46dfb666e546210d339b7cd640e840cb49152a19e1521674b",
+    "output_sha256": "8dc879ce4209a9bc195b1b1182ee66daca283eb790370136ee6a8972fa3dfc63",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/12-a2a-protocol/docs/en.md": {
+    "source_sha256": "88e30cad22423a230c73859d2151de5eaddc78936b5a11c840ddf753d2fa284c",
+    "output_sha256": "026f96878d2afbad1635fb17fec90ab78f5cc160b44ed1c5bcf8523e5db503c3",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/13-shared-memory-blackboard/docs/en.md": {
+    "source_sha256": "7e7a61e06f94de6a99a218705ffcb297058136ace1c363d03e0dce8896a9b8e8",
+    "output_sha256": "ae660408e9fb6fe5021a81bef9a88174320fd31ff56cc32254d4eaede714f978",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/14-consensus-and-bft/docs/en.md": {
+    "source_sha256": "6dc4dab48994111b84688ebf3d53c594380464634f725fe46f09aa4ce2b745bd",
+    "output_sha256": "b7e612dfc83c8cc7cc5e0e226b80d70d25330285e3ebefdf951f0e643aea7cfc",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/15-voting-debate-topology/docs/en.md": {
+    "source_sha256": "d7696a6e00496b73229ba5b9344d386a790acfccf4211aab16f5acf433af2f1e",
+    "output_sha256": "8522a37ec3e418e554a515353b4d2e543f7371e4c082b30cfc2b0714e20d1c59",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/16-negotiation-bargaining/docs/en.md": {
+    "source_sha256": "82443b4ceb00092856951f3fd422664295b574470a9f87704df1076b8724c41c",
+    "output_sha256": "6cbfa01ce34f3ec67169043daa5f31850edc250be7a54d461fd0fb68344e144e",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/17-generative-agents-simulation/docs/en.md": {
+    "source_sha256": "5de483c6c4ba56ee5b39eec136b74c0be65943e7654d57d01d4225b5e195dbe7",
+    "output_sha256": "75ec94b9d6f1eddd2fe0af9e1fd65fdb1564c6870f7ea698abc2e84ac410a4cc",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/18-theory-of-mind-coordination/docs/en.md": {
+    "source_sha256": "c532428bcba5a72f41f9872ea69b03b68ea454ce56ed9febc5489a9e33697e85",
+    "output_sha256": "9dd3ad76d4c3646846b43f2e871d511783bdcb33280fc47a1da5d1f51001e6b5",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/19-swarm-optimization-pso-aco/docs/en.md": {
+    "source_sha256": "f2c7e71f6be630b8aef8efbf47ff81552acd735e193160fe93ce4d0897ca621d",
+    "output_sha256": "c9c7855419ba59c485d34ba01324b477040c6ce1323975537a878cd2e46be093",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/20-marl-maddpg-qmix-mappo/docs/en.md": {
+    "source_sha256": "77aa03c7a2d275a2459e0bf2153ec6059b438f6fa97e68d208716531ea0e9caf",
+    "output_sha256": "127ddbefac135f375a04dd0723810d080954e9f2821d1ba080b1c8a795a05aa1",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/21-agent-economies/docs/en.md": {
+    "source_sha256": "0f033e2c2a20d36b6eb6bddb6b3c0a1984bcb813f9714cc4deb503eca7add32b",
+    "output_sha256": "8641c49875bd56271d964500fb0fba719b2607451e5bf53b0acaea8f62b208c3",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/22-production-scaling-queues-checkpoints/docs/en.md": {
+    "source_sha256": "f35e11480b186e03dd8652f0775a8f23e890d03863539e654b00ddc9a9d21d09",
+    "output_sha256": "f147dbcbafabf8334defe4371e85272f930008650e67b979ca94f963f84cea60",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/23-failure-modes-mast-groupthink/docs/en.md": {
+    "source_sha256": "01c36d0c07b02e58865546546e120a469f9bd58b1123aba79c3d0bccb13b6840",
+    "output_sha256": "fe99b07f83cc251e1792831566dab87cda25a328fb3941b9a5295b39e4b8a7b7",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/24-evaluation-coordination-benchmarks/docs/en.md": {
+    "source_sha256": "1cef5b611082650577f0de25b71a4a0569a3559687c02cd081f28258922f66d0",
+    "output_sha256": "de2ddd9782094d6dd3c4917888d102cdb4ccf802af784c26cfa0b68bd9e11d65",
+    "provider": "manual"
+  },
+  "phases/16-multi-agent-and-swarms/25-case-studies-2026-sota/docs/en.md": {
+    "source_sha256": "6510b5b866402fd265d55f0f9c8fcc69646f71bb82828c1ac684150b58793b96",
+    "output_sha256": "966c96008a0c0bdce9f24f47033b8ae1a2d6ad744dfd410eadeb28a297330d95",
+    "provider": "manual"
+  }
 }

@@ -1,15 +1,67 @@
 {
-  "phases/03-deep-learning-core/01-the-perceptron/docs/en.md": "ab8e9fbfe5bcb8328d915987f8ca588e1b3bccd946a789e4b8bb983e6c78284a",
-  "phases/03-deep-learning-core/02-multi-layer-networks/docs/en.md": "192b46fd134bdd7aada17ecd58fafd35c973d11b9bf47ac3a785cc91595db428",
-  "phases/03-deep-learning-core/03-backpropagation/docs/en.md": "e481014372b43289e15b4d7b70a4045eb786168afb10fe15d1fff84b4bccb7ee",
-  "phases/03-deep-learning-core/04-activation-functions/docs/en.md": "da086a041c9bd97f2465a02c2f3a877eb997969ef5e39f9b8d9585f38370aca3",
-  "phases/03-deep-learning-core/05-loss-functions/docs/en.md": "aa64f3d64a9dab9b7e68b117158d8876bf350adc30d2cd3cddf4d11702d3085c",
-  "phases/03-deep-learning-core/06-optimizers/docs/en.md": "9af59689813d171106b558fca9875f7992c8e834b8d7a69310bbaf7428ff9ad9",
-  "phases/03-deep-learning-core/07-regularization/docs/en.md": "c6e31ead99cce8cf40dda09a94a3a2b95978f162e4fe67bc3f3e1b9763ae170d",
-  "phases/03-deep-learning-core/08-weight-initialization/docs/en.md": "9c270a87d2872791247c02d3d471bc82bd76ea116df35c80143bc1b53a08c87b",
-  "phases/03-deep-learning-core/09-learning-rate-schedules/docs/en.md": "192874a3732b8f75bf87c252b2cabefb58a8df22db14a5ca0118bf8e812e2551",
-  "phases/03-deep-learning-core/10-mini-framework/docs/en.md": "94d283931d471f9a757d50d4f12656d497b3cb78aacebeb7619a55e5c0e67325",
-  "phases/03-deep-learning-core/11-intro-to-pytorch/docs/en.md": "9c1d3d3a389c673ccc0b0491dba0401ef37bac7d7e885ce22d4309f0adb2ea0e",
-  "phases/03-deep-learning-core/12-intro-to-jax/docs/en.md": "9fe3133043ee5c5841555859f2e60f3cd11c6ee194ae7dd4ff6788a97d307a50",
-  "phases/03-deep-learning-core/13-debugging-neural-networks/docs/en.md": "93a9c9e91cc1312801ca02385de5891b2858f45a28a70a3dd099ce5848f21753"
+  "phases/03-deep-learning-core/01-the-perceptron/docs/en.md": {
+    "source_sha256": "ab8e9fbfe5bcb8328d915987f8ca588e1b3bccd946a789e4b8bb983e6c78284a",
+    "output_sha256": "0e8aec479267af12f7b8bcd6100b2bea4d4993e1f0b3a96cf174ac26eb6e71a0",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/02-multi-layer-networks/docs/en.md": {
+    "source_sha256": "192b46fd134bdd7aada17ecd58fafd35c973d11b9bf47ac3a785cc91595db428",
+    "output_sha256": "9b7d9d4a0462b259a6c336e5bb0dd12b99e4d71a336890519f15f2a13fc8d882",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/03-backpropagation/docs/en.md": {
+    "source_sha256": "e481014372b43289e15b4d7b70a4045eb786168afb10fe15d1fff84b4bccb7ee",
+    "output_sha256": "3e62096d3755f9a4c2019235415fce027814b8ba368f93892bfc40d04acc7385",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/04-activation-functions/docs/en.md": {
+    "source_sha256": "da086a041c9bd97f2465a02c2f3a877eb997969ef5e39f9b8d9585f38370aca3",
+    "output_sha256": "2fefe8df3772dfe6f98ee70b84b8fe40d49d385e48e3fad6c31e007e87b6d9ef",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/05-loss-functions/docs/en.md": {
+    "source_sha256": "aa64f3d64a9dab9b7e68b117158d8876bf350adc30d2cd3cddf4d11702d3085c",
+    "output_sha256": "6d6ffb5e47f80b9410c0446a647c8c946411e5361558cc0b71740ea1b4fb577c",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/06-optimizers/docs/en.md": {
+    "source_sha256": "9af59689813d171106b558fca9875f7992c8e834b8d7a69310bbaf7428ff9ad9",
+    "output_sha256": "84d70b048d857955f7b1e8e698d398628be0e92c7da1b25e6bff3959e9979597",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/07-regularization/docs/en.md": {
+    "source_sha256": "c6e31ead99cce8cf40dda09a94a3a2b95978f162e4fe67bc3f3e1b9763ae170d",
+    "output_sha256": "099da67eaa01069a292e3d70683f9f3e055b6b1a8aad5bea173b188e31cb7ba6",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/08-weight-initialization/docs/en.md": {
+    "source_sha256": "9c270a87d2872791247c02d3d471bc82bd76ea116df35c80143bc1b53a08c87b",
+    "output_sha256": "b686a7038f43da66674132e409f7d38bc7f4a6d30a0d92f2f98a6a947b9182a3",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/09-learning-rate-schedules/docs/en.md": {
+    "source_sha256": "192874a3732b8f75bf87c252b2cabefb58a8df22db14a5ca0118bf8e812e2551",
+    "output_sha256": "5a8ba3a48ee4dea335a1f1d436f1c484c8dafa6c717489fb6f3c27504a2386a4",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/10-mini-framework/docs/en.md": {
+    "source_sha256": "94d283931d471f9a757d50d4f12656d497b3cb78aacebeb7619a55e5c0e67325",
+    "output_sha256": "22316aac8183d933f62edbba4e9712403c4c4cbe32f35dfa23da8988930b5a0e",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/11-intro-to-pytorch/docs/en.md": {
+    "source_sha256": "9c1d3d3a389c673ccc0b0491dba0401ef37bac7d7e885ce22d4309f0adb2ea0e",
+    "output_sha256": "0f49569d2cd68960f952d7446a89994154bd23a816f9715e492e1d7f0951cbde",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/12-intro-to-jax/docs/en.md": {
+    "source_sha256": "9fe3133043ee5c5841555859f2e60f3cd11c6ee194ae7dd4ff6788a97d307a50",
+    "output_sha256": "5f1666a72f1b6cfa9a9daa8cf31cff82f419957ae9b8e457a1c50d0ee9d4e557",
+    "provider": "manual"
+  },
+  "phases/03-deep-learning-core/13-debugging-neural-networks/docs/en.md": {
+    "source_sha256": "93a9c9e91cc1312801ca02385de5891b2858f45a28a70a3dd099ce5848f21753",
+    "output_sha256": "2ec7aa24a8fde38d0d61f22742f964fe250e6d6d34f99131c620b9c1902ac756",
+    "provider": "manual"
+  }
 }

@@ -1,32 +1,152 @@
 {
-  "phases/18-ethics-safety-alignment/01-instruction-following-alignment-signal/docs/en.md": "b44320de740d56cf3ef7e2a639064e74d75f3f3e9186098b04f11edc5ee39173",
-  "phases/18-ethics-safety-alignment/02-reward-hacking-goodhart/docs/en.md": "3e90c0c2d439be3c3ec415fcc573adf961c6665ef952fb44caa4e463e6bfb77f",
-  "phases/18-ethics-safety-alignment/03-direct-preference-optimization-family/docs/en.md": "b081d3ff98e2096b63994d4e43ae025601085616183954e99751f4c3cb2bb6c7",
-  "phases/18-ethics-safety-alignment/04-sycophancy-rlhf-amplification/docs/en.md": "69d9da689ec1286230b6974ac1671544a23e60d82955206a42349813e6270f64",
-  "phases/18-ethics-safety-alignment/05-constitutional-ai-rlaif/docs/en.md": "4ee2d7f1d7b5a647091064fcf0ee5d9cd1a87f19a90bb1ba286b14701ed0dcdc",
-  "phases/18-ethics-safety-alignment/06-mesa-optimization-deceptive-alignment/docs/en.md": "5646555111db703a785d07456f8164f71b5a54fcee0018330c544c14151667f2",
-  "phases/18-ethics-safety-alignment/07-sleeper-agents-persistent-deception/docs/en.md": "55c9da067fe4244c6f2b96635c5e16fee805f3c8e498909d1dbf0f6fd196ee66",
-  "phases/18-ethics-safety-alignment/08-in-context-scheming-frontier-models/docs/en.md": "523a920b66274e891eaf8db40dc7ee7bb65f8e69d968f0da640cc57e8cf12092",
-  "phases/18-ethics-safety-alignment/09-alignment-faking/docs/en.md": "8a095cea8af608b37fcc508ad8703b246a6300dddc5b1e34fea3dbf6082e1a6d",
-  "phases/18-ethics-safety-alignment/10-ai-control-subversion/docs/en.md": "49d10fb15bc96c1df66b03f3fb030443ee0ae30d7812cd1beb24cbf72f57626b",
-  "phases/18-ethics-safety-alignment/11-scalable-oversight-weak-to-strong/docs/en.md": "d196b5586d8b302756393fb7a48288b465f5908633395b3164d8924cf46f7a8d",
-  "phases/18-ethics-safety-alignment/12-red-teaming-pair-automated-attacks/docs/en.md": "24dbc68c56b3c9903ecfd86f7237b014e57811bdf00ee62305650b87930ec7ba",
-  "phases/18-ethics-safety-alignment/13-many-shot-jailbreaking/docs/en.md": "27a1efae78e594530ccd35f01fedacd8a1e4aeaec537bb40c419728f001bc261",
-  "phases/18-ethics-safety-alignment/14-ascii-art-visual-jailbreaks/docs/en.md": "49b3da88ca8fbe445a353426bbec66f0488f177c0a34b9ddb2f76269f964b2e8",
-  "phases/18-ethics-safety-alignment/15-indirect-prompt-injection/docs/en.md": "c45f346b585ff1881733b061f7e55d034eacaf23e912374d001ee27dac87df38",
-  "phases/18-ethics-safety-alignment/16-red-team-tooling-garak-llamaguard-pyrit/docs/en.md": "380a3437c4bb05212e34be0ea75e0dca5f86e377a4f0465fed9befa2fc4f3dd8",
-  "phases/18-ethics-safety-alignment/17-wmdp-dual-use-evaluation/docs/en.md": "9cd15aab7f11142663fed3dd4f3c093b45e6d48333468186cff4db555a61af65",
-  "phases/18-ethics-safety-alignment/18-frontier-safety-frameworks-rsp-pf-fsf/docs/en.md": "21747f5afd1eecf95e7ac6a270e263bc855e85d9223e2c0fb834501671d84bf1",
-  "phases/18-ethics-safety-alignment/19-model-welfare-research/docs/en.md": "5ed1c98707f3ae2292def2e86348c666094c96f7ae694922b2621841b4308a7e",
-  "phases/18-ethics-safety-alignment/20-bias-representational-harm/docs/en.md": "22fbd564e6af48d8fe16272e0ed23b50088f13d25ae454d50e8b8e352b8da753",
-  "phases/18-ethics-safety-alignment/21-fairness-criteria-group-individual-counterfactual/docs/en.md": "936f4875ebd967b777b73990662cfd380bbf58790694af81230e84707bad41df",
-  "phases/18-ethics-safety-alignment/22-differential-privacy-for-llms/docs/en.md": "0f05d09ab51d09c553677ace2ec81064232132803ec1dac721d72e8ad1118db4",
-  "phases/18-ethics-safety-alignment/23-watermarking-synthid-stable-signature-c2pa/docs/en.md": "ae55115b02803bcdeaa1a2e65035857646ce3b9703e3d2eb5fd9992b958c767c",
-  "phases/18-ethics-safety-alignment/24-regulatory-frameworks-eu-us-uk-korea/docs/en.md": "5babaaec2f1c7dc2d619dea0a8bb46ee4e94754dec3182adb72a7e7d6e1c7032",
-  "phases/18-ethics-safety-alignment/25-echoleak-cves-for-ai/docs/en.md": "193ed71dd1b1e94227fa8a44bec5df31eda6ffdab54ec130cd5c51997a581ebb",
-  "phases/18-ethics-safety-alignment/26-model-system-dataset-cards/docs/en.md": "ad07f39e9a2754a2f058ee40fa2673b9caa391e13007b2bf2c442a87dd2582ab",
-  "phases/18-ethics-safety-alignment/27-data-provenance-training-governance/docs/en.md": "d54fe97d020370049a72763518047b23ebc1a86a62796db68f2780e76c4173e9",
-  "phases/18-ethics-safety-alignment/28-alignment-research-ecosystem/docs/en.md": "43652e0255c4dca0af153c4c29d35002b32c7bef5235637b18e6a4fd95617ee7",
-  "phases/18-ethics-safety-alignment/29-moderation-systems-openai-perspective-llamaguard/docs/en.md": "ad0da963675b3addadb37f2d439e28b60efebcc0dbd4c4292bb4ef57a39820ef",
-  "phases/18-ethics-safety-alignment/30-dual-use-risk-cyber-bio-chem-nuclear/docs/en.md": "14da17d632f41db5eab259848ceb6a931c9efdad2620c00437838bab25abd88a"
+  "phases/18-ethics-safety-alignment/01-instruction-following-alignment-signal/docs/en.md": {
+    "source_sha256": "b44320de740d56cf3ef7e2a639064e74d75f3f3e9186098b04f11edc5ee39173",
+    "output_sha256": "6491580cf5c86b2307913002199afc262642637f1b027c15de0475096197c3a0",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/02-reward-hacking-goodhart/docs/en.md": {
+    "source_sha256": "3e90c0c2d439be3c3ec415fcc573adf961c6665ef952fb44caa4e463e6bfb77f",
+    "output_sha256": "f0416a5e4b9739273b70a024cd7e3ba5c9f8b0b7117ba47753e8abf7c73757b9",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/03-direct-preference-optimization-family/docs/en.md": {
+    "source_sha256": "b081d3ff98e2096b63994d4e43ae025601085616183954e99751f4c3cb2bb6c7",
+    "output_sha256": "85d0a696f7d5da4231ec3a73556aa218e6fa023c5048836fb6558ede07fd461b",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/04-sycophancy-rlhf-amplification/docs/en.md": {
+    "source_sha256": "69d9da689ec1286230b6974ac1671544a23e60d82955206a42349813e6270f64",
+    "output_sha256": "f13bd22f07a6502a8fa055e135390c2938f2dca32db41b34902e32fa6b9b1c8e",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/05-constitutional-ai-rlaif/docs/en.md": {
+    "source_sha256": "4ee2d7f1d7b5a647091064fcf0ee5d9cd1a87f19a90bb1ba286b14701ed0dcdc",
+    "output_sha256": "5de194ed4ce8928b98340f57eae63e70c821edb1688658df5654a11f9ed9df42",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/06-mesa-optimization-deceptive-alignment/docs/en.md": {
+    "source_sha256": "5646555111db703a785d07456f8164f71b5a54fcee0018330c544c14151667f2",
+    "output_sha256": "6f670f15d95ab637bdf1b29e196ce8eb32b5221e4e2d38721ed53ca94e606c2c",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/07-sleeper-agents-persistent-deception/docs/en.md": {
+    "source_sha256": "55c9da067fe4244c6f2b96635c5e16fee805f3c8e498909d1dbf0f6fd196ee66",
+    "output_sha256": "f043a02170757d6d336d8c9b85cd95489cdfaecbc7084b7f7a4e1556ad75328e",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/08-in-context-scheming-frontier-models/docs/en.md": {
+    "source_sha256": "523a920b66274e891eaf8db40dc7ee7bb65f8e69d968f0da640cc57e8cf12092",
+    "output_sha256": "a69c4208dcae57996a18659b9b1867947b51078032940e01b78caef122e8ea58",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/09-alignment-faking/docs/en.md": {
+    "source_sha256": "8a095cea8af608b37fcc508ad8703b246a6300dddc5b1e34fea3dbf6082e1a6d",
+    "output_sha256": "927296b8a8c12a26aacd1160a8252a7c60a94d6dd3dacb77c134ea46809d9d74",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/10-ai-control-subversion/docs/en.md": {
+    "source_sha256": "49d10fb15bc96c1df66b03f3fb030443ee0ae30d7812cd1beb24cbf72f57626b",
+    "output_sha256": "28c3f6ad51b4c9d90aae43060ffb37ca5fc5d1b1c9b3556e2cc4410d366c3d80",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/11-scalable-oversight-weak-to-strong/docs/en.md": {
+    "source_sha256": "d196b5586d8b302756393fb7a48288b465f5908633395b3164d8924cf46f7a8d",
+    "output_sha256": "43a594eff6ccaacccfebb62f241fd7feedf35c2b2996ced3490e080d7c76694f",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/12-red-teaming-pair-automated-attacks/docs/en.md": {
+    "source_sha256": "24dbc68c56b3c9903ecfd86f7237b014e57811bdf00ee62305650b87930ec7ba",
+    "output_sha256": "43e4e3a05c2fe5a589b57f06f17bdca6e595b5985d91250a4ca4a56677cab7ef",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/13-many-shot-jailbreaking/docs/en.md": {
+    "source_sha256": "27a1efae78e594530ccd35f01fedacd8a1e4aeaec537bb40c419728f001bc261",
+    "output_sha256": "3f636a1f5155ea5ad4dfb8bc9efdb66d2706c5c374689dae430d4b38d664d9de",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/14-ascii-art-visual-jailbreaks/docs/en.md": {
+    "source_sha256": "49b3da88ca8fbe445a353426bbec66f0488f177c0a34b9ddb2f76269f964b2e8",
+    "output_sha256": "f238ac4acd118e18555ebc783bcbe828f14eeeef12bb0b1bd195dd777eaa16d0",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/15-indirect-prompt-injection/docs/en.md": {
+    "source_sha256": "c45f346b585ff1881733b061f7e55d034eacaf23e912374d001ee27dac87df38",
+    "output_sha256": "2f68b13b4acb534d9fdf28aa3349f92c9fa440ac02e1b950edf956a8e20789f7",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/16-red-team-tooling-garak-llamaguard-pyrit/docs/en.md": {
+    "source_sha256": "380a3437c4bb05212e34be0ea75e0dca5f86e377a4f0465fed9befa2fc4f3dd8",
+    "output_sha256": "5d098648924a4506b75d14d8c6e9c8bc9823683333d22ae537b275f50accbf68",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/17-wmdp-dual-use-evaluation/docs/en.md": {
+    "source_sha256": "9cd15aab7f11142663fed3dd4f3c093b45e6d48333468186cff4db555a61af65",
+    "output_sha256": "27f774e46ddbbc7dd9b3d5cdb5a627adb18b6fe538f8357d8493072b1a645e7c",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/18-frontier-safety-frameworks-rsp-pf-fsf/docs/en.md": {
+    "source_sha256": "21747f5afd1eecf95e7ac6a270e263bc855e85d9223e2c0fb834501671d84bf1",
+    "output_sha256": "42cf6cf3fb29a14c027d376e2cc24f71f7a96f3ac50795ebb4f0a36dff7fb80b",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/19-model-welfare-research/docs/en.md": {
+    "source_sha256": "5ed1c98707f3ae2292def2e86348c666094c96f7ae694922b2621841b4308a7e",
+    "output_sha256": "993a70c9ab8c417cf708e02a20a84819351eed8ae3c6409adf77b44d886e7ec7",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/20-bias-representational-harm/docs/en.md": {
+    "source_sha256": "22fbd564e6af48d8fe16272e0ed23b50088f13d25ae454d50e8b8e352b8da753",
+    "output_sha256": "606cee7113c482e7a8bbf91a0671f1c0a98de99747385730477d370ba79658dd",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/21-fairness-criteria-group-individual-counterfactual/docs/en.md": {
+    "source_sha256": "936f4875ebd967b777b73990662cfd380bbf58790694af81230e84707bad41df",
+    "output_sha256": "6e0a91fc4a918d46992c34d28ccabfd462168da12df52cd01497d4cc7fd96cfb",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/22-differential-privacy-for-llms/docs/en.md": {
+    "source_sha256": "0f05d09ab51d09c553677ace2ec81064232132803ec1dac721d72e8ad1118db4",
+    "output_sha256": "ef9febe6ae18bdeab806f353c918bf82ef761f9f7a7d4649682dded4d9e8b775",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/23-watermarking-synthid-stable-signature-c2pa/docs/en.md": {
+    "source_sha256": "ae55115b02803bcdeaa1a2e65035857646ce3b9703e3d2eb5fd9992b958c767c",
+    "output_sha256": "c30579c47719189f627e4aed2fab699f2baa998837765a7716a35807af1a83f6",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/24-regulatory-frameworks-eu-us-uk-korea/docs/en.md": {
+    "source_sha256": "5babaaec2f1c7dc2d619dea0a8bb46ee4e94754dec3182adb72a7e7d6e1c7032",
+    "output_sha256": "1f7a3329ba9d096fb5ea4b0fb0eb42b6b3cf67068e918d1854b0650c8283c506",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/25-echoleak-cves-for-ai/docs/en.md": {
+    "source_sha256": "193ed71dd1b1e94227fa8a44bec5df31eda6ffdab54ec130cd5c51997a581ebb",
+    "output_sha256": "2f7dfe449d91b8088c4822d49053c9c32253564ded18ed6a20ed5a816c3e075f",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/26-model-system-dataset-cards/docs/en.md": {
+    "source_sha256": "ad07f39e9a2754a2f058ee40fa2673b9caa391e13007b2bf2c442a87dd2582ab",
+    "output_sha256": "b62eeccceff5f361a2ee6fb4e43fdc221a6842ddb6b51209214a588d75fe3bbc",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/27-data-provenance-training-governance/docs/en.md": {
+    "source_sha256": "d54fe97d020370049a72763518047b23ebc1a86a62796db68f2780e76c4173e9",
+    "output_sha256": "9c911c53bc2633ee4d4ba0ba03b5f3cdac8dd159f33ffca675b67891792bdc62",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/28-alignment-research-ecosystem/docs/en.md": {
+    "source_sha256": "43652e0255c4dca0af153c4c29d35002b32c7bef5235637b18e6a4fd95617ee7",
+    "output_sha256": "90526fa54916eb995cef77d9a27e8cfad10aa3d14db2ecc75b725bffdc2dbdab",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/29-moderation-systems-openai-perspective-llamaguard/docs/en.md": {
+    "source_sha256": "ad0da963675b3addadb37f2d439e28b60efebcc0dbd4c4292bb4ef57a39820ef",
+    "output_sha256": "250320089e1508e0ad368850061a166df70fe122d1e6c35489b462eee1dbd83f",
+    "provider": "manual"
+  },
+  "phases/18-ethics-safety-alignment/30-dual-use-risk-cyber-bio-chem-nuclear/docs/en.md": {
+    "source_sha256": "14da17d632f41db5eab259848ceb6a931c9efdad2620c00437838bab25abd88a",
+    "output_sha256": "320858c3b2ca1f4f27de50333a4c67b41619dad1611ef97dd72f317e34a561e5",
+    "provider": "manual"
+  }
 }

@@ -1,19 +1,87 @@
 {
-  "phases/11-llm-engineering/01-prompt-engineering/docs/en.md": "cd2886a19bdcb3f8faed3810a1297f820f3ab0b9d9fdfc22479619303bba9425",
-  "phases/11-llm-engineering/02-few-shot-cot/docs/en.md": "cf6f1c6cfb2fb4b6b1fb3674ba5b481c1e88944a2c9d831afec65947d7eee299",
-  "phases/11-llm-engineering/03-structured-outputs/docs/en.md": "6d310ae5ce8f771c5668d8742f1d1b1c922e738c087225d7c4b31eed492e43d7",
-  "phases/11-llm-engineering/04-embeddings/docs/en.md": "9c3115093f152ce871351f278f9e08a2322849bfaa9af54bb5339b5874f2b401",
-  "phases/11-llm-engineering/05-context-engineering/docs/en.md": "778ebedaa18baad1af5409b500b174f1809d215fcc20a48960e8ad6324eb50a6",
-  "phases/11-llm-engineering/06-rag/docs/en.md": "03116a37ce0e9ea3f59d086a0c2cf40c621f16fd1b23351e74042d6329096419",
-  "phases/11-llm-engineering/07-advanced-rag/docs/en.md": "e0f7bf9bf7a1fa40baf3017291881cf3eb995b93696db33178c424566bbfe801",
-  "phases/11-llm-engineering/08-fine-tuning-lora/docs/en.md": "6e6752387e06906ae70b2300d8bf5f2457b2a4f25c85895b10c724db9bee083a",
-  "phases/11-llm-engineering/09-function-calling/docs/en.md": "788bdc7aa7240c0469e546dd853a36dfe17bca39685f7e517b6adc291985019c",
-  "phases/11-llm-engineering/10-evaluation/docs/en.md": "3d0a83d22c49c449b3bfd989b02662b6eabfe64f294f5ec3d8268f126db2f317",
-  "phases/11-llm-engineering/11-caching-cost/docs/en.md": "bec924754c74950f7a7f6e975846b477cb63cc8aec4e8942cffdb4bbbd076bd3",
-  "phases/11-llm-engineering/12-guardrails/docs/en.md": "7bca84f499c6a75c2f97253f3fa4cf85befb0fbcf66e4c882e125279686ad73f",
-  "phases/11-llm-engineering/13-production-app/docs/en.md": "b0a346e45927205a67e1db24f0d67e16adde62736840bd2ac923a5fc03cd6101",
-  "phases/11-llm-engineering/14-model-context-protocol/docs/en.md": "26356da586c4f90922e0ab61af4ea47d81deaf3c9b2cc91e4ae8ac44efaadd7b",
-  "phases/11-llm-engineering/15-prompt-caching/docs/en.md": "c72d9e6ced54e99c366d6f573ba03a8a4f0a4e365eddc8911a92712dd1cfd201",
-  "phases/11-llm-engineering/16-langgraph-state-machines/docs/en.md": "cd449175f7292a9821644d0b829cd0576a68f0da3aedbbc9e3547b45fd7b05cb",
-  "phases/11-llm-engineering/17-agent-framework-tradeoffs/docs/en.md": "4c0c6119addcb3cf05f3a9e1884ae3bf75e4428a6196c90982653559c94c83b7"
+  "phases/11-llm-engineering/01-prompt-engineering/docs/en.md": {
+    "source_sha256": "cd2886a19bdcb3f8faed3810a1297f820f3ab0b9d9fdfc22479619303bba9425",
+    "output_sha256": "81c3e999f6d0fa536b32e353c29fc21ceb087bfc70b477b78fff92b281a60d41",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/02-few-shot-cot/docs/en.md": {
+    "source_sha256": "cf6f1c6cfb2fb4b6b1fb3674ba5b481c1e88944a2c9d831afec65947d7eee299",
+    "output_sha256": "2775df1208a91059ba866c62446d740dc0809d2e0fe6dd21be59323312acb74e",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/03-structured-outputs/docs/en.md": {
+    "source_sha256": "6d310ae5ce8f771c5668d8742f1d1b1c922e738c087225d7c4b31eed492e43d7",
+    "output_sha256": "d35c007861d37438674812fec25f8d983ba03d45c290ceecdb277246ba5b6e92",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/04-embeddings/docs/en.md": {
+    "source_sha256": "9c3115093f152ce871351f278f9e08a2322849bfaa9af54bb5339b5874f2b401",
+    "output_sha256": "774af91d8443312af76602abbeb499e3496b51e9ecea7af2a89644d60fcaaa68",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/05-context-engineering/docs/en.md": {
+    "source_sha256": "778ebedaa18baad1af5409b500b174f1809d215fcc20a48960e8ad6324eb50a6",
+    "output_sha256": "491eeda0c9f5cca46840c390244839ec693bbf9ceea2f1d5aee28175f0c2d4d6",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/06-rag/docs/en.md": {
+    "source_sha256": "03116a37ce0e9ea3f59d086a0c2cf40c621f16fd1b23351e74042d6329096419",
+    "output_sha256": "713333d37e9d5173edcf23c81d49e2810a992330acb0bb797cae9cbbee87c7dd",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/07-advanced-rag/docs/en.md": {
+    "source_sha256": "e0f7bf9bf7a1fa40baf3017291881cf3eb995b93696db33178c424566bbfe801",
+    "output_sha256": "83450b9c47bcd9bff361dbdebf7d563d2a2bbff9c7b3c3bf7dc2610803cebefd",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/08-fine-tuning-lora/docs/en.md": {
+    "source_sha256": "6e6752387e06906ae70b2300d8bf5f2457b2a4f25c85895b10c724db9bee083a",
+    "output_sha256": "c207ce8727f3305b46200e9de3bb97f6b112d22f8033fd5ac512fa9935cb4bbd",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/09-function-calling/docs/en.md": {
+    "source_sha256": "788bdc7aa7240c0469e546dd853a36dfe17bca39685f7e517b6adc291985019c",
+    "output_sha256": "eb9734dd268d5c740d86d613ccccd47ffd95033135a7b1540117732ef139aa2c",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/10-evaluation/docs/en.md": {
+    "source_sha256": "3d0a83d22c49c449b3bfd989b02662b6eabfe64f294f5ec3d8268f126db2f317",
+    "output_sha256": "e51b7c4e94fe380aff0baee3e72a6dab916805bfe40ca2a7f9ec4c49684ca151",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/11-caching-cost/docs/en.md": {
+    "source_sha256": "bec924754c74950f7a7f6e975846b477cb63cc8aec4e8942cffdb4bbbd076bd3",
+    "output_sha256": "1e8d452c5fed2fc6aa9dc32f49b1a2327cc184471a8881a4b8ff85655693047e",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/12-guardrails/docs/en.md": {
+    "source_sha256": "7bca84f499c6a75c2f97253f3fa4cf85befb0fbcf66e4c882e125279686ad73f",
+    "output_sha256": "5ae1909d120167aebb5f84840eeda7757448bfe2966b02f0b519a76a2e216076",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/13-production-app/docs/en.md": {
+    "source_sha256": "b0a346e45927205a67e1db24f0d67e16adde62736840bd2ac923a5fc03cd6101",
+    "output_sha256": "fbb75783f96a5fc5f80a6ceb32038b5856da1e08551ed982086afcf29e1118b8",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/14-model-context-protocol/docs/en.md": {
+    "source_sha256": "26356da586c4f90922e0ab61af4ea47d81deaf3c9b2cc91e4ae8ac44efaadd7b",
+    "output_sha256": "b9f79314c5367bbdcfae23a4a93f10cb69bfb2b4b550c82e184fca34f8ec8dff",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/15-prompt-caching/docs/en.md": {
+    "source_sha256": "c72d9e6ced54e99c366d6f573ba03a8a4f0a4e365eddc8911a92712dd1cfd201",
+    "output_sha256": "3b574c63d3634ead48dbc67ece683b05f1c875c69486788b97897703a713c3c5",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/16-langgraph-state-machines/docs/en.md": {
+    "source_sha256": "cd449175f7292a9821644d0b829cd0576a68f0da3aedbbc9e3547b45fd7b05cb",
+    "output_sha256": "131ec399c51aea9e2f9191d650ec9a7f8250334a08b2e2acfccc730c73ec4eed",
+    "provider": "manual"
+  },
+  "phases/11-llm-engineering/17-agent-framework-tradeoffs/docs/en.md": {
+    "source_sha256": "4c0c6119addcb3cf05f3a9e1884ae3bf75e4428a6196c90982653559c94c83b7",
+    "output_sha256": "0c8309677119a946790fa80147bc09564c717cbeaf620076eb24c3e9202906cf",
+    "provider": "manual"
+  }
 }

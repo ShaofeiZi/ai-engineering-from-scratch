@@ -1,56 +1,272 @@
 {
-  "phases/14-agent-engineering/01-the-agent-loop/docs/en.md": "5f40298b9c1cbabd41a85ede8679c80c55b9a6c9ed92ac661ecd1f9aba18b83e",
-  "phases/14-agent-engineering/02-rewoo-plan-and-execute/docs/en.md": "6415552ddca63102995206c84e95e9b0225b77c0c06ac808f316eb36431bb4df",
-  "phases/14-agent-engineering/03-reflexion-verbal-rl/docs/en.md": "9afabebcab9e1ce6d6ab3b2b0ceabd8b0aa308b25a73b8d6510fc2f2739f9b36",
-  "phases/14-agent-engineering/04-tree-of-thoughts-lats/docs/en.md": "c0d4e1af4425b9cc2a97b944e4b538fb2bcef90e4469acab0d547c69e317e92f",
-  "phases/14-agent-engineering/05-self-refine-and-critic/docs/en.md": "9c7f53947f9886f431c8f1a5d51f4f1c97af01ff68887f33275dbd64892f93e3",
-  "phases/14-agent-engineering/06-tool-use-and-function-calling/docs/en.md": "73cf8bf653c6148817147fd98b4fc780d9794ca3e9651605f6c8e3f242a14992",
-  "phases/14-agent-engineering/07-memory-virtual-context-memgpt/docs/en.md": "71b0ba93e4d737f64c1c7a90408489676e35aaa75418050ca42c5a68a95e355d",
-  "phases/14-agent-engineering/08-memory-blocks-sleep-time-compute/docs/en.md": "c9d406091f226f33e6b8336bd887d12e7a8cdbe769b257a6c6bda4988eff6f3b",
-  "phases/14-agent-engineering/09-hybrid-memory-mem0/docs/en.md": "f7e13f26fd141cdf48067ab7f09c16bc63d35f6eb65063d4378dc29c7d3a2ebb",
-  "phases/14-agent-engineering/10-skill-libraries-voyager/docs/en.md": "c6cf28951a1e4272831bb047e46deda31477551d3f6e142633ec101e6cce5bb2",
-  "phases/14-agent-engineering/11-planning-htn-and-evolutionary/docs/en.md": "f4999bbfd5e356debc4193581fc9a9b6df991366783c41110c5296781eeeb020",
-  "phases/14-agent-engineering/12-anthropic-workflow-patterns/docs/en.md": "55c8edf5c8a62595d2db17d555b2ca3cddf12a8b8d8bdf0ff745b347000c0a57",
-  "phases/14-agent-engineering/13-langgraph-stateful-graphs/docs/en.md": "eff89296945c389b50c9491488940eebee8dc61756ea274a2b1a094709fb4951",
-  "phases/14-agent-engineering/14-autogen-actor-model/docs/en.md": "d711c64e9a5125ae7cb7b50dfd73abf765f3b3e0d6cef0992da9240fee934ad8",
-  "phases/14-agent-engineering/15-crewai-role-based-crews/docs/en.md": "cf08c2959fa6c2fc70a935fe932a8693664c61e39a7d7979bc049f487bc70561",
-  "phases/14-agent-engineering/16-openai-agents-sdk/docs/en.md": "377b426042d5664c5c9cf36932d5ae56dc66c51236a1de60656ef110112eb76c",
-  "phases/14-agent-engineering/17-claude-agent-sdk/docs/en.md": "f1fb3653f42b54dd9267aa3bd20bb56714567f56c71a8b92972d725f0948b9bd",
-  "phases/14-agent-engineering/18-agno-and-mastra-runtimes/docs/en.md": "825b6ee75ecab014886579c42bbae112c977eb6b51b91d570c412faa3933ec79",
-  "phases/14-agent-engineering/19-benchmarks-swebench-gaia/docs/en.md": "b2a282a875e13aa30bea25d2a937ce1e26c422e14e7f4d675808675de1cd6f76",
-  "phases/14-agent-engineering/20-benchmarks-webarena-osworld/docs/en.md": "5f2b258833ea48979405b3f939f5765a667a5a28ae0786b4c208710ac6d8c717",
-  "phases/14-agent-engineering/21-computer-use-agents/docs/en.md": "fddd303eb087f556eb13754431e8a118980c7c9184eb53f61dc810b91638605e",
-  "phases/14-agent-engineering/22-voice-agents-pipecat-livekit/docs/en.md": "514d102d6130a6c3c6682b33e86d7a2e24de4e9240176de6e78403ecc9d8083d",
-  "phases/14-agent-engineering/23-otel-genai-conventions/docs/en.md": "079cbb2f56f7ec32724047275efa9fbd66a2af5f3953edba52f675527e336aa8",
-  "phases/14-agent-engineering/24-agent-observability-platforms/docs/en.md": "aa3f70277a5ad92c61142f4be10b0c68df38981115001dcc870d7987d827751b",
-  "phases/14-agent-engineering/25-multi-agent-debate/docs/en.md": "4dcb50b8b599fd3666f1a8ff1930ecec21a5dcd27ec5262deabad5a375aff61c",
-  "phases/14-agent-engineering/26-failure-modes-agentic/docs/en.md": "588b80e7011058fe627db20be59a8ccb2fea5d54940340c4ba226b67d1209dd3",
-  "phases/14-agent-engineering/27-prompt-injection-defense/docs/en.md": "21b45d0b84c27cea79c3240ebd5c111776989f1eee01e4fd67a33bbec8450b6d",
-  "phases/14-agent-engineering/28-orchestration-patterns/docs/en.md": "c45bf70a77e6c5a172587da2d472cc0d398e62b3bd48352ad4da34d108a2a7f2",
-  "phases/14-agent-engineering/29-production-runtimes/docs/en.md": "693a6f21557b8a6c349730ee6d378eb619b327c65ff8dbfe9474a75968b5f940",
-  "phases/14-agent-engineering/30-eval-driven-agent-development/docs/en.md": "7f1772928ead5688466ea0b7178d2cbd7bd10f0fa2e3568656e76dc4e8fcf891",
-  "phases/14-agent-engineering/31-agent-workbench-why-models-fail/docs/en.md": "0ea9ffdfa16e69122d14c890cff27a1114bf9c967b584ebfa1919bbad4efc1de",
-  "phases/14-agent-engineering/32-minimal-agent-workbench/docs/en.md": "ed33899118e133a6201e503a96d5bd07e54e36616a4586979ea9e5bdc211e980",
-  "phases/14-agent-engineering/33-instructions-as-executable-constraints/docs/en.md": "6ba9752ebfeb92b1a187a7cbace37940438fb57ad11f5518e8688195b5796f6a",
-  "phases/14-agent-engineering/34-repo-memory-and-state/docs/en.md": "cd1aa7ff00250e5d5e0b0a822623522d3fd26db986c56053a5570592097c8d5a",
-  "phases/14-agent-engineering/35-initialization-scripts/docs/en.md": "4ee89ee7aa2b7b40145524afac0b71d6291f8f2ec789297cccf22ed04dce2b9b",
-  "phases/14-agent-engineering/36-scope-contracts/docs/en.md": "993c6db81c5c0d8fdd66023e9588fc4777a1461b76bf078cf96db7c94caf3c85",
-  "phases/14-agent-engineering/37-runtime-feedback-loops/docs/en.md": "702a2f8ef5e03dc631ba401af3b12cbfff1e4cfa1f5d1ae3a38f3ddd8f7681eb",
-  "phases/14-agent-engineering/38-verification-gates/docs/en.md": "9ff4dfd1f6774e4f865bea2ee425fd587280b703a7ad511258919fc5c413d571",
-  "phases/14-agent-engineering/39-reviewer-agent/docs/en.md": "363be9d97da5499c7fbfe8381559490ce77bbb1af46c45f33f01b5999e0086f1",
-  "phases/14-agent-engineering/40-multi-session-handoff/docs/en.md": "d2537f34853af5e07bae24f3d5c5198bf321aa4de6fec9349ac5cd7804d723c4",
-  "phases/14-agent-engineering/41-workbench-for-real-repos/docs/en.md": "75d2298297ec8a23832dea06df7e12a448e1030b265465aac178dc914b881d27",
-  "phases/14-agent-engineering/42-agent-workbench-capstone/docs/en.md": "50733fd8456af91cd7f7cd39bc02e984be10cc85f0c3d886ba60abfa46e24d21",
-  "phases/14-agent-engineering/43-frame-the-task-before-code/docs/en.md": "b5ebe37b63dd21d1abba0472c8abf6b07c070b321b17d3cda1c4e216e1a7e32d",
-  "phases/14-agent-engineering/44-plan-from-evidence/docs/en.md": "1018b075aafa5bb25c695859db764d57a00d1991c450c75511ce0bc3cb6c8139",
-  "phases/14-agent-engineering/45-delegate-with-isolation/docs/en.md": "cdd379d9f31f811933d4ab1897e7c95b3f7e2e84f4d418d4fa6ebae2d1559dfb",
-  "phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md": "81837f3007e77e0b884dd874912d4dba14eaf81b739fb866e78149af241a2c56",
-  "phases/14-agent-engineering/47-outcomes-before-output/docs/en.md": "05407df34f766e1b5a350b70940c149db317c87c3571dcd37926f0acd1772706",
-  "phases/14-agent-engineering/48-discover-the-real-workflow/docs/en.md": "8ee8e7fa91e4ed6674f286de9cbdf05e1c2b141c61af1585c46c54a4b512f34b",
-  "phases/14-agent-engineering/49-map-assumptions-and-risk/docs/en.md": "7c8381be49ff8b9c8b4e9f8100c338936d993f68cbcd9e988e4f0831ff33ab43",
-  "phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md": "8dcdf1ba55e1b58f5ceb019de63ab5be3006b51e051e7acfa4e5cbd6f40149ab",
-  "phases/14-agent-engineering/51-write-specifications-that-preserve-judgment/docs/en.md": "3d5976c2d6cc99bbd6f4660d73e52a78a4b6ee171bd2a3b295c7d2b1ff35582f",
-  "phases/14-agent-engineering/52-design-success-metrics/docs/en.md": "dd1c976a46c3cffd2de66283c967c8b6589217f3171e2168b8f6852fdbc27ecc",
-  "phases/14-agent-engineering/53-prototype-pilot-or-production/docs/en.md": "2f596fd43c98189fc0c314b87b59aa94a6e6351e643cfbd4832ba8b33e53c455",
-  "phases/14-agent-engineering/54-build-the-feedback-ratchet/docs/en.md": "b5ecda7b1df517e6da28990ed22498bf589c5a8ce06d49b1cdd6cf34dfcb9a3a"
+  "phases/14-agent-engineering/01-the-agent-loop/docs/en.md": {
+    "source_sha256": "5f40298b9c1cbabd41a85ede8679c80c55b9a6c9ed92ac661ecd1f9aba18b83e",
+    "output_sha256": "bfff44fecdce06a1d8cbcbe32cc0c06ce460c599f26674b6bd4ab0f048cd21bb",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/02-rewoo-plan-and-execute/docs/en.md": {
+    "source_sha256": "6415552ddca63102995206c84e95e9b0225b77c0c06ac808f316eb36431bb4df",
+    "output_sha256": "2118b0f15c3a6eb914c52081f91a5683f5ae481921c18ce5aa0e4be9fdfe4588",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/03-reflexion-verbal-rl/docs/en.md": {
+    "source_sha256": "9afabebcab9e1ce6d6ab3b2b0ceabd8b0aa308b25a73b8d6510fc2f2739f9b36",
+    "output_sha256": "c0d0d53fc14a34a9652fe79e1eed00f8fac02af3c1f61b005924710a69d73430",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/04-tree-of-thoughts-lats/docs/en.md": {
+    "source_sha256": "c0d4e1af4425b9cc2a97b944e4b538fb2bcef90e4469acab0d547c69e317e92f",
+    "output_sha256": "dadc6fb96684a79bd72d33d52dfec982cc4c763bf97f2eb15fcf3ad53b721769",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/05-self-refine-and-critic/docs/en.md": {
+    "source_sha256": "9c7f53947f9886f431c8f1a5d51f4f1c97af01ff68887f33275dbd64892f93e3",
+    "output_sha256": "c1672fcc92b9e6b546a7df9bf3edca60dcdde6619f8da6610c349b1295ade4b8",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/06-tool-use-and-function-calling/docs/en.md": {
+    "source_sha256": "73cf8bf653c6148817147fd98b4fc780d9794ca3e9651605f6c8e3f242a14992",
+    "output_sha256": "2b72b94905edf38c0f10da8e45aa6d2f9b261f4cfbed9637be877ba94dad5d04",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/07-memory-virtual-context-memgpt/docs/en.md": {
+    "source_sha256": "71b0ba93e4d737f64c1c7a90408489676e35aaa75418050ca42c5a68a95e355d",
+    "output_sha256": "8e74d006f06f3ae988dbcf2e1cb252d96d8fe2cfc9771f2a2ecc8b468059d165",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/08-memory-blocks-sleep-time-compute/docs/en.md": {
+    "source_sha256": "c9d406091f226f33e6b8336bd887d12e7a8cdbe769b257a6c6bda4988eff6f3b",
+    "output_sha256": "4754b68a6d030f91c2062260613038c54885b6d9460dd3a61dd9fee8cac00e0e",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/09-hybrid-memory-mem0/docs/en.md": {
+    "source_sha256": "f7e13f26fd141cdf48067ab7f09c16bc63d35f6eb65063d4378dc29c7d3a2ebb",
+    "output_sha256": "d59e02371a4ba865f2a21a3cd9c831402fb00ebbcfaba0f5b2bb29d94c8433de",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/10-skill-libraries-voyager/docs/en.md": {
+    "source_sha256": "c6cf28951a1e4272831bb047e46deda31477551d3f6e142633ec101e6cce5bb2",
+    "output_sha256": "735b2789997fba4d111728b6decf9b452573c33732da43a6bd366bb9378afb64",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/11-planning-htn-and-evolutionary/docs/en.md": {
+    "source_sha256": "f4999bbfd5e356debc4193581fc9a9b6df991366783c41110c5296781eeeb020",
+    "output_sha256": "a82d20e89c39505a4b87264e2f686112e0ed70b801224571a465d699175c4582",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/12-anthropic-workflow-patterns/docs/en.md": {
+    "source_sha256": "55c8edf5c8a62595d2db17d555b2ca3cddf12a8b8d8bdf0ff745b347000c0a57",
+    "output_sha256": "f52071d639314164c3fcd5f716b4f2a861bcaba46590c3a1707a7a26f3978ce0",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/13-langgraph-stateful-graphs/docs/en.md": {
+    "source_sha256": "eff89296945c389b50c9491488940eebee8dc61756ea274a2b1a094709fb4951",
+    "output_sha256": "b666a1dc1a0ca3b3cf853338ac1e8397f5beeb02fe7b64d746359d99f577101c",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/14-autogen-actor-model/docs/en.md": {
+    "source_sha256": "d711c64e9a5125ae7cb7b50dfd73abf765f3b3e0d6cef0992da9240fee934ad8",
+    "output_sha256": "ba1cb66e3c96f51a4dd555e64075d3619ed91854acaf7cd540a8edd0847b0d8f",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/15-crewai-role-based-crews/docs/en.md": {
+    "source_sha256": "cf08c2959fa6c2fc70a935fe932a8693664c61e39a7d7979bc049f487bc70561",
+    "output_sha256": "ab7a0f4e092a83c7ce8b8309d628475996155337e345f256c79894c850ac48c1",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/16-openai-agents-sdk/docs/en.md": {
+    "source_sha256": "377b426042d5664c5c9cf36932d5ae56dc66c51236a1de60656ef110112eb76c",
+    "output_sha256": "5dc2218780d258452274e27d002899ba5a7912266a61082ad1e5131c3c24c818",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/17-claude-agent-sdk/docs/en.md": {
+    "source_sha256": "f1fb3653f42b54dd9267aa3bd20bb56714567f56c71a8b92972d725f0948b9bd",
+    "output_sha256": "b5811f09bf353b3050ff7dcce57582e6555a97fa03e4261a5498f686a006b7cf",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/18-agno-and-mastra-runtimes/docs/en.md": {
+    "source_sha256": "825b6ee75ecab014886579c42bbae112c977eb6b51b91d570c412faa3933ec79",
+    "output_sha256": "decc14d6eab09a38be761d4e47fe542f4c872c4e73d2584567c5c7d840cc6c49",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/19-benchmarks-swebench-gaia/docs/en.md": {
+    "source_sha256": "b2a282a875e13aa30bea25d2a937ce1e26c422e14e7f4d675808675de1cd6f76",
+    "output_sha256": "2283c374a55dedc13a94d6080f377a21fcea6281ac0a12388c6bac91b28b5f3e",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/20-benchmarks-webarena-osworld/docs/en.md": {
+    "source_sha256": "5f2b258833ea48979405b3f939f5765a667a5a28ae0786b4c208710ac6d8c717",
+    "output_sha256": "b00ab371833d3866868881e94f9532ea6237a9ba03b09c1a858dfd60be3def70",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/21-computer-use-agents/docs/en.md": {
+    "source_sha256": "fddd303eb087f556eb13754431e8a118980c7c9184eb53f61dc810b91638605e",
+    "output_sha256": "91c64aa9e2e65f1e1f9b241b42e1448d3fc63e727097688ecd7e19c953e67712",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/22-voice-agents-pipecat-livekit/docs/en.md": {
+    "source_sha256": "514d102d6130a6c3c6682b33e86d7a2e24de4e9240176de6e78403ecc9d8083d",
+    "output_sha256": "7f0e2b7201497527975b75b6e2a0810bfe0ece9d4e23d4c31bae5dbcad883821",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/23-otel-genai-conventions/docs/en.md": {
+    "source_sha256": "079cbb2f56f7ec32724047275efa9fbd66a2af5f3953edba52f675527e336aa8",
+    "output_sha256": "18ccad33bdec566b4b288ddfa64830a728ce599b9c98f41e8918fb00f3a72640",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/24-agent-observability-platforms/docs/en.md": {
+    "source_sha256": "aa3f70277a5ad92c61142f4be10b0c68df38981115001dcc870d7987d827751b",
+    "output_sha256": "ec012d219c1da22ae11a9ba6415209ada995b35fc4e84ba5db05cb7020bffbe1",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/25-multi-agent-debate/docs/en.md": {
+    "source_sha256": "4dcb50b8b599fd3666f1a8ff1930ecec21a5dcd27ec5262deabad5a375aff61c",
+    "output_sha256": "499749f7af9c4e5d89943cb090d8efd76c0756293ae82bd7b514b3a560e072d7",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/26-failure-modes-agentic/docs/en.md": {
+    "source_sha256": "588b80e7011058fe627db20be59a8ccb2fea5d54940340c4ba226b67d1209dd3",
+    "output_sha256": "bee8500c401801aa988835b00cab2c0be808bdb8c3e4b3433f41ba90d65af81f",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/27-prompt-injection-defense/docs/en.md": {
+    "source_sha256": "21b45d0b84c27cea79c3240ebd5c111776989f1eee01e4fd67a33bbec8450b6d",
+    "output_sha256": "d33b2636d776319fe05366c699a9e4357b8ad8fe85340dbdeca4b5e1c55c8272",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/28-orchestration-patterns/docs/en.md": {
+    "source_sha256": "c45bf70a77e6c5a172587da2d472cc0d398e62b3bd48352ad4da34d108a2a7f2",
+    "output_sha256": "61ad056cef4a4a2e124906f53d3fd29a7b973735a28856623343abc5be05b725",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/29-production-runtimes/docs/en.md": {
+    "source_sha256": "693a6f21557b8a6c349730ee6d378eb619b327c65ff8dbfe9474a75968b5f940",
+    "output_sha256": "7be2147340466557b83c828a83e85ba37cd9ae2bcd412f40c78e665bda49214a",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/30-eval-driven-agent-development/docs/en.md": {
+    "source_sha256": "7f1772928ead5688466ea0b7178d2cbd7bd10f0fa2e3568656e76dc4e8fcf891",
+    "output_sha256": "9490b84be0ff701f71f4dad8d49536697c88e5124ddc652b1c9372a7ab7a1a58",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/31-agent-workbench-why-models-fail/docs/en.md": {
+    "source_sha256": "0ea9ffdfa16e69122d14c890cff27a1114bf9c967b584ebfa1919bbad4efc1de",
+    "output_sha256": "bb8204a72f20631902f2e6e25572b9e138b759028b16603a4f42df136b18acba",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/32-minimal-agent-workbench/docs/en.md": {
+    "source_sha256": "ed33899118e133a6201e503a96d5bd07e54e36616a4586979ea9e5bdc211e980",
+    "output_sha256": "c9a54d59ef654cd16ed2ac64f0e5b925d1bc9ff93d22e52bb2a071af450b6c88",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/33-instructions-as-executable-constraints/docs/en.md": {
+    "source_sha256": "6ba9752ebfeb92b1a187a7cbace37940438fb57ad11f5518e8688195b5796f6a",
+    "output_sha256": "d79c342304a563d7813cbf0674999df133791e2745f9180b8264c94ad29cae60",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/34-repo-memory-and-state/docs/en.md": {
+    "source_sha256": "cd1aa7ff00250e5d5e0b0a822623522d3fd26db986c56053a5570592097c8d5a",
+    "output_sha256": "311b3847a84971fd7311c82e7fedd0a51e4f32372d32d1d4f5ec9a062c60e0e2",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/35-initialization-scripts/docs/en.md": {
+    "source_sha256": "4ee89ee7aa2b7b40145524afac0b71d6291f8f2ec789297cccf22ed04dce2b9b",
+    "output_sha256": "9fb2da51b5fd1fce2062fe614529d0692c60487f9218da73ee48e6749bb67603",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/36-scope-contracts/docs/en.md": {
+    "source_sha256": "993c6db81c5c0d8fdd66023e9588fc4777a1461b76bf078cf96db7c94caf3c85",
+    "output_sha256": "7990a710110f50ffb76fd976fbab9a5a0b36df9d4139516e75db1cf103e9a917",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/37-runtime-feedback-loops/docs/en.md": {
+    "source_sha256": "702a2f8ef5e03dc631ba401af3b12cbfff1e4cfa1f5d1ae3a38f3ddd8f7681eb",
+    "output_sha256": "ffdbe892ca8d8c1f23e9d5c2eff94afe30af2d990750616f9f07436c1778033a",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/38-verification-gates/docs/en.md": {
+    "source_sha256": "9ff4dfd1f6774e4f865bea2ee425fd587280b703a7ad511258919fc5c413d571",
+    "output_sha256": "8469e4678f30f5743e69b73d2908bcad3713426a9b80e339b464b2a1f1a1ae7b",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/39-reviewer-agent/docs/en.md": {
+    "source_sha256": "363be9d97da5499c7fbfe8381559490ce77bbb1af46c45f33f01b5999e0086f1",
+    "output_sha256": "77a72f3e09c6adb6d1da87cde9fef830c31b45bd4b9d75591ef71d5cc688cba5",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/40-multi-session-handoff/docs/en.md": {
+    "source_sha256": "d2537f34853af5e07bae24f3d5c5198bf321aa4de6fec9349ac5cd7804d723c4",
+    "output_sha256": "f70b9ae319bcf5ab14a277a2ac522eb65a9121f5d06e74b72bd70797a5688a18",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/41-workbench-for-real-repos/docs/en.md": {
+    "source_sha256": "75d2298297ec8a23832dea06df7e12a448e1030b265465aac178dc914b881d27",
+    "output_sha256": "220d0dd776618ebdee9931befd219f2980ca03341135db496c5cb8c7cda75d58",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/42-agent-workbench-capstone/docs/en.md": {
+    "source_sha256": "50733fd8456af91cd7f7cd39bc02e984be10cc85f0c3d886ba60abfa46e24d21",
+    "output_sha256": "3aa112686ee3249d56f11601192c1dcb161c8e637fb46676ff7861db68c3c12d",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/43-frame-the-task-before-code/docs/en.md": {
+    "source_sha256": "b5ebe37b63dd21d1abba0472c8abf6b07c070b321b17d3cda1c4e216e1a7e32d",
+    "output_sha256": "06440e48899b29917453ffdaa7c1602c7d1c5e7592f9b88bf57f83a95f539cce",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/44-plan-from-evidence/docs/en.md": {
+    "source_sha256": "1018b075aafa5bb25c695859db764d57a00d1991c450c75511ce0bc3cb6c8139",
+    "output_sha256": "d77168679485fec4bb8e940a2438d9515beaf681e565de04b6597be64c67acb4",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/45-delegate-with-isolation/docs/en.md": {
+    "source_sha256": "cdd379d9f31f811933d4ab1897e7c95b3f7e2e84f4d418d4fa6ebae2d1559dfb",
+    "output_sha256": "16f8edefad58eb7cdae55b587fe2a13976b8ec95d2d3f7c4271d655e45e3093d",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md": {
+    "source_sha256": "81837f3007e77e0b884dd874912d4dba14eaf81b739fb866e78149af241a2c56",
+    "output_sha256": "c2ee1263d85e867542f3afbc2f9aa6ad54ce425d079b398d535500cba5fb2ad8",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/47-outcomes-before-output/docs/en.md": {
+    "source_sha256": "05407df34f766e1b5a350b70940c149db317c87c3571dcd37926f0acd1772706",
+    "output_sha256": "fec702fc979d8691d473f6e4070d316ae88e1c305463f97b9dac89743090349f",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/48-discover-the-real-workflow/docs/en.md": {
+    "source_sha256": "8ee8e7fa91e4ed6674f286de9cbdf05e1c2b141c61af1585c46c54a4b512f34b",
+    "output_sha256": "9578a4874c74d872643506f1daa0bc6e344d8b64c1708aa04ef5d4d9f6bbfd1d",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/49-map-assumptions-and-risk/docs/en.md": {
+    "source_sha256": "7c8381be49ff8b9c8b4e9f8100c338936d993f68cbcd9e988e4f0831ff33ab43",
+    "output_sha256": "e89f38b5f1914cc8f487af8f041a7183a4f6cfc49b265f9acfaf4a77b396930d",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md": {
+    "source_sha256": "8dcdf1ba55e1b58f5ceb019de63ab5be3006b51e051e7acfa4e5cbd6f40149ab",
+    "output_sha256": "7fa3b6b0ce46b1ddd2631c5433ad6cf92bafd301e207273ea16b6ff62c3396b9",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/51-write-specifications-that-preserve-judgment/docs/en.md": {
+    "source_sha256": "3d5976c2d6cc99bbd6f4660d73e52a78a4b6ee171bd2a3b295c7d2b1ff35582f",
+    "output_sha256": "386dc00b88ada42e25541b0d6b8ffd1e6ff34a9a25031ded0d27694a4207a9db",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/52-design-success-metrics/docs/en.md": {
+    "source_sha256": "dd1c976a46c3cffd2de66283c967c8b6589217f3171e2168b8f6852fdbc27ecc",
+    "output_sha256": "65d0627ea88a77e8c396cb02bf84497d1837af91ed494506244322642ddd8c5d",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/53-prototype-pilot-or-production/docs/en.md": {
+    "source_sha256": "2f596fd43c98189fc0c314b87b59aa94a6e6351e643cfbd4832ba8b33e53c455",
+    "output_sha256": "9173e79cab27df7b29214defba916232e794ae4ef2232aebce4f95fa484a107b",
+    "provider": "manual"
+  },
+  "phases/14-agent-engineering/54-build-the-feedback-ratchet/docs/en.md": {
+    "source_sha256": "b5ecda7b1df517e6da28990ed22498bf589c5a8ce06d49b1cdd6cf34dfcb9a3a",
+    "output_sha256": "7335770da76dc26fd827a2314e829c8ebce51f4410c7d4d19d3ed7b6c594a421",
+    "provider": "manual"
+  }
 }

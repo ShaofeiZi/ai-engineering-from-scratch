@@ -1,17 +1,77 @@
 {
-  "phases/08-generative-ai/01-generative-models-taxonomy-history/docs/en.md": "ffd3a1abd851ac44929ef552e8c573e22ab8e45997119815e267dc68f179ea52",
-  "phases/08-generative-ai/02-autoencoders-vae/docs/en.md": "09d80cdcdfbcc7fcd85dcdba56b67cf8923e05ec5883f1f4c5f4525ae82d14b6",
-  "phases/08-generative-ai/03-gans-generator-discriminator/docs/en.md": "db7fe86ffad9d10f6c5a3af0a1192fde88538af04589e34a21472b8769a1cdf8",
-  "phases/08-generative-ai/04-conditional-gans-pix2pix/docs/en.md": "d6bbfa6ac4d6dc5ee373169e15023f9789b88a85ed0a7152ff0d588615c3ded7",
-  "phases/08-generative-ai/05-stylegan/docs/en.md": "4b67d997dd5a842de48754015af22b8a53395131d228b28145656a4fab111e75",
-  "phases/08-generative-ai/06-diffusion-ddpm-from-scratch/docs/en.md": "f62dd0eaa055920ebe0ae369fd734c5b0e6ab90ce3f31f485487d7d4cd7a86f8",
-  "phases/08-generative-ai/07-latent-diffusion-stable-diffusion/docs/en.md": "31a712aa953cffde8d835b2d6776923c98ca0946f06adb2c53f2694863ba6941",
-  "phases/08-generative-ai/08-controlnet-lora-conditioning/docs/en.md": "cc1f1598103a54fe7dda2459c8e0c172c22109098a64f730ac2dbb9d251e83b2",
-  "phases/08-generative-ai/09-inpainting-outpainting-editing/docs/en.md": "a0a39b1a67b7b04440df938be761512cc0fc841d15d2ca492e7d7cdbad0cdbc2",
-  "phases/08-generative-ai/10-video-generation/docs/en.md": "5e91c7daf3c94dce2a239e36f6cf07314359b21629aac1e2f47910d9212c53d1",
-  "phases/08-generative-ai/11-audio-generation/docs/en.md": "c9ead5e0d8b697a96395667f19e8968268865c09c809cbc1f32eed2b81fe010d",
-  "phases/08-generative-ai/12-3d-generation/docs/en.md": "ff570bbe7e4e91898a1277b64011cd2f5bdd1e6bd4dbb5687d8e25f14fd1eeff",
-  "phases/08-generative-ai/13-flow-matching-rectified-flows/docs/en.md": "3b092712de5baa4726f5b090215c3d6e259e1858c7dcc512cc0bc81fea3a8a60",
-  "phases/08-generative-ai/14-evaluation-fid-clip-score/docs/en.md": "ccacaa435acfeb39cc3be47923eeb195ecf11d6c64c6fe76be57aee87db1b4b7",
-  "phases/08-generative-ai/19-visual-autoregressive-var/docs/en.md": "e7444b2327b8996ed0a0a266833e7ae86822f1add71474db7e045a6194011eb2"
+  "phases/08-generative-ai/01-generative-models-taxonomy-history/docs/en.md": {
+    "source_sha256": "ffd3a1abd851ac44929ef552e8c573e22ab8e45997119815e267dc68f179ea52",
+    "output_sha256": "f445bfd620e689975f5195b2f8ac5b2cbe5f1ea7991aef7a0e9c93a34c26b6a9",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/02-autoencoders-vae/docs/en.md": {
+    "source_sha256": "09d80cdcdfbcc7fcd85dcdba56b67cf8923e05ec5883f1f4c5f4525ae82d14b6",
+    "output_sha256": "515bbb68ac0150f08813636366af745e0171d4c93263f2183c105f3835409284",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/03-gans-generator-discriminator/docs/en.md": {
+    "source_sha256": "db7fe86ffad9d10f6c5a3af0a1192fde88538af04589e34a21472b8769a1cdf8",
+    "output_sha256": "4136be56afd38416981b06472024ab6ba11978b8592fb3c4cba190c3b372ffcc",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/04-conditional-gans-pix2pix/docs/en.md": {
+    "source_sha256": "d6bbfa6ac4d6dc5ee373169e15023f9789b88a85ed0a7152ff0d588615c3ded7",
+    "output_sha256": "1bd0068fb2969db72910be694836f6bca3b0c2aa13ad480a0bbf0c4e2602681b",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/05-stylegan/docs/en.md": {
+    "source_sha256": "4b67d997dd5a842de48754015af22b8a53395131d228b28145656a4fab111e75",
+    "output_sha256": "0ed91af4e2b1f7aa47dc91eb174fc208624a523b92ab41707117ba2945560d52",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/06-diffusion-ddpm-from-scratch/docs/en.md": {
+    "source_sha256": "f62dd0eaa055920ebe0ae369fd734c5b0e6ab90ce3f31f485487d7d4cd7a86f8",
+    "output_sha256": "a88168104e8fb0f35a7beb7859cf31b0f2584cd30a5baacf9e6169488b210c29",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/07-latent-diffusion-stable-diffusion/docs/en.md": {
+    "source_sha256": "31a712aa953cffde8d835b2d6776923c98ca0946f06adb2c53f2694863ba6941",
+    "output_sha256": "cb3ea373f65709837bde80874e88a70c9a0232ed4493250015f5e226dfbdc2ff",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/08-controlnet-lora-conditioning/docs/en.md": {
+    "source_sha256": "cc1f1598103a54fe7dda2459c8e0c172c22109098a64f730ac2dbb9d251e83b2",
+    "output_sha256": "1b22cf255fe7f7a0ad6e0595da33e93dda08345881f2e5bcd9faa0f8dbf50e4a",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/09-inpainting-outpainting-editing/docs/en.md": {
+    "source_sha256": "a0a39b1a67b7b04440df938be761512cc0fc841d15d2ca492e7d7cdbad0cdbc2",
+    "output_sha256": "e37991998c6f8a337c0c8cdabb857d6b3457b4580961e76bd25b0715ec45cdaf",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/10-video-generation/docs/en.md": {
+    "source_sha256": "5e91c7daf3c94dce2a239e36f6cf07314359b21629aac1e2f47910d9212c53d1",
+    "output_sha256": "7dc46ccc899887ba75185656ab4e2fb159bf43d2bdd006e430fb8fa98c3b98e8",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/11-audio-generation/docs/en.md": {
+    "source_sha256": "c9ead5e0d8b697a96395667f19e8968268865c09c809cbc1f32eed2b81fe010d",
+    "output_sha256": "15fc853dd66400f7f73ff5371795d301d721bfaaf7fe429d667c46c199d8de1b",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/12-3d-generation/docs/en.md": {
+    "source_sha256": "ff570bbe7e4e91898a1277b64011cd2f5bdd1e6bd4dbb5687d8e25f14fd1eeff",
+    "output_sha256": "cf5a9e13f36822607f97914140c063b9da20309c4d4ddf1b7a1932e9ca85fe6f",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/13-flow-matching-rectified-flows/docs/en.md": {
+    "source_sha256": "3b092712de5baa4726f5b090215c3d6e259e1858c7dcc512cc0bc81fea3a8a60",
+    "output_sha256": "a425b626113129b9ee9b120c320757cb44707e7ef72df6d0d7278944ada91780",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/14-evaluation-fid-clip-score/docs/en.md": {
+    "source_sha256": "ccacaa435acfeb39cc3be47923eeb195ecf11d6c64c6fe76be57aee87db1b4b7",
+    "output_sha256": "c8eceda3869b0fc3377278487f75875b96b1f8e235372d04f21c15cb3a1e3871",
+    "provider": "manual"
+  },
+  "phases/08-generative-ai/19-visual-autoregressive-var/docs/en.md": {
+    "source_sha256": "e7444b2327b8996ed0a0a266833e7ae86822f1add71474db7e045a6194011eb2",
+    "output_sha256": "4d2dc31da8e9392046a670634a685097e892b6d0819325298a621f8a2b755144",
+    "provider": "manual"
+  }
 }

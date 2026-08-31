@@ -1,30 +1,142 @@
 {
-  "phases/04-computer-vision/01-image-fundamentals/docs/en.md": "0d8d07b6d715aa8708870dd43216a0c9a4757b2ce570b6e34643f9ec4987af28",
-  "phases/04-computer-vision/02-convolutions-from-scratch/docs/en.md": "ee7e94efac71346b107d1e0d49de3f61bec95937e30f82bc2aa836bc7757c0ea",
-  "phases/04-computer-vision/03-cnns-lenet-to-resnet/docs/en.md": "d0481e111f38c7b8dc4af048a84d75fe8d9043a5431b90c9b06675e66925d27a",
-  "phases/04-computer-vision/04-image-classification/docs/en.md": "1e1ade21c3e7dfe6025da6200e8d510bc64459c00714762c853d87923579eed0",
-  "phases/04-computer-vision/05-transfer-learning/docs/en.md": "670f74b6d6cc2d6d61d56c868c50c482b9cd77fd3580dc427902dee9666c60a5",
-  "phases/04-computer-vision/06-object-detection-yolo/docs/en.md": "2274e5867a4df25fb17a700b8ad129fa6a45b6eb1aebf0673af7a2bc95bb2a79",
-  "phases/04-computer-vision/07-semantic-segmentation-unet/docs/en.md": "7470d67edf0cf2a46debab0ca1e52fa255926e5c121ef17e665112790102f29f",
-  "phases/04-computer-vision/08-instance-segmentation-mask-rcnn/docs/en.md": "b7ced123dcc47406affd5cc13916ffb6954f8417a29d8b99526c61ec97a4168b",
-  "phases/04-computer-vision/09-image-generation-gans/docs/en.md": "dcdc65b519fc2a23620cde11212f4d3269b63bd52d568d72ef08c04867c33409",
-  "phases/04-computer-vision/10-image-generation-diffusion/docs/en.md": "596c04cae482ef2dd4aae5b11e7452c9fa9bfe74a44047286ed296a5ea5634cd",
-  "phases/04-computer-vision/11-stable-diffusion/docs/en.md": "1122092bff5852878671ba64ee20fecc680e1e3d7aae15ff367a68f651a56d5e",
-  "phases/04-computer-vision/12-video-understanding/docs/en.md": "34e81835e8d37aa76defa8bdc0940b3b04ff308755b27aec9db7d2236755d3fa",
-  "phases/04-computer-vision/13-3d-vision-nerf/docs/en.md": "c91398ef171ce0b74699c08f47544c013b8fb0db493fa8719034051d08c3b169",
-  "phases/04-computer-vision/14-vision-transformers/docs/en.md": "170c3c598b6f80c58cf371afa9002b5fb47bd4fbeaa9400b84293afee02eb2c0",
-  "phases/04-computer-vision/15-real-time-edge/docs/en.md": "d6bbcacd97a751f0923f32ee3625d27d660640bedaa78521b06dd41cc5c9f9ee",
-  "phases/04-computer-vision/16-vision-pipeline-capstone/docs/en.md": "8f658578957bb2c27e48dd1926960ebc448d5030d5c21e3dd8398443689f9b73",
-  "phases/04-computer-vision/17-self-supervised-vision/docs/en.md": "66a6b4b1a00ffd0c876bd52e43da023d00d1a9fa138f169d34442481ad8d82b9",
-  "phases/04-computer-vision/18-open-vocab-clip/docs/en.md": "46eaa09a8e7e440033fdf9d3890e4fb679b54b1f0f1428b5117607275270ee10",
-  "phases/04-computer-vision/19-ocr-document-understanding/docs/en.md": "7d3780797a294b83dc498521397a2dba8c180ef07541faaa5092d6ad655e714e",
-  "phases/04-computer-vision/20-image-retrieval-metric/docs/en.md": "242ab4be9b9dc567f743984958434792bb3642856d2d776d079d27b6bc1060e5",
-  "phases/04-computer-vision/21-keypoint-pose/docs/en.md": "88644bb7be201d54db0db32f6923a932673219bc5bef4664afa604be5c8a663d",
-  "phases/04-computer-vision/22-3d-gaussian-splatting/docs/en.md": "0ede4133b98620602cbe40bc4ff92f43246dbe70e7575466b38207c470c0d55a",
-  "phases/04-computer-vision/23-diffusion-transformers-rectified-flow/docs/en.md": "422060f3286899edcccdb97e17eda8c8f426a18c38116cbe0ef210ebda4aa606",
-  "phases/04-computer-vision/24-sam3-open-vocab-segmentation/docs/en.md": "56e317c037a7b9fb92c05d8738f795c30b11e5cc3e082127984a1ca25a2bd040",
-  "phases/04-computer-vision/25-vision-language-models/docs/en.md": "8998f05f5d863f11139112ef6d845dce76cd3efc7756d6ea040ccb3bad018578",
-  "phases/04-computer-vision/26-monocular-depth/docs/en.md": "fe028ab042b796794be164531fd758573b48769f4afe359fd3c397d1a405cd32",
-  "phases/04-computer-vision/27-multi-object-tracking/docs/en.md": "c94305127796ce8683c9625ebc1897373e86de8c1da82580815f656988c09e7c",
-  "phases/04-computer-vision/28-world-models-video-diffusion/docs/en.md": "2b64fd3dbecb74fbc2cf8c017468033e16d103409dce31b25b62100838991acd"
+  "phases/04-computer-vision/01-image-fundamentals/docs/en.md": {
+    "source_sha256": "0d8d07b6d715aa8708870dd43216a0c9a4757b2ce570b6e34643f9ec4987af28",
+    "output_sha256": "c9d166a1f8c9c5d70825dd56fb9778907ae2cb1938bc1c7360f14df6ff72112b",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/02-convolutions-from-scratch/docs/en.md": {
+    "source_sha256": "ee7e94efac71346b107d1e0d49de3f61bec95937e30f82bc2aa836bc7757c0ea",
+    "output_sha256": "cec46d1ef0848cabefac316c3d7b219051f7ca5e8bec5a9120b84e939ed34fb5",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/03-cnns-lenet-to-resnet/docs/en.md": {
+    "source_sha256": "d0481e111f38c7b8dc4af048a84d75fe8d9043a5431b90c9b06675e66925d27a",
+    "output_sha256": "055f8065cf0bfebcb573b503d2cb8ad1e1fca13af9807bb0e6171c41101644c7",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/04-image-classification/docs/en.md": {
+    "source_sha256": "1e1ade21c3e7dfe6025da6200e8d510bc64459c00714762c853d87923579eed0",
+    "output_sha256": "7e46895ac84de7183ae94ace4b63f5ce76c1ea87206dab0fc3f2f3c7011e7576",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/05-transfer-learning/docs/en.md": {
+    "source_sha256": "670f74b6d6cc2d6d61d56c868c50c482b9cd77fd3580dc427902dee9666c60a5",
+    "output_sha256": "518289cc9f45a41b541820430dfc8357ae35b052d8061c47fc784e302274ca0f",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/06-object-detection-yolo/docs/en.md": {
+    "source_sha256": "2274e5867a4df25fb17a700b8ad129fa6a45b6eb1aebf0673af7a2bc95bb2a79",
+    "output_sha256": "58c0834b03b5f9cd56e6f187be4ca665ee6fe8e3b06383dec09ec21243f63f12",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/07-semantic-segmentation-unet/docs/en.md": {
+    "source_sha256": "7470d67edf0cf2a46debab0ca1e52fa255926e5c121ef17e665112790102f29f",
+    "output_sha256": "fde22cd54c58f0d47efcf00075f4ff9d8a7d8a29f2ecb11577748b897c788f49",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/08-instance-segmentation-mask-rcnn/docs/en.md": {
+    "source_sha256": "b7ced123dcc47406affd5cc13916ffb6954f8417a29d8b99526c61ec97a4168b",
+    "output_sha256": "60c697e5c41dda74920becce1867b0a4e58ae13647789eae51c647e5b1efe231",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/09-image-generation-gans/docs/en.md": {
+    "source_sha256": "dcdc65b519fc2a23620cde11212f4d3269b63bd52d568d72ef08c04867c33409",
+    "output_sha256": "d01f1cd490b9c77a729f54a26da5305d1431a99b252074f3878bf3ef29bfee37",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/10-image-generation-diffusion/docs/en.md": {
+    "source_sha256": "596c04cae482ef2dd4aae5b11e7452c9fa9bfe74a44047286ed296a5ea5634cd",
+    "output_sha256": "9f19ecdbd5a0158bca37b3c0151a066da23e35d94547780bfccdb651e0d1a380",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/11-stable-diffusion/docs/en.md": {
+    "source_sha256": "1122092bff5852878671ba64ee20fecc680e1e3d7aae15ff367a68f651a56d5e",
+    "output_sha256": "c624f5c7ea3eda23458bd6c978c217e3dfb085b8b0eebf425fc57e8b714dd227",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/12-video-understanding/docs/en.md": {
+    "source_sha256": "34e81835e8d37aa76defa8bdc0940b3b04ff308755b27aec9db7d2236755d3fa",
+    "output_sha256": "d1998cec39bf13ca78b5aed7f126d327bc165b88bcecdba84a13bfbe9580917d",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/13-3d-vision-nerf/docs/en.md": {
+    "source_sha256": "c91398ef171ce0b74699c08f47544c013b8fb0db493fa8719034051d08c3b169",
+    "output_sha256": "c80588a42420d5bab553066c0241065c34f2a4ffabcf1c7f658d676fc8126604",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/14-vision-transformers/docs/en.md": {
+    "source_sha256": "170c3c598b6f80c58cf371afa9002b5fb47bd4fbeaa9400b84293afee02eb2c0",
+    "output_sha256": "79786f01d9d1caffa3e6c0e4554e0647c2d96bd3818154b00cc889e8aa560d04",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/15-real-time-edge/docs/en.md": {
+    "source_sha256": "d6bbcacd97a751f0923f32ee3625d27d660640bedaa78521b06dd41cc5c9f9ee",
+    "output_sha256": "3a088a975418223dfc8e5b582017f86828304c6b631c319056dd87b6ce286d7c",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/16-vision-pipeline-capstone/docs/en.md": {
+    "source_sha256": "8f658578957bb2c27e48dd1926960ebc448d5030d5c21e3dd8398443689f9b73",
+    "output_sha256": "651cbe4cdfbb751097a23c8d7a5fe41e701f1ffef2f41aaeec4a4d04c732378b",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/17-self-supervised-vision/docs/en.md": {
+    "source_sha256": "66a6b4b1a00ffd0c876bd52e43da023d00d1a9fa138f169d34442481ad8d82b9",
+    "output_sha256": "3df090acdd32f2799a054cebbedd15a03e0e83e19382549f3504fbf65ed5be73",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/18-open-vocab-clip/docs/en.md": {
+    "source_sha256": "46eaa09a8e7e440033fdf9d3890e4fb679b54b1f0f1428b5117607275270ee10",
+    "output_sha256": "61ad249f1df3aa20878e029de126101353ebe7b107f154290cf6f992261546ed",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/19-ocr-document-understanding/docs/en.md": {
+    "source_sha256": "7d3780797a294b83dc498521397a2dba8c180ef07541faaa5092d6ad655e714e",
+    "output_sha256": "9312a4ae2657ecf8e836a4a678b035ad67686fc3d338b5b3f784820ec58894c6",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/20-image-retrieval-metric/docs/en.md": {
+    "source_sha256": "242ab4be9b9dc567f743984958434792bb3642856d2d776d079d27b6bc1060e5",
+    "output_sha256": "888f7c1425d1919719c26f671b74bc4511c6c1255fe6b0183bbaf6de13147784",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/21-keypoint-pose/docs/en.md": {
+    "source_sha256": "88644bb7be201d54db0db32f6923a932673219bc5bef4664afa604be5c8a663d",
+    "output_sha256": "8b048ab8f987d4b41dc4c1fc3c392a877fbbae6fee0e3c66f823da201ba1daff",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/22-3d-gaussian-splatting/docs/en.md": {
+    "source_sha256": "0ede4133b98620602cbe40bc4ff92f43246dbe70e7575466b38207c470c0d55a",
+    "output_sha256": "5608f3c30040dfd7fd1d11f22ba930b7bab8a92ebb376837fe484b65b66c671b",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/23-diffusion-transformers-rectified-flow/docs/en.md": {
+    "source_sha256": "422060f3286899edcccdb97e17eda8c8f426a18c38116cbe0ef210ebda4aa606",
+    "output_sha256": "050b756dbe792f7bf6c4cc7e51bbcbbdc330732dfaaa1fd15b860dd7d6102c39",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/24-sam3-open-vocab-segmentation/docs/en.md": {
+    "source_sha256": "56e317c037a7b9fb92c05d8738f795c30b11e5cc3e082127984a1ca25a2bd040",
+    "output_sha256": "149dff7ae245d577dea957b5cfc3db388d56fdb7b660741221dab022892b523d",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/25-vision-language-models/docs/en.md": {
+    "source_sha256": "8998f05f5d863f11139112ef6d845dce76cd3efc7756d6ea040ccb3bad018578",
+    "output_sha256": "d73b3ea7d2066743c66396f360b6c52402e314bdf023323f9bf0f6b3acb27bd2",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/26-monocular-depth/docs/en.md": {
+    "source_sha256": "fe028ab042b796794be164531fd758573b48769f4afe359fd3c397d1a405cd32",
+    "output_sha256": "d591391cfb87de425005e6a29e1e8b2385880505411f7520e7166666c5e4b354",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/27-multi-object-tracking/docs/en.md": {
+    "source_sha256": "c94305127796ce8683c9625ebc1897373e86de8c1da82580815f656988c09e7c",
+    "output_sha256": "5f96a627add98160a7dad74b00231f36a3f993f5530a109e3f966fd2a02926da",
+    "provider": "manual"
+  },
+  "phases/04-computer-vision/28-world-models-video-diffusion/docs/en.md": {
+    "source_sha256": "2b64fd3dbecb74fbc2cf8c017468033e16d103409dce31b25b62100838991acd",
+    "output_sha256": "a946418dca755cf50c0326f531983131e023e679909123a98c24f7e2f1ef4d80",
+    "provider": "manual"
+  }
 }
