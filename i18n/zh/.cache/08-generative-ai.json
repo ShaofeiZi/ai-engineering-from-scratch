@@ -65,8 +65,8 @@
     "provider": "manual"
   },
   "phases/08-generative-ai/14-evaluation-fid-clip-score/docs/en.md": {
-    "source_sha256": "ccacaa435acfeb39cc3be47923eeb195ecf11d6c64c6fe76be57aee87db1b4b7",
-    "output_sha256": "c8eceda3869b0fc3377278487f75875b96b1f8e235372d04f21c15cb3a1e3871",
+    "source_sha256": "49dce12f9cd88e96b2c5cd891d31716ebc4d02fe4d111cebf424fc177589445c",
+    "output_sha256": "47749825b66f0deef7d9c65d2a42afc5e6bb9229e360cfb6beb6970cd06e065c",
     "provider": "manual"
   },
   "phases/08-generative-ai/19-visual-autoregressive-var/docs/en.md": {
