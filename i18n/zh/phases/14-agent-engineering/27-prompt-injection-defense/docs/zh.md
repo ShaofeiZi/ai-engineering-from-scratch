@@ -81,7 +81,7 @@ injection-hijack
 
 运行：
 
-```
+```bash
 python3 code/main.py
 ```
 
