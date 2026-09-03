@@ -1,15 +1,15 @@
-"""End-to-end distributed training: tiny GPT, 4 ranks, DDP + ZeRO-1 + sharded checkpoint.
+"""端到端分布式训练：微型 GPT，4 个 rank，DDP + ZeRO-1 + 分片检查点。
 
-Composes the pieces built in lessons 76-80:
-  * gloo backend with file rendezvous (lesson 76)
-  * broadcast at init for DDP-shape parameter sync (lesson 77)
-  * reduce_scatter on grad + allgather on params for ZeRO-1 (lesson 78)
-  * sharded checkpoint with atomic write at the halfway mark (lesson 80)
+组合第 76-80 课中构建的各个组件：
+  * 基于 file 会合的 gloo 后端（第 76 课）
+  * 初始化时 broadcast 以同步 DDP 形状的参数（第 77 课）
+  * 对梯度做 reduce_scatter + 对参数做 allgather 实现 ZeRO-1（第 78 课）
+  * 在训练中点做原子写入的分片检查点（第 80 课）
 
-20 steps, self-terminating, prints loss curve, per-rank memory profile, and a
-RESUME VERIFIED line proving the step-10 checkpoint reloads byte-equal.
+共 20 步，自行终止，打印损失曲线、每 rank 内存画像，以及一行
+RESUME VERIFIED，用于证明第 10 步的检查点可逐字节相等重新加载。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -143,7 +143,7 @@ def gather_flat_grads(module: nn.Module) -> torch.Tensor:
 
 
 class ZeroOptimizer:
-    """Stage-1 sharded Adam, ported from lesson 78."""
+    """阶段 1 分片 Adam，移植自第 78 课。"""
 
     def __init__(self, module: nn.Module, world_size: int, rank: int,
                  lr: float = LR, beta1: float = 0.9, beta2: float = 0.999,
@@ -300,7 +300,7 @@ def init_distributed(rank: int, world_size: int, init_file: str, iface: str) -> 
 
 
 def _gather_payloads_to_rank0(local_payload: bytes, world_size: int) -> list:
-    """Allgather variable-length byte buffers across ranks via padding."""
+    """通过补齐的方式在各 rank 间 allgather 变长字节缓冲区。"""
     tensor = torch.frombuffer(bytearray(local_payload), dtype=torch.uint8).clone()
     sizes = [torch.zeros(1, dtype=torch.long) for _ in range(world_size)]
     dist.all_gather(sizes, torch.tensor([tensor.numel()], dtype=torch.long))
@@ -400,10 +400,10 @@ def run_e2e(world_size: int = WORLD_SIZE, steps: int = STEPS) -> dict:
 
 def verify_resume(ckpt_dir: str, expected_world_size: int,
                   expected_master_shards: list) -> bool:
-    """Reload the checkpoint and compare master shards byte-equal to the snapshot.
+    """重新加载检查点，并将 master 分片与快照逐字节比较是否相等。
 
-    Each rank captured its master shard at the moment of the checkpoint write;
-    reloading the saved manifest must return the same tensor byte-for-byte.
+    每个 rank 在写入检查点的时刻都保存了自身的 master 分片；
+    重新加载已保存的 manifest 必须逐字节返回相同的张量。
     """
     loaded = load_sharded(ckpt_dir, expected_world_size=expected_world_size)
     for r in range(expected_world_size):
@@ -417,32 +417,32 @@ def verify_resume(ckpt_dir: str, expected_world_size: int,
 def main() -> int:
     print(f"world_size={WORLD_SIZE}, steps={STEPS}, model=MiniGPT")
     total_params = flat_param_numel(MiniGPT())
-    print(f"model params: {total_params}")
-    print("starting distributed train...")
+    print(f"模型参数量：{total_params}")
+    print("正在启动分布式训练……")
     out = run_e2e()
     results = out["results"]
     ckpt_dir = out["ckpt_dir"]
-    print(f"\n{'step':<6}{'rank0_loss':<14}")
+    print(f"\n{'步骤':<6}{'rank0_loss':<14}")
     rank0_losses = results[0]["losses"]
     for s, loss in enumerate(rank0_losses):
         print(f"{s:<6}{loss:<14.6f}")
     norms = [results[r]["norm"] for r in range(WORLD_SIZE)]
-    print("\nfinal param norm (must agree across ranks):")
+    print("\n最终参数范数（所有 rank 必须一致）：")
     for r in range(WORLD_SIZE):
         print(f"  rank {r}: {norms[r]:.6f}")
     norm_drift = max(norms) - min(norms)
-    print(f"  drift across ranks: {norm_drift:.2e}")
-    print("\nper-rank optimiser memory (ZeRO-1 shard, bytes):")
+    print(f"  rank 间偏差：{norm_drift:.2e}")
+    print("\n各 rank 优化器内存（ZeRO-1 分片，字节）：")
     for r in range(WORLD_SIZE):
         print(f"  rank {r}: {results[r]['shard_bytes']}")
     expected_zero = (total_params + (-total_params) % WORLD_SIZE) // WORLD_SIZE * 4 * 3
-    print(f"  expected per-rank (fp32 master + m + v): {expected_zero}")
-    print(f"\ncheckpoint at step {CHECKPOINT_STEP}: {ckpt_dir}")
+    print(f"  每个 rank 的预期值（fp32 master + m + v）：{expected_zero}")
+    print(f"\n第 {CHECKPOINT_STEP} 步的检查点：{ckpt_dir}")
     master_shards = [results[r]["master_at_ckpt"] for r in range(WORLD_SIZE)]
     if verify_resume(ckpt_dir, WORLD_SIZE, master_shards):
-        print("RESUME VERIFIED: saved shard at step 10 matches in-memory snapshot byte-for-byte")
+        print("恢复验证通过：第 10 步保存的分片与内存快照逐字节一致")
     else:
-        print("RESUME FAILED")
+        print("恢复验证失败")
         return 1
     shutil.rmtree(out["workdir"], ignore_errors=True)
     return 0

@@ -1,4 +1,4 @@
-"""Unit tests for the end-to-end distributed training composition."""
+"""端到端分布式训练组合的单元测试。"""
 
 from __future__ import annotations
 
