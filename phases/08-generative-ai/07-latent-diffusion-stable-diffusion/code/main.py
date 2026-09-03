@@ -133,7 +133,7 @@ def main():
     alphas, alpha_bars = make_schedule(T)
     net = init_net(1, t_dim, num_classes_inc_null, hidden, rng)
 
-    print("=== training class-conditional latent diffusion with CFG dropout ===")
+    print("=== 使用 CFG dropout 训练类别条件潜空间扩散模型 ===")
     for step in range(4000):
         x0, c = sample_data(rng)
         z0 = encode(x0)
@@ -147,7 +147,7 @@ def main():
         grads = backward([eps], out, cache, net)
         apply(net, grads, 0.01)
         if (step + 1) % 1000 == 0:
-            print(f"  step {step+1:5d}")
+            print(f"  步骤 {step+1:5d}")
 
     def sample(c_target, w):
         z = rng.gauss(0, 1)
@@ -165,7 +165,7 @@ def main():
         return decode(z)
 
     print()
-    print("=== CFG sweep: per-class mean over 200 samples ===")
+    print("=== CFG 扫描：每个类别 200 个样本的均值 ===")
     for w in [0.0, 1.0, 3.0, 7.0]:
         samples = {0: [], 1: []}
         for _ in range(200):
@@ -173,11 +173,11 @@ def main():
             samples[c].append(sample(c, w))
         m0 = sum(samples[0]) / len(samples[0])
         m1 = sum(samples[1]) / len(samples[1])
-        print(f"  w={w:.1f}: class 0 mean {m0:+.2f}  class 1 mean {m1:+.2f}")
+        print(f"  w={w:.1f}：类别 0 均值 {m0:+.2f}  类别 1 均值 {m1:+.2f}")
 
     print()
-    print("takeaway: same DDPM loss, just running on encoded z.")
-    print("          CFG scales conditioning strength without retraining.")
+    print("要点：仍然使用相同的 DDPM 损失，只是改为在编码后的 z 上运行。")
+    print("      CFG 无需重新训练即可调节条件强度。")
 
 
 if __name__ == "__main__":
