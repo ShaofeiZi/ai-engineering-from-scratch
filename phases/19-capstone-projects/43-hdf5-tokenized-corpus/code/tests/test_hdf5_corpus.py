@@ -1,6 +1,6 @@
-"""Unit tests for the HDF5 tokenized corpus pipeline.
+"""HDF5 token 化语料流水线的单元测试。
 
-Run with: python3 -m unittest discover code/tests -v
+运行命令：python3 -m unittest discover code/tests -v
 """
 
 from __future__ import annotations
