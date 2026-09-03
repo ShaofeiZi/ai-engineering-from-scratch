@@ -1,9 +1,9 @@
-"""Supervisor / Orchestrator-Worker pattern (Anthropic Research style).
+"""Supervisor / Orchestrator-Worker 模式（Anthropic Research 风格）。
 
-Lead agent decomposes a query, spawns workers in parallel threads, synthesizes.
-No real LLM calls -- workers are scripted fetch-and-summarize simulations.
+Lead Agent 分解查询，通过并行线程启动 worker，再综合结果。
+这里不进行真实的 LLM 调用，worker 是脚本化的抓取和总结模拟。
 
-The point is the wall-clock win from parallel subagents, plus the pattern.
+重点是并行子 Agent 缩短实际耗时的收益，以及这一模式本身。
 """
 from __future__ import annotations
 
@@ -41,9 +41,9 @@ class Trace:
 
 
 def fake_web_fetch(query: str) -> str:
-    """Simulate web fetch + summarization latency."""
+    """模拟网页抓取与总结的延迟。"""
     time.sleep(0.3)
-    return f"Summary for '{query}': 3 key findings from 5 sources."
+    return f"关于“{query}”的总结：从 5 个来源中得到 3 项关键发现。"
 
 
 class Worker:
@@ -66,23 +66,23 @@ class Worker:
 
 
 class Lead:
-    """Supervisor. Plans, spawns workers in parallel, synthesizes."""
+    """Supervisor：规划、并行启动 worker 并综合结果。"""
 
     def __init__(self, trace: Trace) -> None:
         self.trace = trace
 
     def plan(self, query: str) -> list[str]:
-        """Decompose. Real lead uses an LLM; this splits by heuristic."""
+        """分解任务。真实的 lead 会使用 LLM；此处按启发式规则拆分。"""
         return [
-            f"{query} -- historical origins",
-            f"{query} -- state of the art 2026",
-            f"{query} -- open problems",
+            f"{query} -- 历史起源",
+            f"{query} -- 2026 年技术前沿",
+            f"{query} -- 开放问题",
         ]
 
     def synthesize(self, query: str, results: list[WorkerResult]) -> str:
         ok = [r for r in results if r is not None]
         parts = [f"- {r.sub_question}: {r.summary}" for r in ok]
-        return f"Answer to '{query}':\n" + "\n".join(parts)
+        return f"对“{query}”的回答：\n" + "\n".join(parts)
 
     def run(self, query: str) -> tuple[str, dict]:
         t0 = time.time()
@@ -120,26 +120,26 @@ def render_trace(trace: Trace, t0: float) -> None:
 
 
 def main() -> None:
-    print("Supervisor / Orchestrator-Worker demo")
+    print("Supervisor / Orchestrator-Worker 演示")
     print("-" * 42)
 
     trace = Trace()
     t0 = time.time()
     lead = Lead(trace=trace)
-    answer, stats = lead.run("What changed in multi-agent systems 2023 to 2026?")
+    answer, stats = lead.run("多 Agent 系统在 2023 至 2026 年间发生了哪些变化？")
 
-    print("\nTrace (+seconds relative to plan start):")
+    print("\n轨迹（相对于规划开始时间的秒数）：")
     render_trace(trace, t0)
 
-    print("\nFinal synthesis:")
+    print("\n最终综合结果：")
     print("  " + answer.replace("\n", "\n  "))
 
-    print("\nStats:")
+    print("\n统计：")
     for k, v in stats.items():
         print(f"  {k}: {v}")
 
-    print("\nSequential baseline would be ~0.9s (3 * 0.3s).")
-    print("Parallel actual is ~0.35s. That's the supervisor win.")
+    print("\n顺序执行的基线约为 0.9 秒（3 * 0.3 秒）。")
+    print("并行执行实际约为 0.35 秒。这就是 supervisor 带来的收益。")
 
 
 if __name__ == "__main__":
