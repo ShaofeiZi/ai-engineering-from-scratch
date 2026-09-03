@@ -1,16 +1,16 @@
-"""Gradient clipping and mixed-precision training step.
+"""梯度裁剪与混合精度训练步骤。
 
-Implements:
-- clip_global_l2_norm, a wrapper around torch.nn.utils.clip_grad_norm_ that
-  returns both the pre-clip norm and an explicit post-clip norm.
-- has_non_finite_grad, a helper that scans gradients for NaN and Inf.
-- AmpTrainState, a training-step orchestrator that wires an AdamW optimizer,
-  autocast, and GradScaler into one safe step.
-- StepLog and SkipLog, structured per-step records.
+实现：
+- clip_global_l2_norm：对 torch.nn.utils.clip_grad_norm_ 的封装，
+  同时返回裁剪前的范数和显式的裁剪后范数。
+- has_non_finite_grad：扫描梯度中是否存在 NaN 和 Inf 的辅助函数。
+- AmpTrainState：训练步骤编排器，将 AdamW 优化器、autocast 和
+  GradScaler 串联为一个安全的步骤。
+- StepLog 与 SkipLog：结构化的逐步骤记录。
 
-The demo at the bottom trains a small torch.nn.Linear model for 20 steps and
-injects a non-finite gradient on a specific step to exercise the skip path.
-Run: python3 code/main.py
+底部的演示会用一个小的 torch.nn.Linear 模型训练 20 步，并在指定步骤
+注入一个非有限梯度，以触发跳过路径。
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ try:
     from torch import nn
 except ImportError as exc:
     raise SystemExit(
-        "torch is required for this lesson. Install with: pip install torch"
+        "本课程需要 torch。请使用以下命令安装：pip install torch"
     ) from exc
 
 
@@ -38,7 +38,7 @@ NORM_TYPE = 2.0
 
 @dataclass
 class StepLog:
-    """One row of the per-step training log."""
+    """逐步骤训练日志中的一行。"""
 
     step: int
     lr: float
@@ -64,7 +64,7 @@ class StepLog:
 
 @dataclass
 class SkipLog:
-    """Standalone record of a skipped step, for alerting and forensics."""
+    """被跳过步骤的独立记录，用于告警和事后追溯。"""
 
     step: int
     reason: str
@@ -74,7 +74,7 @@ class SkipLog:
 
 
 def has_non_finite_grad(parameters: Iterable[torch.nn.Parameter]) -> bool:
-    """Return True if any gradient contains a NaN or Inf."""
+    """如果任意梯度中包含 NaN 或 Inf，则返回 True。"""
 
     for param in parameters:
         if param.grad is None:
@@ -86,7 +86,7 @@ def has_non_finite_grad(parameters: Iterable[torch.nn.Parameter]) -> bool:
 
 
 def compute_global_l2_norm(parameters: Iterable[torch.nn.Parameter]) -> float:
-    """Compute the Euclidean norm over all gradients without clipping."""
+    """计算全部梯度的欧几里得范数，但不执行裁剪。"""
 
     squared_sum = 0.0
     for param in parameters:
@@ -101,11 +101,11 @@ def clip_global_l2_norm(
     parameters: list[torch.nn.Parameter],
     max_norm: float,
 ) -> tuple[float, float]:
-    """Clip gradients in place to max_norm and return (pre_clip, post_clip).
+    """就地将梯度裁剪到 max_norm，并返回 ``(pre_clip, post_clip)``。
 
-    Returns (pre_clip, post_clip). When pre_clip <= max_norm the gradients are
-    untouched and post_clip == pre_clip. When pre_clip > max_norm the gradients
-    are scaled by max_norm / pre_clip and post_clip == max_norm.
+    当 ``pre_clip <= max_norm`` 时不修改梯度，且 ``post_clip == pre_clip``。
+    当 ``pre_clip > max_norm`` 时，梯度按 ``max_norm / pre_clip`` 缩放，且
+    ``post_clip == max_norm``。
     """
 
     if max_norm <= 0:
@@ -123,18 +123,18 @@ def clip_global_l2_norm(
 
 
 class AmpTrainState:
-    """Training step with mixed precision and gradient clipping.
+    """包含混合精度与梯度裁剪的训练步骤。
 
-    Wires together a model, an AdamW optimizer, a GradScaler, and an autocast
-    device. Exposes step(inputs, targets) which:
+    将模型、AdamW 优化器、GradScaler 和 autocast 设备连接起来。公开的
+    ``step(inputs, targets)`` 会执行：
 
-      1. Forward pass under autocast.
-      2. Loss finiteness check; non-finite loss skips backward.
-      3. Backward through scaler.scale(loss).
-      4. scaler.unscale_(optimizer).
-      5. Gradient finiteness check; non-finite grad skips optimizer step.
-      6. Clip to max_norm.
-      7. scaler.step(optimizer); scaler.update().
+      1. 在 autocast 下前向传播。
+      2. 检查 loss 是否有限；非有限 loss 会跳过反向传播。
+      3. 通过 scaler.scale(loss) 反向传播。
+      4. 调用 scaler.unscale_(optimizer)。
+      5. 检查梯度是否有限；非有限梯度会跳过优化器步骤。
+      6. 裁剪到 max_norm。
+      7. 调用 scaler.step(optimizer) 和 scaler.update()。
     """
 
     def __init__(
@@ -196,11 +196,11 @@ class AmpTrainState:
         targets: torch.Tensor,
         gradient_corruptor: Callable[[nn.Module], None] | None = None,
     ) -> StepLog:
-        """Run one training step with optional gradient corruption for testing.
+        """运行一个训练步骤，并可选择注入梯度损坏以便测试。
 
-        `gradient_corruptor` lets the demo inject a non-finite gradient after
-        backward and before the unscale step. Production callers leave it as
-        None; tests pass a closure that writes Inf into one parameter's grad.
+        ``gradient_corruptor`` 允许演示在反向传播后、unscale 之前注入非有限
+        梯度。生产调用方将其保留为 None；测试会传入一个把 Inf 写入某个参数
+        梯度的闭包。
         """
 
         self.model.train()
@@ -211,9 +211,9 @@ class AmpTrainState:
             loss = self._loss_fn(predictions, targets)
 
         if not torch.isfinite(loss).all().item():
-            # Skip without touching scaler.update(): we never called
-            # scaler.scale(loss).backward() for this step, so calling update()
-            # here would violate GradScaler's required call ordering.
+            # 跳过且不调用 scaler.update()：本步骤从未调用
+            # scaler.scale(loss).backward()，此时调用 update() 会违反
+            # GradScaler 要求的调用顺序。
             return self._record_skip(
                 loss_value=float(loss.detach().cpu().item()),
                 reason="non_finite_loss",
@@ -304,7 +304,7 @@ class AmpTrainState:
 
 
 def rolling_skip_rate(log: Iterable[StepLog], window: int = 1000) -> list[float]:
-    """Return the rolling skip rate over the last `window` steps for each step."""
+    """返回每一步最近 ``window`` 步的滚动跳过率。"""
 
     if window <= 0:
         raise ValueError("window must be positive")
@@ -320,10 +320,10 @@ def rolling_skip_rate(log: Iterable[StepLog], window: int = 1000) -> list[float]
 
 
 def write_step_log_csv(log: Iterable[StepLog], path: Path) -> None:
-    """Write the canonical training-step CSV.
+    """写入采用规范 schema 的训练步骤 CSV。
 
-    Columns: step, lr, grad_l2_pre_clip, grad_l2_post_clip, loss, skipped,
-    skip_reason, scaler_scale.
+    列为：step、lr、grad_l2_pre_clip、grad_l2_post_clip、loss、skipped、
+    skip_reason、scaler_scale。
     """
 
     path = Path(path)
@@ -359,7 +359,7 @@ def build_toy_model(
 
 
 def inject_inf_into_first_grad(model: nn.Module) -> None:
-    """Test-only: write +Inf into the first parameter's gradient."""
+    """仅用于测试：将 +Inf 写入第一个参数的梯度。"""
 
     for param in model.parameters():
         if param.grad is not None:
@@ -368,7 +368,7 @@ def inject_inf_into_first_grad(model: nn.Module) -> None:
 
 
 def run_demo() -> int:
-    """Train for 20 steps and inject a non-finite gradient on a known step."""
+    """训练 20 步，并在已知步骤注入非有限梯度。"""
 
     model, inputs, targets = build_toy_model()
     state = AmpTrainState(model=model, lr=1e-2, max_norm=1.0, device_type="cpu")
