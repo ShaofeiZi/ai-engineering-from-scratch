@@ -1,10 +1,8 @@
-"""Compare a prompt-only run against a workbench-guided run on a tiny repo task.
+"""在一个小型仓库任务上，将一次 prompt-only 运行与一次 workbench-guided 运行进行对比。
 
-The agent is a rule-based stub; the point is the surrounding surfaces. Each
-surface is wired in for the second run and we count which surfaces would have
-caught each failure on the first run.
+该代理是一个 rule-based 桩；重点在于周边的防护面。每个防护面在第二次运行中都会接入，我们统计哪些防护面本可以在第一次运行中捕获每个故障。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -48,7 +46,7 @@ class RunResult:
 
 
 def stub_agent(task: RepoTask, surfaces: list[str]) -> RunResult:
-    """Tiny deterministic stand-in for an LLM-backed coding agent."""
+    """用于 LLM 驱动编码代理的微型确定性替代实现。"""
     result = RunResult(label="prompt-only" if not surfaces else "workbench")
     result.surfaces_present = list(surfaces)
 
@@ -109,17 +107,17 @@ def main() -> None:
     prompt_only = stub_agent(task, surfaces=[])
     workbench = stub_agent(task, surfaces=WORKBENCH_SURFACES)
 
-    print("=== prompt only ===")
+    print("=== 仅提示词 ===")
     for k, v in failure_report(prompt_only).items():
         print(f"  {k}: {v}")
     print()
-    print("=== workbench ===")
+    print("=== 工作台 ===")
     for k, v in failure_report(workbench).items():
         print(f"  {k}: {v}")
 
     out = Path(__file__).parent.parent / "outputs" / "failure_modes.json"
     out.write_text(json.dumps(failure_report(prompt_only), indent=2) + "\n")
-    print(f"\nwrote {out.relative_to(out.parent.parent.parent.parent.parent)}")
+    print(f"\n已写入 {out.relative_to(out.parent.parent.parent.parent.parent)}")
 
 
 if __name__ == "__main__":
