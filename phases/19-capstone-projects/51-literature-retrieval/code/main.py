@@ -1,10 +1,10 @@
-"""Literature retrieval: BM25 over abstracts plus citation graph traversal, merged.
+"""文献检索：基于摘要的 BM25 检索叠加引用图谱遍历，最终合并。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 Track A lessons 20-29 (agent harness primitives)
+概念性参考：
+- ./docs/en.md（本节课）
+- 第 19 阶段 Track A 第 20-29 课（智能体框架基础组件）
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def tokenise(text: str) -> list[str]:
 
 
 class BM25Index:
-    """Okapi BM25 with default k1=1.5, b=0.75. Stdlib only."""
+    """Okapi BM25，默认 k1=1.5、b=0.75。仅使用标准库。"""
 
     def __init__(self, k1: float = 1.5, b: float = 0.75) -> None:
         self.k1 = k1
@@ -108,7 +108,7 @@ class BM25Index:
 
 
 class CitationGraph:
-    """Directed citation graph with forward and backward adjacency lists."""
+    """有向引用图谱，维护前向与后向邻接表。"""
 
     def __init__(self) -> None:
         self._forward: dict[str, list[str]] = {}
@@ -124,7 +124,7 @@ class CitationGraph:
         return out
 
     def expand(self, seeds: list[str], max_hops: int = 2) -> dict[str, int]:
-        """Return a mapping of paper id to shortest hop distance from any seed."""
+        """返回 paper id 到任意种子的最短跳数映射。"""
         distance: dict[str, int] = {sid: 0 for sid in seeds}
         queue: deque[str] = deque(seeds)
         while queue:
@@ -141,7 +141,7 @@ class CitationGraph:
 
 
 class ArxivMockClient:
-    """Returns title, abstract, year, authors. No reference graph."""
+    """返回标题、摘要、年份和作者，不提供引用图谱。"""
 
     def __init__(self, corpus: list[Paper]) -> None:
         self._papers = {p.id: p for p in corpus}
@@ -164,7 +164,7 @@ class ArxivMockClient:
 
 
 class SemanticScholarMockClient:
-    """Returns the same papers as arxiv plus references and citations."""
+    """返回与 arxiv 相同的论文，外加参考文献与引用关系。"""
 
     def __init__(self, corpus: list[Paper]) -> None:
         self._papers = {p.id: p for p in corpus}
@@ -255,7 +255,7 @@ class RetrievalResult:
 
 
 class RetrievalClient:
-    """Wraps arxiv and semantic scholar mocks and merges lexical and graph hits."""
+    """包装 arxiv 与 semantic scholar 模拟器，并合并词法和图谱命中。"""
 
     def __init__(
         self,
@@ -353,11 +353,11 @@ class RetrievalClient:
 
 
 def build_corpus() -> list[Paper]:
-    """Return a hundred paper mock corpus across five topics, with a citation graph.
+    """返回包含五个主题和引用图谱的百篇模拟论文语料库。
 
-    Topics: attention sparsity, retrieval augmentation, low rank adapters,
-    dataset distillation, evaluation harnesses. Each topic gets twenty papers
-    with intra topic references and a few cross topic edges.
+    主题包括 attention sparsity、retrieval augmentation、low rank adapters、
+    dataset distillation 和 evaluation harnesses。每个主题有二十篇论文，
+    主题内包含引用关系，并有少量跨主题边。
     """
     topics = [
         ("attention sparsity", "attention sparsity head pruning routing block"),
