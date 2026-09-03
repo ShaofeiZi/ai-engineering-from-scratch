@@ -1,4 +1,4 @@
-"""Tests for the byte-level BPE tokenizer."""
+"""字节级 BPE 分词器的测试。"""
 
 from __future__ import annotations
 
