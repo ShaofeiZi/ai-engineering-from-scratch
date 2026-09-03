@@ -1,15 +1,15 @@
-"""Cross-encoder reranker on top of a bi-encoder retriever.
+"""在双编码器检索器之上的交叉编码器重排器。
 
-A tiny torch module shows the architectural shape. The two-stage pipeline
-demonstrates the latency-vs-quality trade-off on a fixture corpus.
+一个微型 torch 模块展示了其架构形态。两阶段流水线
+在固定语料库上演示了延迟与质量的权衡。
 
-References:
+参考：
 - ./docs/en.md
-- Phase 19 lesson 65 (bi-encoder hybrid retriever)
-- Phase 19 lesson 68 (eval harness measuring the rerank lift)
-- Phase 19 lesson 69 (end-to-end system that uses this reranker)
+- 第 19 阶段第 65 课（双编码器混合检索器）
+- 第 19 阶段第 68 课（衡量重排提升的评测框架）
+- 第 19 阶段第 69 课（使用该重排器的端到端系统）
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def tokenize_pair(query: str, document: str, max_len: int = 96) -> tuple[list[in
 
 
 # ---------------------------------------------------------------------------
-# the cross-encoder model
+# 交叉编码器模型
 # ---------------------------------------------------------------------------
 
 class CrossEncoder(nn.Module):
@@ -94,14 +94,14 @@ class CrossEncoder(nn.Module):
         attn_out, _ = self.attn(x, x, x, key_padding_mask=mask)
         x = self.ln1(x + attn_out)
         x = self.ln2(x + self.ff(x))
-        # mean-pool over non-pad positions
+        # 对非 pad 位置做均值池化。
         keep = (~mask).unsqueeze(-1).float()
         pooled = (x * keep).sum(dim=1) / keep.sum(dim=1).clamp(min=1.0)
         return self.head(pooled).squeeze(-1)
 
 
 # ---------------------------------------------------------------------------
-# training - one supervised pass with hand-labeled triples
+# 训练——使用人工标注三元组进行一次监督训练
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -128,7 +128,7 @@ def _batch_encode(pairs: list[Triple], max_len: int = 96) -> tuple[torch.Tensor,
 
 
 def train_tiny(model: CrossEncoder, triples: list[Triple], epochs: int = 60, lr: float = 5e-3) -> list[float]:
-    """Returns per-epoch loss."""
+    """返回逐轮 loss。"""
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     loss_fn = nn.MSELoss()
     losses: list[float] = []
@@ -144,7 +144,7 @@ def train_tiny(model: CrossEncoder, triples: list[Triple], epochs: int = 60, lr:
 
 
 # ---------------------------------------------------------------------------
-# reranking interface
+# 重排接口
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -172,7 +172,7 @@ def rerank(
 
 
 # ---------------------------------------------------------------------------
-# bi-encoder retriever (deterministic mock embedding)
+# 双编码器检索器（确定性模拟 embedding）
 # ---------------------------------------------------------------------------
 
 def mock_embed(text: str, dim: int = 96) -> list[float]:
@@ -209,7 +209,7 @@ class BiEncoder:
 
 
 # ---------------------------------------------------------------------------
-# the full two-stage pipeline
+# 完整的两阶段流水线
 # ---------------------------------------------------------------------------
 
 def pipeline(
@@ -233,7 +233,7 @@ def pipeline(
 
 
 # ---------------------------------------------------------------------------
-# fixture corpus and training pairs
+# 夹具语料库与训练样本对
 # ---------------------------------------------------------------------------
 
 CORPUS = [
@@ -275,7 +275,7 @@ TRAIN_TRIPLES = [
 
 
 # ---------------------------------------------------------------------------
-# demo
+# 演示
 # ---------------------------------------------------------------------------
 
 def print_list(label: str, items, fmt) -> None:
@@ -292,7 +292,7 @@ def main() -> None:
 
     reranker = CrossEncoder()
     losses = train_tiny(reranker, TRAIN_TRIPLES, epochs=60)
-    print(f"trained tiny cross-encoder, loss {losses[0]:.4f} -> {losses[-1]:.4f}\n")
+    print(f"微型交叉编码器训练完成，损失 {losses[0]:.4f} -> {losses[-1]:.4f}\n")
 
     queries = [
         "how do we abort a multipart upload",
@@ -301,20 +301,20 @@ def main() -> None:
     ]
 
     for q in queries:
-        print(f"query: {q}")
+        print(f"查询：{q}")
         result = pipeline(q, retriever, reranker, top_n=8, top_k=3)
         print_list(
-            "retrieve top-N",
+            "初步检索 top-N",
             result["retrieve_top_n"],
             lambda c: f"{c.doc_id}  retriever_score={c.retriever_score:.4f}",
         )
         print_list(
-            "reranked top-K",
+            "重排后 top-K",
             result["reranked_top_k"],
             lambda x: f"{x[0].doc_id}  cross_score={x[1]:.4f}",
         )
-        print(f"  latency: retrieve {result['latency_retrieve_ms']:.2f}ms, "
-              f"rerank {result['latency_rerank_ms']:.2f}ms\n")
+        print(f"  延迟：检索 {result['latency_retrieve_ms']:.2f}ms，"
+              f"重排 {result['latency_rerank_ms']:.2f}ms\n")
 
 
 if __name__ == "__main__":
