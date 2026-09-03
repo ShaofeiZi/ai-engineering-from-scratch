@@ -1,8 +1,7 @@
-"""PSO for LLM parameter optimization and ACO for agent routing, stdlib only.
+"""用于 LLM 参数优化的 PSO 与用于 Agent 路由的 ACO，仅使用 stdlib。
 
-PSO runs on a 2D parameter space (temperature, top_k_weight) with a scripted
-fitness proxy. AMRO-S simulates 3 agents handling 4 task types with a
-pheromone matrix that strengthens on quality, decays over time.
+PSO 在二维参数空间（temperature、top_k_weight）上运行，并使用脚本化的适应度代理。
+AMRO-S 模拟 3 个 Agent 处理 4 类任务，其信息素矩阵会随质量增强、随时间衰减。
 """
 from __future__ import annotations
 
@@ -22,8 +21,8 @@ class Particle:
 
 
 def fitness(x: list[float]) -> float:
-    """Rastrigin-style fitness: narrow peak at (0.72, 0.40) with ripples.
-    Chosen to be harder than a plain bowl so PSO convergence is visible."""
+    """Rastrigin 风格的适应度：在 (0.72, 0.40) 处具有带波纹的窄峰。
+    刻意设置得比普通碗形函数更难，以便观察 PSO 的收敛过程。"""
     cx, cy = 0.72, 0.40
     dx, dy = x[0] - cx, x[1] - cy
     dist2 = dx * dx + dy * dy
@@ -70,7 +69,7 @@ def run_lmpso(n_particles: int = 20, iterations: int = 30, seed: int = 0) -> lis
     return history
 
 
-# ---------- AMRO-S (ACO routing) ----------
+# ---------- AMRO-S（ACO 路由） ----------
 
 class PheromoneRouter:
     def __init__(self, task_types: list[str], agents: list[str],
@@ -125,12 +124,12 @@ def run_amro_s(n_tasks: int = 200, seed: int = 0) -> tuple[float, float, Pheromo
     for i in range(n_tasks):
         tt = task_types[i % len(task_types)]
 
-        # Random baseline
+        # 随机基线
         rand_agent = rng.choice(agents)
         rq = simulate_task(rand_agent, tt, rng)
         random_router_quality += rq
 
-        # ACO router
+        # ACO 路由器
         aco_agent = router.choose(tt, rng)
         aq = simulate_task(aco_agent, tt, rng)
         aco_quality += aq
@@ -140,7 +139,7 @@ def run_amro_s(n_tasks: int = 200, seed: int = 0) -> tuple[float, float, Pheromo
 
 
 def print_pheromone_table(router: PheromoneRouter) -> None:
-    print(f"  {'task_type':12s} " + " ".join(f"{a:>14s}" for a in router.agents))
+    print(f"  {'任务类型':12s} " + " ".join(f"{a:>14s}" for a in router.agents))
     for tt in router.task_types:
         row = [f"{router.pheromones[tt][a]:>14.3f}" for a in router.agents]
         print(f"  {tt:12s} " + " ".join(row))
@@ -148,30 +147,30 @@ def print_pheromone_table(router: PheromoneRouter) -> None:
 
 def main() -> None:
     print("=" * 72)
-    print("LMPSO — 20 particles, 30 iterations, 2D parameter space")
+    print("LMPSO — 20 个粒子、30 次迭代、二维参数空间")
     print("=" * 72)
     history = run_lmpso()
     for i in range(0, len(history), 5):
         bar = "#" * max(1, int(history[i] * 40))
-        print(f"  iter {i:3d}  g_best={history[i]:.4f}  {bar}")
-    print(f"  final g_best={history[-1]:.4f} (optimum = 1.0000 at (0.72, 0.40))")
+        print(f"  迭代 {i:3d}  g_best={history[i]:.4f}  {bar}")
+    print(f"  最终 g_best={history[-1]:.4f}（最优值 = 1.0000，位置为 (0.72, 0.40)）")
 
     print("\n" + "=" * 72)
-    print("AMRO-S — 200 tasks routed across 3 agents × 4 task-types")
+    print("AMRO-S — 将 200 个任务路由给 3 个 Agent，覆盖 4 种任务类型")
     print("=" * 72)
     rand_quality, aco_quality, router = run_amro_s()
-    print(f"  random routing avg quality: {rand_quality:.3f}")
-    print(f"  ACO routing    avg quality: {aco_quality:.3f}")
-    print(f"  improvement: {(aco_quality - rand_quality) / rand_quality * 100:+.1f}%")
+    print(f"  随机路由平均质量：{rand_quality:.3f}")
+    print(f"  ACO 路由平均质量： {aco_quality:.3f}")
+    print(f"  提升：{(aco_quality - rand_quality) / rand_quality * 100:+.1f}%")
 
-    # Show the pheromone table from the run we just measured
-    print("\n  final pheromone table (after 200 tasks):")
+    # 显示刚才测量的这次运行所产生的信息素表
+    print("\n  最终信息素表（处理 200 个任务后）：")
     print_pheromone_table(router)
 
-    print("\nTakeaways:")
-    print("  PSO converges to the fitness peak without gradients, using only fitness evals.")
-    print("  ACO pheromone trails surface interpretable evidence for who routes where.")
-    print("  quality-gated deposits (threshold=0.6) prevent fast-but-wrong agents from locking in.")
+    print("\n要点：")
+    print("  PSO 无需梯度，仅靠适应度评估就能收敛到适应度峰值。")
+    print("  ACO 信息素轨迹提供了可解释的路由依据。")
+    print("  由质量门控的信息素沉积（threshold=0.6）可防止快速但错误的 Agent 被锁定。")
 
 
 if __name__ == "__main__":
