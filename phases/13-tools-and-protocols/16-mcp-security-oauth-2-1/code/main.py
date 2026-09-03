@@ -1,9 +1,9 @@
-"""Phase 13 Lesson 16: MCP 2026-07-28 authorization simulator.
+"""Phase 13 第16课：MCP 2026-07-28 授权模拟器。
 
-Companion to ../docs/en.md. Implements an in-process protocol model with
-protected-resource discovery, CIMD-first enrollment, deprecated DCR fallback,
-PKCE, issuer validation, resource-bound tokens, scope step-up, discovery, and
-tools/list. Lesson 09 supplies the complete Streamable HTTP adapter.
+../docs/en.md. 的配套实现。实现了一个 in-process 协议模型，包含
+protected-resource 发现、CIMD-first 注册、已弃用的 DCR 回退、
+PKCE、发行方验证、resource-bound 令牌、作用域 step-up、发现，以及
+tools/list.。第09课提供了完整的 Streamable HTTP 适配器。
 """
 
 from __future__ import annotations
@@ -611,16 +611,16 @@ def demo() -> None:
     client = Client()
     discover_body, discover_headers = make_discover_request()
     _, discovery, _ = server.discover(discover_body, discover_headers)
-    print("server discovery:", discovery["result"] if discovery else None)
+    print("服务器发现：", discovery["result"] if discovery else None)
     list_body, list_headers = make_tools_list_request()
     _, listing, _ = server.handle(list_body, list_headers)
-    print("tools:", [tool["name"] for tool in listing["result"]["tools"]] if listing else None)
-    print("protected resource metadata:", server.protected_resource_metadata())
-    print("CIMD client_id:", client.enroll(auth))
+    print("工具：", [tool["name"] for tool in listing["result"]["tools"]] if listing else None)
+    print("受保护资源元数据：", server.protected_resource_metadata())
+    print("CIMD client_id：", client.enroll(auth))
     for tool in ("notes.list", "notes.create", "notes.delete"):
         status, response, _ = client.call_with_step_up(tool, server, auth)
         print(tool, status, response.get("result", {}).get("content") if response else None)
-    print("effective client ids by issuer:", sorted(client.client_ids_by_issuer))
+    print("按发行方划分的有效客户端 ID：", sorted(client.client_ids_by_issuer))
 
 
 if __name__ == "__main__":
