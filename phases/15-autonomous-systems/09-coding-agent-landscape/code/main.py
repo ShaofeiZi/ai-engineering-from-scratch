@@ -1,14 +1,14 @@
-"""CodeAct vs JSON tool-call scaffold comparison — stdlib Python.
+"""CodeAct 与 JSON tool-call 脚手架对比 — 纯标准库 Python。
 
-Both scaffolds use the same stub "model" (deterministic rules) so the
-comparison isolates the scaffold from model quality. Metrics:
-  - tasks solved
-  - turns used
-  - per-action blast radius (number of files an action can touch)
+两个脚手架使用相同的桩 "模型"（确定性规则），因此对比
+将脚手架与模型质量隔离开来。指标：
+  - 已解决的测试任务数
+  - 消耗的轮数
+  - per-action 爆炸半径（一次操作可触及的文件数）
 
-The point is pedagogical: scaffolding is load-bearing. OpenHands
-(arXiv:2407.16741) made the CodeAct bet explicitly; JSON tool calls
-dominate managed services where the provider controls the executor.
+这里的要点是教学性的：脚手架即 load-bearing.，OpenHands
+（arXiv:2407.16741）明确押注了 CodeAct；JSON 工具调用
+在由提供商控制执行器的托管服务中占据主导地位。
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import json
 from dataclasses import dataclass, field
 
 
-# ---------- Mini-world: a tiny in-memory "repo" ----------
+# ---------- 微型世界：一个小型内存“仓库” ----------
 
 INITIAL_REPO = {
     "app.py": "def add(a, b):\n    return a - b\n",
@@ -31,9 +31,9 @@ TESTS = [
     ("cli.py", "VERSION == 'v1.0'"),
 ]
 
-# Per-path replacement the stub "model" applies when a test fails.
-# Centralizing the table avoids duplicating the if/elif chain across
-# both scaffolds and avoids UnboundLocalError if TESTS later grows.
+# 按路径替换：当测试失败时，桩“模型”所应用的替换。
+# 将该表集中定义，避免在以下两者之间重复 if/elif 链
+# 两个脚手架之间，并避免在 TESTS 后续扩展时出现 UnboundLocalError。
 FIXES: dict[str, tuple[str, str]] = {
     "app.py": ("a - b", "a + b"),
     "util.py": ("s.upper()", "s.lower()"),
@@ -42,7 +42,7 @@ FIXES: dict[str, tuple[str, str]] = {
 
 
 def run_tests(repo: dict[str, str]) -> list[bool]:
-    """Deterministic stub: simulate the test suite against the repo string."""
+    """确定性桩：针对仓库字符串模拟测试套件。"""
     results = []
     for path, _expr in TESTS:
         src = repo.get(path, "")
@@ -58,7 +58,7 @@ def run_tests(repo: dict[str, str]) -> list[bool]:
 
 
 def _apply_fix(repo: dict[str, str], path: str) -> bool:
-    """Apply the per-path fix in place. Returns True iff a fix was applied."""
+    """就地应用 per-path 修复。当且仅当应用了修复时返回 True。"""
     rule = FIXES.get(path)
     if rule is None:
         return False
@@ -67,7 +67,7 @@ def _apply_fix(repo: dict[str, str], path: str) -> bool:
     return True
 
 
-# ---------- JSON tool-call scaffold: one action per turn ----------
+# ---------- JSON tool-call 脚手架：每轮一次操作 ----------
 
 @dataclass
 class JsonScaffold:
@@ -75,7 +75,7 @@ class JsonScaffold:
     turns: int = 0
 
     def step(self) -> str:
-        """Return one JSON action at a time, based on current failing test."""
+        """根据当前失败的测试，每次返回一个 JSON 操作。"""
         self.turns += 1
         results = run_tests(self.repo)
         for (path, _), ok in zip(TESTS, results, strict=True):
@@ -86,7 +86,7 @@ class JsonScaffold:
         return json.dumps({"tool": "done"})
 
     def blast_radius(self) -> int:
-        return 1  # each action touches exactly one file
+        return 1  # 每次操作只触及一个文件
 
     def run(self, max_turns: int = 10) -> tuple[int, int]:
         for _ in range(max_turns):
@@ -97,21 +97,21 @@ class JsonScaffold:
         return passed, self.turns
 
 
-# ---------- CodeAct scaffold: one snippet may touch many files ----------
+# ---------- CodeAct 脚手架：一段代码片段可触及多个文件 ----------
 
 @dataclass
 class CodeActScaffold:
     repo: dict[str, str] = field(default_factory=lambda: dict(INITIAL_REPO))
     turns: int = 0
-    # Track the observed max number of files touched by a single action.
-    # This is more honest than a static upper bound of len(repo) because
-    # it would not silently inflate if someone adds an untested helper.
+    # 跟踪观察到的单次操作触及文件数的最大值。
+    # 这比 len(repo) 的静态上界更符合实际，因为
+    # 如果有人添加了未经测试的辅助函数，它不会悄然膨胀。
     worst_touched: int = 0
 
     def step(self) -> str:
-        """Return one Python snippet that may edit multiple files in one go."""
+        """返回一段 Python 代码片段，可一次性编辑多个文件。"""
         self.turns += 1
-        # A single "snippet" action rewrites every failing file at once.
+        # 单个 "代码片段" 操作会一次重写所有失败的文件。
         snippet_lines = []
         results = run_tests(self.repo)
         for (path, _), ok in zip(TESTS, results, strict=True):
@@ -125,7 +125,7 @@ class CodeActScaffold:
         return "; ".join(snippet_lines)
 
     def blast_radius(self) -> int:
-        # observed worst-case: files touched by a single action.
+        # 观察到的最坏情况：单次操作触及的文件数。
         return self.worst_touched
 
     def run(self, max_turns: int = 10) -> tuple[int, int]:
@@ -137,20 +137,20 @@ class CodeActScaffold:
         return passed, self.turns
 
 
-# ---------- Driver ----------
+# ---------- 驱动程序 ----------
 
 def report(name: str, passed: int, turns: int, blast: int) -> None:
     total = len(TESTS)
-    print(f"  {name:<18}  passed {passed}/{total}  turns {turns:>2}  "
-          f"blast-radius {blast}")
+    print(f"  {name:<18}  通过 {passed}/{total}  轮次 {turns:>2}  "
+          f"影响范围 {blast}")
 
 
 def main() -> None:
     print("=" * 70)
-    print("CODEACT vs JSON TOOL-CALL SCAFFOLDS (Phase 15, Lesson 9)")
+    print("CODEACT 与 JSON 工具调用脚手架（第 15 阶段，第 9 课）")
     print("=" * 70)
     print()
-    print("Same stub model, three-bug toy repo. Scaffold-only comparison.")
+    print("相同的桩模型、含三个缺陷的玩具仓库，仅对比脚手架。")
     print("-" * 70)
 
     js = JsonScaffold()
@@ -163,14 +163,14 @@ def main() -> None:
 
     print()
     print("=" * 70)
-    print("HEADLINE: scaffolding is not scenery. It is the product.")
+    print("要点：脚手架不是摆设。它就是产品本身。")
     print("-" * 70)
-    print("  Same model, two scaffolds, different turn counts.")
-    print("  CodeAct compresses multiple edits into one action.")
-    print("  The cost is blast radius: CodeAct needs hardened sandbox")
-    print("  isolation (OpenHands uses Docker). JSON tool-calls get safety")
-    print("  by construction since every action is independently validated.")
-    print("  Neither is strictly better; the trade-off is what to audit.")
+    print("  相同的模型，两种脚手架，不同的轮数。")
+    print("  CodeAct 将多次编辑压缩为一次操作。")
+    print("  代价是爆炸半径：CodeAct 需要加固的沙箱")
+    print("  隔离（OpenHands 使用 Docker）。JSON tool-calls 则通过")
+    print("  构造本身获得安全性，因为每次操作都经过独立验证。")
+    print("  两者都不是绝对更优；取舍取决于需要审计的内容。")
 
 
 if __name__ == "__main__":
