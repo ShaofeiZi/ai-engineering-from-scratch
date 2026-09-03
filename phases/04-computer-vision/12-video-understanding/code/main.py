@@ -6,7 +6,7 @@ from torchvision.models import resnet18, ResNet18_Weights
 
 def sample_uniform(num_frames_total, T):
     if num_frames_total <= 0:
-        raise ValueError(f"num_frames_total must be positive, got {num_frames_total}")
+        raise ValueError(f"num_frames_total 必须为正数，实际为 {num_frames_total}")
     if num_frames_total <= T:
         return list(range(num_frames_total)) + [num_frames_total - 1] * (T - num_frames_total)
     step = num_frames_total / T
@@ -15,7 +15,7 @@ def sample_uniform(num_frames_total, T):
 
 def sample_dense(num_frames_total, T, rng=None):
     if num_frames_total <= 0:
-        raise ValueError(f"num_frames_total must be positive, got {num_frames_total}")
+        raise ValueError(f"num_frames_total 必须为正数，实际为 {num_frames_total}")
     rng = rng or np.random.default_rng()
     if num_frames_total <= T:
         return list(range(num_frames_total)) + [num_frames_total - 1] * (T - num_frames_total)
@@ -81,32 +81,32 @@ class Conv2Plus1D(nn.Module):
 
 
 def main():
-    print("[frame samplers]")
+    print("[帧采样器]")
     for total in [5, 30, 300]:
-        print(f"  total={total:4d}  uniform(T=8)={sample_uniform(total, 8)}")
-        print(f"  total={total:4d}  dense(T=8)={sample_dense(total, 8, np.random.default_rng(0))}")
+        print(f"  总帧数={total:4d}  均匀采样(T=8)={sample_uniform(total, 8)}")
+        print(f"  总帧数={total:4d}  密集采样(T=8)={sample_dense(total, 8, np.random.default_rng(0))}")
 
-    print("\n[frame-pool model]")
+    print("\n[帧池化模型]")
     model = FramePool(num_classes=10, pretrained=False)
     x = torch.randn(2, 8, 3, 64, 64)
     out = model(x)
-    print(f"  input:  {tuple(x.shape)}")
-    print(f"  output: {tuple(out.shape)}")
-    print(f"  params: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"  输入：  {tuple(x.shape)}")
+    print(f"  输出：  {tuple(out.shape)}")
+    print(f"  参数量：{sum(p.numel() for p in model.parameters()):,}")
 
-    print("\n[I3D inflation]")
+    print("\n[I3D 膨胀]")
     c2d = nn.Conv2d(3, 16, kernel_size=3, padding=1, bias=False)
     c3d = inflate_2d_to_3d(c2d, time_kernel=3)
-    print(f"  2D weight shape: {tuple(c2d.weight.shape)}")
-    print(f"  3D weight shape: {tuple(c3d.weight.shape)}")
+    print(f"  2D 权重形状：{tuple(c2d.weight.shape)}")
+    print(f"  3D 权重形状：{tuple(c3d.weight.shape)}")
     y = c3d(torch.randn(1, 3, 8, 32, 32))
-    print(f"  output: {tuple(y.shape)}")
+    print(f"  输出：{tuple(y.shape)}")
 
-    print("\n[(2+1)D conv]")
+    print("\n[(2+1)D 卷积]")
     c21 = Conv2Plus1D(3, 16)
     y = c21(torch.randn(1, 3, 8, 32, 32))
-    print(f"  output: {tuple(y.shape)}")
-    print(f"  params: {sum(p.numel() for p in c21.parameters()):,}")
+    print(f"  输出：{tuple(y.shape)}")
+    print(f"  参数量：{sum(p.numel() for p in c21.parameters()):,}")
 
 
 if __name__ == "__main__":
