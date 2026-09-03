@@ -1,9 +1,9 @@
-"""Phase 13 Lesson 11: model input through stateless MCP MRTR.
+"""第13阶段 第11课：通过无状态 MCP MRTR. 传递模型输入
 
-Lesson: ../docs/en.md
-Specification: https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-This example uses only Python's standard library.
-Run: python3 main.py
+课程：../docs/en.md
+规格说明：https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
+本示例仅使用 Python 标准库。
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -375,10 +375,10 @@ def main() -> None:
             "params": {"_meta": request_meta()},
         }
     )
-    print("discover:", json.dumps(discovery["result"], indent=2))
+    print("discover：", json.dumps(discovery["result"], indent=2))
     response, request_ids = run_mrtr()
-    print("independent request ids:", request_ids)
-    print("final:", json.dumps(response["result"], indent=2))
+    print("独立请求 ID：", request_ids)
+    print("最终结果：", json.dumps(response["result"], indent=2))
 
 
 if __name__ == "__main__":
