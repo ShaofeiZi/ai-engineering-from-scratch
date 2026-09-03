@@ -150,13 +150,13 @@ def verify_equivalence(n_layers=6, hidden=16, inner=32, batch=4, k=2):
 
 
 if __name__ == "__main__":
-    print("equivalence:", verify_equivalence())
+    print("等值 :", verify_equivalence())
     for seg in [1, 2, 4, 8, 16, 32, 64]:
         cost = checkpoint_cost(64, segment_size=seg)
         print(f"k={seg:3d}  overhead={cost['overhead_vs_no_ckpt']:.1%}")
-    print("selective overhead:", f"{checkpoint_cost(64, selective=True)['overhead_vs_no_ckpt']:.1%}")
-    print("optimal segment for L=64:", optimal_segment(64))
-    print("activation memory (no ckpt), L=64, d=8192, seq=8192, batch=1:",
+    print("选择性间接费用 :", f"{checkpoint_cost(64, selective=True)['overhead_vs_no_ckpt']:.1%}")
+    print("L=64的最佳线段:", optimal_segment(64))
+    print("激活内存(无ckpt),L=64,d=8192,以下为8192,批次=1:",
           f"{activation_memory_mb(64):.1f} MB")
     for seg in [1, 4, 8, 16, 32]:
         print(f"  checkpoint k={seg:3d}: {memory_after_checkpoint(64, seg):.1f} MB")
