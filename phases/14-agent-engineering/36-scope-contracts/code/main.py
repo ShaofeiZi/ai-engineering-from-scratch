@@ -1,11 +1,10 @@
-"""Scope contract checker with violation budgets, severity, and multi-contract merge.
+"""带有违规预算、严重级别和多契约合并的作用域契约检查器。
 
-Loads a per-task scope_contract.json and a RunSummary (touched files, commands,
-elapsed minutes), produces a typed Finding list with severity tags, applies a
-violation budget the runtime can survive without halting, and supports merging
-multiple contracts (project-wide + task-specific) into a single effective one.
+加载一个 per-task scope_contract.json 和一个 RunSummary（触及的文件、执行的命令、
+耗时分钟数），生成一个带严重级别标签的已类型化 Finding 列表，应用运行时可承受而不中止的
+违规预算，并支持将多个契约（project-wide + task-specific）合并为单个有效契约。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ class ScopeContract:
     rollback_plan: str
     approvals_required: list[str] = field(default_factory=list)
     time_budget_minutes: int | None = None
-    network_egress: list[str] | None = None  # None = no enforcement, [] = deny-all, [...] = allowlist
+    network_egress: list[str] | None = None  # None = 不执行强制，[] = deny-all，[...] = 允许列表
     violation_budget: int = 0
     docs_paths_soft: list[str] = field(default_factory=lambda: ["docs/**", "README.md", "**/*.md"])
 
@@ -69,14 +68,14 @@ def matches_any(path: str, patterns: list[str]) -> bool:
 
 
 def merge_contracts(parent: ScopeContract, child: ScopeContract) -> ScopeContract:
-    """Least-privilege merge: intersect allowed, union forbidden, narrowest budgets.
+    """最小权限合并：交集取允许、并集取禁止、取最窄预算。
 
-    allowed_files intersect (both contracts must permit a path),
-    forbidden_files union (either contract can prohibit a path),
-    time_budget_minutes min (most restrictive wins),
-    approvals_required accumulate,
-    network_egress: None means no enforcement, otherwise intersect; an empty
-    list means deny-all and stays deny-all under merge.
+    allowed_files 取交集（两个契约都必须允许某路径），
+    forbidden_files 取并集（任一契约即可禁止某路径），
+    time_budget_minutes 取最小值（最严格者胜出），
+    approvals_required 累加，
+    network_egress：None 表示不执行强制，否则取交集；空
+    列表表示 deny-all 且在合并下保持 deny-all。
     """
     return ScopeContract(
         task_id=child.task_id,
@@ -215,20 +214,20 @@ def main() -> None:
     clean_report = scope_check(effective, clean)
     creep_report = scope_check(effective, creep)
 
-    print("effective contract:", json.dumps(asdict(effective), indent=2))
-    print("\nclean run findings:")
+    print("有效契约：", json.dumps(asdict(effective), indent=2))
+    print("\n干净运行的检查结果：")
     for f in clean_report.findings:
         print(f"  [{f.severity}] {f.code}: {f.detail}")
-    print(f"  passed={clean_report.passed()} over_budget={clean_report.over_budget}")
+    print(f"  通过={clean_report.passed()} over_budget={clean_report.over_budget}")
 
-    print("\ncreep run findings:")
+    print("\n蔓延运行的检查结果：")
     for f in creep_report.findings:
         print(f"  [{f.severity}] {f.code}: {f.detail}")
-    print(f"  passed={creep_report.passed()} over_budget={creep_report.over_budget}")
+    print(f"  通过={creep_report.passed()} over_budget={creep_report.over_budget}")
 
     archive(clean_report)
     archive(creep_report)
-    print(f"\narchived under {(HERE / 'closed').name}/")
+    print(f"\n归档于 {(HERE / 'closed').name}/")
 
 
 if __name__ == "__main__":
