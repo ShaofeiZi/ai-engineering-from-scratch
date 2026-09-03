@@ -160,7 +160,7 @@ class DecisionTree:
             feature_indices = random.sample(range(self.n_features), k)
         elif isinstance(self.max_features, int):
             if self.max_features < 1:
-                raise ValueError("max_features must be at least 1 when given as an integer")
+                raise ValueError("max_features 作为整数时必须至少为 1")
             k = min(self.max_features, self.n_features)
             feature_indices = random.sample(range(self.n_features), k)
         else:
@@ -213,12 +213,12 @@ class DecisionTree:
         if node is None:
             node = self.tree
         if node["leaf"]:
-            print(f"{indent}Predict: {node['value']}")
+            print(f"{indent}预测: {node['value']}")
             return
-        print(f"{indent}Feature {node['feature']} <= {node['threshold']:.4f}?")
-        print(f"{indent}  Yes:")
+        print(f"{indent}特征 {node['feature']} <= {node['threshold']:.4f}?")
+        print(f"{indent}  是:")
         self.print_tree(node["left"], indent + "    ")
-        print(f"{indent}  No:")
+        print(f"{indent}  否:")
         self.print_tree(node["right"], indent + "    ")
 
 
@@ -333,19 +333,19 @@ def train_test_split(X, y, test_ratio=0.2, seed=42):
 
 def demo_split_criteria():
     print("=" * 65)
-    print("SPLIT CRITERIA: GINI vs ENTROPY")
+    print("划分标准：基尼 vs 熵")
     print("=" * 65)
     print()
 
     test_cases = [
-        ("Pure node [A,A,A,A]", ["A", "A", "A", "A"]),
-        ("Balanced [A,A,B,B]", ["A", "A", "B", "B"]),
-        ("Imbalanced [A,A,A,B]", ["A", "A", "A", "B"]),
-        ("Three classes [A,A,B,C]", ["A", "A", "B", "C"]),
-        ("Uniform 4-class", ["A", "B", "C", "D"]),
+        ("纯节点 [A,A,A,A]", ["A", "A", "A", "A"]),
+        ("均衡 [A,A,B,B]", ["A", "A", "B", "B"]),
+        ("不均衡 [A,A,A,B]", ["A", "A", "A", "B"]),
+        ("三类 [A,A,B,C]", ["A", "A", "B", "C"]),
+        ("均匀四类", ["A", "B", "C", "D"]),
     ]
 
-    print(f"  {'Distribution':<30s} {'Gini':>8s} {'Entropy':>8s}")
+    print(f"  {'分布':<30s} {'Gini':>8s} {'熵':>8s}")
     print(f"  {'-' * 30} {'-' * 8} {'-' * 8}")
     for name, labels in test_cases:
         g = gini_impurity(labels)
@@ -353,14 +353,14 @@ def demo_split_criteria():
         print(f"  {name:<30s} {g:>8.4f} {e:>8.4f}")
 
     print()
-    print("  Both measures agree: pure = 0, balanced = maximum.")
-    print("  Entropy grows slightly faster than Gini for multi-class.")
+    print("  两种度量一致：纯节点为 0，均衡时最大。")
+    print("  对于多分类，熵比基尼增长略快。")
     print()
 
 
 def demo_information_gain():
     print("=" * 65)
-    print("INFORMATION GAIN: CHOOSING THE BEST SPLIT")
+    print("信息增益：选择最佳划分")
     print("=" * 65)
     print()
 
@@ -368,23 +368,23 @@ def demo_information_gain():
               "bird", "bird", "bird"]
 
     splits = [
-        ("Feature A: [cat,cat,cat,dog] | [cat,dog,dog,bird,bird,bird]",
+        ("特征 A: [cat,cat,cat,dog] | [cat,dog,dog,bird,bird,bird]",
          ["cat", "cat", "cat", "dog"],
          ["cat", "dog", "dog", "bird", "bird", "bird"]),
-        ("Feature B: [cat,cat,cat,cat] | [dog,dog,dog,bird,bird,bird]",
+        ("特征 B: [cat,cat,cat,cat] | [dog,dog,dog,bird,bird,bird]",
          ["cat", "cat", "cat", "cat"],
          ["dog", "dog", "dog", "bird", "bird", "bird"]),
-        ("Feature C: [cat,cat,dog,bird] | [cat,cat,dog,dog,bird,bird]",
+        ("特征 C: [cat,cat,dog,bird] | [cat,cat,dog,dog,bird,bird]",
          ["cat", "cat", "dog", "bird"],
          ["cat", "cat", "dog", "dog", "bird", "bird"]),
     ]
 
-    print(f"  Parent: {parent}")
-    print(f"  Parent Gini: {gini_impurity(parent):.4f}")
-    print(f"  Parent Entropy: {entropy(parent):.4f}")
+    print(f"  父节点: {parent}")
+    print(f"  父节点 Gini: {gini_impurity(parent):.4f}")
+    print(f"  父节点熵: {entropy(parent):.4f}")
     print()
 
-    print(f"  {'Split':<55s} {'IG(Gini)':>10s} {'IG(Entropy)':>12s}")
+    print(f"  {'划分':<55s} {'IG(Gini)':>10s} {'IG(熵)':>12s}")
     print(f"  {'-' * 55} {'-' * 10} {'-' * 12}")
 
     for name, left, right in splits:
@@ -393,25 +393,25 @@ def demo_information_gain():
         print(f"  {name:<55s} {ig_gini:>10.4f} {ig_ent:>12.4f}")
 
     print()
-    print("  Feature B separates cats perfectly. Highest information gain.")
+    print("  特征 B 完美区分了 cat。信息增益最高。")
     print()
 
 
 def demo_decision_tree():
     print("=" * 65)
-    print("DECISION TREE: CLASSIFICATION")
+    print("决策树：分类")
     print("=" * 65)
     print()
 
     X, y = generate_classification_data(200, seed=42)
     X_train, y_train, X_test, y_test = train_test_split(X, y)
 
-    print(f"  Dataset: {len(X)} samples, 2 features, 3 classes")
-    print(f"  Train: {len(X_train)}  Test: {len(X_test)}")
+    print(f"  数据集：{len(X)} 个样本，2 个特征，3 个类别")
+    print(f"  训练集：{len(X_train)}  测试集：{len(X_test)}")
     print()
 
     depths = [1, 2, 3, 5, 10, None]
-    print(f"  {'Max Depth':>10s}  {'Train Acc':>10s}  {'Test Acc':>10s}")
+    print(f"  {'最大深度':>10s}  {'训练准确率':>10s}  {'测试准确率':>10s}")
     print(f"  {'-' * 10}  {'-' * 10}  {'-' * 10}")
 
     for d in depths:
@@ -425,20 +425,20 @@ def demo_decision_tree():
         print(f"  {d_str:>10s}  {train_acc:>10.4f}  {test_acc:>10.4f}")
 
     print()
-    print("  Shallow trees underfit. Deep trees overfit.")
-    print("  The sweet spot is somewhere in between.")
+    print("  浅树会欠拟合，深树会过拟合。")
+    print("  最佳深度介于两者之间。")
     print()
 
     tree = DecisionTree(max_depth=3, criterion="gini")
     tree.fit(X_train, y_train)
-    print("  Tree structure (max_depth=3):")
+    print("  树结构（max_depth=3）：")
     tree.print_tree()
     print()
 
 
 def demo_random_forest():
     print("=" * 65)
-    print("RANDOM FOREST: ENSEMBLE POWER")
+    print("随机森林：集成的力量")
     print("=" * 65)
     print()
 
@@ -446,12 +446,12 @@ def demo_random_forest():
     X, y = generate_classification_data(300, seed=42)
     X_train, y_train, X_test, y_test = train_test_split(X, y)
 
-    print(f"  Dataset: {len(X)} samples, 2 features, 3 classes")
-    print(f"  Train: {len(X_train)}  Test: {len(X_test)}")
+    print(f"  数据集：{len(X)} 个样本，2 个特征，3 个类别")
+    print(f"  训练集：{len(X_train)}  测试集：{len(X_test)}")
     print()
 
     tree_counts = [1, 3, 5, 10, 25, 50, 100]
-    print(f"  {'N Trees':>8s}  {'Train Acc':>10s}  {'Test Acc':>10s}")
+    print(f"  {'树数量':>8s}  {'训练准确率':>10s}  {'测试准确率':>10s}")
     print(f"  {'-' * 8}  {'-' * 10}  {'-' * 10}")
 
     for n in tree_counts:
@@ -464,14 +464,14 @@ def demo_random_forest():
         print(f"  {n:>8d}  {train_acc:>10.4f}  {test_acc:>10.4f}")
 
     print()
-    print("  More trees = better generalization, with diminishing returns.")
-    print("  Test accuracy plateaus but does not decrease.")
+    print("  树越多，泛化能力越好，但收益会逐渐递减。")
+    print("  测试准确率会趋于稳定，但不会下降。")
     print()
 
 
 def demo_feature_importance():
     print("=" * 65)
-    print("FEATURE IMPORTANCE")
+    print("特征重要性")
     print("=" * 65)
     print()
 
@@ -494,10 +494,10 @@ def demo_feature_importance():
     rf.fit(X, y)
     importances = rf.feature_importances()
 
-    print(f"  Target: 1 if feature_0 + feature_1 > 0, else 0")
-    print(f"  Features 2 and 3 are pure noise.")
+    print(f"  目标：feature_0 + feature_1 > 0 时为 1，否则为 0")
+    print(f"  特征 2 和特征 3 是纯噪声。")
     print()
-    print(f"  {'Feature':<15s}  {'Importance':>12s}")
+    print(f"  {'特征':<15s}  {'重要性':>12s}")
     print(f"  {'-' * 15}  {'-' * 12}")
     for name, imp in sorted(zip(feature_names, importances),
                             key=lambda x: -x[1]):
@@ -505,13 +505,13 @@ def demo_feature_importance():
         print(f"  {name:<15s}  {imp:>12.4f}  {bar}")
 
     print()
-    print("  The forest correctly identifies which features matter.")
+    print("  随机森林正确识别出了哪些特征真正重要。")
     print()
 
 
 def demo_regression_tree():
     print("=" * 65)
-    print("REGRESSION TREE: PIECEWISE CONSTANT APPROXIMATION")
+    print("回归树：分段常数近似")
     print("=" * 65)
     print()
 
@@ -519,11 +519,11 @@ def demo_regression_tree():
     X_train, y_train, X_test, y_test = train_test_split(X, y)
 
     depths = [1, 2, 3, 5, 10]
-    print(f"  Target: y = sin(x) * x + noise")
-    print(f"  Train: {len(X_train)}  Test: {len(X_test)}")
+    print(f"  目标：y = sin(x) * x + 噪声")
+    print(f"  训练集：{len(X_train)}  测试集：{len(X_test)}")
     print()
 
-    print(f"  {'Max Depth':>10s}  {'Train MSE':>10s}  {'Test MSE':>10s}")
+    print(f"  {'最大深度':>10s}  {'训练 MSE':>10s}  {'测试 MSE':>10s}")
     print(f"  {'-' * 10}  {'-' * 10}  {'-' * 10}")
 
     for d in depths:
@@ -541,15 +541,15 @@ def demo_regression_tree():
     rf.fit(X_train, y_train)
     rf_pred = rf.predict(X_test)
     rf_mse = sum((a - b) ** 2 for a, b in zip(y_test, rf_pred)) / len(y_test)
-    print(f"  Random Forest (50 trees, depth=5) Test MSE: {rf_mse:.4f}")
+    print(f"  随机森林（50 棵树，深度=5）测试 MSE：{rf_mse:.4f}")
     print()
-    print("  The forest averages many piecewise predictions for smoother output.")
+    print("  随机森林对多个分段预测取平均，使输出更加平滑。")
     print()
 
 
 def demo_gini_vs_entropy():
     print("=" * 65)
-    print("GINI vs ENTROPY: DO THEY DISAGREE?")
+    print("基尼 vs 熵：二者会产生分歧吗？")
     print("=" * 65)
     print()
 
@@ -566,25 +566,25 @@ def demo_gini_vs_entropy():
         acc_gini = accuracy(y_test, tree_gini.predict(X_test))
         acc_entropy = accuracy(y_test, tree_entropy.predict(X_test))
 
-        print(f"  depth={depth:<4d}  Gini acc: {acc_gini:.4f}  "
-              f"Entropy acc: {acc_entropy:.4f}  "
-              f"Diff: {abs(acc_gini - acc_entropy):.4f}")
+        print(f"  深度={depth:<4d}  Gini 准确率：{acc_gini:.4f}  "
+              f"熵准确率：{acc_entropy:.4f}  "
+              f"差异：{abs(acc_gini - acc_entropy):.4f}")
 
     print()
-    print("  In practice, Gini and entropy produce nearly identical trees.")
-    print("  Gini is slightly faster (no log computation).")
+    print("  实践中，Gini 和熵生成的树几乎相同。")
+    print("  Gini 略快一些，因为不需要计算对数。")
     print()
 
 
 def demo_single_tree_vs_forest():
     print("=" * 65)
-    print("SINGLE TREE vs RANDOM FOREST: STABILITY")
+    print("单棵树 vs 随机森林：稳定性")
     print("=" * 65)
     print()
 
     X, y = generate_classification_data(200, seed=42)
 
-    print("  Training 5 single trees on slightly different data subsets:")
+    print("  在略有不同的数据子集上训练 5 棵单独的树：")
     single_accs = []
     for trial in range(5):
         random.seed(trial * 10)
@@ -596,10 +596,10 @@ def demo_single_tree_vs_forest():
         tree.fit(X_tr, y_tr)
         acc = accuracy(y_te, tree.predict(X_te))
         single_accs.append(acc)
-        print(f"    Trial {trial + 1}: accuracy = {acc:.4f}")
+        print(f"    试验 {trial + 1}：准确率 = {acc:.4f}")
 
     print()
-    print("  Training 5 random forests on the same data subsets:")
+    print("  在相同数据子集上训练 5 个随机森林：")
     forest_accs = []
     for trial in range(5):
         random.seed(trial * 10)
@@ -611,34 +611,34 @@ def demo_single_tree_vs_forest():
         rf.fit(X_tr, y_tr)
         acc = accuracy(y_te, rf.predict(X_te))
         forest_accs.append(acc)
-        print(f"    Trial {trial + 1}: accuracy = {acc:.4f}")
+        print(f"    试验 {trial + 1}：准确率 = {acc:.4f}")
 
     single_std = (sum((a - sum(single_accs) / 5) ** 2 for a in single_accs) / 5) ** 0.5
     forest_std = (sum((a - sum(forest_accs) / 5) ** 2 for a in forest_accs) / 5) ** 0.5
 
     print()
-    print(f"  Single tree:   mean = {sum(single_accs)/5:.4f}, "
-          f"std = {single_std:.4f}")
-    print(f"  Random forest: mean = {sum(forest_accs)/5:.4f}, "
-          f"std = {forest_std:.4f}")
+    print(f"  单棵树：   均值 = {sum(single_accs)/5:.4f}，"
+          f"标准差 = {single_std:.4f}")
+    print(f"  随机森林：均值 = {sum(forest_accs)/5:.4f}，"
+          f"标准差 = {forest_std:.4f}")
     print()
-    print("  Forests are more stable (lower variance) across data perturbations.")
+    print("  面对数据扰动，随机森林更加稳定（方差更低）。")
     print()
 
 
 def print_summary():
     print()
     print("=" * 65)
-    print("SUMMARY")
+    print("总结")
     print("=" * 65)
     print()
-    print("  1. Decision trees split data by maximizing information gain.")
-    print("  2. Gini impurity and entropy produce nearly identical splits.")
-    print("  3. Single trees are unstable. Small data changes = different tree.")
-    print("  4. Random forests average many trees for stable, strong predictions.")
-    print("  5. Bagging + feature randomization decorrelate the trees.")
-    print("  6. Feature importance falls out naturally from impurity reduction.")
-    print("  7. Trees dominate neural networks on tabular data.")
+    print("  1. 决策树通过最大化信息增益来划分数据。")
+    print("  2. Gini 不纯度和熵产生的划分几乎相同。")
+    print("  3. 单棵树并不稳定，数据的微小变化就可能生成不同的树。")
+    print("  4. 随机森林对多棵树取平均，获得稳定且强大的预测。")
+    print("  5. Bagging 与特征随机化可以降低树之间的相关性。")
+    print("  6. 特征重要性可以从不纯度下降中自然得到。")
+    print("  7. 在表格数据上，树模型通常优于神经网络。")
     print()
 
 
