@@ -1,4 +1,4 @@
-"""Tests for the iteration scheduler: UCB picks, parallel slots, fan-out, pruning, budgets."""
+"""迭代调度器的测试：UCB 选择、并行槽位、扇出、剪枝与预算。"""
 
 from __future__ import annotations
 

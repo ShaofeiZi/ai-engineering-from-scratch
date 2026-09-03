@@ -1,12 +1,12 @@
-"""Auto-research orchestrator: hypothesis queue, parallel slots, UCB scoring, fan-out.
+"""自动研究编排器：假设队列、并行槽位、UCB 评分、扇出。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 lesson 54 (paper writer; receives paper.trigger fan-out)
-- Phase 19 lesson 55 (critic loop; consumes results downstream)
-- Phase 19 lessons 50-53 (earlier auto-research stages)
+概念参考：
+- ./docs/en.md（本课）
+- 第 19 阶段第 54 课（论文撰写器；接收 paper.trigger 扇出）
+- 第 19 阶段第 55 课（评审循环；下游消费结果）
+- 第 19 阶段第 50-53 课（更早的自动研究阶段）
 
-Stdlib + numpy only. Run: python3 code/main.py
+仅使用标准库 + numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ def ucb_score(branch_stats: BranchStats, total_runs: int, c: float) -> float:
 
 
 class IterationScheduler:
-    """Drives a hypothesis queue across N parallel asyncio slots with UCB picking."""
+    """以 UCB 选择策略驱动假设队列在 N 个并行 asyncio 槽位上运行。"""
 
     def __init__(
         self,
@@ -127,9 +127,9 @@ class IterationScheduler:
         expander: Expander | None = None,
     ) -> None:
         if slots < 1:
-            raise ValueError("slots must be >= 1")
+            raise ValueError("slots 必须 >= 1")
         if max_experiments < 1:
-            raise ValueError("max_experiments must be >= 1")
+            raise ValueError("max_experiments 必须 >= 1")
         self.runner = runner
         self.slots = slots
         self.max_experiments = max_experiments
@@ -300,7 +300,7 @@ def make_deterministic_runner(
     delay_ms: float = 5.0,
     seed: int = 0,
 ) -> Runner:
-    """Build an async experiment runner whose reward is base_reward + N(0, noise)."""
+    """构建一个异步实验运行器，其奖励为 base_reward + N(0, noise)。"""
     rng = np.random.default_rng(seed)
 
     async def run(hyp: Hypothesis) -> Result:
@@ -317,7 +317,7 @@ def make_deterministic_runner(
 
 
 def deterministic_expander(result: Result) -> list[Hypothesis]:
-    """Spawn two follow-up hypotheses on the same branch with a monotonic id."""
+    """在同一分支上生成两个具有单调递增 id 的后续假设。"""
     return [
         Hypothesis(id=f"{result.hypothesis_id}-f{i}", branch=result.branch,
                    payload={"parent": result.hypothesis_id})
