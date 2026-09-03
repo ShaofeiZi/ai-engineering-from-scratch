@@ -66,13 +66,13 @@ def magnitude_report(name, magnitudes):
     for i, mag in enumerate(magnitudes):
         if i % 5 == 0 or i == len(magnitudes) - 1:
             if mag > 1e6:
-                bar = "X" * 50 + " EXPLODED"
+                bar = "X" * 50 + " 已爆炸"
             elif mag < 1e-6:
-                bar = "." + " VANISHED"
+                bar = "." + " 已消失"
             else:
                 bar_len = min(50, max(1, int(mag * 10)))
                 bar = "#" * bar_len
-            print(f"  Layer {i+1:3d}: {bar} ({mag:.6f})")
+            print(f"  第 {i+1:3d} 层: {bar} ({mag:.6f})")
 
 
 def symmetry_demo():
@@ -85,12 +85,12 @@ def symmetry_demo():
         z = sum(weights[neuron_idx][j] * inputs[j] for j in range(2)) + biases[neuron_idx]
         outputs.append(sigmoid(z))
 
-    print("Symmetry Demo (4 neurons, zero init):")
+    print("对称性演示（4 个神经元，零初始化）:")
     for i, out in enumerate(outputs):
-        print(f"  Neuron {i}: output = {out:.6f}")
+        print(f"  神经元 {i}: 输出 = {out:.6f}")
     all_same = all(abs(outputs[i] - outputs[0]) < 1e-10 for i in range(len(outputs)))
-    print(f"  All identical: {all_same}")
-    print(f"  Effective parameters: 1 (not {len(weights) * len(weights[0])})")
+    print(f"  全部相同: {all_same}")
+    print(f"  有效参数: 1 (而非 {len(weights) * len(weights[0])})")
 
 
 def variance_analysis():
@@ -98,14 +98,14 @@ def variance_analysis():
     n_trials = 10000
 
     configs = [
-        ("Random N(0,1)", 1.0),
-        ("Random N(0,0.01)", 0.01),
-        ("Xavier std", math.sqrt(2.0 / (fan_in + fan_in))),
-        ("Kaiming std", math.sqrt(2.0 / fan_in)),
+        ("随机 N(0,1)", 1.0),
+        ("随机 N(0,0.01)", 0.01),
+        ("Xavier 标准差", math.sqrt(2.0 / (fan_in + fan_in))),
+        ("Kaiming 标准差", math.sqrt(2.0 / fan_in)),
     ]
 
-    print("\nVariance Analysis (fan_in=64, single layer):")
-    print(f"  {'Strategy':<25} {'Weight Var':>12} {'Output Var':>12} {'Ratio':>10}")
+    print("\n方差分析（fan_in=64，单层）:")
+    print(f"  {'策略':<25} {'权重方差':>12} {'输出方差':>12} {'比率':>10}")
     print("  " + "-" * 60)
 
     for name, std in configs:
@@ -125,15 +125,15 @@ def variance_analysis():
 
 def run_experiment():
     configs = [
-        ("Zero + Sigmoid", lambda fi, fo: zero_init(fi, fo), sigmoid),
-        ("Random N(0,1) + ReLU", lambda fi, fo: random_init(fi, fo, 1.0), relu),
-        ("Random N(0,0.01) + ReLU", lambda fi, fo: random_init(fi, fo, 0.01), relu),
+        ("零初始化 + Sigmoid", lambda fi, fo: zero_init(fi, fo), sigmoid),
+        ("随机 N(0,1) + ReLU", lambda fi, fo: random_init(fi, fo, 1.0), relu),
+        ("随机 N(0,0.01) + ReLU", lambda fi, fo: random_init(fi, fo, 0.01), relu),
         ("Xavier + Sigmoid", xavier_init, sigmoid),
         ("Xavier + Tanh", xavier_init, tanh_act),
         ("Kaiming + ReLU", kaiming_init, relu),
     ]
 
-    print(f"\n{'Strategy':<30} {'L1':>10} {'L5':>10} {'L10':>10} {'L25':>10} {'L50':>10}")
+    print(f"\n{'策略':<30} {'L1':>10} {'L5':>10} {'L10':>10} {'L25':>10} {'L50':>10}")
     print("-" * 80)
 
     all_results = {}
@@ -144,9 +144,9 @@ def run_experiment():
         for idx in [0, 4, 9, 24, 49]:
             val = mags[idx]
             if val > 1e6:
-                row += f" {'EXPLODED':>10}"
+                row += f" {'已爆炸':>10}"
             elif val < 1e-6:
-                row += f" {'VANISHED':>10}"
+                row += f" {'已消失':>10}"
             else:
                 row += f" {val:>10.4f}"
         print(row)
@@ -225,16 +225,16 @@ def training_comparison():
         return 1.0 if x > 0 else 0.0
 
     configs = [
-        ("Random(0.01) + Sigmoid", "random", 0.01, sigmoid, sigmoid_d),
-        ("Random(1.0) + Sigmoid", "random", 1.0, sigmoid, sigmoid_d),
+        ("随机(0.01) + Sigmoid", "random", 0.01, sigmoid, sigmoid_d),
+        ("随机(1.0) + Sigmoid", "random", 1.0, sigmoid, sigmoid_d),
         ("Xavier + Sigmoid", "xavier", 0, sigmoid, sigmoid_d),
-        ("Random(0.01) + ReLU", "random", 0.01, relu, relu_d),
-        ("Random(1.0) + ReLU", "random", 1.0, relu, relu_d),
+        ("随机(0.01) + ReLU", "random", 0.01, relu, relu_d),
+        ("随机(1.0) + ReLU", "random", 1.0, relu, relu_d),
         ("Kaiming + ReLU", "kaiming", 0, relu, relu_d),
     ]
 
-    print("\nTraining Comparison (300 epochs, circle dataset):")
-    print(f"  {'Config':<30} {'Start Loss':>12} {'End Loss':>12} {'Improvement':>12}")
+    print("\n训练对比（300 轮，圆形数据集）:")
+    print(f"  {'配置':<30} {'初始损失':>12} {'最终损失':>12} {'提升':>12}")
     print("  " + "-" * 66)
 
     for name, init_name, scale, act_fn, act_d_fn in configs:
@@ -247,27 +247,27 @@ def training_comparison():
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("STEP 1: Symmetry Problem -- Zero Init")
+    print("步骤 1：对称性问题 -- 零初始化")
     print("=" * 70)
     symmetry_demo()
 
     print("\n" + "=" * 70)
-    print("STEP 2: Variance Analysis")
+    print("步骤 2：方差分析")
     print("=" * 70)
     variance_analysis()
 
     print("\n" + "=" * 70)
-    print("STEP 3: 50-Layer Forward Pass Experiment")
+    print("步骤 3：50 层前向传播实验")
     print("=" * 70)
     all_results = run_experiment()
 
     print("\n" + "=" * 70)
-    print("STEP 4: Layer-by-Layer Magnitude Reports")
+    print("步骤 4：逐层幅度报告")
     print("=" * 70)
     for name, mags in all_results.items():
         magnitude_report(name, mags)
 
     print("\n" + "=" * 70)
-    print("STEP 5: Training Comparison")
+    print("步骤 5：训练对比")
     print("=" * 70)
     training_comparison()
