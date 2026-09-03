@@ -19,8 +19,8 @@ def semi_hard_negatives(emb, labels, margin=0.2):
     positives.fill_diagonal_(float("-inf"))
     pos_idx = positives.argmax(dim=1)
 
-    # Semi-hard: d_ap < d_an < d_ap + margin. Exclude same-class, diagonals,
-    # negatives closer than the positive, and those past the margin boundary.
+    # 半难负样本：d_ap < d_an < d_ap + margin。排除同类样本、对角线元素、
+    # 比正样本更近的负样本，以及超出间隔边界的负样本。
     semi_hard = dist.clone()
     semi_hard[same_class] = float("inf")
     d_ap = dist[torch.arange(N), pos_idx].unsqueeze(1)
@@ -76,7 +76,7 @@ def main():
         loss = triplet_loss(emb, emb[pos_idx], emb[neg_idx])
         opt.zero_grad(); loss.backward(); opt.step()
         if step % 40 == 0:
-            print(f"step {step:3d}  triplet {loss.item():.4f}")
+            print(f"步骤 {step:3d}  三元组损失 {loss.item():.4f}")
 
     enc.eval()
     with torch.no_grad():
@@ -86,7 +86,7 @@ def main():
         q_emb = enc(qx)
         for k in [1, 5, 10]:
             r = recall_at_k(q_emb, g_emb, qy, gy, k=k)
-            print(f"  recall@{k}: {r:.3f}")
+            print(f"  召回率@{k}：{r:.3f}")
 
 
 if __name__ == "__main__":
