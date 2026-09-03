@@ -1,8 +1,7 @@
-"""Toy goodput calculator — stdlib Python.
+"""玩具版 goodput 计算器，使用 Python stdlib。
 
-Simulate a population of LLM requests with realistic right-skewed latency,
-apply a multi-constraint SLO, compute goodput, and show the GenAI-Perf
-vs LLMPerf TPOT calculation divergence on the same trace.
+模拟一组具有真实右偏延迟的 LLM 请求，应用多约束 SLO，计算 goodput，并展示
+GenAI-Perf 与 LLMPerf 在同一轨迹上的 TPOT 计算差异。
 """
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ from dataclasses import dataclass
 class RequestTrace:
     queue_ms: float
     prefill_ms: float
-    decode_ms_per_token: list[float]      # per-token decode latency
+    decode_ms_per_token: list[float]      # 逐 token decode 延迟
     output_tokens: int
 
     @property
@@ -28,11 +27,11 @@ class RequestTrace:
         return self.ttft_ms + sum(self.decode_ms_per_token)
 
     def tpot_llmperf(self) -> float:
-        """LLMPerf: include TTFT in ITL calculation."""
+        """LLMPerf：在 ITL 计算中包含 TTFT。"""
         return self.e2e_ms / self.output_tokens
 
     def tpot_genaiperf(self) -> float:
-        """GenAI-Perf: ITL starts from token 2."""
+        """GenAI-Perf：ITL 从第 2 个 token 开始计算。"""
         if self.output_tokens <= 1:
             return 0.0
         return sum(self.decode_ms_per_token) / (self.output_tokens - 1)
@@ -44,14 +43,14 @@ def synth_workload(n: int = 1000, seed: int = 7, tail_spike_rate: float = 0.02) 
     for _ in range(n):
         prompt_len = rng.choice([128, 256, 512, 2048, 8192])
         output_tokens = rng.randint(50, 300)
-        queue = rng.expovariate(1 / 40.0)           # avg 40 ms queue
-        prefill = prompt_len * 0.05                 # ~50 us per input token
-        decode_base = 7.0                            # 7 ms mean TPOT
+        queue = rng.expovariate(1 / 40.0)           # 平均 40 ms 排队时间
+        prefill = prompt_len * 0.05                 # 每个输入 token 约 50 微秒
+        decode_base = 7.0                           # 平均 TPOT 为 7 ms
         decodes = []
         for _ in range(output_tokens):
             t = max(1.5, rng.gauss(decode_base, decode_base * 0.15))
             if rng.random() < tail_spike_rate:
-                t *= rng.uniform(3, 8)              # tail spike
+                t *= rng.uniform(3, 8)              # 长尾尖峰
             decodes.append(t)
         traces.append(RequestTrace(queue, prefill, decodes, output_tokens))
     return traces
@@ -74,12 +73,12 @@ def report_latency(label: str, traces: list[RequestTrace]) -> None:
 
     print(f"{label}")
     print("-" * 76)
-    print(f"  TTFT (ms)     P50={p50_ttft:7.1f}  P90={p90_ttft:7.1f}  P99={p99_ttft:7.1f}  mean={statistics.mean(ttft):7.1f}")
-    print(f"  TPOT (ms)     P50={p50_tpot:7.2f}  P90={p90_tpot:7.2f}  P99={p99_tpot:7.2f}  mean={statistics.mean(tpot_nv):7.2f}")
-    print(f"  E2E  (ms)     P50={p50_e2e:7.1f}  P90={p90_e2e:7.1f}  P99={p99_e2e:7.1f}")
-    print(f"  Tool trap     GenAI-Perf mean TPOT={statistics.mean(tpot_nv):6.2f}  "
-          f"LLMPerf mean TPOT={statistics.mean(tpot_llm):6.2f}  "
-          f"delta={statistics.mean(tpot_llm) - statistics.mean(tpot_nv):+5.2f} ms")
+    print(f"  TTFT（毫秒） P50={p50_ttft:7.1f}  P90={p90_ttft:7.1f}  P99={p99_ttft:7.1f}  平均={statistics.mean(ttft):7.1f}")
+    print(f"  TPOT（毫秒） P50={p50_tpot:7.2f}  P90={p90_tpot:7.2f}  P99={p99_tpot:7.2f}  平均={statistics.mean(tpot_nv):7.2f}")
+    print(f"  E2E（毫秒）  P50={p50_e2e:7.1f}  P90={p90_e2e:7.1f}  P99={p99_e2e:7.1f}")
+    print(f"  工具陷阱      GenAI-Perf 平均 TPOT={statistics.mean(tpot_nv):6.2f}  "
+          f"LLMPerf 平均 TPOT={statistics.mean(tpot_llm):6.2f}  "
+          f"差值={statistics.mean(tpot_llm) - statistics.mean(tpot_nv):+5.2f} 毫秒")
 
 
 def goodput(traces: list[RequestTrace], slo_ttft: float, slo_tpot: float,
@@ -93,33 +92,33 @@ def goodput(traces: list[RequestTrace], slo_ttft: float, slo_tpot: float,
 
 def main() -> None:
     print("=" * 78)
-    print("TOY GOODPUT CALCULATOR — inference SLOs and the measurement trap")
+    print("玩具版 GOODPUT 计算器 — 推理 SLO 与测量陷阱")
     print("=" * 78)
     print()
 
     traces = synth_workload(n=2000)
-    report_latency("Synthetic workload (2000 requests)", traces)
+    report_latency("合成工作负载（2000 个请求）", traces)
     print()
 
     slos = [
-        ("loose   TTFT<800 TPOT<25 E2E<3000", 800, 25, 3000),
-        ("target  TTFT<500 TPOT<15 E2E<2000", 500, 15, 2000),
-        ("tight   TTFT<300 TPOT<10 E2E<1500", 300, 10, 1500),
+        ("宽松    TTFT<800 TPOT<25 E2E<3000", 800, 25, 3000),
+        ("目标    TTFT<500 TPOT<15 E2E<2000", 500, 15, 2000),
+        ("严格    TTFT<300 TPOT<10 E2E<1500", 300, 10, 1500),
     ]
-    print("Goodput under three SLO profiles")
+    print("三种 SLO 配置下的 Goodput")
     print("-" * 76)
     for label, t1, t2, t3 in slos:
         g = goodput(traces, t1, t2, t3)
-        tag = "  SHIPPABLE" if g >= 0.99 else ("  DEGRADED" if g >= 0.95 else "  FAILING")
-        print(f"  {label}  goodput={g:6.2%}{tag}")
+        tag = "  可发布" if g >= 0.99 else ("  已退化" if g >= 0.95 else "  失败")
+        print(f"  {label}  有效吞吐率={g:6.2%}{tag}")
 
     print()
     print("=" * 78)
-    print("KEY FINDING")
+    print("关键发现")
     print("-" * 78)
-    print("  Mean TPOT ~7 ms looks great. P99 TPOT ~25-40 ms tells the real story.")
-    print("  Tighten the SLO and goodput collapses from 99% -> 80%+. Users feel P99.")
-    print("  GenAI-Perf vs LLMPerf disagree by ~1 ms on mean TPOT — cite the tool.")
+    print("  平均 TPOT 约 7 ms 看起来很好；P99 TPOT 约 25-40 ms 才反映真实情况。")
+    print("  收紧 SLO 后，goodput 会从 99% 跌至 80%+。用户感受到的是 P99。")
+    print("  GenAI-Perf 与 LLMPerf 的平均 TPOT 相差约 1 ms；引用数据时请注明工具。")
 
 
 if __name__ == "__main__":
