@@ -1,8 +1,8 @@
-# Activation functions in Julia. Sigmoid, tanh, ReLU, leaky ReLU,
-# GELU, Swish — each with hand-derived analytical gradients.
-# Plus dead-neuron detection on ReLU and a vanishing-gradient demo.
-# Trains a tiny 2-h-1 MLP with each activation on circle data.
-# Stdlib only. Sources:
+# Julia 激活函数实现。包括 Sigmoid、tanh、ReLU、Leaky ReLU、
+# GELU、Swish —— 每个都附带手推的解析梯度。
+# 此外还包含 ReLU 的死神经元检测和梯度消失演示。
+# 用每种激活函数在圆形数据上训练一个 2-h-1 的小型 MLP。
+# 仅使用标准库。参考资料：
 #   https://docs.julialang.org/en/v1/base/math/  (tanh, erf, sqrt)
 #   https://arxiv.org/abs/1606.08415  (GELU: Hendrycks & Gimpel)
 
@@ -10,8 +10,8 @@ using Random
 using Printf
 
 
-# Hand-rolled erf via Abramowitz & Stegun 7.1.26 (max error ~1.5e-7).
-# Stdlib only — Julia 1.x Base does not ship erf.
+# 基于 Abramowitz & Stegun 7.1.26 手写的 erf（最大误差约 1.5e-7）。
+# 仅使用标准库 —— Julia 1.x 的 Base 不自带 erf。
 function erf_approx(x::Float64)::Float64
     sign_x = x < 0 ? -1.0 : 1.0
     ax = abs(x)
@@ -37,7 +37,7 @@ leaky_relu_d(x::Float64; alpha::Float64=0.01)::Float64 = x > 0 ? 1.0 : alpha
 
 
 function gelu(x::Float64)::Float64
-    # Exact form x * Phi(x); keeps gelu and gelu_d consistent for backprop.
+    # 精确形式 x * Phi(x)；使 gelu 和 gelu_d 在反向传播中保持一致。
     return 0.5 * x * (1 + erf_approx(x / sqrt(2.0)))
 end
 
@@ -76,7 +76,7 @@ function gradient_scan(name::String, deriv; start::Float64=-5.0, stop::Float64=5
         end
     end
     pct_dead = near_zero / n * 100
-    @printf("%-15s: %3d healthy, %3d near-zero (%.0f%% dead zone)\n",
+    @printf("%-15s: %3d 个健康, %3d 个接近零 (%.0f%% 死区)\n",
             name, healthy, near_zero, pct_dead)
 end
 
@@ -84,10 +84,9 @@ end
 function vanishing_gradient_experiment(act, act_d, name::String; n_layers::Int=10, n_inputs::Int=5)
     rng = MersenneTwister(42)
     values = randn(rng, n_inputs)
-    # Track the running product of |f'(z)| across layers — this is the
-    # quantity that actually vanishes during backprop, not the signal.
+    # 跟踪各层 |f'(z)| 的连乘积 —— 这才是反向传播中真正会消失的量，而非信号本身。
     chain_grad = 1.0
-    println("\n$name through $n_layers layers:")
+    println("\n$name 穿越 $n_layers 层：")
     for layer in 1:n_layers
         weights = randn(rng, n_inputs)
         z = sum(weights .* values)
@@ -95,7 +94,7 @@ function vanishing_gradient_experiment(act, act_d, name::String; n_layers::Int=1
         chain_grad *= abs(act_d(z))
         bar_len = isfinite(chain_grad) ? clamp(Int(round(chain_grad * 20)), 0, 60) : 0
         bar = "#" ^ bar_len
-        @printf("  Layer %2d: |grad chain| = %.6f %s\n", layer, chain_grad, bar)
+        @printf("  第 %2d 层: |梯度链| = %.6f %s\n", layer, chain_grad, bar)
         values = fill(activated, n_inputs)
     end
 end
@@ -120,15 +119,15 @@ function dead_neuron_detector(; n_inputs::Int=5, hidden_size::Int=20, n_samples:
     dead = count(==(0), fire_counts)
     rarely = count(c -> 0 < c < n_samples * 0.05, fire_counts)
     healthy = hidden_size - dead - rarely
-    println("\nDead Neuron Report ($hidden_size neurons, $n_samples samples):")
-    println("  Dead (never fired):     $dead")
-    println("  Barely alive (<5%):     $rarely")
-    println("  Healthy:                $healthy")
-    @printf("  Dead neuron rate:       %.1f%%\n", dead / hidden_size * 100)
+    println("\n死神经元报告（共 $hidden_size 个神经元，$n_samples 个样本）：")
+    println("  死亡（从未激活）：       $dead")
+    println("  勉强存活（<5%）：         $rarely")
+    println("  健康：                   $healthy")
+    @printf("  死神经元比例：           %.1f%%\n", dead / hidden_size * 100)
     for (i, c) in enumerate(fire_counts)
-        status = c == 0 ? "DEAD" : (c < n_samples * 0.05 ? "WEAK" : "OK")
+        status = c == 0 ? "死亡" : (c < n_samples * 0.05 ? "濒死" : "健康")
         bar = "#" ^ (c * 40 ÷ n_samples)
-        @printf("  Neuron %2d: %4d/%d fires [%-4s] %s\n", i - 1, c, n_samples, status, bar)
+        @printf("  神经元 %2d: %4d/%d 次激活 [%-4s] %s\n", i - 1, c, n_samples, status, bar)
     end
 end
 
@@ -155,7 +154,7 @@ mutable struct ActivationNetwork
     b1::Vector{Float64}
     w2::Vector{Float64}
     b2::Float64
-    # caches
+    # 缓存
     x::Vector{Float64}
     z1::Vector{Float64}
     h::Vector{Float64}
@@ -222,7 +221,7 @@ function train!(net::ActivationNetwork, data::Vector{Tuple{Vector{Float64}, Floa
         acc = correct / length(data) * 100
         push!(losses, avg)
         if epoch % 50 == 0 || epoch == epochs - 1
-            @printf("    Epoch %3d: loss=%.4f, accuracy=%.1f%%\n", epoch, avg, acc)
+            @printf("    轮次 %3d: 损失=%.4f, 准确率=%.1f%%\n", epoch, avg, acc)
         end
     end
     return losses
@@ -231,7 +230,7 @@ end
 
 function main()
     println("=" ^ 60)
-    println("STEP 1: Activation Function Values")
+    println("第 1 步：激活函数值")
     println("=" ^ 60)
     for x in [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0]
         @printf("  x=%5.1f  sigmoid=%.4f  tanh=%.4f  relu=%.4f  gelu=%.4f  swish=%.4f\n",
@@ -242,7 +241,7 @@ function main()
     println("  softmax([10, 10, 10])    = $(round.(softmax(Float64[10, 10, 10]), digits=6))")
 
     println("\n" * "=" ^ 60)
-    println("STEP 2: Gradient Dead Zones")
+    println("第 2 步：梯度死区")
     println("=" ^ 60)
     gradient_scan("Sigmoid", sigmoid_d)
     gradient_scan("Tanh", tanh_d)
@@ -252,19 +251,19 @@ function main()
     gradient_scan("Swish", swish_d)
 
     println("\n" * "=" ^ 60)
-    println("STEP 3: Vanishing Gradient Experiment")
+    println("第 3 步：梯度消失实验")
     println("=" ^ 60)
     vanishing_gradient_experiment(sigmoid, sigmoid_d, "Sigmoid")
     vanishing_gradient_experiment(relu, relu_d, "ReLU")
     vanishing_gradient_experiment(gelu, gelu_d, "GELU")
 
     println("\n" * "=" ^ 60)
-    println("STEP 4: Dead Neuron Detection")
+    println("第 4 步：死神经元检测")
     println("=" ^ 60)
     dead_neuron_detector()
 
     println("\n" * "=" ^ 60)
-    println("STEP 5: Training Comparison (Circle Dataset)")
+    println("第 5 步：训练对比（圆形数据集）")
     println("=" ^ 60)
     data = make_circle_data()
     configs = [
@@ -274,17 +273,17 @@ function main()
     ]
     results = Dict{String, Vector{Float64}}()
     for (name, act, act_d) in configs
-        println("\n--- Training with $name ---")
+        println("\n--- 使用 $name 训练 ---")
         net = ActivationNetwork(act, act_d; hidden_size=8, lr=0.1)
         losses = train!(net, data; epochs=200)
         results[name] = losses
     end
 
-    println("\n=== Final Loss Comparison ===")
+    println("\n=== 最终损失对比 ===")
     for (name, _, _) in configs
         losses = results[name]
         improvement = losses[1] > 0 ? (1 - losses[end] / losses[1]) * 100 : 0.0
-        @printf("  %-10s: start=%.4f -> end=%.4f (improvement: %.1f%%)\n",
+        @printf("  %-10s: 起始=%.4f -> 结束=%.4f（提升：%.1f%%）\n",
                 name, losses[1], losses[end], improvement)
     end
 end

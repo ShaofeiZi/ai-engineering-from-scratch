@@ -75,21 +75,21 @@ def gradient_scan(name, derivative_fn, start=-5, end=5, n=100):
         else:
             healthy += 1
     pct_dead = near_zero / n * 100
-    print(f"{name:15s}: {healthy:3d} healthy, {near_zero:3d} near-zero ({pct_dead:.0f}% dead zone)")
+    print(f"{name:15s}: {healthy:3d} 健康, {near_zero:3d} 近零 ({pct_dead:.0f}% 死区)")
 
 
 def vanishing_gradient_experiment(activation_fn, name, n_layers=10, n_inputs=5):
     random.seed(42)
     values = [random.gauss(0, 1) for _ in range(n_inputs)]
 
-    print(f"\n{name} through {n_layers} layers:")
+    print(f"\n{name} 经过 {n_layers} 层:")
     for layer in range(n_layers):
         weights = [random.gauss(0, 1) for _ in range(n_inputs)]
         z = sum(w * v for w, v in zip(weights, values))
         activated = activation_fn(z)
         magnitude = abs(activated)
         bar = "#" * int(magnitude * 20)
-        print(f"  Layer {layer+1:2d}: magnitude = {magnitude:.6f} {bar}")
+        print(f"  第 {layer+1:2d} 层: 幅度 = {magnitude:.6f} {bar}")
         values = [activated] * n_inputs
 
 
@@ -111,16 +111,16 @@ def dead_neuron_detector(n_inputs=5, hidden_size=20, n_samples=1000):
     rarely_fire = sum(1 for c in fire_counts if 0 < c < n_samples * 0.05)
     healthy = hidden_size - dead - rarely_fire
 
-    print(f"\nDead Neuron Report ({hidden_size} neurons, {n_samples} samples):")
-    print(f"  Dead (never fired):     {dead}")
-    print(f"  Barely alive (<5%):     {rarely_fire}")
-    print(f"  Healthy:                {healthy}")
-    print(f"  Dead neuron rate:       {dead/hidden_size*100:.1f}%")
+    print(f"\n死亡神经元报告 ({hidden_size} 个神经元, {n_samples} 个样本):")
+    print(f"  死亡 (从未激活):       {dead}")
+    print(f"  濒死 (<5%):            {rarely_fire}")
+    print(f"  健康:                  {healthy}")
+    print(f"  死亡神经元比例:         {dead/hidden_size*100:.1f}%")
 
     for i, c in enumerate(fire_counts):
-        status = "DEAD" if c == 0 else "WEAK" if c < n_samples * 0.05 else "OK"
+        status = "死亡" if c == 0 else "濒死" if c < n_samples * 0.05 else "健康"
         bar = "#" * (c * 40 // n_samples)
-        print(f"  Neuron {i:2d}: {c:4d}/{n_samples} fires [{status:4s}] {bar}")
+        print(f"  神经元 {i:2d}: {c:4d}/{n_samples} 次激活 [{status:4s}] {bar}")
 
 
 def make_circle_data(n=200, seed=42):
@@ -187,13 +187,13 @@ class ActivationNetwork:
             accuracy = correct / len(data) * 100
             losses.append(avg_loss)
             if epoch % 50 == 0 or epoch == epochs - 1:
-                print(f"    Epoch {epoch:3d}: loss={avg_loss:.4f}, accuracy={accuracy:.1f}%")
+                print(f"    第 {epoch:3d} 轮: 损失={avg_loss:.4f}, 准确率={accuracy:.1f}%")
         return losses
 
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("STEP 1: Activation Function Values")
+    print("第 1 步: 激活函数值")
     print("=" * 60)
     test_points = [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0]
     for x in test_points:
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     print(f"  softmax([10, 10, 10])    = {softmax([10.0, 10.0, 10.0])}")
 
     print("\n" + "=" * 60)
-    print("STEP 2: Gradient Dead Zones")
+    print("第 2 步: 梯度死区")
     print("=" * 60)
     gradient_scan("Sigmoid", sigmoid_derivative)
     gradient_scan("Tanh", tanh_derivative)
@@ -214,19 +214,19 @@ if __name__ == "__main__":
     gradient_scan("Swish", swish_derivative)
 
     print("\n" + "=" * 60)
-    print("STEP 3: Vanishing Gradient Experiment")
+    print("第 3 步: 梯度消失实验")
     print("=" * 60)
     vanishing_gradient_experiment(sigmoid, "Sigmoid")
     vanishing_gradient_experiment(relu, "ReLU")
     vanishing_gradient_experiment(gelu, "GELU")
 
     print("\n" + "=" * 60)
-    print("STEP 4: Dead Neuron Detection")
+    print("第 4 步: 死亡神经元检测")
     print("=" * 60)
     dead_neuron_detector()
 
     print("\n" + "=" * 60)
-    print("STEP 5: Training Comparison (Circle Dataset)")
+    print("第 5 步: 训练对比 (圆形数据集)")
     print("=" * 60)
     data = make_circle_data()
 
@@ -238,12 +238,12 @@ if __name__ == "__main__":
 
     results = {}
     for name, act_fn, act_d_fn in configs:
-        print(f"\n--- Training with {name} ---")
+        print(f"\n--- 使用 {name} 训练 ---")
         net = ActivationNetwork(act_fn, act_d_fn, hidden_size=8, lr=0.1)
         losses = net.train(data, epochs=200)
         results[name] = losses
 
-    print("\n=== Final Loss Comparison ===")
+    print("\n=== 最终损失对比 ===")
     for name, losses in results.items():
         improvement = (1 - losses[-1] / losses[0]) * 100 if losses[0] > 0 else 0
-        print(f"  {name:10s}: start={losses[0]:.4f} -> end={losses[-1]:.4f} (improvement: {improvement:.1f}%)")
+        print(f"  {name:10s}: 起始={losses[0]:.4f} -> 结束={losses[-1]:.4f} (提升: {improvement:.1f}%)")
