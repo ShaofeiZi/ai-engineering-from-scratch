@@ -1,12 +1,11 @@
-"""Minimal AlphaEvolve-like evolutionary loop — stdlib Python.
+"""最小化 AlphaEvolve-like 进化循环 — 纯标准库 Python。
 
-Toy symbolic regression. The "LLM" proposes a small mutation to a candidate
-expression (change a constant, change an operator, add a term). The
-"evaluator" scores the expression on training and held-out test points.
+玩具级符号回归。"LLM" 对候选表达式提出一个小变异
+（修改常量、修改运算符、增加一项）。
+"evaluator" 在训练集和 held-out 测试点上对表达式评分。
 
-MAP-elites grid keeps diverse candidates: cell keyed by (expression depth,
-constant magnitude bucket). Without a held-out split the loop overfits
-aggressively; with one the best candidate generalizes.
+MAP-elites 网格保持候选多样性：以（表达式深度、常量量级桶）为键的单元格。
+没有 held-out 划分时循环会激进过拟合；有了划分后最佳候选能泛化。
 """
 
 from __future__ import annotations
@@ -20,12 +19,12 @@ from dataclasses import dataclass
 DEFAULT_SEED = 1
 
 
-# Target function the loop tries to rediscover.
+# 循环试图重新发现的目标函数。
 def target(x: float) -> float:
     return 2.0 * x * x + 3.0 * x - 1.0
 
 
-Expr = tuple  # recursive: ("num", v) | ("x",) | ("add", a, b) | ("mul", a, b)
+Expr = tuple  # 递归: ("num", v) | ("x",) | ("add", a, b) | ("mul", a, b)
 
 
 def evaluate_expr(e: Expr, x: float) -> float:
@@ -58,7 +57,7 @@ def max_const(e: Expr) -> float:
 
 
 def mutate(e: Expr) -> Expr:
-    """Stand-in for the LLM's targeted edit."""
+    """代替 LLM 执行定向编辑。"""
     choice = random.random()
     if choice < 0.25:
         return random_leaf()
@@ -66,7 +65,7 @@ def mutate(e: Expr) -> Expr:
         return ("add", e, random_leaf())
     if choice < 0.75:
         return ("mul", e, random_leaf())
-    # perturb a constant somewhere
+    # 在某处扰动一个常量
     return perturb(e)
 
 
@@ -164,9 +163,9 @@ def run_loop(
         best_trace.append(best.train_score)
         test_trace.append(best.test_score)
 
-    # Final selection must use the same signal as the search: using the
-    # held-out test here when use_holdout=False would silently leak the
-    # holdout back into Run B and mask the overfitting the lesson shows.
+    # 最终选择必须使用与搜索相同的信号：在这里
+    # 当 use_holdout=False 时使用 held-out 测试会静默泄露
+    # 验证集回 Run B，掩盖课程所展示的过拟合。
     best = min(archive.values(), key=signal_of)
     return best, best_trace, test_trace
 
@@ -176,47 +175,47 @@ def main() -> None:
     parser.add_argument(
         "--no-holdout",
         action="store_true",
-        help="skip the held-out test evaluator (Run B only; forces reward-hacking demo)",
+        help="跳过留出测试评估器（仅运行 B；强制展示奖励破解）",
     )
     args = parser.parse_args()
 
     print("=" * 70)
-    print("ALPHAEVOLVE-STYLE LOOP (Phase 15, Lesson 3)")
+    print("ALPHAEVOLVE-STYLE LOOP（第 15 阶段，第 3 课）")
     print("=" * 70)
-    print("target: 2x^2 + 3x - 1")
+    print("目标: 2x^2 + 3x - 1")
 
     if not args.no_holdout:
-        print("\nRun A: held-out test included in evaluator signal")
+        print("\n运行 A：评估器信号中包含留出测试")
         best, train_trace, _ = run_loop(
             generations=1500, pop=20, use_holdout=True, seed=DEFAULT_SEED
         )
-        print(f"  best expr : {render(best.expr)}")
-        print(f"  train MSE : {best.train_score:.4f}")
-        print(f"  test  MSE : {best.test_score:.4f}")
-        print(f"  generation: {best.generation}")
-        print("  progress  : gen 100 train={:.3f} gen 500 train={:.3f} gen 1500 train={:.3f}".format(
+        print(f"  最佳表达式 : {render(best.expr)}")
+        print(f"  训练 MSE : {best.train_score:.4f}")
+        print(f"  测试  MSE : {best.test_score:.4f}")
+        print(f"  代次: {best.generation}")
+        print("  进度：第 100 代训练={:.3f}，第 500 代训练={:.3f}，第 1500 代训练={:.3f}".format(
             train_trace[99], train_trace[499], train_trace[-1]))
 
-    print("\nRun B: no held-out test (train-only evaluator -> reward hacking risk)")
+    print("\n运行 B：无留出测试（仅训练集评估器 -> 奖励破解风险）")
     best, _train_trace, _test_trace = run_loop(
         generations=1500, pop=20, use_holdout=False, seed=DEFAULT_SEED
     )
-    print(f"  best expr : {render(best.expr)}")
-    print(f"  train MSE : {best.train_score:.4f}")
-    print(f"  test  MSE : {best.test_score:.4f}")
-    print(f"  generation: {best.generation}")
+    print(f"  最佳表达式 : {render(best.expr)}")
+    print(f"  训练 MSE : {best.train_score:.4f}")
+    print(f"  测试  MSE : {best.test_score:.4f}")
+    print(f"  代次: {best.generation}")
     gap = best.test_score - best.train_score
-    print(f"  train-to-test gap: {gap:+.4f}  (large gap = overfit/reward hacking proxy)")
+    print(f"  训练集到测试集的差距：{gap:+.4f}（大差距 = 过拟合/奖励破解代理）")
 
     print()
     print("=" * 70)
-    print("HEADLINE: the evaluator is the architecture")
+    print("要点：评估器即架构")
     print("-" * 70)
-    print("  Run A converges to low train AND low test MSE.")
-    print("  Run B converges to low train MSE; test MSE stays loose or worse.")
-    print("  A held-out evaluator is the difference between discovery and")
-    print("  reward hacking. AlphaEvolve's wins are in domains where such an")
-    print("  evaluator exists. Picking those domains is the hard part.")
+    print("  运行 A 的训练 MSE 和测试 MSE 都收敛到较低水平。")
+    print("  运行 B 的训练 MSE 收敛到较低水平；测试 MSE 仍然不稳定或更差。")
+    print("  留出评估器决定了结果是发现还是奖励破解。")
+    print("  AlphaEvolve 的优势来自存在此类")
+    print("  评估器的领域。挑选那些领域才是困难之处。")
 
 
 if __name__ == "__main__":
