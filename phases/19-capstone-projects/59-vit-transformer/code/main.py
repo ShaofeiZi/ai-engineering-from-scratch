@@ -1,10 +1,10 @@
-"""Vision Transformer encoder built on the patch front end from lesson 58.
+"""基于第 58 课 patch 前端构建的 Vision Transformer 编码器。
 
-Twelve pre-LN blocks, twelve heads, GELU feed-forward with 4x expansion. The
-encoder consumes a 224x224x3 fixture image, returns the contextual token
-sequence, and exposes the CLS pooled vector for downstream heads.
+十二个 Pre-LN 模块、十二个注意力头、4 倍扩展的 GELU 前馈网络。编码器
+接收一张 224x224x3 的测试图像，返回上下文化的 token 序列，并暴露
+CLS 池化向量供下游任务头使用。
 
-Run with: python3 main.py
+运行方式：python3 main.py
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def _load_front_end_module():
     src = LESSON_58 / "main.py"
     spec = importlib.util.spec_from_file_location(name, src)
     if spec is None or spec.loader is None:
-        raise ImportError(f"could not load lesson 58 main.py at {src}")
+        raise ImportError(f"无法加载位于 {src} 的第 58 课 main.py")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
@@ -59,7 +59,7 @@ class ViTConfig:
     @property
     def head_dim(self) -> int:
         if self.hidden % self.heads != 0:
-            raise ValueError(f"hidden {self.hidden} not divisible by heads {self.heads}")
+            raise ValueError(f"hidden {self.hidden} 不能被 heads {self.heads} 整除")
         return self.hidden // self.heads
 
     def front_end_config(self) -> FrontEndConfig:
@@ -83,7 +83,7 @@ class MultiHeadSelfAttention(nn.Module):
 
     def forward(self, x: torch.Tensor, store_attn: bool = False) -> torch.Tensor:
         if x.dim() != 3:
-            raise ValueError(f"expected (B, N, D), got {tuple(x.shape)}")
+            raise ValueError(f"期望形状为 (B, N, D)，实际得到 {tuple(x.shape)}")
         b, n, d = x.shape
         h = self.cfg.heads
         hd = self.cfg.head_dim
@@ -147,10 +147,10 @@ class ViT(nn.Module):
 
 
 class VisionEncoder(nn.Module):
-    """Full encoder: patch front end + ViT stack.
+    """完整编码器：patch 前端 + ViT 堆叠。
 
-    Returns (tokens, cls) where tokens has shape (B, num_patches + 1, hidden)
-    and cls has shape (B, hidden).
+    返回 (tokens, cls)，其中 tokens 形状为 (B, num_patches + 1, hidden)，
+    cls 形状为 (B, hidden)。
     """
 
     def __init__(self, cfg: ViTConfig | None = None) -> None:
@@ -172,52 +172,52 @@ def count_params(module: nn.Module) -> int:
 
 def main() -> None:
     print("=" * 60)
-    print("VISION TRANSFORMER ENCODER")
+    print("VISION TRANSFORMER 编码器")
     print("=" * 60)
 
     cfg = ViTConfig()
-    print(f"  image size      : {cfg.image_size}")
-    print(f"  patch size      : {cfg.patch_size}")
-    print(f"  hidden          : {cfg.hidden}")
-    print(f"  depth x heads   : {cfg.depth} x {cfg.heads} (head dim {cfg.head_dim})")
-    print(f"  mlp ratio       : {cfg.mlp_ratio}")
+    print(f"  图像尺寸        : {cfg.image_size}")
+    print(f"  patch 尺寸      : {cfg.patch_size}")
+    print(f"  隐藏维度        : {cfg.hidden}")
+    print(f"  深度 x head 数  : {cfg.depth} x {cfg.heads}（head 维度 {cfg.head_dim}）")
+    print(f"  MLP 比率        : {cfg.mlp_ratio}")
 
     torch.manual_seed(0)
     encoder = VisionEncoder(cfg).eval()
-    print(f"\nfront-end params : {count_params(encoder.front):,}")
-    print(f"vit params       : {count_params(encoder.vit):,}")
-    print(f"total params     : {count_params(encoder):,}")
+    print(f"\n前端参数量       : {count_params(encoder.front):,}")
+    print(f"ViT 参数量       : {count_params(encoder.vit):,}")
+    print(f"总参数量         : {count_params(encoder):,}")
 
     img = synthesize_image(seed=0)
-    print(f"\nfixture image    : {tuple(img.shape)}")
+    print(f"\n夹具图像         : {tuple(img.shape)}")
 
     with torch.no_grad():
         tokens, cls = encoder(img)
-    print(f"output tokens    : {tuple(tokens.shape)}")
-    print(f"cls shape        : {tuple(cls.shape)}")
-    print(f"cls L2 norm      : {cls.norm().item():.3f}")
+    print(f"输出 token       : {tuple(tokens.shape)}")
+    print(f"CLS 形状         : {tuple(cls.shape)}")
+    print(f"CLS L2 范数      : {cls.norm().item():.3f}")
 
-    print("\nlayer-by-layer CLS norm trace:")
+    print("\n逐层 CLS 范数追踪：")
     with torch.no_grad():
         x = encoder.front(img)
-        print(f"  layer  0 (after front end) : cls norm {x[0, 0].norm().item():.3f}")
+        print(f"  第 0 层（前端之后）：CLS 范数 {x[0, 0].norm().item():.3f}")
         for i, block in enumerate(encoder.vit.blocks, start=1):
             x = block(x)
             if i % 2 == 0 or i == cfg.depth:
-                print(f"  layer {i:2d}                    : cls norm {x[0, 0].norm().item():.3f}")
+                print(f"  第 {i:2d} 层             ：CLS 范数 {x[0, 0].norm().item():.3f}")
         x = encoder.vit.norm(x)
-        print(f"  final LN                   : cls norm {x[0, 0].norm().item():.3f}")
+        print(f"  最终 LN             ：CLS 范数 {x[0, 0].norm().item():.3f}")
 
-    print("\nattention sanity:")
+    print("\n注意力健全性检查：")
     encoder.vit.blocks[0].attn(encoder.front(img), store_attn=True)
     attn = encoder.vit.blocks[0].attn.last_attn
     if attn is not None:
         row_sums = attn[0, 0, 0].sum().item()
-        print(f"  block 0 head 0 CLS row sum (should be 1.0) : {row_sums:.6f}")
+        print(f"  block 0 head 0 的 CLS 行和（应为 1.0）：{row_sums:.6f}")
         spread = attn[0, 0, 0].std().item()
-        print(f"  block 0 head 0 CLS row stddev              : {spread:.4f}")
+        print(f"  block 0 head 0 的 CLS 行标准差：{spread:.4f}")
 
-    print("\ngradient sanity:")
+    print("\n梯度健全性检查：")
     img2 = synthesize_image(seed=2)
     enc2 = VisionEncoder(cfg)
     _, c = enc2(img2)
@@ -225,11 +225,11 @@ def main() -> None:
     loss.backward()
     grad_norm = enc2.front.patch.proj.weight.grad.norm().item()
     cls_grad = enc2.front.cls_token.grad.norm().item()
-    print(f"  patch.proj.weight grad norm                : {grad_norm:.3e}")
-    print(f"  front.cls_token grad norm                  : {cls_grad:.3e}")
-    print("  ok: gradients flow from CLS back through the encoder")
+    print(f"  patch.proj.weight 梯度范数：{grad_norm:.3e}")
+    print(f"  front.cls_token 梯度范数  ：{cls_grad:.3e}")
+    print("  ok: 梯度从 CLS 反向流经整个编码器")
 
-    print("\ndone.")
+    print("\n完成。")
 
 
 if __name__ == "__main__":

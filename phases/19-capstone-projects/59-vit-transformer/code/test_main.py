@@ -1,4 +1,4 @@
-"""Unit tests for the Vision Transformer encoder."""
+"""Vision Transformer 编码器的单元测试。"""
 
 from __future__ import annotations
 
