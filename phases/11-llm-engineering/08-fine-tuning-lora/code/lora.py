@@ -196,28 +196,28 @@ if __name__ == "__main__":
     torch.manual_seed(42)
 
     print("=" * 60)
-    print("STEP 1: Create Base Model")
+    print("步骤 1：创建基础模型")
     print("=" * 60)
 
     model = create_demo_model()
     params = count_parameters(model)
-    print(f"  Architecture: Linear(256->512) -> ReLU -> Linear(512->512) -> ReLU -> Linear(512->10)")
-    print(f"  Total parameters: {params['total']:,}")
-    print(f"  Trainable: {params['trainable']:,} ({params['trainable_pct']:.1f}%)")
+    print("  架构：Linear(256->512) -> ReLU -> Linear(512->512) -> ReLU -> Linear(512->10)")
+    print(f"  参数总数：{params['total']:,}")
+    print(f"  可训练参数：{params['trainable']:,}（{params['trainable_pct']:.1f}%）")
 
     print("\n" + "=" * 60)
-    print("STEP 2: Inject LoRA (rank=8, alpha=16)")
+    print("步骤 2：注入 LoRA（rank=8，α=16）")
     print("=" * 60)
 
     lora_layers = inject_lora(model, target_modules=["0", "2"], rank=8, alpha=16)
     params = count_parameters(model)
-    print(f"  LoRA injected into: {list(lora_layers.keys())}")
-    print(f"  Total parameters: {params['total']:,}")
-    print(f"  Trainable (LoRA only): {params['trainable']:,} ({params['trainable_pct']:.2f}%)")
-    print(f"  Frozen (base model): {params['frozen']:,}")
+    print(f"  LoRA 注入层：{list(lora_layers.keys())}")
+    print(f"  参数总数：{params['total']:,}")
+    print(f"  可训练参数（仅 LoRA）：{params['trainable']:,}（{params['trainable_pct']:.2f}%）")
+    print(f"  冻结参数（基础模型）：{params['frozen']:,}")
 
     print("\n" + "=" * 60)
-    print("STEP 3: Rank Comparison")
+    print("步骤3:等级比较")
     print("=" * 60)
 
     data = create_demo_data()
@@ -228,12 +228,12 @@ if __name__ == "__main__":
         p = count_parameters(m)
         losses = train_lora(m, data, epochs=10, lr=1e-3)
         print(
-            f"  rank={rank:>2d}: trainable={p['trainable']:>6,} ({p['trainable_pct']:.2f}%)  "
-            f"loss: {losses[0]:.4f} -> {losses[-1]:.4f}"
+            f"  rank={rank:>2d}：可训练参数={p['trainable']:>6,}（{p['trainable_pct']:.2f}%）  "
+            f"损失：{losses[0]:.4f} -> {losses[-1]:.4f}"
         )
 
     print("\n" + "=" * 60)
-    print("STEP 4: Simulated QLoRA (4-bit quantization)")
+    print("步骤 4：模拟 QLoRA（4 位量化）")
     print("=" * 60)
 
     model_q = create_demo_model()
@@ -247,11 +247,11 @@ if __name__ == "__main__":
     max_err = (weight_before - weight_after).abs().max().item()
     corr = torch.corrcoef(torch.stack([weight_before.flatten(), weight_after.flatten()]))[0, 1].item()
 
-    print(f"  Quantized layers: {len(q_state)}")
-    print(f"  Quantization error (layer 0):")
+    print(f"  量化层数：{len(q_state)}")
+    print("  量化误差（第 0 层）：")
     print(f"    MSE: {mse:.6f}")
-    print(f"    Max absolute error: {max_err:.6f}")
-    print(f"    Correlation: {corr:.6f}")
+    print(f"    最大绝对误差：{max_err:.6f}")
+    print(f"    相关系数：{corr:.6f}")
 
     original_bytes = sum(p.numel() * 4 for p in model_q.parameters())
     quantized_bytes = sum(
@@ -262,25 +262,25 @@ if __name__ == "__main__":
         p.numel() * 4 for p in model_q.parameters() if p.requires_grad
     )
 
-    print(f"\n  Memory comparison:")
-    print(f"    Full model (fp32): {original_bytes / 1024:.1f} KB")
-    print(f"    Quantized base (simulated NF4): {quantized_bytes / 1024:.1f} KB")
-    print(f"    LoRA adapters (fp32): {lora_bytes / 1024:.1f} KB")
-    print(f"    QLoRA total: {(quantized_bytes + lora_bytes) / 1024:.1f} KB")
+    print("\n  内存比较：")
+    print(f"    完整模型（fp32）：{original_bytes / 1024:.1f} KB")
+    print(f"    量化基础模型（模拟 NF4）：{quantized_bytes / 1024:.1f} KB")
+    print(f"    LoRA 适配器（fp32）：{lora_bytes / 1024:.1f} KB")
+    print(f"    QLoRA 总计：{(quantized_bytes + lora_bytes) / 1024:.1f} KB")
 
     print("\n" + "=" * 60)
-    print("STEP 5: Train with QLoRA")
+    print("步骤 5：使用 QLoRA 训练")
     print("=" * 60)
 
     losses = train_lora(model_q, data, epochs=20, lr=1e-3)
-    print(f"  Training loss: {losses[0]:.4f} -> {losses[-1]:.4f}")
-    print(f"  Epoch losses: ", end="")
+    print(f"  训练损失：{losses[0]:.4f} -> {losses[-1]:.4f}")
+    print("  各轮损失：", end="")
     for i in range(0, 20, 5):
         print(f"  e{i}={losses[i]:.4f}", end="")
     print()
 
     print("\n" + "=" * 60)
-    print("STEP 6: Merge and Verify")
+    print("步骤 6：合并并验证")
     print("=" * 60)
 
     test_input = torch.randn(10, 256)
@@ -292,12 +292,12 @@ if __name__ == "__main__":
     output_after_merge = model_q(test_input).detach()
     merge_diff = (output_before_merge - output_after_merge).abs().max().item()
 
-    print(f"  Parameters after merge: {params_merged['total']:,}")
-    print(f"  LoRA layers remaining: {sum(1 for _, m in model_q.named_modules() if isinstance(m, LinearWithLoRA))}")
-    print(f"  Max output difference (should be ~0): {merge_diff:.8f}")
+    print(f"  合并后的参数数：{params_merged['total']:,}")
+    print(f"  剩余 LoRA 层数：{sum(1 for _, m in model_q.named_modules() if isinstance(m, LinearWithLoRA))}")
+    print(f"  最大输出差异（应接近 0）：{merge_diff:.8f}")
 
     print("\n" + "=" * 60)
-    print("STEP 7: Save and Load Adapter")
+    print("步骤 7: 保存并装入适配器")
     print("=" * 60)
 
     base_weights = create_demo_model().state_dict()
@@ -326,16 +326,16 @@ if __name__ == "__main__":
     out_b = model_b(test_in).detach()
     load_diff = (out_a - out_b).abs().max().item()
 
-    print(f"  Adapter layers saved: {n_saved}")
-    print(f"  Adapter file size: {adapter_size / 1024:.1f} KB")
-    print(f"  Base model size: {sum(p.numel() * 4 for p in model_b.parameters()) / 1024:.1f} KB")
-    print(f"  Adapter is {adapter_size / sum(p.numel() * 4 for p in model_b.parameters()) * 100:.1f}% of base model")
-    print(f"  Output match after load (max diff): {load_diff:.8f}")
+    print(f"  已保存的适配器层数：{n_saved}")
+    print(f"  适配器文件大小：{adapter_size / 1024:.1f} KB")
+    print(f"  基础模型大小：{sum(p.numel() * 4 for p in model_b.parameters()) / 1024:.1f} KB")
+    print(f"  适配器大小为基础模型的 {adapter_size / sum(p.numel() * 4 for p in model_b.parameters()) * 100:.1f}%")
+    print(f"  加载后的输出匹配情况（最大差异）：{load_diff:.8f}")
 
     os.unlink(adapter_path)
 
     print("\n" + "=" * 60)
-    print("STEP 8: Multi-Adapter Serving")
+    print("步骤 8：多适配器切换")
     print("=" * 60)
 
     base = create_demo_model()
@@ -364,17 +364,17 @@ if __name__ == "__main__":
     out_odd = model_odd(test_in).detach()
     adapter_diff = (out_even - out_odd).abs().mean().item()
 
-    print(f"  Adapter A trained on {len(data_even['inputs'])} even-indexed samples")
-    print(f"  Adapter B trained on {len(data_odd['inputs'])} odd-indexed samples")
-    print(f"  Mean output difference between adapters: {adapter_diff:.4f}")
-    print(f"  (Different adapters produce different outputs from the same base model)")
+    print(f"  适配器 A 使用 {len(data_even['inputs'])} 个偶数索引样本训练")
+    print(f"  适配器 B 使用 {len(data_odd['inputs'])} 个奇数索引样本训练")
+    print(f"  两个适配器的平均输出差异：{adapter_diff:.4f}")
+    print("  （不同适配器会让同一个基础模型产生不同输出）")
 
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("总结")
     print("=" * 60)
-    print("  LoRA: freeze base weights, train low-rank A and B matrices")
-    print("  QLoRA: quantize base to 4-bit, LoRA adapters in fp16")
-    print("  Typical trainable parameters: 0.5-2% of the base model")
-    print("  Adapters are small (10-100MB) and swappable")
-    print("  Merged model = original size, no inference overhead")
-    print("  Quality: within 1% of full fine-tuning on most benchmarks")
+    print("LoRA：冻结基础权重，只训练低秩 A、B 矩阵")
+    print("QLoRA：将基础模型量化为 4 位，同时以 fp16 训练 LoRA 适配器")
+    print("典型可训练参数量：基础模型的 0.5%–2%")
+    print("适配器体积小（10–100 MB）且可互换")
+    print("合并后的模型大小不变，推理时没有额外开销")
+    print("质量：在多数基准上与全量微调的差距不超过 1%")
