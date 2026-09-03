@@ -1,6 +1,6 @@
-# Linear regression in Julia. Closed-form normal equation and batch
-# gradient descent, plus multiple linear regression and a ridge penalty.
-# Stdlib only. Sources:
+# Julia 版线性回归。包含闭式正规方程和批量梯度下降，
+# 以及多元线性回归和岭回归惩罚项。
+# 仅使用标准库。参考资料：
 #   https://docs.julialang.org/en/v1/manual/types/
 #   https://docs.julialang.org/en/v1/stdlib/Statistics/
 #   https://docs.julialang.org/en/v1/stdlib/Random/
@@ -54,7 +54,7 @@ function fit_gd!(model::GDLinearRegression, xs::Vector{Float64}, ys::Vector{Floa
         c = cost(model, xs, ys)
         push!(model.history, c)
         if epoch % print_every == 0
-            @printf("  epoch %4d  cost=%.4f  w=%.4f  b=%.4f\n", epoch, c, model.w, model.b)
+            @printf("  轮次 %4d  代价=%.4f  w=%.4f  b=%.4f\n", epoch, c, model.w, model.b)
         end
     end
     return model
@@ -116,7 +116,7 @@ function fit_multi!(model::MultiLinearRegression, X::Vector{Vector{Float64}},
         model.bias -= model.lr * ((2.0 / n) * sum(errs))
         if epoch % print_every == 0
             mse = sum(errs .^ 2) / n
-            @printf("  epoch %4d  cost=%.4f\n", epoch, mse)
+            @printf("  轮次 %4d  代价=%.4f\n", epoch, mse)
         end
     end
     return model
@@ -189,7 +189,7 @@ function fit_ridge!(model::RidgeRegression, X::Vector{Vector{Float64}},
         end
         model.bias -= model.lr * ((2.0 / n) * sum(errs))
         if epoch % print_every == 0
-            @printf("  epoch %4d  cost=%.4f  L2=%.4f\n", epoch, mse_v + reg, reg)
+            @printf("  轮次 %4d  代价=%.4f  L2=%.4f\n", epoch, mse_v + reg, reg)
         end
     end
     return model
@@ -198,14 +198,14 @@ end
 
 function demo_simple_regression()
     println("=" ^ 60)
-    println("LINEAR REGRESSION (GRADIENT DESCENT)")
+    println("线性回归（梯度下降）")
     println("=" ^ 60)
     xs, ys = generate_simple_data()
-    @printf("\nGenerated %d samples, true y = 3x + 7 + noise\n", length(xs))
+    @printf("\n生成了 %d 个样本，真实关系 y = 3x + 7 + 噪声\n", length(xs))
     model = GDLinearRegression(0.005)
     fit_gd!(model, xs, ys; epochs=1000, print_every=200)
     preds = predict(model, xs)
-    @printf("\nLearned: y = %.4fx + %.4f\n", model.w, model.b)
+    @printf("\n学习结果：y = %.4fx + %.4f\n", model.w, model.b)
     @printf("R^2: %.4f\n", r_squared(ys, preds))
     return xs, ys
 end
@@ -213,18 +213,18 @@ end
 
 function demo_normal_equation(xs::Vector{Float64}, ys::Vector{Float64})
     println("\n" * "=" ^ 60)
-    println("LINEAR REGRESSION (NORMAL EQUATION)")
+    println("线性回归（正规方程）")
     println("=" ^ 60)
     w, b = fit_normal_equation(xs, ys)
     preds = [w * x + b for x in xs]
-    @printf("\nClosed-form: y = %.4fx + %.4f\n", w, b)
+    @printf("\n闭式解：y = %.4fx + %.4f\n", w, b)
     @printf("R^2: %.4f\n", r_squared(ys, preds))
 end
 
 
 function demo_multiple_regression()
     println("\n" * "=" ^ 60)
-    println("MULTIPLE LINEAR REGRESSION (3 FEATURES)")
+    println("多元线性回归（3 个特征）")
     println("=" ^ 60)
     X_raw, ys_raw = generate_house_data()
     X_scaled, _, _ = standardize(X_raw)
@@ -235,10 +235,10 @@ function demo_multiple_regression()
     model = MultiLinearRegression(3, 0.01)
     fit_multi!(model, X_scaled, ys_scaled; epochs=1000, print_every=200)
     preds = predict_multi(model, X_scaled)
-    @printf("\nStandardized weights: [%.4f, %.4f, %.4f]\n",
+    @printf("\n标准化后的权重：[%.4f, %.4f, %.4f]\n",
             model.weights[1], model.weights[2], model.weights[3])
-    @printf("Standardized bias: %.4f\n", model.bias)
-    @printf("R^2 (scaled space): %.4f\n", r_squared(ys_scaled, preds))
+    @printf("标准化后的偏置：%.4f\n", model.bias)
+    @printf("R^2（标准化空间）：%.4f\n", r_squared(ys_scaled, preds))
     return X_scaled, ys_scaled, model
 end
 
@@ -246,21 +246,21 @@ end
 function demo_ridge(X_scaled::Vector{Vector{Float64}}, ys_scaled::Vector{Float64},
                    plain_model::MultiLinearRegression)
     println("\n" * "=" ^ 60)
-    println("RIDGE REGRESSION (L2)")
+    println("岭回归（L2）")
     println("=" ^ 60)
     ridge = RidgeRegression(3, 0.01, 0.1)
     fit_ridge!(ridge, X_scaled, ys_scaled; epochs=1000, print_every=200)
-    @printf("\nRidge  weights: [%.4f, %.4f, %.4f]\n",
+    @printf("\n岭回归  权重：[%.4f, %.4f, %.4f]\n",
             ridge.weights[1], ridge.weights[2], ridge.weights[3])
-    @printf("Plain  weights: [%.4f, %.4f, %.4f]\n",
+    @printf("普通    权重：[%.4f, %.4f, %.4f]\n",
             plain_model.weights[1], plain_model.weights[2], plain_model.weights[3])
-    println("Ridge shrinks weights toward zero through the L2 penalty.")
+    println("岭回归通过 L2 惩罚项将权重向零收缩。")
 end
 
 
 function demo_train_test_split()
     println("\n" * "=" ^ 60)
-    println("TRAIN/TEST SPLIT")
+    println("训练/测试划分")
     println("=" ^ 60)
     xs, ys = generate_simple_data()
     split = Int(round(0.8 * length(xs)))
@@ -272,8 +272,8 @@ function demo_train_test_split()
     fit_gd!(model, xs_train, ys_train; epochs=1000, print_every=500)
     train_r2 = r_squared(ys_train, predict(model, xs_train))
     test_r2 = r_squared(ys_test, predict(model, xs_test))
-    @printf("\nTrain R^2: %.4f\n", train_r2)
-    @printf("Test  R^2: %.4f\n", test_r2)
+    @printf("\n训练 R^2: %.4f\n", train_r2)
+    @printf("测试 R^2: %.4f\n", test_r2)
 end
 
 
