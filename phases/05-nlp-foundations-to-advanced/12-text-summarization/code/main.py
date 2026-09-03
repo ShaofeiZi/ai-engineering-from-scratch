@@ -79,17 +79,17 @@ def main():
 
     summary = textrank(article, top_k=3)
     joined = " ".join(summary)
-    print("=== TextRank summary ===")
+    print("=== TextRank 摘要 ===")
     for s in summary:
         print(f"  - {s}")
     print()
 
-    print("=== ROUGE against reference ===")
+    print("=== 与参考摘要比较的 ROUGE ===")
     for n in [1, 2]:
         score = rouge_n(joined, reference, n=n)
         print(f"  ROUGE-{n}: {score:.3f}")
     print()
-    print("For production, use the `rouge-score` package with stemming for a proper F-measure.")
+    print("生产环境请使用带词干提取的 `rouge-score` 包，以正确计算 F 值。")
 
 
 if __name__ == "__main__":
