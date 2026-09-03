@@ -111,7 +111,7 @@ def main():
     for word in ["cat", "dog", "sat", "chased"]:
         idx = vocab[word]
         top = nearest(vocab, W, W[idx], topk=4, exclude={idx})
-        print(f"nearest to {word}:")
+        print(f"与 {word} 最接近的词：")
         for w, s in top:
             print(f"  {w:12s} {s:.3f}")
         print()
