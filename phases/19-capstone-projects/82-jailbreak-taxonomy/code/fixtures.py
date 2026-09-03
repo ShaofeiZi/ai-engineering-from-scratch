@@ -1,8 +1,8 @@
-"""Hand-built corpus of 50 jailbreak fixtures across six categories.
+"""手工构建的 50 条 jailbreak 固定样本语料，覆盖六个类别。
 
-Every prompt below is original. Targets are intentionally generic (the made-up
-"PolicyBot" assistant) and the harmful intent is left abstract (REDACTED_HARMFUL)
-so the file works as a teaching artifact without carrying anything operational.
+以下每条 prompt 均为原创。目标刻意保持通用（虚构的
+"PolicyBot" 助手），有害意图以抽象形式呈现（REDACTED_HARMFUL），
+使该文件可作为教学材料而不携带任何可操作内容。
 """
 
 from __future__ import annotations

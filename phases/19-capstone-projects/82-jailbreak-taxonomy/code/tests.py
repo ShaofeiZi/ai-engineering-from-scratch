@@ -1,4 +1,4 @@
-"""Unit tests for the jailbreak taxonomy loader and matcher."""
+"""越狱分类体系加载器与匹配器的单元测试。"""
 
 from __future__ import annotations
 
