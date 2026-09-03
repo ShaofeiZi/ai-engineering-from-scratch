@@ -1,11 +1,11 @@
-"""Swarm architecture demo: workers pull from a shared queue.
+"""Swarm 架构演示：worker 从共享队列中拉取任务。
 
-Compares three scheduling strategies on a variable-duration workload:
-  - sequential (1 worker processes all tasks)
-  - fixed assignment (each task pre-assigned to a specific worker)
-  - swarm (4 workers pull from a shared queue)
+对比可变时长工作负载下的三种调度策略：
+  - 顺序执行（1 个 worker 处理所有任务）
+  - 固定分配（每个任务预先分配给特定 worker）
+  - swarm（4 个 worker 从共享队列中拉取任务）
 
-Swarm balances load automatically; fixed assignment leaves fast workers idle.
+Swarm 会自动平衡负载；固定分配会让较快的 worker 闲置。
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from dataclasses import dataclass
 class Task:
     task_id: int
     duration: float
-    pre_assigned: int  # for the fixed-assignment baseline
+    pre_assigned: int  # 用于固定分配基线
 
 
 def fake_work(task: Task) -> str:
@@ -37,7 +37,7 @@ def run_sequential(tasks: list[Task]) -> tuple[float, dict[int, int]]:
 
 
 def run_fixed_assignment(tasks: list[Task], n_workers: int) -> tuple[float, dict[int, int]]:
-    """Each task is pre-assigned to worker id. Worker processes its tasks serially."""
+    """每个任务都预先分配给一个 worker ID。worker 串行处理自己的任务。"""
     per_worker: dict[int, list[Task]] = {i: [] for i in range(n_workers)}
     for t in tasks:
         per_worker[t.pre_assigned].append(t)
@@ -58,7 +58,7 @@ def run_fixed_assignment(tasks: list[Task], n_workers: int) -> tuple[float, dict
 
 
 def run_swarm(tasks: list[Task], n_workers: int) -> tuple[float, dict[int, int]]:
-    """Workers pull from a shared queue."""
+    """worker 从共享队列中拉取任务。"""
     q: queue.Queue = queue.Queue()
     for t in tasks:
         q.put(t)
@@ -86,8 +86,8 @@ def run_swarm(tasks: list[Task], n_workers: int) -> tuple[float, dict[int, int]]
 
 
 def make_tasks(n_workers: int = 4) -> list[Task]:
-    """8 tasks: half fast (0.1s), half slow (0.4s). Pre-assignment is pessimal:
-    worker 0 gets all slow tasks, others get fast ones."""
+    """8 个任务：一半较快（0.1 秒），一半较慢（0.4 秒）。预分配采用最差情况：
+    worker 0 获得所有慢任务，其他 worker 获得快任务。"""
     tasks: list[Task] = []
     for i in range(8):
         is_slow = i < 4
@@ -102,33 +102,33 @@ def make_tasks(n_workers: int = 4) -> list[Task]:
 
 
 def main() -> None:
-    print("Swarm architecture demo — variable-duration workload")
+    print("Swarm 架构演示 — 可变时长工作负载")
     print("-" * 56)
     n_workers = 4
 
     tasks = make_tasks(n_workers)
     total_work = sum(t.duration for t in tasks)
-    print(f"{len(tasks)} tasks, 4 slow (0.4s) + 4 fast (0.1s)")
-    print(f"Total work-seconds: {total_work:.2f}s")
-    print(f"Ideal parallel time with {n_workers} workers: {total_work / n_workers:.2f}s")
+    print(f"{len(tasks)} 个任务，4 个慢任务（0.4 秒）+ 4 个快任务（0.1 秒）")
+    print(f"总工作时间：{total_work:.2f} 秒")
+    print(f"使用 {n_workers} 个 worker 时的理想并行时间：{total_work / n_workers:.2f} 秒")
 
     seq_time, seq_counts = run_sequential(tasks)
-    print(f"\nSequential (1 worker):      wall={seq_time:.2f}s, counts={seq_counts}")
+    print(f"\n顺序执行（1 个 worker）：实际耗时={seq_time:.2f} 秒，计数={seq_counts}")
 
     fixed_time, fixed_counts = run_fixed_assignment(tasks, n_workers)
-    print(f"Fixed assignment ({n_workers} workers): wall={fixed_time:.2f}s, counts={fixed_counts}")
-    print("  worker 0 got all 4 slow tasks; other workers idle after their fast ones.")
+    print(f"固定分配（{n_workers} 个 worker）：实际耗时={fixed_time:.2f} 秒，计数={fixed_counts}")
+    print("  worker 0 获得全部 4 个慢任务；其他 worker 完成快任务后处于闲置状态。")
 
     swarm_time, swarm_counts = run_swarm(tasks, n_workers)
-    print(f"Swarm ({n_workers} workers):            wall={swarm_time:.2f}s, counts={swarm_counts}")
-    print("  load balances automatically — slow workers finish first, fast pull next job.")
+    print(f"Swarm（{n_workers} 个 worker）：实际耗时={swarm_time:.2f} 秒，计数={swarm_counts}")
+    print("  负载会自动均衡：先完成任务的 worker 会拉取下一个任务。")
 
     speedup_vs_seq = seq_time / swarm_time if swarm_time > 0 else float("inf")
     speedup_vs_fixed = fixed_time / swarm_time if swarm_time > 0 else float("inf")
-    print(f"\nSwarm speedup vs sequential: {speedup_vs_seq:.2f}x")
-    print(f"Swarm speedup vs fixed:      {speedup_vs_fixed:.2f}x")
-    print("\nTakeaway: swarm wins when duration varies and assignment is hard to predict.")
-    print("Tradeoff: no central trace; debugging requires per-task IDs and durable logs.")
+    print(f"\nSwarm 相对顺序执行的加速比：{speedup_vs_seq:.2f}x")
+    print(f"Swarm 相对固定分配的加速比：{speedup_vs_fixed:.2f}x")
+    print("\n要点：当任务时长不一且难以预先分配时，swarm 更有优势。")
+    print("权衡：没有集中式轨迹；调试需要逐任务 ID 和持久化日志。")
 
 
 if __name__ == "__main__":
