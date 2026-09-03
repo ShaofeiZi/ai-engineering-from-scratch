@@ -67,36 +67,36 @@ def build_custom_maskrcnn(num_classes):
 
 
 def freeze_backbone(model):
-    # torchvision Mask R-CNN's backbone includes the FPN (model.backbone.fpn),
-    # so freezing model.backbone.parameters() also freezes the FPN parameters.
+    # torchvision Mask R-CNN 的骨干网络包含 FPN（model.backbone.fpn），
+    # 因此冻结 model.backbone.parameters() 也会冻结 FPN 参数。
     for p in model.backbone.parameters():
         p.requires_grad = False
     return model
 
 
 def main():
-    print("[roi_align] comparing ours vs torchvision.ops.roi_align")
+    print("[roi_align] 对比自实现与 torchvision.ops.roi_align")
     diffs = compare_with_torchvision_roi_align()
     for i, d in enumerate(diffs):
-        print(f"  box {i}: max|diff|={d:.2e}")
+        print(f"  边界框 {i}：最大|差值|={d:.2e}")
 
     try:
-        print("\n[pretrained] loading maskrcnn_resnet50_fpn_v2 (downloads on first run)")
+        print("\n[预训练] 加载 maskrcnn_resnet50_fpn_v2（首次运行时下载）")
         model = load_pretrained_maskrcnn()
         with torch.no_grad():
             p = model([torch.randn(3, 200, 300)])[0]
-        print(f"  boxes:  {tuple(p['boxes'].shape)}")
-        print(f"  labels: {tuple(p['labels'].shape)}")
-        print(f"  masks:  {tuple(p['masks'].shape)}")
+        print(f"  边界框：{tuple(p['boxes'].shape)}")
+        print(f"  标签：  {tuple(p['labels'].shape)}")
+        print(f"  掩码：  {tuple(p['masks'].shape)}")
 
-        print("\n[fine-tune setup] swap heads for 5-class dataset, freeze backbone")
+        print("\n[微调设置] 为 5 类数据集替换预测头，并冻结骨干网络")
         custom = build_custom_maskrcnn(num_classes=5)
         custom = freeze_backbone(custom)
         trainable = sum(p.numel() for p in custom.parameters() if p.requires_grad)
         total = sum(p.numel() for p in custom.parameters())
-        print(f"  trainable: {trainable:,}   total: {total:,}")
+        print(f"  可训练：{trainable:,}   总计：{total:,}")
     except Exception as e:
-        print(f"[pretrained] skipped: {e}")
+        print(f"[预训练] 已跳过：{e}")
 
 
 if __name__ == "__main__":
