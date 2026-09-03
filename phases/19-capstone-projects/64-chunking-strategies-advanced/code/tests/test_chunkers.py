@@ -1,4 +1,4 @@
-"""Tests for the five chunking strategies and the recall eval harness."""
+"""五种分块策略与 recall 评估框架的测试。"""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ class TestFixedWindow(unittest.TestCase):
 
     def test_overlap_visible(self) -> None:
         chunks = fixed_window("d", SAMPLE_PROSE, size=60, overlap=20)
-        # Adjacent chunks must share at least the overlap region size by construction
+        # 根据构造方式，相邻分块至少要共享指定大小的重叠区域。
         for a, b in zip(chunks, chunks[1:]):
             self.assertGreaterEqual(a.end - b.start, 20)
 

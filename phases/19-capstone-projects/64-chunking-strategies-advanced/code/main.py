@@ -1,14 +1,14 @@
-"""Chunking strategies, compared on a fixture corpus.
+"""分块策略对比，基于一份固定语料。
 
-Five strategies, one recall@k harness, no third-party retrieval libs.
+五种策略，一套 recall@k 评测框架，不依赖任何第三方检索库。
 
-References (lesson-internal):
+参考（课程内部）：
 - ./docs/en.md
-- Phase 11 lesson 06 (RAG fundamentals)
-- Phase 19 lesson 65 (hybrid retrieval that ranks these chunks)
-- Phase 19 lesson 68 (eval harness that scores the chunker)
+- 第 11 阶段第 06 课（RAG 基础）
+- 第 19 阶段第 65 课（对这些分块进行排序的混合检索）
+- 第 19 阶段第 68 课（为分块器打分的评测框架）
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -32,14 +32,14 @@ class Chunk:
 
 
 # ---------------------------------------------------------------------------
-# strategy 1  --  fixed window
+# 策略 1  --  固定窗口
 # ---------------------------------------------------------------------------
 
 def fixed_window(doc_id: str, text: str, size: int = 400, overlap: int = 80) -> list[Chunk]:
     if size <= 0:
-        raise ValueError("size must be positive")
+        raise ValueError("size 必须为正数")
     if overlap < 0 or overlap >= size:
-        raise ValueError("overlap must be non-negative and smaller than size")
+        raise ValueError("overlap 必须非负且小于 size")
     out: list[Chunk] = []
     step = size - overlap
     i = 0
@@ -54,7 +54,7 @@ def fixed_window(doc_id: str, text: str, size: int = 400, overlap: int = 80) -> 
 
 
 # ---------------------------------------------------------------------------
-# strategy 2  --  sentence packer
+# 策略 2  --  句子打包器
 # ---------------------------------------------------------------------------
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
@@ -101,7 +101,7 @@ def sentence_chunks(doc_id: str, text: str, target: int = 500) -> list[Chunk]:
 
 
 # ---------------------------------------------------------------------------
-# strategy 3  --  recursive split
+# 策略 3  --  递归切分
 # ---------------------------------------------------------------------------
 
 DEFAULT_SEPARATORS = ("\n\n", "\n", ". ", " ")
@@ -131,7 +131,7 @@ def _recursive_split(text: str, base_offset: int, separators: tuple[str, ...],
             pieces.append((base_offset + start, base_offset + start + len(part), part))
         else:
             pieces.extend(_recursive_split(part, base_offset + start, rest, target))
-    # pack contiguous small pieces up to the target.
+    # 将连续的小片段打包至 target 以内。
     packed: list[tuple[int, int, str]] = []
     for p_start, p_end, p_text in pieces:
         if packed and (p_end - packed[-1][0]) <= target:
@@ -149,7 +149,7 @@ def recursive_split(doc_id: str, text: str, target: int = 500,
 
 
 # ---------------------------------------------------------------------------
-# deterministic mock embedding -- hash-based, normalized
+# 确定性 mock 嵌入 -- 基于哈希、归一化
 # ---------------------------------------------------------------------------
 
 def _token_hashes(text: str, dim: int) -> list[float]:
@@ -174,7 +174,7 @@ def cosine(a: list[float], b: list[float]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# strategy 4  --  semantic clustering
+# 策略 4  --  语义聚类
 # ---------------------------------------------------------------------------
 
 def semantic_chunks(doc_id: str, text: str, similarity_threshold: float = 0.55,
@@ -220,7 +220,7 @@ def semantic_chunks(doc_id: str, text: str, similarity_threshold: float = 0.55,
 
 
 # ---------------------------------------------------------------------------
-# strategy 5  --  structural markdown
+# 策略 5  --  结构化 markdown
 # ---------------------------------------------------------------------------
 
 _HEADER = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
@@ -241,7 +241,7 @@ def structural_markdown(doc_id: str, text: str) -> list[Chunk]:
 
 
 # ---------------------------------------------------------------------------
-# dense index used for ranking
+# 用于排序的稠密索引
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -259,7 +259,7 @@ class DenseIndex:
 
 
 # ---------------------------------------------------------------------------
-# fixture corpus + gold answer spans
+# 固定语料 + 标准答案区间
 # ---------------------------------------------------------------------------
 
 PROSE_DOC = (
@@ -354,7 +354,7 @@ def build_fixture() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# eval -- recall@k per strategy
+# 评测 -- 每种策略的 recall@k
 # ---------------------------------------------------------------------------
 
 ChunkFn = Callable[[str, str], list[Chunk]]
@@ -389,17 +389,17 @@ STRATEGIES: dict[str, ChunkFn] = {
 def main() -> None:
     fixture = build_fixture()
     ks = (1, 3, 5)
-    print(f"{'strategy':<12} | " + " | ".join(f"recall@{k}" for k in ks))
+    print(f"{'策略':<12} | " + " | ".join(f"recall@{k}" for k in ks))
     print("-" * 44)
     for name, fn in STRATEGIES.items():
         recall = eval_recall(fn, fixture, ks)
         row = " | ".join(f"  {recall[k]:.2f}  " for k in ks)
         print(f"{name:<12} | {row}")
     print()
-    print("chunk counts per strategy (across all fixture docs):")
+    print("每种策略的分块数量（覆盖所有语料文档）：")
     for name, fn in STRATEGIES.items():
         n = sum(len(fn(d["doc_id"], d["text"])) for d in fixture)
-        print(f"  {name:<12} {n} chunks")
+        print(f"  {name:<12} {n} 个分块")
 
 
 if __name__ == "__main__":
