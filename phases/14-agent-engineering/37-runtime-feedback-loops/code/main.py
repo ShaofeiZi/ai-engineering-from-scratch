@@ -1,11 +1,10 @@
-"""Wrap subprocess.run with structured capture, secret redaction, rotation, and command lineage.
+"""用结构化捕获、密钥脱敏、轮转和命令谱系来封装 subprocess.run。
 
-Every shell command goes through run_with_feedback. Records carry argv, redacted
-stdout/stderr tails, exit code, duration, started_at, agent note, and a
-command_id/parent_command_id pair so retries trace back to their origin. The
-JSONL file rotates at 1 MB to keep loader memory bounded.
+每条 shell 命令都经过 run_with_feedback.。记录包含 argv、已脱敏的
+stdout/stderr 尾部、退出码、耗时、started_at、代理备注以及一个
+command_id/parent_command_id 对，使重试可追溯到其来源。JSONL 文件在 1 MB 时轮转，以保持加载器内存有界。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -27,7 +26,7 @@ TAIL_LINES = 30
 ROTATE_BYTES = 1 * 1024 * 1024  # 1 MB
 MAX_ROTATIONS = 5
 
-# Secret patterns. Audit quarterly against the production runtime's observed leak shapes.
+# 密钥模式。每季度根据生产运行时观测到的泄漏形状进行审计。
 REDACTION_PATTERNS = [
     (re.compile(r"(?i)bearer\s+[A-Za-z0-9._\-]+"), "Bearer [REDACTED]"),
     (re.compile(r"(?i)\b(password|passwd|secret|api[_-]?key|access[_-]?key|token)\s*[:=]\s*\S+"),
@@ -56,7 +55,7 @@ class FeedbackRecord:
 
 
 def redact(text: str) -> tuple[str, int]:
-    """Strip secrets before the JSONL append. Read-time redaction is a foot-gun."""
+    """在 JSONL 追加之前剥离密钥。读取时才脱敏容易引发安全问题。"""
     if not text:
         return text, 0
     hits = 0
@@ -76,14 +75,14 @@ def deterministic_tail(text: str, head: int = HEAD_LINES, tail: int = TAIL_LINES
 
 
 def _process_capture(text: str) -> tuple[str, int, int]:
-    """Truncate first, then redact. Returns (text, cut_lines, redaction_hits)."""
+    """先截断，再脱敏。返回（文本、截断行数、脱敏命中数）。"""
     tailed, cut = deterministic_tail(text)
     redacted, hits = redact(tailed)
     return redacted, cut, hits
 
 
 def maybe_rotate() -> None:
-    """Cap the active file at ROTATE_BYTES; rotate .1 .. .MAX, drop oldest."""
+    """将活跃文件上限设为 ROTATE_BYTES；按 .1 到 .MAX 轮转，丢弃最旧的。"""
     if not RECORD.exists() or RECORD.stat().st_size < ROTATE_BYTES:
         return
     for idx in range(MAX_ROTATIONS, 0, -1):
@@ -157,16 +156,16 @@ def run_with_feedback(
 
 
 def loop_can_advance(record: FeedbackRecord) -> bool:
-    """Refuse to advance the loop when exit code is missing."""
+    """当退出码缺失时拒绝推进循环。"""
     return record.exit_code is not None
 
 
 def load_all() -> list[FeedbackRecord]:
-    """Read active + rotated files so parent-command lineage survives rotation."""
+    """读取活跃文件和轮转文件，使父命令谱系在轮转后仍然保留。"""
     def _rotation_key(p: Path) -> int:
         suffix = p.name[len(RECORD.name):]
         if not suffix:
-            return 0  # active file
+            return 0  # 活跃文件
         try:
             return int(suffix.lstrip("."))
         except ValueError:
@@ -185,12 +184,12 @@ def load_all() -> list[FeedbackRecord]:
                 record = FeedbackRecord(**json.loads(line))
             except (json.JSONDecodeError, TypeError):
                 continue
-            by_id[record.command_id] = record  # active file wins (last loaded)
+            by_id[record.command_id] = record  # 活跃文件优先（最后加载的为准）
     return list(by_id.values())
 
 
 def retry_chain(command_id: str) -> list[FeedbackRecord]:
-    """Walk parent_command_id pointers to reconstruct a retry chain."""
+    """沿 parent_command_id 指针遍历以重建重试链。"""
     records = {r.command_id: r for r in load_all()}
     chain: list[FeedbackRecord] = []
     cursor: str | None = command_id
@@ -222,13 +221,13 @@ def main() -> None:
         print(f"{label}: cid={rec.command_id} parent={rec.parent_command_id or '-'} exit={rec.exit_code} "
               f"duration_ms={rec.duration_ms} redactions={rec.redactions or '-'}")
         if rec.error:
-            print(f"  error: {rec.error}")
+            print(f"  错误：{rec.error}")
         if rec.stdout_tail and "REDACTED" in rec.stdout_tail:
-            print(f"  stdout after redaction: {rec.stdout_tail!r}")
+            print(f"  脱敏后的 stdout：{rec.stdout_tail!r}")
 
     chain = retry_chain(retry.command_id)
-    print(f"\nretry chain for {retry.command_id}: {[r.command_id for r in chain]} (oldest -> newest)")
-    print(f"{len(load_all())} records persisted in {RECORD.name}")
+    print(f"\n{retry.command_id} 的重试链：{[r.command_id for r in chain]}（从最旧到最新）")
+    print(f"{len(load_all())} 条记录已持久化到 {RECORD.name}")
 
 
 if __name__ == "__main__":
