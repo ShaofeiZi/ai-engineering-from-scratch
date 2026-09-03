@@ -1,9 +1,9 @@
-"""Constitutional AI self-critique + GRPO rule-reward loop.
+"""宪法AI自律+GRPO规则奖励循环.
 
-Runs end-to-end in pure stdlib + numpy. The CAI loop uses a handwritten critic
-that stands in for an LLM self-judge. The GRPO loop uses a deterministic math
-grader as the reward source. Both loops produce the metrics you would wire
-into a real optimizer.
+在纯stdlib + numpy中运行端到端. CAI循环使用手写评论器
+这代表着一个 "ph3 " 自我裁判。 GRPO 循环使用定数数学
+作为奖励来源 两种循环都会产生你用电线发出的度量
+成为真正的优化者。
 """
 
 from __future__ import annotations
@@ -126,9 +126,9 @@ def grpo_step(
 
 
 def mock_sampler(rng: random.Random) -> Callable[[str], str]:
-    """Stand-in for an LLM policy. Returns a string that sometimes contains
-    the correct answer to a simple arithmetic prompt, sometimes wrapped in
-    <answer> tags, sometimes not. Good enough to exercise the reward shape."""
+    """准备执行LLM政策。 返回有时包含的字符串
+对简单的算术提示的正确答案,有时用
+< 回答> 标记, 有时不是 。 足以锻炼奖励形状."""
 
     def sampler(prompt: str) -> str:
         try:
@@ -180,7 +180,7 @@ def self_improvement_round(
 
 def demo_constitutional_loop() -> None:
     print("=" * 70)
-    print("PART 1 / CONSTITUTIONAL AI SELF-CRITIQUE")
+    print("第1部分/《宪法》")
     print("=" * 70)
     raw = [
         ("What is the capital of France?",
@@ -192,17 +192,17 @@ def demo_constitutional_loop() -> None:
          "and among the many options a reasonable choice would be blue."),
     ]
     for pair in cai_stage_one(raw):
-        print(f"\nPrompt   : {pair['prompt']}")
-        print(f"Principle: {pair['principle']}")
-        print(f"Initial  : {pair['initial']}")
-        print(f"Problems : {pair['problems']}")
-        print(f"Revised  : {pair['revised']}")
-        print(f"Changed? : {pair['changed']}")
+        print(f"\n提示词：{pair['prompt']}")
+        print(f"原则：  {pair['principle']}")
+        print(f"初始回复：{pair['initial']}")
+        print(f"问题：  {pair['problems']}")
+        print(f"修订回复：{pair['revised']}")
+        print(f"是否改变：{pair['changed']}")
 
 
 def demo_grpo_loop() -> None:
     print("\n" + "=" * 70)
-    print("PART 2 / GRPO WITH RULE-BASED REWARDS")
+    print("第 2 部分：GRPO 与基于规则的奖励")
     print("=" * 70)
     rng = random.Random(42)
     sampler = mock_sampler(rng)
@@ -215,7 +215,7 @@ def demo_grpo_loop() -> None:
     group_size = 8
 
     for round_idx in range(3):
-        print(f"\n-- Round {round_idx + 1} / group_size={group_size} --")
+        print(f"\n-- 轮次 {round_idx + 1} / group_size={group_size} --")
         result = self_improvement_round(prompts, sampler, group_size=group_size)
         for m in result["per_prompt"]:
             print(
@@ -224,21 +224,21 @@ def demo_grpo_loop() -> None:
                 f"best={m['best_reward']:.3f}  "
                 f"std={m['std_reward']:.3f}"
             )
-        print(f"  overall mean reward: {result['overall_mean']:.3f}")
+        print(f"  总体平均奖励：{result['overall_mean']:.3f}")
 
-    print("\n-- Synthetic GRPO update --")
+    print("\n - 合成 GRPO 更新 -")
     rewards = [1.0, 0.0, 0.1, 0.0, 1.0, 1.0, 0.0, 0.1]
     advantages = group_relative_advantage(rewards)
     policy_logprobs = np.array([-1.2, -2.1, -1.9, -2.4, -1.1, -1.0, -2.3, -2.0])
     ref_logprobs = policy_logprobs - 0.05
     stats = grpo_step(policy_logprobs, ref_logprobs, advantages)
-    print(f"  rewards       : {rewards}")
-    print(f"  advantages    : {advantages.round(3).tolist()}")
-    print(f"  policy_loss   : {stats['policy_loss']:.4f}")
-    print(f"  kl            : {stats['kl']:.4f}")
-    print(f"  total_loss    : {stats['total_loss']:.4f}")
-    print(f"  mean ratio    : {stats['mean_ratio']:.4f}")
-    print(f"  adv range     : {stats['advantage_range']:.4f}")
+    print(f"  奖励：        {rewards}")
+    print(f"  优势值：      {advantages.round(3).tolist()}")
+    print(f"  策略损失：    {stats['policy_loss']:.4f}")
+    print(f"  KL：          {stats['kl']:.4f}")
+    print(f"  总损失：      {stats['total_loss']:.4f}")
+    print(f"  平均比率：    {stats['mean_ratio']:.4f}")
+    print(f"  优势值范围：  {stats['advantage_range']:.4f}")
 
 
 if __name__ == "__main__":
@@ -247,5 +247,5 @@ if __name__ == "__main__":
     demo_constitutional_loop()
     demo_grpo_loop()
     print("\n" + "=" * 70)
-    print("DONE")
+    print("完成")
     print("=" * 70)
