@@ -1,4 +1,4 @@
-"""Unit tests for cross-attention fusion."""
+"""交叉注意力融合的单元测试。"""
 
 from __future__ import annotations
 
