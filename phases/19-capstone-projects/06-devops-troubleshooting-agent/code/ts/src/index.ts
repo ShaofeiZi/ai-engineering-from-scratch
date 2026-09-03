@@ -1,6 +1,6 @@
-// Capstone 06 entrypoint: DevOps troubleshooting agent Slack integration.
-// Source: ../../docs/en.md (Slack brief + approval buttons, gated MCP behind approval).
-// References:
+// 综合项目 06 入口：DevOps 故障排查智能体的 Slack 集成。
+// 来源：../../docs/en.md（Slack 摘要 + 审批按钮，MCP 受审批门禁保护）。
+// 参考资料：
 //   Slack request signing v0 https://api.slack.com/authentication/verifying-requests-from-slack
 //   Slack Block Kit          https://api.slack.com/reference/block-kit/blocks
 //   HMAC-SHA256 (RFC 2104)   https://datatracker.ietf.org/doc/html/rfc2104
@@ -57,7 +57,7 @@ function signedHeaders(body: string, opts: SignedOpts = {}): Record<string, stri
 async function runDemo(): Promise<void> {
   const { app, outboundLog } = buildApp({ signingSecret: SECRET });
   console.log("=".repeat(72));
-  console.log("CAPSTONE 06 - SLACK INTEGRATION SKELETON (TypeScript)");
+  console.log("综合项目 06——SLACK 集成骨架（TypeScript）");
   console.log("=".repeat(72));
 
   const slashBody = new URLSearchParams({
@@ -85,7 +85,7 @@ async function runDemo(): Promise<void> {
       req: () => doRequest("/health"),
     },
     {
-      label: "POST /slack/command with valid signature",
+      label: "POST /slack/command，签名有效",
       expect: 200,
       req: () =>
         doRequest("/slack/command", {
@@ -95,7 +95,7 @@ async function runDemo(): Promise<void> {
         }),
     },
     {
-      label: "POST /slack/command with tampered signature",
+      label: "POST /slack/command，签名被篡改",
       expect: 401,
       req: () =>
         doRequest("/slack/command", {
@@ -105,7 +105,7 @@ async function runDemo(): Promise<void> {
         }),
     },
     {
-      label: "POST /slack/command with stale timestamp",
+      label: "POST /slack/command，时间戳已过期",
       expect: 401,
       req: () =>
         doRequest("/slack/command", {
@@ -115,7 +115,7 @@ async function runDemo(): Promise<void> {
         }),
     },
     {
-      label: "POST /slack/interactivity approve",
+      label: "POST /slack/interactivity，批准操作",
       expect: 200,
       req: () =>
         doRequest("/slack/interactivity", {
@@ -131,14 +131,14 @@ async function runDemo(): Promise<void> {
     const resp = await c.req();
     const body = await resp.text();
     console.log(`\n${c.label}`);
-    console.log(`  status=${resp.status} expect=${c.expect}`);
-    console.log(`  body=${body.slice(0, 120)}`);
+    console.log(`  状态=${resp.status} 预期=${c.expect}`);
+    console.log(`  响应体=${body.slice(0, 120)}`);
     if (resp.status === c.expect) ok += 1;
   }
 
   console.log("\n" + "-".repeat(72));
-  console.log(`probes ok=${ok}/${checks.length}`);
-  console.log(`outbound slack calls logged=${outboundLog.length}`);
+  console.log(`探测通过=${ok}/${checks.length}`);
+  console.log(`已记录 Slack 出站调用=${outboundLog.length}`);
 }
 
 function startServer(): void {
@@ -155,7 +155,7 @@ function startServer(): void {
   });
   server.listen(port, "127.0.0.1", () => {
     const addr = server.address() as AddressInfo;
-    console.log(`slack-integration listening on http://127.0.0.1:${addr.port}`);
+    console.log(`Slack 集成正在监听 http://127.0.0.1:${addr.port}`);
   });
   process.on("SIGINT", () => server.close(() => process.exit(0)));
   process.on("SIGTERM", () => server.close(() => process.exit(0)));
@@ -170,6 +170,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error("startup failed:", err);
+  console.error("启动失败：", err);
   process.exit(1);
 });

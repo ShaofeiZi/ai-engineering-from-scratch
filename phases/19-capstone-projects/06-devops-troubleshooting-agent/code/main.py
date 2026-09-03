@@ -1,12 +1,10 @@
-"""DevOps troubleshooting agent — K8s knowledge graph + HITL approval gate.
+"""DevOps 故障排查智能体——K8s 知识图谱 + HITL 审批门禁。
 
-The hard architectural primitives are (a) a K8s knowledge graph that lets
-root-cause analysis walk from an alerted object to its neighbors with
-telemetry overlays, and (b) a read-only-by-default tool surface where every
-destructive command is gated by a human-in-the-loop approval and every
-considered command is audit-logged. This scaffold implements both.
+关键架构原语包括：(a) K8s 知识图谱，使根因分析能够从告警对象遍历到其邻居，
+并叠加遥测数据；(b) 默认只读的工具接口，每条破坏性命令都必须通过人在回路
+审批，而且每条被考虑的命令都会写入审计日志。此脚手架实现了这两部分。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -18,7 +16,7 @@ from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
-# K8s knowledge graph  --  objects + telemetry overlay edges
+# K8s 知识图谱——对象 + 遥测叠加边
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -75,7 +73,7 @@ def build_sample_cluster() -> Graph:
 
 
 # ---------------------------------------------------------------------------
-# hypothesis ranking  --  recency * specificity * citation count
+# 假设排序——时效性 * 特异性 * 引用数量
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -96,17 +94,16 @@ class Hypothesis:
 
 
 def root_cause(g: Graph, alerted: str) -> list[Hypothesis]:
-    """Walk outward from the alerted object, collect telemetry,
-    and propose ranked hypotheses."""
+    """从告警对象向外遍历，收集遥测数据并提出排序后的假设。"""
     hyps: list[Hypothesis] = []
-    # nearest telemetry siblings
+    # 最近的遥测同级节点
     telemetry: list[Node] = []
     for rel, neighbor_key in g.neighbors(alerted):
         n = g.nodes.get(neighbor_key)
         if n and n.kind in ("Prom", "Loki", "Tempo"):
             telemetry.append(n)
 
-    # hypothesis: bad rollout if recent deploy + observing error surge
+    # 假设：若近期部署后观察到错误激增，则可能是发布异常
     dep = g.nodes.get(alerted)
     if dep and dep.kind == "Deployment":
         mins = int(str(dep.attrs.get("deployed_at", "?")).split("m")[0]) if "m" in str(dep.attrs.get("deployed_at", "")) else 999
@@ -118,7 +115,7 @@ def root_cause(g: Graph, alerted: str) -> list[Hypothesis]:
             path_len=0,
         ))
 
-    # hypothesis: node-level issue (noisy neighbor / kernel)
+    # 假设：节点级问题（嘈杂邻居 / 内核）
     nodes = [g.nodes[dst] for _, dst in g.neighbors(alerted) if dst.startswith("Node/")]
     if nodes:
         hyps.append(Hypothesis(
@@ -129,7 +126,7 @@ def root_cause(g: Graph, alerted: str) -> list[Hypothesis]:
             path_len=2,
         ))
 
-    # hypothesis: service mesh / DNS
+    # 假设：服务网格 / DNS
     hyps.append(Hypothesis(
         title="DNS flap in kube-system/coredns",
         citations=[],
@@ -142,7 +139,7 @@ def root_cause(g: Graph, alerted: str) -> list[Hypothesis]:
 
 
 # ---------------------------------------------------------------------------
-# approval gate + audit log  --  every considered command tracked
+# 审批门禁 + 审计日志——追踪每条被考虑的命令
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -184,7 +181,7 @@ class Agent:
 
 
 # ---------------------------------------------------------------------------
-# demo  --  full alert -> graph walk -> ranked hypotheses -> slack gate
+# 演示——完整的告警 -> 图遍历 -> 假设排序 -> Slack 门禁流程
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -192,31 +189,31 @@ def main() -> None:
     agent = Agent(graph=g)
 
     alerted = "Deployment/checkout-api"
-    print(f"=== alert received: {alerted} (error rate 14%) ===")
+    print(f"=== 收到告警：{alerted}（错误率 14%）===")
 
-    # agent pulls read-only telemetry first
+    # 智能体首先拉取只读遥测数据
     agent.call("promql", {"query": "rate(http_requests_total{status=~'5..'}[5m])"})
     agent.call("logql", {"query": '{app="checkout-api"} |~ "stack"'})
 
     hyps = root_cause(g, alerted)
-    print("\nranked hypotheses:")
+    print("\n排序后的假设：")
     for i, h in enumerate(hyps, 1):
         print(f"  #{i} score={h.score():.3f}  {h.title}")
-        print(f"     citations: {h.citations}")
+        print(f"     引用：{h.citations}")
 
-    # agent proposes rollback but must wait for slack approval
-    print("\nproposing remediation:")
+    # 智能体提出回滚方案，但必须等待 Slack 审批
+    print("\n提出修复方案：")
     ev = agent.call("argocd_rollback", {"app": "checkout-api", "to_revision": 41})
     print(f"  {ev.tool}: {ev.result}")
 
-    # slack approved -> agent executes
-    print("\nslack approval granted by alice@sre")
+    # Slack 已批准 -> 智能体执行
+    print("\nSlack 审批已由 alice@sre 通过")
     ev = agent.call("argocd_rollback",
                     {"app": "checkout-api", "to_revision": 41},
                     approver="alice@sre")
     print(f"  {ev.tool}: {ev.result}")
 
-    print("\naudit log:")
+    print("\n审计日志：")
     for ev in agent.audit:
         print(" ", json.dumps({
             "tool": ev.tool, "executed": ev.executed,

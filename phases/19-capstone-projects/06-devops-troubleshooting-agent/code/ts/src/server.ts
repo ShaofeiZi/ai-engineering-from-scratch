@@ -29,7 +29,7 @@ export function buildApp(options: AppOptions = {}): {
 } {
   const signingSecret = options.signingSecret || process.env.SLACK_SIGNING_SECRET;
   if (!signingSecret) {
-    throw new Error("SLACK_SIGNING_SECRET is required");
+    throw new Error("必须提供 SLACK_SIGNING_SECRET");
   }
   const outboundLog: OutboundCall[] = options.outboundLog ?? [];
   const now = options.now ?? (() => Math.floor(Date.now() / 1000));
@@ -85,7 +85,7 @@ export function buildApp(options: AppOptions = {}): {
     try {
       parsed = InteractivitySchema.parse(JSON.parse(payloadStr));
     } catch {
-      return c.json({ error: "bad interactivity payload" }, 400);
+      return c.json({ error: "交互 payload 无效" }, 400);
     }
     const action = parsed.actions?.[0] ?? {};
     const actionId = action.action_id ?? "unknown";
@@ -97,7 +97,7 @@ export function buildApp(options: AppOptions = {}): {
     return c.json(reply);
   });
 
-  app.notFound((c) => c.json({ error: "not found" }, 404));
+  app.notFound((c) => c.json({ error: "未找到" }, 404));
 
   return { app, outboundLog };
 }
