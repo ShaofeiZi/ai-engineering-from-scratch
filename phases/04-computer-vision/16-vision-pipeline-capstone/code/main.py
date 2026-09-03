@@ -29,7 +29,7 @@ class PipelineResult(BaseModel):
 
 
 class StubDetector(nn.Module):
-    """Minimal stand-in for Mask R-CNN that produces a fixed set of detections."""
+    """Mask R-CNN 的最小替代实现，生成一组固定检测结果。"""
 
     def __init__(self):
         super().__init__()
@@ -78,14 +78,14 @@ class VisionPipeline:
     def preprocess(self, image):
         if isinstance(image, np.ndarray):
             if image.ndim != 3 or image.shape[-1] != 3:
-                raise ValueError(f"expected HxWx3 RGB image, got shape {image.shape}")
+                raise ValueError(f"预期 HxWx3 RGB 图像，实际形状为 {image.shape}")
             tensor = torch.from_numpy(image).permute(2, 0, 1).float() / 255.0
         elif isinstance(image, torch.Tensor):
             if image.ndim != 3 or image.shape[0] != 3:
-                raise ValueError(f"expected (3, H, W) tensor, got shape {tuple(image.shape)}")
+                raise ValueError(f"预期 (3, H, W) 张量，实际形状为 {tuple(image.shape)}")
             tensor = image.float()
         else:
-            raise TypeError(f"image must be numpy ndarray or torch Tensor, got {type(image)}")
+            raise TypeError(f"image 必须是 numpy ndarray 或 torch Tensor，实际类型为 {type(image)}")
         return tensor.to(self.device)
 
     @torch.no_grad()
@@ -198,11 +198,11 @@ def main():
 
     img = (np.random.rand(400, 600, 3) * 255).astype(np.uint8)
     result = pipe.run(img, image_id="demo")
-    print("[result]")
+    print("[结果]")
     print(result.model_dump_json(indent=2)[:400])
     print("...")
 
-    print("\n[benchmark]")
+    print("\n[基准测试]")
     benchmark(pipe, num_runs=10)
 
 
