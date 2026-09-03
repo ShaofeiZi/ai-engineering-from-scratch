@@ -1,10 +1,10 @@
-// Phase 11 · Lesson 05 — Context engineering (TypeScript port).
-// Token budget, sliding-window history compressor, lost-in-the-middle reorder.
-// Token counts use the 1 word ≈ 1.3 tokens heuristic — close enough for budgeting
-// without dragging in tiktoken. Real assemblers swap in a tokenizer at the seam.
-// Refs: https://arxiv.org/abs/2307.03172  (Lost in the Middle — Liu et al.)
-//       https://www.anthropic.com/news/contextual-retrieval
-//       https://platform.openai.com/docs/guides/context-window
+// 第11阶段 05课——背景工程(TypeScript端口).
+// Token 预算, 滑窗历史压缩器, 迷失在中间重排 。
+// Token 计数采用 1 个单词约等于 1.3 个 token 的启发式规则，足以用于预算估算
+// 而不在tiktoken中拖曳。 真正的装配器在接合处以tokenizer进行交换。
+// 参考文献:https://arxiv.org/abs/2307.03172(中途败诉——刘等人)
+// https://www.anthropic.com/news/contextual-retrieval (韩语)
+// https://platform.openai.com/docs/guides/context-window (韩语)
 
 import process from "node:process";
 
@@ -79,9 +79,9 @@ class ContextBudget {
   }
 }
 
-// Liu et al. 2023: attention dips for tokens placed in the middle of long
-// contexts. So we put the highest-relevance docs at the head AND tail and
-// hide the weakest in the middle.
+// 刘等人 2023年:将 " ph1 " 的 "ph0 " 涂料置于长中
+// 环境。 所以我们在头部和尾部 加上最高相关性的文档
+// 将最弱者藏在中间.
 function reorderLostInMiddle<T>(items: T[], scores: number[]): T[] {
   const paired = items.map((item, i) => ({ item, score: scores[i] ?? 0 }));
   paired.sort((a, b) => b.score - a.score);
@@ -108,8 +108,8 @@ class ConversationManager {
     this.compress();
   }
 
-  // Sliding window with cheap summarisation. Real systems summarise with an
-  // LLM; here we keep just the first 100 chars of each compacted turn.
+  // 滑窗与便宜的总结。 真实系统以一个
+  // LLM; 这里仅保留每个压缩转弯的前100个字符 。
   private compress(): void {
     let total = this.totalTurnTokens();
     while (total > this.maxHistoryTokens && this.turns.length > 4) {

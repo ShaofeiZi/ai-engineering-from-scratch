@@ -52,16 +52,16 @@ class ContextBudget:
     def report(self):
         total_used = sum(self.allocations.values())
         lines = []
-        lines.append(f"\n  Context Budget Report ({self.max_tokens:,} token window)")
+        lines.append(f"\n  上下文预算报告（{self.max_tokens:,} token 窗口）")
         lines.append("  " + "-" * 55)
         for component, tokens in self.allocations.items():
             pct = tokens / self.max_tokens * 100
             bar = "#" * int(pct * 2) if pct >= 0.5 else ""
-            lines.append(f"    {component:<25} {tokens:>6} tokens ({pct:>5.1f}%) {bar}")
+            lines.append(f"    {component:<25} {tokens:>6} 个 token（{pct:>5.1f}%）{bar}")
         lines.append("  " + "-" * 55)
-        lines.append(f"    {'Used':<25} {total_used:>6} tokens ({total_used/self.max_tokens*100:.1f}%)")
-        lines.append(f"    {'Generation reserve':<25} {self.generation_reserve:>6} tokens")
-        lines.append(f"    {'Remaining':<25} {self.remaining():>6} tokens")
+        lines.append(f"    {'已使用':<25} {total_used:>6} 个 token（{total_used/self.max_tokens*100:.1f}%）")
+        lines.append(f"    {'生成预留':<25} {self.generation_reserve:>6} 个 token")
+        lines.append(f"    {'剩余':<25} {self.remaining():>6} 个 token")
         return "\n".join(lines)
 
 
@@ -301,7 +301,7 @@ class ContextEngine:
 
 def run_budget_demo():
     print("=" * 60)
-    print("  STEP 1: Context Budget Manager")
+    print("步骤 1：上下文预算管理器")
     print("=" * 60)
 
     budget = ContextBudget(max_tokens=128000, generation_reserve=4000)
@@ -315,7 +315,7 @@ def run_budget_demo():
 
 def run_reorder_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 2: Lost-in-the-Middle Reordering")
+    print("步骤 2：缓解中间位置遗忘的重排")
     print("=" * 60)
 
     docs = [
@@ -331,19 +331,19 @@ def run_reorder_demo():
 
     reordered = reorder_lost_in_middle(docs, scores)
 
-    print(f"\n  Original order (by insertion):")
+    print("\n  原始顺序（按插入顺序）：")
     for doc, score in zip(docs, scores):
         print(f"    {score:.2f}  {doc}")
 
-    print(f"\n  Reordered (high relevance at start + end, low in middle):")
+    print("\n  重排后（高相关内容位于开头和结尾，低相关内容位于中间）：")
     for i, doc in enumerate(reordered):
-        position = "START" if i < 2 else "END" if i >= len(reordered) - 2 else "middle"
+        position = "开头" if i < 2 else "结尾" if i >= len(reordered) - 2 else "中间"
         print(f"    [{position:>6}]  {doc}")
 
 
 def run_conversation_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 3: Conversation History Compression")
+    print("步骤 3：对话历史压缩")
     print("=" * 60)
 
     conv = ConversationManager(max_history_tokens=200)
@@ -360,17 +360,17 @@ def run_conversation_demo():
         conv.add_turn("user", user_msg)
         conv.add_turn("assistant", assistant_msg)
         stats = conv.stats()
-        print(f"\n  After turn {i + 1}:")
-        print(f"    Live turns: {stats['live_turns']}, Summaries: {stats['summaries']}, Tokens: {stats['tokens']}")
+        print(f"\n  第 {i + 1} 轮之后：")
+        print(f"    当前轮次：{stats['live_turns']}，摘要数：{stats['summaries']}，token 数：{stats['tokens']}")
 
-    print(f"\n  Final context:")
+    print("\n  最终上下文：")
     for line in conv.get_context().split("\n"):
         print(f"    {line}")
 
 
 def run_tool_selection_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 4: Dynamic Tool Selection")
+    print("步骤 4：动态工具选择")
     print("=" * 60)
 
     test_queries = [
@@ -382,22 +382,22 @@ def run_tool_selection_demo():
         "Read the config file and check for database connection settings",
     ]
 
-    print(f"\n  All tools: {list(TOOL_REGISTRY.keys())} ({sum(t['tokens'] for t in TOOL_REGISTRY.values())} total tokens)")
+    print(f"\n  全部工具：{list(TOOL_REGISTRY.keys())}（共 {sum(t['tokens'] for t in TOOL_REGISTRY.values())} 个 token）")
 
     for q in test_queries:
         tools, tokens = select_tools(q)
         intents = classify_intent(q)
         all_tokens = sum(t["tokens"] for t in TOOL_REGISTRY.values())
         savings = all_tokens - tokens
-        print(f"\n  Query: {q[:60]}...")
-        print(f"    Intents: {intents}")
-        print(f"    Selected: {list(tools.keys())}")
-        print(f"    Tokens: {tokens} (saved {savings} by pruning)")
+        print(f"\n  查询：{q[:60]}...")
+        print(f"    意图：{intents}")
+        print(f"    已选择：{list(tools.keys())}")
+        print(f"    token 数：{tokens}（裁剪后节省 {savings} 个）")
 
 
 def run_full_pipeline_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 5: Full Context Assembly Pipeline")
+    print("步骤 5：完整上下文组装管道")
     print("=" * 60)
 
     engine = ContextEngine(max_tokens=128000, generation_reserve=4000)
@@ -409,11 +409,11 @@ def run_full_pipeline_demo():
     ]
 
     for q in queries:
-        print(f"\n  Query: {q}")
+        print(f"\n  查询：{q}")
         budget = engine.chat(q)
         print(budget.report())
 
-    print(f"\n  --- After building up conversation history ---")
+    print("\n  --- 累积对话历史后 ---")
     for i in range(6):
         engine.conversation.add_turn("user", f"Follow-up question {i+1} about the database migration and authentication setup")
         engine.conversation.add_turn("assistant", f"Detailed response {i+1} covering the technical architecture and implementation steps")
@@ -421,12 +421,12 @@ def run_full_pipeline_demo():
     budget = engine.chat("Now implement all the changes we discussed in the previous turns")
     print(budget.report())
     conv_stats = engine.conversation.stats()
-    print(f"\n  Conversation state: {conv_stats['live_turns']} live turns, {conv_stats['summaries']} summaries, {conv_stats['tokens']} tokens")
+    print(f"\n  对话状态：{conv_stats['live_turns']} 个当前轮次，{conv_stats['summaries']} 个摘要，{conv_stats['tokens']} 个 token")
 
 
 def run_relevance_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 6: Relevance Scoring + Filtering")
+    print("步骤 6：相关性评分与过滤")
     print("=" * 60)
 
     knowledge = [
@@ -443,8 +443,8 @@ def run_relevance_demo():
     query = "How do I fix the JWT authentication token expiry bug?"
     scores = score_relevance(query, knowledge)
 
-    print(f"\n  Query: {query}")
-    print(f"\n  Relevance scores:")
+    print(f"\n  查询：{query}")
+    print("\n  相关性分数：")
     for doc, score in sorted(zip(knowledge, scores), key=lambda x: -x[1]):
         marker = "*" if score >= 0.05 else " "
         print(f"    {marker} {score:.3f}  {doc[:70]}...")
@@ -452,8 +452,8 @@ def run_relevance_demo():
     threshold = 0.05
     included = sum(1 for s in scores if s >= threshold)
     excluded = len(scores) - included
-    print(f"\n  Threshold {threshold}: {included} included, {excluded} excluded")
-    print(f"  Token savings: ~{excluded * 20} tokens from excluded docs")
+    print(f"\n  阈值 {threshold}：纳入 {included} 条，排除 {excluded} 条")
+    print(f"  token 节省量：排除文档约节省 {excluded * 20} 个 token")
 
 
 if __name__ == "__main__":
