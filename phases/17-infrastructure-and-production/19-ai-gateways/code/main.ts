@@ -1,34 +1,34 @@
 /**
- * AI gateway skeleton — TypeScript port.
+ * AI 网关骨架——TypeScript 移植版。
  *
- * Implements the four core gateway primitives from docs/en.md:
- *   1. Auth: API-key check with constant-time comparison + per-tenant resolution.
- *   2. Rate limit: token-bucket per tenant; LiteLLM-style.
- *   3. Retry: exponential backoff with jitter on transient 429/5xx; bounded.
- *   4. Fallback chain: try providers in order until one succeeds.
+ * 实现 docs/en.md 中的四种核心网关原语：
+ *   1. 身份验证：以常量时间比较检查 API 密钥，并解析对应租户。
+ *   2. 限流：按租户维护令牌桶，采用 LiteLLM 风格。
+ *   3. 重试：对瞬时 429/5xx 错误执行带抖动、有上限的指数退避。
+ *   4. 回退链：依次尝试提供商，直到成功。
  *
- * Plus the same fallback simulator main.py runs (4 gateway profiles, 3-provider
- * chain, error injection) so the numbers stay reproducible.
+ * 另外还包含与 main.py 相同的回退模拟器（4 种网关配置、三提供商链路和错误注入），
+ * 使结果可复现。
  *
- * Citations:
- *   - Kong AI Gateway benchmark (228% vs Portkey, 859% vs LiteLLM):
+ * 参考资料：
+ *   - Kong AI Gateway 基准测试（比 Portkey 高 228%，比 LiteLLM 高 859%）：
  *     https://konghq.com/blog/engineering/ai-gateway-benchmark-kong-ai-gateway-portkey-litellm
- *   - LiteLLM (MIT OSS, 100+ providers): https://github.com/BerriAI/litellm
- *   - Portkey (Apache 2.0 since March 2026): https://github.com/Portkey-AI/gateway
- *   - Kong AI Gateway docs: https://docs.konghq.com/gateway/latest/ai-gateway/
+ *   - LiteLLM（MIT 开源，支持 100 多家提供商）：https://github.com/BerriAI/litellm
+ *   - Portkey（自 2026 年 3 月起采用 Apache 2.0）：https://github.com/Portkey-AI/gateway
+ *   - Kong AI Gateway 文档：https://docs.konghq.com/gateway/latest/ai-gateway/
  *
- * Runs on Node 20+ stdlib. No npm deps.
+ * 使用 Node 20+ 标准库运行，无 npm 依赖。
  */
 
 import { timingSafeEqual, createHash } from "node:crypto";
 
-// -- Auth ------------------------------------------------------------------
+// -- 身份验证 -------------------------------------------------------------
 
 type Tenant = {
   id: string;
-  // SHA-256 hex of the issued API key. Never store keys in plaintext.
+  // 已签发 API 密钥的 SHA-256 十六进制摘要，绝不以明文存储密钥。
   keyHashHex: string;
-  // Per-tenant tier: shapes rate-limit budgets.
+  // 租户层级，用于确定限流预算。
   tier: "free" | "trial" | "paid";
 };
 
@@ -41,11 +41,10 @@ class AuthService {
     this.hashByKey.set(tenant.keyHashHex, tenant);
   }
 
-  // Constant-time check by digest comparison.
+  // 通过摘要比较进行常量时间检查。
   authenticate(presentedKey: string): Tenant | undefined {
     const digest = createHash("sha256").update(presentedKey).digest("hex");
-    // Walk every known hash so an unknown key has the same wall-clock cost
-    // as a known one.
+    // 遍历所有已知哈希，让未知密钥与已知密钥耗费相同的墙钟时间。
     let match: Tenant | undefined;
     const presented = Buffer.from(digest, "hex");
     for (const t of this.tenants.values()) {
@@ -61,7 +60,7 @@ class AuthService {
   }
 }
 
-// -- Rate limiter (token-bucket) ------------------------------------------
+// -- 限流器（令牌桶） -----------------------------------------------------
 
 type Bucket = {
   tokens: number;
@@ -103,7 +102,7 @@ class TokenBucketLimiter {
     return bucket;
   }
 
-  // Returns true if the request fits within the bucket; false otherwise.
+  // 请求未超出令牌桶容量时返回 true，否则返回 false。
   allow(tenant: Tenant, cost = 1): boolean {
     const bucket = this.getOrCreate(tenant);
     const nowNs = this.now();
@@ -121,7 +120,7 @@ class TokenBucketLimiter {
   }
 }
 
-// -- Provider abstraction + retry/fallback --------------------------------
+// -- 提供商抽象与重试/回退 ------------------------------------------------
 
 type ProviderResponse = {
   provider: string;
@@ -138,16 +137,16 @@ type ProviderError = {
 
 type Provider = {
   name: string;
-  // Call is async because the real one is HTTP. Returns either text + latency
-  // or throws a ProviderError-shaped value.
+  // 真实调用使用 HTTP，因而此调用为异步。返回文本与延迟，或抛出符合
+  // ProviderError 结构的值。
   call(prompt: string): Promise<{ text: string; latencyMs: number }>;
 };
 
-// Mocked provider with deterministic error injection by request counter.
+// 模拟提供商，根据请求计数器确定性地注入错误。
 function makeMockProvider(
   name: string,
   baseLatencyMs: number,
-  // Function that decides whether call #n errors and how.
+  // 决定第 n 次调用是否出错以及如何出错的函数。
   errorPolicy: (n: number) => ProviderError | null,
 ): Provider {
   let n = 0;
@@ -156,7 +155,7 @@ function makeMockProvider(
     async call(prompt: string): Promise<{ text: string; latencyMs: number }> {
       const callN = ++n;
       const err = errorPolicy(callN);
-      // Yield a microtask so we look properly async.
+      // 让出一个微任务，使调用体现真实异步行为。
       await Promise.resolve();
       if (err) {
         throw err;
@@ -172,16 +171,15 @@ function makeMockProvider(
 type RetryConfig = {
   maxAttempts: number;
   baseBackoffMs: number;
-  // For determinism in tests/demos.
+  // 保证测试和演示的确定性。
   jitter: () => number;
   sleep: (ms: number) => Promise<void>;
 };
 
 type RetryOutcome = {
   response: ProviderResponse;
-  // Wall-clock spent across all retry attempts + backoff sleeps for this
-  // single provider. Equals response.latencyMs when the first attempt
-  // succeeds with no backoff.
+  // 单个提供商的所有重试尝试与退避等待所耗费的墙钟时间。首次尝试成功且
+  // 无退避时，它等于 response.latencyMs。
   totalLatencyMs: number;
 };
 
@@ -214,8 +212,8 @@ async function callWithRetry(
       await cfg.sleep(backoffMs);
     }
   }
-  // Surface the last error to the fallback layer.
-  throw lastErr ?? ({ retryable: false, status: 500, message: "unknown" } as ProviderError);
+  // 将最后一个错误暴露给回退层。
+  throw lastErr ?? ({ retryable: false, status: 500, message: "未知错误" } as ProviderError);
 }
 
 async function callWithFallback(
@@ -236,10 +234,10 @@ async function callWithFallback(
       lastErr = err as ProviderError;
     }
   }
-  throw lastErr ?? { retryable: false, status: 500, message: "no providers" };
+  throw lastErr ?? { retryable: false, status: 500, message: "没有可用提供商" };
 }
 
-// -- The gateway -----------------------------------------------------------
+// -- 网关 -----------------------------------------------------------------
 
 class AIGateway {
   constructor(
@@ -258,9 +256,9 @@ class AIGateway {
     | { ok: false; status: number; reason: string }
   > {
     const tenant = this.auth.authenticate(presentedKey);
-    if (!tenant) return { ok: false, status: 401, reason: "invalid api key" };
+    if (!tenant) return { ok: false, status: 401, reason: "API 密钥无效" };
     if (!this.limiter.allow(tenant)) {
-      return { ok: false, status: 429, reason: "rate limit exceeded" };
+      return { ok: false, status: 429, reason: "超过速率限制" };
     }
     try {
       const { response, fallbackHits, totalLatencyMs } = await callWithFallback(
@@ -271,9 +269,8 @@ class AIGateway {
       return {
         ok: true,
         response,
-        // End-to-end wall clock: gateway overhead + every retry attempt +
-        // every backoff sleep + every failed-provider latency leading to the
-        // winning provider.
+        // 端到端墙钟时间：网关开销 + 每次重试 + 每次退避等待 + 成功提供商之前
+        // 所有失败提供商的延迟。
         totalLatencyMs: totalLatencyMs + this.overheadMs,
         fallbackHits,
       };
@@ -284,7 +281,7 @@ class AIGateway {
   }
 }
 
-// -- Simulator (matches main.py shape) ------------------------------------
+// -- 模拟器（与 main.py 结构一致） ---------------------------------------
 
 type ProviderProfile = { name: string; baseLatencyMs: number; errorRate: number };
 
@@ -316,8 +313,8 @@ type SimRow = {
   gateway: string;
   successRate: number;
   meanLatency: number;
-  // Each inner iteration tries one provider exactly once before falling
-  // back, so this counts failed provider attempts, not in-provider retries.
+  // 内层每次迭代只尝试一个提供商一次，然后回退；因此这里统计的是失败的
+  // 提供商尝试，而不是提供商内部重试。
   providerFailures: number;
   fallbackHits: number;
 };
@@ -361,20 +358,20 @@ function simulateFallback(gateway: string, n = 1000, seed = 7): SimRow {
 function reportRow(r: SimRow): void {
   console.log(
     `${r.gateway.padEnd(12)}  ` +
-      `success=${(r.successRate * 100).toFixed(1).padStart(5)}%  ` +
-      `mean_latency=${r.meanLatency.toFixed(0).padStart(6)}ms  ` +
-      `prov_fails=${String(r.providerFailures).padStart(4)}  ` +
-      `fallbacks=${String(r.fallbackHits).padStart(4)}`,
+      `成功率=${(r.successRate * 100).toFixed(1).padStart(5)}%  ` +
+      `平均延迟=${r.meanLatency.toFixed(0).padStart(6)}毫秒  ` +
+      `提供商失败=${String(r.providerFailures).padStart(4)}  ` +
+      `回退=${String(r.fallbackHits).padStart(4)}`,
   );
 }
 
-// -- Demo ------------------------------------------------------------------
+// -- 演示 ------------------------------------------------------------------
 
 async function liveDemo(): Promise<void> {
-  console.log("--- AI gateway primitives (auth + rate limit + retry + fallback) ---");
+  console.log("--- AI 网关原语（身份验证 + 限流 + 重试 + 回退）---");
 
   const auth = new AuthService();
-  // Pre-issue two keys; "secret-paid-key" → paid tier, "secret-free-key" → free.
+  // 预先签发两个密钥："secret-paid-key" 对应付费层，"secret-free-key" 对应免费层。
   const paidHash = createHash("sha256").update("secret-paid-key").digest("hex");
   const freeHash = createHash("sha256").update("secret-free-key").digest("hex");
   auth.register({ id: "tenant-paid", keyHashHex: paidHash, tier: "paid" });
@@ -386,19 +383,19 @@ async function liveDemo(): Promise<void> {
     paid: { capacity: 100, refillPerSec: 10 },
   });
 
-  // Provider 1: 429 on the first call, succeeds afterwards.
+  // 提供商 1：首次调用返回 429，之后成功。
   const flaky = makeMockProvider("openai", 180, (n) =>
     n === 1
       ? { retryable: true, status: 429, message: "rate_limit_exceeded" }
       : null,
   );
-  // Provider 2: 5xx half the time.
+  // 提供商 2：一半调用返回 5xx。
   const wobble = makeMockProvider("anthropic", 220, (n) =>
     n % 2 === 1
       ? { retryable: true, status: 503, message: "upstream_unavailable" }
       : null,
   );
-  // Provider 3: always healthy.
+  // 提供商 3：始终健康。
   const healthy = makeMockProvider("self-hosted", 100, () => null);
 
   const retry: RetryConfig = {
@@ -416,42 +413,42 @@ async function liveDemo(): Promise<void> {
     /* overheadMs */ 5,
   );
 
-  console.log("paid tenant — should succeed via retry / fallback:");
+  console.log("付费租户——应通过重试或回退成功：");
   for (let i = 0; i < 3; i++) {
-    const r = await gateway.handle("secret-paid-key", `hello world ${i}`);
+    const r = await gateway.handle("secret-paid-key", `你好，世界 ${i}`);
     console.log("  →", JSON.stringify(r));
   }
 
-  console.log("\nfree tenant — capacity=2, third call hits rate limit:");
+  console.log("\n免费租户——容量为 2，第三次调用触发限流：");
   for (let i = 0; i < 4; i++) {
-    const r = await gateway.handle("secret-free-key", `q ${i}`);
+    const r = await gateway.handle("secret-free-key", `问题 ${i}`);
     console.log("  →", JSON.stringify(r));
   }
 
-  console.log("\nbad key — 401:");
+  console.log("\n错误密钥——401：");
   console.log("  →", JSON.stringify(await gateway.handle("nope", "x")));
 }
 
 function simulatorDemo(): void {
   console.log("\n" + "=".repeat(80));
-  console.log("AI GATEWAY FALLBACK — 3-provider chain under error injection");
+  console.log("AI 网关回退——注入错误时的三提供商链路");
   console.log("=".repeat(80));
   const header =
-    `${"Gateway".padEnd(12)}  ` +
-    `${"Success".padStart(7)}         ${"mean latency".padStart(12)}  prov_fails  fallbacks`;
+    `${"网关".padEnd(12)}  ` +
+    `${"成功率".padStart(7)}         ${"平均延迟".padStart(12)}  提供商失败  回退`;
   console.log(header);
   console.log("-".repeat(header.length));
   for (const gw of ["LiteLLM", "Portkey", "Kong", "Cloudflare"]) {
     reportRow(simulateFallback(gw));
   }
   console.log(
-    "\nNotes: a single-provider target at 3% error rate → 97% success.",
+    "\n说明：单一提供商的错误率为 3% 时，成功率为 97%。",
   );
   console.log(
-    "Two-provider fallback → 99.94% success (complement of 0.03 × 0.02).",
+    "双提供商回退的成功率为 99.94%（0.03 × 0.02 的补集）。",
   );
   console.log(
-    "Three-provider fallback → 99.997% success. Latency rises on fallback.",
+    "三提供商回退的成功率为 99.997%，但回退会增加延迟。",
   );
 }
 
