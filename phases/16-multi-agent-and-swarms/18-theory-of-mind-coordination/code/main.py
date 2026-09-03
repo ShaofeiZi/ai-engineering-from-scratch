@@ -1,9 +1,8 @@
-"""ToM-aware vs zeroth-order agents on a token-collection task, stdlib only.
+"""token 收集任务中的 ToM 感知 Agent 与零阶 Agent 对比，仅使用 stdlib。
 
-Three agents must each collect one token from one of three boxes. They
-cannot communicate; they only observe each other's movement. Zeroth-order
-agents ignore others; first-order ToM agents model which boxes each other
-is targeting. Measured over 200 trials.
+三个 Agent 必须各自从三个盒子之一收集一个 token。它们无法通信，只能观察彼此的
+移动。零阶 Agent 忽略其他 Agent；一阶 ToM Agent 会推测彼此正在瞄准哪个盒子。
+共测量 200 次试验。
 """
 from __future__ import annotations
 
@@ -36,10 +35,10 @@ class Agent:
         if not available:
             return -1
         if not self.tom:
-            # zeroth-order: pick uniformly among remaining boxes; no memory of others
+            # 零阶：在剩余盒子中均匀选择；不记忆其他 Agent
             return rng.choice(available)
-        # first-order ToM: model which boxes others are currently targeting
-        # (inferred from last-turn observations) and avoid them when possible.
+        # 一阶 ToM：根据上一轮的观察，推测其他 Agent 当前瞄准的盒子，
+        # 并尽可能避开这些盒子。
         last_turn_targets = {box for _, box in self.observations[-(len(world.boxes_with_tokens) + 2):]}
         options = [b for b in available if b not in last_turn_targets]
         return rng.choice(options) if options else rng.choice(available)
@@ -49,20 +48,18 @@ class Agent:
 
 
 def run_trial(n_agents: int, n_boxes: int, tom: bool, seed: int, max_turns: int = 10) -> tuple[int, int, int]:
-    """Each turn, agents commit simultaneously. Collisions waste a turn for all
-    but one colliding agent. ToM agents avoid boxes they observed others
-    approach last turn.
+    """每一轮中，Agent 同时提交选择。发生冲突时，除一个 Agent 外，其余参与冲突的
+    Agent 都会浪费一轮。ToM Agent 会避开上一轮观察到其他 Agent 接近的盒子。
 
-    Seed nudge: in turn 0, each ToM agent is pre-primed with a 'preference
-    broadcast' simulating a cheap communication channel (glances, or 'I prefer
-    box-0' prior knowledge). Zeroth-order agents ignore this prime."""
+    种子提示：在第 0 轮，每个 ToM Agent 都预先收到一条“偏好广播”，模拟低成本
+    通信渠道（眼神，或“我偏好 box-0”这样的先验知识）。零阶 Agent 忽略该提示。"""
     rng = random.Random(seed)
     world = World.new(n_boxes)
     agents = [Agent(f"agent-{i}", tom=tom) for i in range(n_agents)]
 
-    # Prime ToM agents with a cheap inference about others' preferences.
-    # Each agent 'prefers' a starting box based on their name. ToM agents see
-    # the others' preferences; zeroth-order agents ignore.
+    # 用对其他 Agent 偏好的低成本推断来预热 ToM Agent。
+    # 每个 Agent 会根据名称“偏好”一个起始盒子。ToM Agent 能看到其他 Agent 的偏好；
+    # 零阶 Agent 则会忽略。
     if tom:
         for i, a in enumerate(agents):
             for j, other in enumerate(agents):
@@ -73,7 +70,7 @@ def run_trial(n_agents: int, n_boxes: int, tom: bool, seed: int, max_turns: int 
     turns = 0
     for t in range(max_turns):
         turns = t + 1
-        # Each uncollected agent commits a target this turn.
+        # 每个尚未收集 token 的 Agent 在本轮提交一个目标。
         commitments: dict[str, int] = {}
         for a in agents:
             if a.collected:
@@ -83,22 +80,22 @@ def run_trial(n_agents: int, n_boxes: int, tom: bool, seed: int, max_turns: int 
                 continue
             commitments[a.name] = choice
 
-        # All other agents observe this turn's commitments (ToM agents use these).
+        # 所有其他 Agent 都会观察本轮提交的目标（ToM Agent 会使用这些信息）。
         for observer in agents:
             for other, box in commitments.items():
                 if other == observer.name:
                     continue
                 observer.observe(other, box)
 
-        # Count collisions: same box chosen by 2+ agents.
+        # 统计冲突：两个或更多 Agent 选择同一个盒子。
         choices = list(commitments.values())
         for box in set(choices):
             n = choices.count(box)
             if n >= 2:
                 duplications += n - 1
 
-        # Resolve: for each box, exactly one agent (first in dict iteration, which is insertion order)
-        # collects; the rest waste the turn.
+        # 解决冲突：每个盒子恰好由一个 Agent 收集（dict 迭代中的第一个，即插入顺序）；
+        # 其余 Agent 浪费本轮。
         taken: set[int] = set()
         for name, box in commitments.items():
             if box in taken:
@@ -118,7 +115,7 @@ def run_trial(n_agents: int, n_boxes: int, tom: bool, seed: int, max_turns: int 
 
 
 def bench(tom: bool, trials: int = 200) -> None:
-    label = "first-order ToM" if tom else "zeroth-order"
+    label = "一阶 ToM" if tom else "零阶"
     tot_completions = 0
     tot_dup = 0
     tot_turns = 0
@@ -130,26 +127,26 @@ def bench(tom: bool, trials: int = 200) -> None:
         tot_turns += turns
         if c == 3:
             full_trials += 1
-    print(f"  {label:16s} full-completion={full_trials}/{trials} "
-          f"  duplications/trial={tot_dup/trials:.2f}"
-          f"  avg_turns={tot_turns/trials:.2f}")
+    print(f"  {label:16s} 完整完成={full_trials}/{trials} "
+          f"  每次试验重复数={tot_dup/trials:.2f}"
+          f"  平均轮数={tot_turns/trials:.2f}")
 
 
 def main() -> None:
     print("=" * 72)
-    print("TOKEN-COLLECTION — 3 agents, 3 boxes, 10-turn budget, 200 trials each")
-    print("agents cannot communicate; they observe each other's movements")
+    print("TOKEN 收集 — 3 个 Agent、3 个盒子、10 轮预算，各进行 200 次试验")
+    print("Agent 无法通信；它们只能观察彼此的移动")
     print("=" * 72)
     bench(tom=False)
     bench(tom=True)
-    print("\nTakeaways:")
-    print("  zeroth-order agents collide on a shared box ~1x per trial (0.96 duplications).")
-    print("  first-order ToM agents, given a cheap preference prime, eliminate collisions")
-    print("  and finish in 1 turn instead of ~2.")
-    print("  the delta is the *measurable* coordination effect -- not a prompt-dressing story.")
-    print("  remove the prime (comment out the observe loop) to see how the effect vanishes;")
-    print("  Riedl 2025 (arXiv:2510.05174) shows this is why ToM prompting is load-bearing.")
-    print("  long-horizon degradation is documented in Li et al. 2023 with max_turns=30.")
+    print("\n要点：")
+    print("  零阶 Agent 每次试验约发生 1 次共享盒子冲突（0.96 次重复）。")
+    print("  一阶 ToM Agent 在获得低成本偏好提示后会消除冲突，")
+    print("  并在 1 轮而非约 2 轮内完成任务。")
+    print("  这一差异是可测量的协调效应，而非 prompt 包装出来的故事。")
+    print("  移除提示（注释掉 observe 循环），即可看到该效应如何消失；")
+    print("  Riedl 2025（arXiv:2510.05174）说明了 ToM prompting 为何至关重要。")
+    print("  Li 等人在 2023 年使用 max_turns=30 记录了长周期退化。")
 
 
 if __name__ == "__main__":
