@@ -1,24 +1,156 @@
 {
-  "phases/15-autonomous-systems/01-long-horizon-agents/docs/en.md": "7501b37f5bcb44996567ca9c304a2505f654fdd31d24274308d3107f035d85fc",
-  "phases/15-autonomous-systems/02-star-family-reasoning/docs/en.md": "dc3da02402c7cd3fdcb173eb7eb9a04b44041d5fb8b45ac804a7052a22628737",
-  "phases/15-autonomous-systems/03-alphaevolve-evolutionary-coding/docs/en.md": "b1e9291727c98bddb07080e724b95cd1b89b78f70fd94f46eb64aff47f1248f8",
-  "phases/15-autonomous-systems/04-darwin-godel-machine/docs/en.md": "43d3cef80a1eb777b641b9ae7a727eb66144d4f63dd750551ee0bc8b715da351",
-  "phases/15-autonomous-systems/05-ai-scientist-v2/docs/en.md": "39e95cca329be5f1fe6e090969854635a2db3bda2f4fb2771cf41a8d6f2248ba",
-  "phases/15-autonomous-systems/06-automated-alignment-research/docs/en.md": "b9baea7e1c628eff4a700a67ed30eb3952574c159beb63e8e1def6acce623307",
-  "phases/15-autonomous-systems/07-recursive-self-improvement/docs/en.md": "203b879ffa5b1a34afc51caf2fdedcde5553bb08e1873039b036bd1add6f38b0",
-  "phases/15-autonomous-systems/08-bounded-self-improvement/docs/en.md": "ed3e03bb1c0431173c30bf272e4a484a8264ab6823f305f10850a8e245b207d0",
-  "phases/15-autonomous-systems/09-coding-agent-landscape/docs/en.md": "62d80c824129f6f23833be3473421afaa99330f4dfa617f49108013fe76bfeb3",
-  "phases/15-autonomous-systems/10-claude-code-permission-modes/docs/en.md": "89c7658a26b24a863992b5284936730885ea25c254e3a4b1c1949126da9d683c",
-  "phases/15-autonomous-systems/11-browser-agents/docs/en.md": "fc1ad4d5c053b9effc8840efa4d993faabe6639a80b00a6485529331ddc0d493",
-  "phases/15-autonomous-systems/12-durable-execution/docs/en.md": "adc5aa6f20ee09b6920ab01aec2e062234e9e6620ca58f4e43fc59f073c15bba",
-  "phases/15-autonomous-systems/13-cost-governors/docs/en.md": "4bbc8166514794ae938da3981b90bf55549cde613ad6b5440da67115dbb7fd83",
-  "phases/15-autonomous-systems/14-kill-switches-canaries/docs/en.md": "75ace984dda6cc34bc2dabf0da98bed969cb849bba80530b34e2b65413e4b64d",
-  "phases/15-autonomous-systems/15-propose-then-commit/docs/en.md": "066d62177805838d9d0678e12e73824d860440642edd386b738307c20ee579c4",
-  "phases/15-autonomous-systems/16-checkpoints-rollback/docs/en.md": "a530818bb301abf263f3ca3b331287160ae5f94b4557b5a0cb5e01133f611d62",
-  "phases/15-autonomous-systems/17-constitutional-ai/docs/en.md": "05b75703c17dfa8e118833fd0443e7b95e26216aab1ef97aa9fed34bc6bbadcc",
-  "phases/15-autonomous-systems/18-llama-guard/docs/en.md": "d2e6f91903b8358ead955c4db18c9ba986e51b359d62366e2fc8e4cb23f02d08",
-  "phases/15-autonomous-systems/19-anthropic-rsp/docs/en.md": "239697bb9af9a03e89c8272cab896bbe338000655fb809de8628a40ddeba0d12",
-  "phases/15-autonomous-systems/20-openai-preparedness-deepmind-fsf/docs/en.md": "3a74fd7227a18efce31a8c6da82f774f2c2ad69f196cb48c87d1feb06edbebcc",
-  "phases/15-autonomous-systems/21-metr-external-evaluation/docs/en.md": "21805b2aa6c8fedab76f6f0e4ab35455a73e1020c60544d83357a1f960068468",
-  "phases/15-autonomous-systems/22-cais-caisi-societal-risk/docs/en.md": "1529015064248f4681d5f98f3889c3d938cb29bf7c6b2f82de650573ae2d45a7"
+  "phases/15-autonomous-systems/01-long-horizon-agents/docs/en.md": {
+    "source_sha256": "7501b37f5bcb44996567ca9c304a2505f654fdd31d24274308d3107f035d85fc",
+    "output_sha256": "74b75384d2bab2bd451b1ee027e22450f768788fbfb21c61a8790a8f6a1b095c",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/02-star-family-reasoning/docs/en.md": {
+    "source_sha256": "dc3da02402c7cd3fdcb173eb7eb9a04b44041d5fb8b45ac804a7052a22628737",
+    "output_sha256": "afa7556721cb37bc51457b47072960eac721c22578e8ee94a4a6973537ff9f0e",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/03-alphaevolve-evolutionary-coding/docs/en.md": {
+    "source_sha256": "b1e9291727c98bddb07080e724b95cd1b89b78f70fd94f46eb64aff47f1248f8",
+    "output_sha256": "a7ac2050ac6f218d1179b9e6d15d029383c74fc05a9ec4c3e4f25c8a27fad6ef",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/04-darwin-godel-machine/docs/en.md": {
+    "source_sha256": "43d3cef80a1eb777b641b9ae7a727eb66144d4f63dd750551ee0bc8b715da351",
+    "output_sha256": "9145576efe39765b1a848679a69b48e46c2f50be3b012192ef676c37cd1c3da0",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/05-ai-scientist-v2/docs/en.md": {
+    "source_sha256": "39e95cca329be5f1fe6e090969854635a2db3bda2f4fb2771cf41a8d6f2248ba",
+    "output_sha256": "d7241ee4968d21a58178c2485642e854f0cc5936288e5a4faa5cb298c0078714",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/06-automated-alignment-research/docs/en.md": {
+    "source_sha256": "b9baea7e1c628eff4a700a67ed30eb3952574c159beb63e8e1def6acce623307",
+    "output_sha256": "f3dcf5ea6b24501f8cd894cdd7e817743d7e7dfb7fbe83319b5c8af2bac0dea1",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/07-recursive-self-improvement/docs/en.md": {
+    "source_sha256": "203b879ffa5b1a34afc51caf2fdedcde5553bb08e1873039b036bd1add6f38b0",
+    "output_sha256": "33c258c0bf2c04e4f0ee73cf5320285a3affc59cdf19bfcbdedce836f54f38c6",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/08-bounded-self-improvement/docs/en.md": {
+    "source_sha256": "ed3e03bb1c0431173c30bf272e4a484a8264ab6823f305f10850a8e245b207d0",
+    "output_sha256": "dc17c3088b6f94396f3fab969c0c9a5826d89811b820556007b257485ec6793d",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/09-coding-agent-landscape/docs/en.md": {
+    "source_sha256": "62d80c824129f6f23833be3473421afaa99330f4dfa617f49108013fe76bfeb3",
+    "output_sha256": "3dbfd64f736c2c0ee2586adecf2db829d5e977b1e1022b8654426b09718b9404",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/10-claude-code-permission-modes/docs/en.md": {
+    "source_sha256": "89c7658a26b24a863992b5284936730885ea25c254e3a4b1c1949126da9d683c",
+    "output_sha256": "2f9ddd0c60156b467bb6ff259c09e4512fa2f5d16f7c61828d50cac375c60e4d",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/11-browser-agents/docs/en.md": {
+    "source_sha256": "fc1ad4d5c053b9effc8840efa4d993faabe6639a80b00a6485529331ddc0d493",
+    "output_sha256": "3fd929258f2b582341524049ba17186e5ea08868ff73a6cebf685d5256ccc4ac",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/12-durable-execution/docs/en.md": {
+    "source_sha256": "adc5aa6f20ee09b6920ab01aec2e062234e9e6620ca58f4e43fc59f073c15bba",
+    "output_sha256": "03248ad46065ad9d3dd0ccda991a2e933fe2f3d4771bcf02a5b238c85bc7c345",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/13-cost-governors/docs/en.md": {
+    "source_sha256": "4bbc8166514794ae938da3981b90bf55549cde613ad6b5440da67115dbb7fd83",
+    "output_sha256": "7ffeae8039af74ee2b4cb0c3c3d548d0b795c436feb4d4928c51a43183149e60",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/14-kill-switches-canaries/docs/en.md": {
+    "source_sha256": "75ace984dda6cc34bc2dabf0da98bed969cb849bba80530b34e2b65413e4b64d",
+    "output_sha256": "85d7ac0b323f284b81b6b3356470d6dabe3f1a4c4351fed99b97559ea1b513d0",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/15-propose-then-commit/docs/en.md": {
+    "source_sha256": "066d62177805838d9d0678e12e73824d860440642edd386b738307c20ee579c4",
+    "output_sha256": "4c081c5d07f4e24feba8036027ad0d15368476d6211a34e69d08b1e00de935c2",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/16-checkpoints-rollback/docs/en.md": {
+    "source_sha256": "a530818bb301abf263f3ca3b331287160ae5f94b4557b5a0cb5e01133f611d62",
+    "output_sha256": "15bc4d5cbf72745580d5948c89c8c9fd176ce0581c5e252d732ff961ef5646e2",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/17-constitutional-ai/docs/en.md": {
+    "source_sha256": "05b75703c17dfa8e118833fd0443e7b95e26216aab1ef97aa9fed34bc6bbadcc",
+    "output_sha256": "88bb1537e6b2bb795358fda6be65799322886c89ca599e3b225dbf2acfb094ee",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/18-llama-guard/docs/en.md": {
+    "source_sha256": "d2e6f91903b8358ead955c4db18c9ba986e51b359d62366e2fc8e4cb23f02d08",
+    "output_sha256": "f5bcb7c0ee45c41d64c122d5ba484f61f8e5a07801e8dbaa7ed052d84022a92c",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/19-anthropic-rsp/docs/en.md": {
+    "source_sha256": "239697bb9af9a03e89c8272cab896bbe338000655fb809de8628a40ddeba0d12",
+    "output_sha256": "c03b0edd021cbad4fe62f8423a9379eb81db55f683236f8eaea6158e38b7a8de",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/20-openai-preparedness-deepmind-fsf/docs/en.md": {
+    "source_sha256": "3a74fd7227a18efce31a8c6da82f774f2c2ad69f196cb48c87d1feb06edbebcc",
+    "output_sha256": "4847dcb3ceeb00d274cc652465bc13ac4073984c6f5e79bfbeee7db9549c1d8b",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/21-metr-external-evaluation/docs/en.md": {
+    "source_sha256": "21805b2aa6c8fedab76f6f0e4ab35455a73e1020c60544d83357a1f960068468",
+    "output_sha256": "ec95f0faf40f6680ebe806107b6ad513577774efbb39fad418badbd1db597470",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/15-autonomous-systems/22-cais-caisi-societal-risk/docs/en.md": {
+    "source_sha256": "1529015064248f4681d5f98f3889c3d938cb29bf7c6b2f82de650573ae2d45a7",
+    "output_sha256": "0f71af59fac2cb88f1b42a0b6fa9bcd44ead5bbb28eeb6f0575eb81d9a706a3f",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  }
 }
