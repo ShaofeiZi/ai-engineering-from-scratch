@@ -1,4 +1,4 @@
-"""Deterministic tests for the Lesson 23 in-process integration harness."""
+"""第 23 课进程内集成框架的确定性测试。"""
 
 from __future__ import annotations
 
@@ -48,6 +48,27 @@ class ToolEcosystemTests(unittest.TestCase):
         self.assertGreaterEqual(len(papers), 1)
         self.assertFalse(result["isError"])
         self.assertEqual(result["resultType"], "complete")
+
+    def test_search_preserves_canonical_english_queries(self) -> None:
+        cases = {
+            "tool": "2603.22489",
+            "poisoning": "2603.22489",
+            "agent coordination": "2604.01055",
+            "long-running": "2603.30016",
+        }
+        for query, expected_id in cases.items():
+            with self.subTest(query=query):
+                result = main.research_arxiv_search({"query": query})
+                papers = json.loads(result["content"][0]["text"])
+                self.assertIn(expected_id, {paper["arxiv_id"] for paper in papers})
+
+    def test_search_supports_chinese_display_titles(self) -> None:
+        result = main.research_arxiv_search({"query": "工具投毒"})
+        papers = json.loads(result["content"][0]["text"])
+
+        self.assertEqual([paper["arxiv_id"] for paper in papers], ["2603.22489"])
+        self.assertIn("工具投毒", papers[0]["title"])
+        self.assertNotIn("canonical_title", papers[0])
 
     def test_server_discovery_advertises_stateless_revision_and_task_extension(self) -> None:
         result = main.server_discover(main.request_meta())

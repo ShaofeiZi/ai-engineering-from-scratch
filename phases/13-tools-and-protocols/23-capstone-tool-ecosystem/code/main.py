@@ -1,17 +1,17 @@
-"""Phase 13 Capstone - stateless in-process research-and-report simulation.
+"""第 13 阶段综合项目 - 无状态进程内研究与报告模拟。
 
-Several Phase 13 boundaries in one readable demo:
-  - gateway-shaped static token lookup and RBAC
-  - per-request protocol metadata and mandatory server discovery
-  - local tool functions returning task-extension and ui-shaped data
-  - A2A-shaped writer delegation represented by a nested span
-  - in-memory trace dictionaries sharing one trace id
-  - pinned-hash manifest guarding description mutations
+在一个可读的演示中涵盖 Phase 13 的多个边界：
+  - 网关形态的静态令牌查找与 RBAC
+  - 每请求协议元数据与强制服务器发现
+  - 返回任务扩展和 UI 形态数据的本地工具函数
+  - 以嵌套 span 表示的 A2A 写作代理委派
+  - 共享同一 trace id 的内存 trace 字典
+  - 保护 description 变更的固定哈希 manifest
 
-This file does not implement an MCP or A2A transport, OAuth exchange, MCP App
-bridge, telemetry exporter, or execution sandbox. Stdlib only.
+本文件不实现 MCP 或 A2A 传输、OAuth 交换、MCP App
+桥接、遥测导出器或执行沙箱。仅使用标准库。
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -123,14 +123,26 @@ def finish(sp: dict) -> None:
 
 
 TOOLS = [
-    {"name": "arxiv_search", "description": "Use when the user searches arXiv by keyword."},
-    {"name": "generate_report", "description": "Use when the user wants a full report."},
+    {"name": "arxiv_search", "description": "当用户希望按关键词搜索 arXiv 时使用。"},
+    {"name": "generate_report", "description": "当用户需要完整报告时使用。"},
 ]
 
 PAPERS = [
-    {"arxiv_id": "2603.22489", "title": "Tool poisoning attacks on MCP deployments"},
-    {"arxiv_id": "2604.01055", "title": "Agent-to-agent coordination benchmarks"},
-    {"arxiv_id": "2603.30016", "title": "Long-running tool calls via Tasks"},
+    {
+        "arxiv_id": "2603.22489",
+        "title": "MCP 部署中的工具投毒攻击",
+        "canonical_title": "Tool poisoning attacks on MCP deployments",
+    },
+    {
+        "arxiv_id": "2604.01055",
+        "title": "Agent 间协作基准",
+        "canonical_title": "Agent-to-agent coordination benchmarks",
+    },
+    {
+        "arxiv_id": "2603.30016",
+        "title": "通过 Tasks 执行长时间运行的工具调用",
+        "canonical_title": "Long-running tool calls via Tasks",
+    },
 ]
 
 PINNED = {f"research::{t['name']}": hashlib.sha256(t["description"].encode()).hexdigest()
@@ -138,8 +150,13 @@ PINNED = {f"research::{t['name']}": hashlib.sha256(t["description"].encode()).he
 
 
 def research_arxiv_search(args: dict) -> dict:
-    q = args["query"].lower()
-    hits = [p for p in PAPERS if q in p["title"].lower()]
+    q = args["query"].casefold()
+    hits = [
+        {"arxiv_id": paper["arxiv_id"], "title": paper["title"]}
+        for paper in PAPERS
+        if q in paper["title"].casefold()
+        or q in paper["canonical_title"].casefold()
+    ]
     return complete_result(
         content=[{"type": "text", "text": json.dumps(hits)}],
         isError=False,
@@ -156,9 +173,9 @@ def research_generate_report(args: dict, trace_id: str, parent: str) -> dict:
     finish(sp)
     html = (
         "<!doctype html><html><body>"
-        "<h1>Agent-protocol arXiv report</h1><ul>"
+        "<h1>代理协议 arXiv 报告</h1><ul>"
         + "".join(f"<li>{p['arxiv_id']}: {p['title']}</li>" for p in PAPERS)
-        + "</ul><script>/* A real MCP App bridge is intentionally absent. */</script></body></html>"
+        + "</ul><script>/* 此演示有意省略真实的 MCP App 桥接。 */</script></body></html>"
     )
     now = datetime.now(timezone.utc).isoformat()
     TASKS[task_id] = {
@@ -171,7 +188,7 @@ def research_generate_report(args: dict, trace_id: str, parent: str) -> dict:
         "pollIntervalMs": 1_000,
         "result": complete_result(
             content=[
-                {"type": "text", "text": "Report generated: 3 papers summarized."},
+                {"type": "text", "text": "报告已生成：已总结 3 篇论文。"},
                 {"type": "ui_resource", "uri": "ui://report/current"},
             ],
             ui={
@@ -284,49 +301,49 @@ def orchestrator(token: str, user_query: str) -> dict:
 
 def demo() -> None:
     print("=" * 72)
-    print("PHASE 13 CAPSTONE - RESEARCH AND REPORT ECOSYSTEM")
+    print("第 13 阶段综合项目 - 研究与报告生态系统")
     print("=" * 72)
 
-    print("\n--- stateless server discovery ---")
+    print("\n--- 无状态服务器发现 ---")
     discovery = server_discover(request_meta())
-    print(f"  protocol       : {discovery['supportedVersions'][0]}")
-    print(f"  task extension : {TASK_EXTENSION in discovery['capabilities']['extensions']}")
+    print(f"  协议          : {discovery['supportedVersions'][0]}")
+    print(f"  任务扩展      : {TASK_EXTENSION in discovery['capabilities']['extensions']}")
 
-    print("\n--- orchestrator run as alice (read+write) ---")
-    out = orchestrator("tok_alice", "summarize the three most-cited 2026 arXiv papers")
-    print(f"  trace id      : {out['trace_id']}")
-    print(f"  search result : {out['search']['content'][0]['text']}")
-    print(f"  report handle : {out['report']['taskId']} ({out['report']['status']})")
-    print(f"  task status   : {out['task']['status']} via tasks/get")
-    print(f"  ui bytes      : {len(out['task']['result']['html'])}")
+    print("\n--- 以 alice 身份运行编排器（read+write）---")
+    out = orchestrator("tok_alice", "总结 2026 年引用量最高的三篇 arXiv 论文")
+    print(f"  trace id       ：{out['trace_id']}")
+    print(f"  搜索结果      : {out['search']['content'][0]['text']}")
+    print(f"  报告句柄      : {out['report']['taskId']} ({out['report']['status']})")
+    print(f"  任务状态      : {out['task']['status']}，通过 tasks/get")
+    print(f"  UI 字节数     : {len(out['task']['result']['html'])}")
 
-    print("\n--- orchestrator run as bob (read only) ---")
-    out = orchestrator("tok_bob", "generate a report")
-    print(f"  generate_report -> {out['report']}")
+    print("\n--- 以 bob 身份运行编排器（只读）---")
+    out = orchestrator("tok_bob", "生成一份报告")
+    print(f"  generate_report 结果：{out['report']}")
 
-    print("\n--- audit log ---")
+    print("\n--- 审计日志 ---")
     for row in AUDIT:
         print(f"  {row}")
 
-    print("\n--- OTel GenAI spans ---")
+    print("\n--- OTel GenAI span ---")
     for sp in SPANS:
         dur_ms = round((sp['end'] - sp['start']) / 1_000_000, 2) if sp['end'] else 0
         parent = sp['parentSpanId'][:6] if sp['parentSpanId'] else "ROOT"
         print(f"  [{sp['traceId'][:6]}] {sp['name']:20s} {sp['kind']:8s} "
-              f"parent={parent}  dur={dur_ms}ms")
+              f"父 span={parent}  耗时={dur_ms}ms")
 
-    print("\n--- primitive coverage ---")
+    print("\n--- 基元覆盖情况 ---")
     covered = [
-        "tool interface and direct function dispatch",
-        "server/discover and per-request stateless metadata",
-        "structured content dictionaries",
-        "task-extension handle and tasks/get polling",
-        "ui://-shaped resource reference",
-        "description mutation detection with pinned hashes",
-        "static-token scope and gateway policy simulation",
-        "A2A-shaped opaque delegation boundary",
-        "in-memory trace identifiers and parent span identifiers",
-        "orchestrator routing between local operations",
+        "工具接口与直接函数分发",
+        "server/discover 与每请求无状态元数据",
+        "结构化内容字典",
+        "任务扩展句柄与 tasks/get 轮询",
+        "ui:// 形态的资源引用",
+        "使用固定哈希检测 description 变更",
+        "静态令牌权限范围与网关策略模拟",
+        "A2A 形态的不透明委派边界",
+        "内存中的 trace 标识符与父 span 标识符",
+        "编排器在本地操作之间的路由",
     ]
     for c in covered:
         print(f"  + {c}")
