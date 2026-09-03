@@ -17,8 +17,8 @@ def verify_inverse_cdf(lam, n=10000):
     samples = [sample_exponential_inverse_cdf(lam) for _ in range(n)]
     empirical_mean = sum(samples) / len(samples)
     theoretical_mean = 1.0 / lam
-    print(f"  Exponential(lambda={lam}): empirical mean={empirical_mean:.4f}, "
-          f"theoretical={theoretical_mean:.4f}")
+    print(f"  指数分布(lambda={lam}): 经验均值={empirical_mean:.4f}, "
+          f"理论均值={theoretical_mean:.4f}")
     return samples
 
 
@@ -118,10 +118,10 @@ def importance_sampling_demo():
         f, target, proposal_pdf, proposal, n=50000
     )
     theoretical = mu ** 2 + sigma ** 2
-    print(f"  E[X^2] under N({mu},{sigma}):")
-    print(f"    Unnormalized IS: {est_unnorm:.4f}")
-    print(f"    Self-normalized IS: {est_selfnorm:.4f}")
-    print(f"    Theoretical: {theoretical:.4f}")
+    print(f"  N({mu},{sigma}) 下的 E[X^2]:")
+    print(f"    未归一化重要性采样: {est_unnorm:.4f}")
+    print(f"    自归一化重要性采样: {est_selfnorm:.4f}")
+    print(f"    理论值: {theoretical:.4f}")
 
 
 def monte_carlo_pi(n):
@@ -396,37 +396,37 @@ def text_generation_demo(vocab, logits, length, method, **kwargs):
 
 if __name__ == "__main__":
     print("=" * 65)
-    print("SAMPLING METHODS")
+    print("采样方法")
     print("=" * 65)
 
-    print("\n--- 1. Inverse CDF Sampling (Exponential) ---")
+    print("\n--- 1. 逆 CDF 采样（指数分布）---")
     for lam in [0.5, 1.0, 2.0]:
         verify_inverse_cdf(lam)
 
-    print("\n--- 2. Rejection Sampling (Truncated Normal) ---")
+    print("\n--- 2. 拒绝采样（截断正态分布）---")
     trunc_samples, acc = truncated_normal_demo(0, 1, -1, 2, n=5000)
     trunc_mean = sum(trunc_samples) / len(trunc_samples)
-    print(f"  Truncated N(0,1) on [-1, 2]: mean={trunc_mean:.4f}, "
-          f"acceptance rate={acc:.4f}")
+    print(f"  [-1, 2] 上的截断 N(0,1): 均值={trunc_mean:.4f}, "
+          f"接受率={acc:.4f}")
 
-    print("\n--- 3. Importance Sampling ---")
+    print("\n--- 3. 重要性采样 ---")
     importance_sampling_demo()
 
-    print("\n--- 4. Monte Carlo Estimation ---")
-    print("  Estimating pi:")
+    print("\n--- 4. 蒙特卡洛估计 ---")
+    print("  估计 pi:")
     for n in [1000, 10000, 100000]:
         pi_est = monte_carlo_pi(n)
         error = abs(pi_est - math.pi)
-        print(f"    N={n:>7d}: pi ~ {pi_est:.6f}, error={error:.6f}")
+        print(f"    N={n:>7d}: pi ~ {pi_est:.6f}, 误差={error:.6f}")
 
-    print("  Estimating integral of sin(x) from 0 to pi (true = 2.0):")
+    print("  估计 sin(x) 从 0 到 pi 的积分（真值 = 2.0）:")
     for n in [1000, 10000, 100000]:
         est = monte_carlo_integral(math.sin, 0, math.pi, n)
         error = abs(est - 2.0)
-        print(f"    N={n:>7d}: estimate={est:.6f}, error={error:.6f}")
+        print(f"    N={n:>7d}: 估计值={est:.6f}, 误差={error:.6f}")
 
     print("\n--- 5. Metropolis-Hastings MCMC ---")
-    print("  Sampling from bimodal distribution (mixture of Gaussians):")
+    print("  从双峰分布采样（高斯混合）:")
     for std in [0.5, 1.0, 3.0]:
         samples_mh, acc_rate = metropolis_hastings(
             bimodal_log_pdf, x0=0.0, n_samples=10000, burn_in=2000,
@@ -434,10 +434,10 @@ if __name__ == "__main__":
         )
         mh_mean = sum(samples_mh) / len(samples_mh)
         mh_std = (sum((x - mh_mean) ** 2 for x in samples_mh) / len(samples_mh)) ** 0.5
-        print(f"    proposal_std={std}: mean={mh_mean:.4f}, std={mh_std:.4f}, "
-              f"acceptance={acc_rate:.4f}")
+        print(f"    proposal_std={std}: 均值={mh_mean:.4f}, 标准差={mh_std:.4f}, "
+              f"接受率={acc_rate:.4f}")
 
-    print("\n  Sampling from 2D Gaussian:")
+    print("\n  从二维高斯分布采样:")
     def gaussian_2d_log_pdf(x, y):
         return -0.5 * (x ** 2 + y ** 2)
 
@@ -448,9 +448,9 @@ if __name__ == "__main__":
     xs = [s[0] for s in samples_2d]
     ys = [s[1] for s in samples_2d]
     print(f"    mean_x={sum(xs)/len(xs):.4f}, mean_y={sum(ys)/len(ys):.4f}, "
-          f"acceptance={acc_2d:.4f}")
+          f"接受率={acc_2d:.4f}")
 
-    print("\n--- 6. Gibbs Sampling (Correlated 2D Gaussian) ---")
+    print("\n--- 6. 吉布斯采样（相关二维高斯）---")
     for rho in [0.0, 0.5, 0.9]:
         gibbs_samples = gibbs_sampling_2d(rho, n_samples=10000, burn_in=1000)
         gx = [s[0] for s in gibbs_samples]
@@ -459,19 +459,19 @@ if __name__ == "__main__":
             sum(a * b for a, b in gibbs_samples) / len(gibbs_samples)
             - (sum(gx) / len(gx)) * (sum(gy) / len(gy))
         )
-        print(f"  rho={rho}: empirical correlation={empirical_corr:.4f}")
+        print(f"  rho={rho}: 经验相关系数={empirical_corr:.4f}")
 
-    print("\n--- 7. Temperature Sampling ---")
+    print("\n--- 7. 温度采样 ---")
     token_logits = [3.0, 2.0, 1.5, 0.5, -1.0, -2.0]
     vocab = ["the", "a", "this", "one", "that", "some"]
     print("  Logits:", token_logits)
-    print("  Vocab:", vocab)
+    print("  词表:", vocab)
     for temp in [0.1, 0.5, 1.0, 1.5, 3.0]:
         dist = temperature_distribution(token_logits, temp)
         formatted = [f"{p:.4f}" for p in dist]
         print(f"  T={temp:.1f}: [{', '.join(formatted)}]")
 
-    print("\n  Generation samples at different temperatures:")
+    print("\n  不同温度下的生成采样:")
     for temp in [0.1, 0.7, 1.0, 2.0]:
         tokens_out = []
         for _ in range(10):
@@ -479,37 +479,37 @@ if __name__ == "__main__":
             tokens_out.append(vocab[idx])
         print(f"    T={temp}: {' '.join(tokens_out)}")
 
-    print("\n--- 8. Top-k Sampling ---")
+    print("\n--- 8. Top-k 采样 ---")
     print("  Logits:", token_logits)
     for k in [1, 2, 3, 6]:
         dist = top_k_distribution(token_logits, k)
         formatted = [f"{p:.4f}" for p in dist]
         print(f"  k={k}: [{', '.join(formatted)}]")
 
-    print("\n--- 9. Top-p (Nucleus) Sampling ---")
+    print("\n--- 9. Top-p（核）采样 ---")
     print("  Logits:", token_logits)
     for p in [0.5, 0.8, 0.9, 0.95, 1.0]:
         dist = top_p_distribution(token_logits, p)
         nonzero = sum(1 for d in dist if d > 0)
         formatted = [f"{d:.4f}" for d in dist]
-        print(f"  p={p:.2f}: [{', '.join(formatted)}] ({nonzero} tokens)")
+        print(f"  p={p:.2f}: [{', '.join(formatted)}]（{nonzero} 个 token）")
 
-    print("\n--- 10. Reparameterization Trick ---")
+    print("\n--- 10. 重参数化技巧 ---")
     mu_val, log_var_val = 2.0, 0.5
 
-    print(f"  VAE encoder output: mu={mu_val}, log_var={log_var_val}")
+    print(f"  VAE 编码器输出: mu={mu_val}, log_var={log_var_val}")
     z_samples = []
     for trial in range(5):
         z, eps, dz_dmu, dz_dlogvar = vae_forward_demo(mu_val, log_var_val)
         z_samples.append(z)
-        print(f"    Trial {trial+1}: z={z:.4f}, eps={eps:.4f}, "
+        print(f"    第 {trial+1} 次: z={z:.4f}, eps={eps:.4f}, "
               f"dz/dmu={dz_dmu:.4f}, dz/dlog_var={dz_dlogvar:.4f}")
 
-    print(f"  Mean of z samples: {sum(z_samples)/len(z_samples):.4f} "
-          f"(expected ~{mu_val})")
-    print("  Gradients exist because z = mu + sigma * epsilon is differentiable.")
+    print(f"  z 样本均值: {sum(z_samples)/len(z_samples):.4f} "
+          f"（期望 ~{mu_val}）")
+    print("  由于 z = mu + sigma * epsilon 是可微的，因此梯度存在。")
 
-    print("\n  Verifying reparameterization matches direct sampling:")
+    print("\n  验证重参数化与直接采样一致:")
     sigma_val = math.exp(0.5 * log_var_val)
     direct_samples = [sample_normal_box_muller(mu_val, sigma_val) for _ in range(10000)]
     reparam_samples = [reparam_sample(mu_val, sigma_val)[0] for _ in range(10000)]
@@ -517,54 +517,54 @@ if __name__ == "__main__":
     r_mean = sum(reparam_samples) / len(reparam_samples)
     d_std = (sum((x - d_mean)**2 for x in direct_samples) / len(direct_samples)) ** 0.5
     r_std = (sum((x - r_mean)**2 for x in reparam_samples) / len(reparam_samples)) ** 0.5
-    print(f"    Direct:  mean={d_mean:.4f}, std={d_std:.4f}")
-    print(f"    Reparam: mean={r_mean:.4f}, std={r_std:.4f}")
+    print(f"    直接采样:  均值={d_mean:.4f}, 标准差={d_std:.4f}")
+    print(f"    重参数化: 均值={r_mean:.4f}, 标准差={r_std:.4f}")
 
     print("\n--- 11. Gumbel-Softmax ---")
     probs = [0.5, 0.3, 0.15, 0.05]
     log_probs = [math.log(p) for p in probs]
     labels = ["cat", "dog", "bird", "fish"]
-    print(f"  True probs: {probs}")
+    print(f"  真实概率: {probs}")
 
-    print("\n  Gumbel-Max (exact categorical) verification:")
+    print("\n  Gumbel-Max（精确类别分布）验证:")
     counts = [0] * len(probs)
     n_gumbel = 10000
     for _ in range(n_gumbel):
         idx = gumbel_max_sample(log_probs)
         counts[idx] += 1
     empirical = [c / n_gumbel for c in counts]
-    print(f"    Empirical: [{', '.join(f'{p:.4f}' for p in empirical)}]")
-    print(f"    True:      [{', '.join(f'{p:.4f}' for p in probs)}]")
+    print(f"    经验值: [{', '.join(f'{p:.4f}' for p in empirical)}]")
+    print(f"    真实值: [{', '.join(f'{p:.4f}' for p in probs)}]")
 
-    print("\n  Gumbel-Softmax at different temperatures:")
+    print("\n  不同温度下的 Gumbel-Softmax:")
     for tau in [0.1, 0.5, 1.0, 5.0]:
         soft = gumbel_softmax_sample(log_probs, tau)
         formatted = [f"{s:.4f}" for s in soft]
         max_idx = soft.index(max(soft))
         print(f"    tau={tau:.1f}: [{', '.join(formatted)}] -> {labels[max_idx]}")
 
-    print("\n  Straight-through estimator:")
+    print("\n  直通估计器:")
     hard, soft = gumbel_softmax_straight_through(log_probs, temperature=0.5)
-    print(f"    Hard (forward): {hard}")
-    print(f"    Soft (backward): [{', '.join(f'{s:.4f}' for s in soft)}]")
+    print(f"    硬（前向）: {hard}")
+    print(f"    软（反向）: [{', '.join(f'{s:.4f}' for s in soft)}]")
 
-    print("\n--- 12. Stratified Sampling ---")
+    print("\n--- 12. 分层采样 ---")
     def test_fn(x):
         return math.sin(math.pi * x)
 
-    print("  Comparing standard vs stratified Monte Carlo:")
-    print(f"  Function: sin(pi*x) on [0,1], true integral = 2/pi = {2/math.pi:.6f}")
+    print("  对比标准蒙特卡洛与分层蒙特卡洛:")
+    print(f"  函数: sin(pi*x) 在 [0,1] 上，真实积分 = 2/pi = {2/math.pi:.6f}")
     for n in [10, 50, 100]:
         std_var, strat_var = compare_sampling_variance(test_fn, n)
         ratio = std_var / strat_var if strat_var > 0 else float('inf')
         print(f"    N={n:3d}: standard_var={std_var:.8f}, "
-              f"stratified_var={strat_var:.8f}, ratio={ratio:.2f}x")
+              f"stratified_var={strat_var:.8f}, 比值={ratio:.2f}x")
 
-    print("\n--- 13. Text Generation Demo ---")
+    print("\n--- 13. 文本生成演示 ---")
     gen_vocab = ["the", "cat", "sat", "on", "mat", "a", "dog", "ran", "big", "red"]
     gen_logits = [3.0, 2.5, 2.0, 1.8, 1.5, 1.0, 0.5, 0.0, -0.5, -1.0]
 
-    print(f"  Vocab: {gen_vocab}")
+    print(f"  词表: {gen_vocab}")
     print(f"  Logits: {gen_logits}")
     print()
 
@@ -588,12 +588,12 @@ if __name__ == "__main__":
             sequences.append(seq)
         print(f"  {label}:")
         for i, seq in enumerate(sequences):
-            print(f"    Run {i+1}: {seq}")
+            print(f"    第 {i+1} 次: {seq}")
         unique = len(set(sequences))
-        print(f"    Unique sequences: {unique}/3")
+        print(f"    唯一序列数: {unique}/3")
         print()
 
-    print("\n--- 14. Visualizations ---")
+    print("\n--- 14. 可视化 ---")
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -602,33 +602,33 @@ if __name__ == "__main__":
         fig, axes = plt.subplots(3, 3, figsize=(18, 16))
 
         ax = axes[0][0]
-        ax.set_title("Inverse CDF: Exponential Samples")
+        ax.set_title("逆 CDF：指数分布样本")
         exp_samples = [sample_exponential_inverse_cdf(1.0) for _ in range(10000)]
         ax.hist(exp_samples, bins=60, density=True, alpha=0.7, color="#4a90d9",
-                label="Samples")
+                label="样本")
         xs_exp = [i * 0.05 for i in range(160)]
         ys_exp = [math.exp(-x) for x in xs_exp]
-        ax.plot(xs_exp, ys_exp, "r-", linewidth=2, label="True PDF")
+        ax.plot(xs_exp, ys_exp, "r-", linewidth=2, label="真实 PDF")
         ax.set_xlabel("x")
-        ax.set_ylabel("Density")
+        ax.set_ylabel("密度")
         ax.legend()
 
         ax = axes[0][1]
-        ax.set_title("Rejection Sampling: Truncated Normal")
+        ax.set_title("拒绝采样：截断正态分布")
         rej_samples, _ = truncated_normal_demo(0, 1, -1, 2, n=5000)
         ax.hist(rej_samples, bins=50, density=True, alpha=0.7, color="#4a90d9",
-                label="Samples")
+                label="样本")
         xs_tn = [-1 + 3 * i / 200 for i in range(201)]
         ys_tn = [normal_pdf(x, 0, 1) for x in xs_tn]
         area = sum(ys_tn) * 3 / 200
         ys_tn_norm = [y / area for y in ys_tn]
-        ax.plot(xs_tn, ys_tn_norm, "r-", linewidth=2, label="True PDF (normalized)")
+        ax.plot(xs_tn, ys_tn_norm, "r-", linewidth=2, label="真实 PDF（归一化）")
         ax.set_xlabel("x")
-        ax.set_ylabel("Density")
+        ax.set_ylabel("密度")
         ax.legend()
 
         ax = axes[0][2]
-        ax.set_title("Monte Carlo: Estimating Pi")
+        ax.set_title("蒙特卡洛：估计 pi")
         n_mc_vis = 5000
         mc_x = [random.uniform(-1, 1) for _ in range(n_mc_vis)]
         mc_y = [random.uniform(-1, 1) for _ in range(n_mc_vis)]
@@ -647,23 +647,23 @@ if __name__ == "__main__":
         ax.set_xlabel(f"pi ~ {pi_est:.4f}")
 
         ax = axes[1][0]
-        ax.set_title("MCMC: Bimodal Distribution")
+        ax.set_title("MCMC：双峰分布")
         mcmc_samples, _ = metropolis_hastings(
             bimodal_log_pdf, x0=0.0, n_samples=20000, burn_in=5000, proposal_std=2.0
         )
         ax.hist(mcmc_samples, bins=80, density=True, alpha=0.7, color="#4a90d9",
-                label="MCMC samples")
+                label="MCMC 样本")
         xs_bm = [-8 + 16 * i / 400 for i in range(401)]
         ys_bm = [math.exp(bimodal_log_pdf(x)) for x in xs_bm]
         area_bm = sum(ys_bm) * 16 / 400
         ys_bm_norm = [y / area_bm for y in ys_bm]
-        ax.plot(xs_bm, ys_bm_norm, "r-", linewidth=2, label="True density")
+        ax.plot(xs_bm, ys_bm_norm, "r-", linewidth=2, label="真实密度")
         ax.set_xlabel("x")
-        ax.set_ylabel("Density")
+        ax.set_ylabel("密度")
         ax.legend()
 
         ax = axes[1][1]
-        ax.set_title("Gibbs Sampling: 2D Gaussian (rho=0.8)")
+        ax.set_title("吉布斯采样：二维高斯（rho=0.8）")
         gibbs_vis = gibbs_sampling_2d(0.8, n_samples=3000, burn_in=500)
         gvx = [s[0] for s in gibbs_vis]
         gvy = [s[1] for s in gibbs_vis]
@@ -674,7 +674,7 @@ if __name__ == "__main__":
         ax.set_aspect("equal")
 
         ax = axes[1][2]
-        ax.set_title("Temperature Scaling")
+        ax.set_title("温度缩放")
         temps = [0.1, 0.5, 1.0, 2.0, 5.0]
         bar_width = 0.15
         positions = list(range(len(token_logits)))
@@ -685,26 +685,26 @@ if __name__ == "__main__":
             ax.bar(bars, dist, bar_width, label=f"T={temp}", alpha=0.8)
         ax.set_xticks(positions)
         ax.set_xticklabels(vocab, rotation=45)
-        ax.set_ylabel("Probability")
+        ax.set_ylabel("概率")
         ax.legend(fontsize=8)
 
         ax = axes[2][0]
-        ax.set_title("Top-k vs Top-p Distributions")
+        ax.set_title("Top-k 与 Top-p 分布")
         k_dist = top_k_distribution(token_logits, k=3)
         p_dist = top_p_distribution(token_logits, p=0.9)
         full_dist = softmax(token_logits)
         x_pos = list(range(len(token_logits)))
         w = 0.25
-        ax.bar([x - w for x in x_pos], full_dist, w, label="Full", alpha=0.8, color="#aaaaaa")
+        ax.bar([x - w for x in x_pos], full_dist, w, label="完整分布", alpha=0.8, color="#aaaaaa")
         ax.bar(x_pos, k_dist, w, label="Top-3", alpha=0.8, color="#4a90d9")
         ax.bar([x + w for x in x_pos], p_dist, w, label="Top-p=0.9", alpha=0.8, color="#d94a4a")
         ax.set_xticks(x_pos)
         ax.set_xticklabels(vocab, rotation=45)
-        ax.set_ylabel("Probability")
+        ax.set_ylabel("概率")
         ax.legend(fontsize=8)
 
         ax = axes[2][1]
-        ax.set_title("Gumbel-Softmax: Temperature Effect")
+        ax.set_title("Gumbel-Softmax：温度效应")
         taus = [0.1, 0.5, 1.0, 5.0]
         g_log_probs = [math.log(p) for p in [0.5, 0.3, 0.15, 0.05]]
         n_trials_vis = 500
@@ -714,35 +714,35 @@ if __name__ == "__main__":
                 soft = gumbel_softmax_sample(g_log_probs, tau)
                 max_vals.append(max(soft))
             ax.hist(max_vals, bins=30, alpha=0.5, label=f"tau={tau}", density=True)
-        ax.set_xlabel("Max component value")
-        ax.set_ylabel("Density")
+        ax.set_xlabel("最大分量值")
+        ax.set_ylabel("密度")
         ax.legend(fontsize=8)
 
         ax = axes[2][2]
-        ax.set_title("Stratified vs Standard Sampling")
+        ax.set_title("分层采样与标准采样对比")
         n_strat_vis = 20
         standard_pts = sorted([random.random() for _ in range(n_strat_vis)])
         stratified_pts = sorted(stratified_sample_1d(n_strat_vis))
-        ax.scatter(standard_pts, [1] * n_strat_vis, s=30, c="#d94a4a", label="Standard",
+        ax.scatter(standard_pts, [1] * n_strat_vis, s=30, c="#d94a4a", label="标准采样",
                    zorder=3)
-        ax.scatter(stratified_pts, [0] * n_strat_vis, s=30, c="#4a90d9", label="Stratified",
+        ax.scatter(stratified_pts, [0] * n_strat_vis, s=30, c="#4a90d9", label="分层采样",
                    zorder=3)
         for i in range(n_strat_vis + 1):
             ax.axvline(i / n_strat_vis, color="#cccccc", linewidth=0.5, linestyle="--")
         ax.set_yticks([0, 1])
-        ax.set_yticklabels(["Stratified", "Standard"])
-        ax.set_xlabel("Sample value")
+        ax.set_yticklabels(["分层采样", "标准采样"])
+        ax.set_xlabel("样本值")
         ax.legend()
         ax.set_ylim(-0.5, 1.5)
 
         plt.tight_layout()
         plt.savefig("sampling_methods.png", dpi=150)
-        print("  Saved: sampling_methods.png")
+        print("  已保存: sampling_methods.png")
         plt.close()
 
     except ImportError:
-        print("  matplotlib not available, skipping visualization.")
+        print("  matplotlib 不可用，跳过可视化。")
 
     print("\n" + "=" * 65)
-    print("All sampling methods complete.")
+    print("所有采样方法执行完毕。")
     print("=" * 65)
