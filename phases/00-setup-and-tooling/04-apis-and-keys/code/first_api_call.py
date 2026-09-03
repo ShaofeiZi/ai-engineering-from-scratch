@@ -9,7 +9,7 @@ def call_with_sdk():
     try:
         import anthropic
     except ImportError:
-        print("Install the SDK: pip install anthropic")
+        print("安装 SDK：pip install anthropic")
         return
 
     client = anthropic.Anthropic()
@@ -18,14 +18,14 @@ def call_with_sdk():
         max_tokens=256,
         messages=[{"role": "user", "content": "What is a neural network in one sentence?"}]
     )
-    print(f"SDK response: {response.content[0].text}")
-    print(f"Tokens used: {response.usage.input_tokens} in, {response.usage.output_tokens} out")
+    print(f"SDK 响应：{response.content[0].text}")
+    print(f"Token 用量：输入 {response.usage.input_tokens}，输出 {response.usage.output_tokens}")
 
 
 def call_raw_http():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print("Set ANTHROPIC_API_KEY environment variable first")
+        print("请先设置 ANTHROPIC_API_KEY 环境变量")
         return
 
     url = "https://api.anthropic.com/v1/messages"
@@ -43,13 +43,13 @@ def call_raw_http():
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
     with urllib.request.urlopen(req) as resp:
         result = json.loads(resp.read())
-        print(f"Raw HTTP response: {result['content'][0]['text']}")
-        print(f"Tokens used: {result['usage']['input_tokens']} in, {result['usage']['output_tokens']} out")
+        print(f"原始 HTTP 响应：{result['content'][0]['text']}")
+        print(f"Token 用量：输入 {result['usage']['input_tokens']}，输出 {result['usage']['output_tokens']}")
 
 
 if __name__ == "__main__":
-    print("=== API Calls ===\n")
-    print("1. Using the SDK:")
+    print("=== API 调用 ===\n")
+    print("1. 使用 SDK：")
     call_with_sdk()
-    print("\n2. Using raw HTTP:")
+    print("\n2. 使用原始 HTTP：")
     call_raw_http()
