@@ -1,15 +1,15 @@
-// Mini-GPT forward pass, stdlib only.
-// Topic: embedding + pos embedding, N transformer blocks (LayerNorm, MHA, FFN), LM head.
-// References (cited in spirit, not as deps):
-//   - Karpathy nanoGPT / llm.c:    https://github.com/karpathy/llm.c/blob/master/train_gpt2.c
-//   - candle gpt-2:                https://github.com/huggingface/candle/blob/main/candle-transformers/src/models/gpt2.rs
-//   - GPT-2 paper:                 https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
+// 迷你GPT前传,仅限stdlib.
+// 题目:embedding + posembedding,Ntransformer区块(LayerNorm,MHA,FFN),LM头.
+// 参考文献(在精神上引用,而不是作为道具引用):
+// - Karopathy纳米GPT /llm.c:https://github.com/karpathy/llm.c/blob/master/train_gpt2.c
+// - 蜡烛gpt-2:https://github.com/huggingface/candle/blob/main/candle-transformers/src/models/gpt2.rs
+// - GPT-2 纸张: https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
 //
-// Compile + run:  rustc --edition 2021 main.rs -o /tmp/mini && /tmp/mini
+// 编译并运行：rustc --edition 2021 main.rs -o /tmp/mini && /tmp/mini
 
 use std::f32::consts::PI;
 
-// Tensor3 = [n, d_model]. We keep batch=1 implicit, matching the lesson script.
+// Tensor3 表示 [n, d_model]；为与课程一致，这里隐式采用 batch=1。
 struct Mat {
     rows: usize,
     cols: usize,
@@ -68,7 +68,7 @@ impl Rng {
         let u2 = self.uniform();
         (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos()
     }
-    // sample categorical from probability vector (must sum to 1)
+    // 从概率矢量的样本绝对值( 一定和到 1)
     fn choice(&mut self, probs: &[f32]) -> usize {
         let r = self.uniform();
         let mut acc = 0.0;
@@ -167,7 +167,7 @@ impl MultiHeadAttention {
         }
     }
 
-    // Causal MHA forward. mask = upper triangle of -1e9 baked into the inner loop.
+    // Causal MHA向前移动. mask = -1e9 的上三角形烤入内环.
     fn forward(&self, x: &Mat) -> Mat {
         let n = x.rows;
         let d = x.cols;
@@ -180,7 +180,7 @@ impl MultiHeadAttention {
 
         for h in 0..self.n_heads {
             let hoff = h * self.head_dim;
-            // Per-head scores [n, n]
+            // 人均分数 [n, n]
             let mut scores = vec![0.0f32; n * n];
             for i in 0..n {
                 for j in 0..n {
@@ -192,7 +192,7 @@ impl MultiHeadAttention {
                     if j > i { scores[i * n + j] = -1e9; }
                 }
             }
-            // softmax row-wise
+            // softmax 顺行
             for i in 0..n {
                 let row = &mut scores[i * n..(i + 1) * n];
                 let mut m = f32::NEG_INFINITY;
@@ -202,7 +202,7 @@ impl MultiHeadAttention {
                 let inv = 1.0 / s;
                 for v in row.iter_mut() { *v *= inv; }
             }
-            // weights @ V for this head, write into concat columns [hoff .. hoff + head_dim]
+            // 重量 @ V 此头, 写成 Concat 列 [hoff. hoff + head  dim]
             for i in 0..n {
                 for kk in 0..self.head_dim {
                     let mut s = 0.0f32;
@@ -261,7 +261,7 @@ impl Block {
         }
     }
     fn forward(&self, x: &Mat) -> Mat {
-        // pre-LN, residual
+        // 剩余
         let mut y = self.attn.forward(&self.ln1.forward(x));
         y.add_(x);
         let mut z = self.ffn.forward(&self.ln2.forward(&y));
@@ -292,8 +292,8 @@ impl MiniGPT {
         let mut x = self.embedding.forward(ids);
         for b in &self.blocks { x = b.forward(&x); }
         x = self.ln_f.forward(&x);
-        // LM head shares token embedding matrix: logits = x @ token_embed^T
-        // Compute directly into [n, vocab]. token_embed is [vocab, d_model].
+        // LM 头共享 token embedding 矩阵 : logits = x @ 令牌 embed^T
+        // 直接计算为[n,vocab]. official embed is [vocab, d model]. [永久失效連結] 互联网档案馆的存檔,存档日期2014-09-02.].
         let n = x.rows;
         let mut logits = Mat::zeros(n, self.vocab);
         for i in 0..n {
@@ -323,12 +323,12 @@ impl MiniGPT {
 fn cross_entropy_loss(logits: &Mat, targets: &[usize]) -> f32 {
     let n = logits.rows;
     let v = logits.cols;
-    assert_eq!(targets.len(), n, "targets length must equal logits rows");
+    assert_eq!(targets.len(), n, "目标长度必须等于 logits 行");
     let mut total = 0.0f32;
     for i in 0..n {
         let row = &logits.data[i * v..(i + 1) * v];
         let t = targets[i];
-        assert!(t < v, "target index out of range for logits cols");
+        assert!(t < v, "logits cols 目标指数超出范围");
         let mut m = f32::NEG_INFINITY;
         for &x in row { if x > m { m = x; } }
         let mut s = 0.0f32;
@@ -341,8 +341,8 @@ fn cross_entropy_loss(logits: &Mat, targets: &[usize]) -> f32 {
 }
 
 fn generate(model: &MiniGPT, prompt: &[usize], max_new: usize, temperature: f32, rng: &mut Rng) -> Vec<usize> {
-    assert!(!prompt.is_empty(), "prompt must be non-empty");
-    assert!(temperature > 0.0, "temperature must be > 0");
+    assert!(!prompt.is_empty(), "提示必须是非空的");
+    assert!(temperature > 0.0, "温度必须是 > 0");
     let mut tokens: Vec<usize> = prompt.to_vec();
     let max_seq = model.max_seq;
     for _ in 0..max_new {
@@ -363,9 +363,9 @@ fn generate(model: &MiniGPT, prompt: &[usize], max_new: usize, temperature: f32,
 }
 
 fn parameter_breakdown() {
-    println!("GPT-2 family parameter counts (analytical)");
+    println!("GPT-2 系列参数量（解析式）");
     println!("{}", "=".repeat(65));
-    println!("{:<16} {:>6} {:>6} {:>6} {:>14}", "Model", "Layers", "Heads", "Dims", "Params");
+    println!("{:<16} {:>6} {:>6} {:>6} {:>14}", "模型", "层", "head", "维度", "参数");
     println!("{}", "-".repeat(65));
     let configs: [(&str, usize, usize, usize, usize, usize, usize); 4] = [
         ("GPT-2 Small",  50257, 768,  12, 12, 1024, 3072),
@@ -388,9 +388,9 @@ fn parameter_breakdown() {
 }
 
 fn memory_estimate() {
-    println!("Inference memory (FP16)");
+    println!("推理内存需求（FP16）");
     println!("{}", "=".repeat(65));
-    println!("{:<24} {:>10} {:>12} {:>10}", "Model", "Weights", "KV Cache", "Total");
+    println!("{:<24} {:>10} {:>12} {:>10}", "模型", "权重", "KV Cache", "总计");
     println!("{}", "-".repeat(65));
     let models: [(&str, f64, usize, usize, usize, usize); 4] = [
         ("GPT-2 Small (124M)", 124e6,  12,  12,  64, 1024),
@@ -415,14 +415,14 @@ fn main() {
     parameter_breakdown();
     memory_estimate();
 
-    // Tiny demo on byte-level vocab.
+    // 在字节级别 vocab上进行小演示.
     let corpus: &str = "The transformer architecture has revolutionized natural language processing. \
 Attention mechanisms allow the model to focus on relevant parts of the input. \
 Self-attention computes relationships between all pairs of positions in a sequence.";
 
     let tokens: Vec<usize> = corpus.bytes().map(|b| b as usize).collect();
 
-    println!("=== Mini-GPT forward pass demo ===");
+    println!("++ 迷你 GPT 前向传播演示 ++");
     let vocab = 256usize;
     let d_model = 32usize;
     let n_heads = 4usize;
@@ -432,8 +432,8 @@ Self-attention computes relationships between all pairs of positions in a sequen
 
     let mut rng = Rng::new(42);
     let model = MiniGPT::new(vocab, d_model, n_heads, n_layers, max_seq, ff, &mut rng);
-    println!("config: vocab={}, d={}, heads={}, layers={}, seq={}", vocab, d_model, n_heads, n_layers, max_seq);
-    println!("parameters: {}", model.count_parameters());
+    println!("配置：vocab={}，d={}，head={}，层数={}，max_seq={}", vocab, d_model, n_heads, n_layers, max_seq);
+    println!("参数: {}", model.count_parameters());
 
     let input = &tokens[..max_seq.min(tokens.len() - 1)];
     let target: Vec<usize> = tokens[1..1 + input.len()].to_vec();
@@ -442,24 +442,24 @@ Self-attention computes relationships between all pairs of positions in a sequen
     let logits = model.forward(input);
     let elapsed = start.elapsed();
 
-    println!("forward pass: {} tokens -> logits shape ({}, {})",
+    println!("前向传播：{} 个 token -> logits 形状 ({}, {})",
         input.len(), logits.rows, logits.cols);
-    println!("forward latency: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+    println!("前向传播延迟：{:.2}ms", elapsed.as_secs_f64() * 1000.0);
 
     let loss = cross_entropy_loss(&logits, &target);
-    println!("cross-entropy loss vs next-token target: {:.4}", loss);
-    println!("(random init loss ~ ln(vocab) = {:.4})", (vocab as f32).ln());
+    println!("下一个 token 目标的交叉熵损失：{:.4}", loss);
+    println!("（随机基线损失约为 ln(vocab) = {:.4}）", (vocab as f32).ln());
 
-    // Generation demo with a random model is gibberish, but exercises the autoregressive loop.
+    // 随机模型生成的文本没有语义，但可以演示自回归循环。
     let prompt: Vec<usize> = "The ".bytes().map(|b| b as usize).collect();
     let mut gen_rng = Rng::new(123);
     let out = generate(&model, &prompt, 24, 1.0, &mut gen_rng);
     let bytes: Vec<u8> = out.iter().map(|&t| t as u8).collect();
     let s = String::from_utf8_lossy(&bytes);
-    println!("\ngenerated (random weights, expect gibberish):");
+    println!("\n生成结果（随机权重，内容无实际语义）：");
     println!("  {:?}", s);
 
-    println!("\n=== microbench: 50 forwards (n=32, d=32, 2 layers) ===");
+    println!("\n=== 微型基准：50 次前向传播（n=32，d=32，2 层）===");
     let start = std::time::Instant::now();
     let mut sink = 0.0f32;
     for _ in 0..50 {
@@ -467,7 +467,7 @@ Self-attention computes relationships between all pairs of positions in a sequen
         sink += l.at(0, 0);
     }
     let elapsed = start.elapsed();
-    println!("50 forwards in {:.2}ms ({:.1}/sec)  sink={:.4}",
+    println!("50 次前向传播耗时 {:.2}ms（{:.1} 次/秒）sink={:.4}",
         elapsed.as_secs_f64() * 1000.0,
         50.0 / elapsed.as_secs_f64(),
         sink,
