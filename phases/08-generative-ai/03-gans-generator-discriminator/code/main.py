@@ -68,7 +68,7 @@ def sample_noise(n, z_dim, rng):
 
 
 def update_d(reals, fakes, D, lr):
-    """Gradient step on D to maximize log D(x) + log(1 - D(G(z)))."""
+    """对 D 执行梯度更新，使 log D(x) + log(1 - D(G(z))) 最大化。"""
     grads = {k: None for k in D}
     for part in D:
         if isinstance(D[part][0], list):
@@ -106,7 +106,7 @@ def update_d(reals, fakes, D, lr):
 
 
 def update_g(noise_batch, G, D, lr):
-    """Non-saturating G loss: maximize log D(G(z)). Gradient flows through both."""
+    """非饱和 G 损失：最大化 log D(G(z))，梯度流经 G 和 D。"""
     grads = {k: None for k in G}
     for part in G:
         if isinstance(G[part][0], list):
@@ -117,16 +117,16 @@ def update_g(noise_batch, G, D, lr):
     for z in noise_batch:
         x_hat, g_h, g_pre1 = forward_g(z, G)
         p, d_h, d_pre1, d_pre2 = forward_d(x_hat, D)
-        # dL/dpre2_D where L = -log(p) is -(1/p) * p*(1-p) = p - 1
+        # 当 L = -log(p) 时，dL/dpre2_D = -(1/p) * p*(1-p) = p - 1
         dL_dpre2 = p - 1.0
-        # back through D to get dL / d x_hat
+        # 反向通过 D，得到 dL / d x_hat
         dh_D = [D["W2"][0][j] * dL_dpre2 for j in range(len(d_h))]
         dpre1_D = [dh_D[j] * leaky_grad(d_pre1[j]) for j in range(len(d_h))]
         dL_dxhat = [0.0] * len(x_hat)
         for j in range(len(d_h)):
             for k in range(len(x_hat)):
                 dL_dxhat[k] += D["W1"][j][k] * dpre1_D[j]
-        # now back through G
+        # 再反向通过 G
         grads["b2"] = [grads["b2"][i] + dL_dxhat[i] for i in range(len(x_hat))]
         for i in range(len(x_hat)):
             for j in range(len(g_h)):
@@ -161,7 +161,7 @@ def main():
     D = init_mlp(1, hidden, 1, rng)
 
     batch, g_lr, d_lr = 32, 0.02, 0.01
-    print("=== training 1-D GAN on two-mode Gaussian mixture ===")
+    print("=== 在双峰高斯混合上训练一维 GAN ===")
     for step in range(1, 801):
         reals = sample_real(batch, rng)
         noise = sample_noise(batch, z_dim, rng)
@@ -177,12 +177,12 @@ def main():
             mode_b = 400 - mode_a
             d_real = mean([forward_d(x, D)[0] for x in sample_real(100, rng)])
             d_fake = mean([forward_d([v], D)[0] for v in probe_fakes])
-            warn = "  [!] mode collapse" if min(mode_a, mode_b) < 50 else ""
-            print(f"step {step:4d}: D(real)={d_real:.2f}  D(fake)={d_fake:.2f}  "
+            warn = "  [!] 模式崩塌" if min(mode_a, mode_b) < 50 else ""
+            print(f"步骤 {step:4d}：D(真实)={d_real:.2f}  D(生成)={d_fake:.2f}  "
                   f"modeA={mode_a:3d}  modeB={mode_b:3d}{warn}")
 
     print()
-    print("=== final 10 generator samples ===")
+    print("=== 生成器最终生成的 10 个样本 ===")
     for z in sample_noise(10, z_dim, rng):
         print(f"  G(z) = {forward_g(z, G)[0][0]:+.2f}")
 
