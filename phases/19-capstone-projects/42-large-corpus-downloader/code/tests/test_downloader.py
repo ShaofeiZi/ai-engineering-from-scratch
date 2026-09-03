@@ -1,6 +1,6 @@
-"""Unit tests for the streaming corpus downloader.
+"""流式语料下载器的单元测试。
 
-Run with: python3 -m unittest discover code/tests -v
+运行命令：python3 -m unittest discover code/tests -v
 """
 
 from __future__ import annotations

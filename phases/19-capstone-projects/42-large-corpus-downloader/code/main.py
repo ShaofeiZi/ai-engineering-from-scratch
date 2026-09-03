@@ -1,13 +1,11 @@
-"""Streaming corpus downloader with resume, MinHash plus LSH dedup, and a shard manifest.
+"""支持续传、MinHash + LSH 去重和分片清单的流式语料下载器。
 
-Pulls compressed shards from a list of URLs, streams them through a Zstandard
-decompressor, iterates JSONL documents, fingerprints each document with MinHash,
-buckets the signature with locality-sensitive hashing, drops near-duplicates,
-and writes a per-corpus manifest.
+从 URL 列表拉取压缩分片，以流式方式通过 Zstandard 解压器，迭代 JSONL 文档，
+使用 MinHash 为每篇文档生成指纹，通过局部敏感哈希为签名分桶，丢弃近似重复项，
+并写入语料库清单。
 
-The demo at the bottom builds a small synthetic corpus on disk, compresses it
-with Zstandard, exposes it via a file URL, downloads it through this module,
-and prints the manifest. Run: python3 code/main.py
+文件末尾的演示会在磁盘上构建小型合成语料库，用 Zstandard 压缩，通过文件 URL
+公开，再经本模块下载并打印清单。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -31,7 +29,7 @@ try:
     import zstandard as zstd
 except ImportError as exc:
     raise SystemExit(
-        "zstandard is required for this lesson. Install with: pip install zstandard"
+        "本课需要 zstandard。安装命令：pip install zstandard"
     ) from exc
 
 
@@ -45,7 +43,7 @@ MERSENNE_PRIME = (1 << 61) - 1
 
 @dataclass
 class ShardPlan:
-    """One row of the planned shard list."""
+    """计划分片列表中的一行。"""
 
     shard_id: str
     url: str
@@ -54,7 +52,7 @@ class ShardPlan:
 
 @dataclass
 class ShardResult:
-    """Per-shard download and dedup outcome."""
+    """每个分片的下载与去重结果。"""
 
     shard_id: str
     url: str
@@ -71,17 +69,17 @@ class ShardResult:
 
 @dataclass
 class DocVerdict:
-    """One document's dedup verdict."""
+    """单篇文档的去重判定。"""
 
     shard_id: str
     doc_index: int
     verdict: str  # "keep" or "near_duplicate"
-    collided_with: str | None = None  # "shard:doc" of the keeper
+    collided_with: str | None = None  # 保留项的 "shard:doc"。
 
 
 @dataclass
 class CheckpointState:
-    """Resume checkpoint persisted next to the shard."""
+    """持久化在分片旁的续传检查点。"""
 
     url: str
     verified_bytes: int
@@ -103,21 +101,20 @@ class CheckpointState:
 
 
 def _hash_seed_pair(seed: int) -> tuple[int, int]:
-    """Derive two 64-bit coefficients (a, b) from a seed.
+    """从种子派生两个 64 位系数 (a, b)。
 
-    The signature uses universal hashing of the form ((a * x + b) mod p) mod 2^64.
-    Two coefficients are derived deterministically from the seed so the family
-    of hash functions is reproducible across runs and machines.
+    签名使用形式为 ((a * x + b) mod p) mod 2^64 的通用哈希。
+    两个系数由种子确定性派生，使哈希函数族可跨运行、跨机器复现。
     """
 
     digest = hashlib.blake2b(seed.to_bytes(8, "little"), digest_size=16).digest()
-    a = int.from_bytes(digest[:8], "little") | 1  # ensure a is non-zero
+    a = int.from_bytes(digest[:8], "little") | 1  # 确保 a 非零。
     b = int.from_bytes(digest[8:], "little")
     return a, b
 
 
 class MinHasher:
-    """MinHash signature builder with a fixed family of hash seeds."""
+    """使用固定哈希种子族的 MinHash 签名构建器。"""
 
     def __init__(self, num_hashes: int = DEFAULT_NUM_HASHES, shingle_width: int = DEFAULT_SHINGLE_WIDTH) -> None:
         if num_hashes <= 0:
@@ -129,7 +126,7 @@ class MinHasher:
         self._coefficients: list[tuple[int, int]] = [_hash_seed_pair(i) for i in range(num_hashes)]
 
     def shingles(self, text: str) -> list[str]:
-        """Return overlapping whitespace-token shingles."""
+        """返回相互重叠的空白分词 shingle。"""
 
         tokens = text.split()
         if len(tokens) < self.shingle_width:
@@ -145,7 +142,7 @@ class MinHasher:
         return int.from_bytes(digest, "little")
 
     def signature(self, text: str) -> list[int]:
-        """Return the MinHash signature as a list of num_hashes 64-bit ints."""
+        """以 num_hashes 个 64 位整数的列表形式返回 MinHash 签名。"""
 
         shingles = self.shingles(text)
         if not shingles:
@@ -163,13 +160,13 @@ class MinHasher:
 
 
 class LSHIndex:
-    """Locality-sensitive hashing index over MinHash signatures.
+    """基于 MinHash 签名的局部敏感哈希索引。
 
-    Splits each signature into `bands` bands of `rows = num_hashes / bands` rows.
-    Two signatures collide if they agree on at least one band. The collision
-    probability is 1 - (1 - s^r)^b where s is Jaccard similarity, which gives
-    a sharp threshold near s = (1/b)^(1/r). For (b=32, r=4) the threshold is
-    near s = 0.42; for (b=20, r=5) it is near s = 0.55.
+    将每个签名拆为 ``bands`` 个 band，每个 band 有
+    ``rows = num_hashes / bands`` 行。两个签名只要在至少一个 band 上一致就会
+    碰撞。碰撞概率为 ``1 - (1 - s^r)^b``，其中 s 是 Jaccard 相似度，因此在
+    ``s = (1/b)^(1/r)`` 附近形成明显阈值。``(b=32, r=4)`` 时阈值约为
+    ``s = 0.42``；``(b=20, r=5)`` 时约为 ``s = 0.55``。
     """
 
     def __init__(self, num_hashes: int, bands: int = DEFAULT_BANDS) -> None:
@@ -186,7 +183,7 @@ class LSHIndex:
         return hashlib.blake2b(b"".join(struct.pack("<Q", v) for v in band), digest_size=16).digest()
 
     def query(self, signature: list[int]) -> str | None:
-        """Return the doc id of a near-duplicate keeper or None."""
+        """返回近重复保留文档的 doc id；若无则返回 None。"""
 
         for i in range(self.bands):
             band = signature[i * self.rows : (i + 1) * self.rows]
@@ -204,7 +201,7 @@ class LSHIndex:
             self._buckets[i].setdefault(key, []).append(doc_id)
 
     def jaccard_estimate(self, doc_a: str, doc_b: str) -> float:
-        """Return an unbiased Jaccard estimate between two indexed docs."""
+        """返回两个已索引文档之间无偏的 Jaccard 估计值。"""
 
         sig_a = self._signatures[doc_a]
         sig_b = self._signatures[doc_b]
@@ -213,7 +210,7 @@ class LSHIndex:
 
 
 class Dedup:
-    """Combine MinHasher and LSHIndex into a streaming dedup."""
+    """把 MinHasher 与 LSHIndex 组合为流式去重器。"""
 
     def __init__(self, hasher: MinHasher, index: LSHIndex) -> None:
         self.hasher = hasher
@@ -235,11 +232,10 @@ class Dedup:
 
 
 class ZstdDocIterator:
-    """Iterate JSONL documents from a Zstandard-compressed byte stream.
+    """从 Zstandard 压缩字节流中迭代 JSONL 文档。
 
-    Wraps the upstream reader in a Zstandard stream reader, then iterates one
-    line per document. The decompressor never buffers the whole shard; it
-    consumes the upstream incrementally.
+    用 Zstandard 流读取器包装上游读取器，再逐行迭代文档。解压器不会缓冲整个分片，
+    而是增量消费上游数据。
     """
 
     def __init__(self, raw_reader: io.RawIOBase | io.BufferedIOBase) -> None:
@@ -255,12 +251,10 @@ class ZstdDocIterator:
 
 
 class StreamingDownloader:
-    """Stream a remote URL to a local path with Range-resume and checkpointing.
+    """使用 Range 续传与检查点，把远程 URL 流式写入本地路径。
 
-    On every chunk the verified hash and byte count are advanced and the
-    checkpoint is rewritten atomically. The checkpoint records the sha256
-    prefix over the verified bytes, so a corrupted partial cannot be silently
-    resumed.
+    每个数据块都会推进已验证哈希与字节计数，并以原子方式重写检查点。检查点记录
+    已验证字节的 sha256 前缀，因此损坏的部分文件无法被静默续传。
     """
 
     def __init__(
@@ -347,9 +341,8 @@ class StreamingDownloader:
                 if headers is not None:
                     content_range = str(headers.get("Content-Range", "") or "")
                 if status != 206 or not content_range.startswith(f"bytes {resume_from}-"):
-                    # Server ignored or misreported the Range header.
-                    # Close the partial response and reissue a full GET
-                    # before touching the shard or reading the body.
+            # 服务器忽略或错误报告了 Range 标头。
+            # 在修改分片或读取响应体之前，关闭部分响应并重新发起完整 GET。
                     try:
                         response.close()
                     except Exception:
@@ -409,7 +402,7 @@ class StreamingDownloader:
 
 
 class ShardPlanner:
-    """Turn a list of URLs into a planned shard list."""
+    """把 URL 列表转换为计划分片列表。"""
 
     @staticmethod
     def from_urls(urls: Iterable[str]) -> list[ShardPlan]:
@@ -421,7 +414,7 @@ class ShardPlanner:
 
 
 class ManifestWriter:
-    """Collect shard results into a manifest with its own content hash."""
+    """把分片结果收集到带自身内容哈希的清单中。"""
 
     def __init__(self) -> None:
         self._rows: list[dict[str, object]] = []
@@ -462,7 +455,7 @@ def process_shard(
     dedup: Dedup,
     manifest: ManifestWriter,
 ) -> ShardResult:
-    """Download, decompress, dedup, and account for one shard."""
+    """下载、解压、去重并统计单个分片。"""
 
     result = downloader.download(plan)
     kept = 0
@@ -482,9 +475,9 @@ def process_shard(
 
 
 def build_demo_corpus(directory: Path) -> list[str]:
-    """Build a tiny synthetic corpus with duplicates and write zst shards.
+    """构建包含重复项的微型合成语料库，并写入 zst 分片。
 
-    Returns the list of file URLs the downloader should pull.
+    返回下载器应拉取的文件 URL 列表。
     """
 
     directory.mkdir(parents=True, exist_ok=True)
@@ -525,15 +518,15 @@ def run_demo() -> int:
         for plan in plans:
             result = process_shard(plan, downloader, dedup, manifest)
             print(
-                f"[shard] {result.shard_id} docs={result.document_count} "
-                f"kept={result.kept_count} duplicates={result.duplicate_count} "
+                f"[分片] {result.shard_id} 文档={result.document_count} "
+                f"保留={result.kept_count} 重复={result.duplicate_count} "
                 f"sha256={result.sha256[:12]}"
             )
         manifest_path = cache_path / "manifest.json"
         manifest_sha = manifest.write(manifest_path)
         kept = sum(int(row["kept_count"]) for row in manifest.shards)
         dup = sum(int(row["duplicate_count"]) for row in manifest.shards)
-        print(f"[manifest] sha256={manifest_sha[:12]} kept={kept} duplicates={dup}")
+        print(f"[清单] sha256={manifest_sha[:12]} 保留={kept} 重复={dup}")
     return 0
 
 
