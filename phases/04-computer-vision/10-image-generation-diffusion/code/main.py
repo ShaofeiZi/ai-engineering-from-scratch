@@ -141,7 +141,7 @@ def main():
     T = 200
 
     schedule = precompute_schedule(linear_beta_schedule(T=T, beta_start=1e-4, beta_end=0.04))
-    print(f"schedule: T={T}  alpha_bar[0]={float(schedule['alphas_cumprod'][0]):.4f}  "
+    print(f"调度：T={T}  alpha_bar[0]={float(schedule['alphas_cumprod'][0]):.4f}  "
           f"alpha_bar[-1]={float(schedule['alphas_cumprod'][-1]):.4f}")
 
     data = synthetic_circles(num=100, size=16)
@@ -149,18 +149,18 @@ def main():
 
     model = TinyUNet(img_channels=3, base=16).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=1e-3)
-    print(f"params: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"参数量：{sum(p.numel() for p in model.parameters()):,}")
 
     for epoch in range(3):
         losses = []
         for (batch,) in loader:
             losses.append(train_step(model, batch, schedule, opt, device, T=T))
-        print(f"epoch {epoch}  mse {np.mean(losses):.4f}")
+        print(f"轮次 {epoch}  MSE {np.mean(losses):.4f}")
 
     s_ddpm = sample_ddpm(model, schedule, shape=(2, 3, 16, 16), T=T, device=device)
     s_ddim = sample_ddim(model, schedule, shape=(2, 3, 16, 16), steps=20, T=T, device=device)
-    print(f"\nsampled DDPM: {tuple(s_ddpm.shape)}  range [{s_ddpm.min():.2f}, {s_ddpm.max():.2f}]")
-    print(f"sampled DDIM: {tuple(s_ddim.shape)}  range [{s_ddim.min():.2f}, {s_ddim.max():.2f}]")
+    print(f"\nDDPM 采样结果：{tuple(s_ddpm.shape)}  范围 [{s_ddpm.min():.2f}, {s_ddpm.max():.2f}]")
+    print(f"DDIM 采样结果：{tuple(s_ddim.shape)}  范围 [{s_ddim.min():.2f}, {s_ddim.max():.2f}]")
 
 
 if __name__ == "__main__":
