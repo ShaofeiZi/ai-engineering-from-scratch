@@ -1,14 +1,14 @@
-"""Prompt caching accountant.
+"""快速缓存会计师。
 
-Simulates three provider caching regimes (Anthropic ephemeral 5m, Anthropic 1h,
-OpenAI automatic, Gemini explicit) against a stream of requests and reports
-write/read/miss counts plus blended cost per 1K requests.
+模拟三种供方缓存制度(Anthropic ephemeral 5m, Anthropic 1h,
+OpenAI 自动,双子座显式)针对一系列请求和报告
+写入 /read/miss 计数, 加上每1K个请求混合成本 。
 
-Prices below are the April 2026 published rates for input tokens on the
-provider's frontier model. Override by editing PRICES.
+下面的价格是2026年4月公布的输入率tokens
+供应商的前沿模型。 由编辑价格取代。
 
-Run with:
-    python main.py
+运行方式 :
+python 主页.py
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Iterable
 
 
-# Input-token prices, USD per 1K tokens --------------------------------------
+# 输入-token价格,每1Ktokens美元 ——————————————————————————.
 
 PRICES = {
     "anthropic_claude_opus_4_7": {"base": 0.015, "cache_write_5m": 0.01875, "cache_write_1h": 0.030, "cache_read": 0.0015},
@@ -28,7 +28,7 @@ PRICES = {
 
 @dataclass
 class Request:
-    """A single request. `prefix_tokens` is the cacheable prefix; `suffix_tokens` is user input."""
+    """单个请求。 `prefix_tokens` 是可缓存的前缀; `suffix_tokens` 是用户输入。"""
 
     prefix_tokens: int
     suffix_tokens: int
@@ -38,7 +38,7 @@ class Request:
 @dataclass
 class CacheEntry:
     tokens: int
-    written_at: int  # request index
+    written_at: int  # 请求索引
     ttl_seconds: int
 
 
@@ -76,7 +76,7 @@ def simulate_anthropic(requests: Iterable[Request], ttl_seconds: int, seconds_be
 
 
 def simulate_openai(requests: Iterable[Request], seconds_between: int) -> ProviderStats:
-    """OpenAI's cache is automatic; we model it as always-on with 1h best-effort TTL."""
+    """OpenAI的缓存是自动的;我们用1h最佳TTL来模拟它总是-on."""
     p = PRICES["openai_gpt_5"]
     stats = ProviderStats()
     cache: dict[str, CacheEntry] = {}
@@ -111,7 +111,7 @@ def simulate_gemini(requests: Iterable[Request], ttl_seconds: int, seconds_betwe
             stats.reads += 1
             stats.input_cost += (r.prefix_tokens / 1000) * p["cache_read"]
         stats.input_cost += (r.suffix_tokens / 1000) * p["base"]
-    # Storage cost: each entry lives for ttl, billed per token-hour
+    # 存储成本:每个条目使用ttl,每token小时计费
     for entry in cache.values():
         hours = entry.ttl_seconds / 3600
         stats.storage_cost += (entry.tokens / 1000) * p["storage_per_1k_per_hour"] * hours
@@ -137,29 +137,29 @@ def make_traffic(n_requests: int, n_prefixes: int, prefix_size: int, suffix_size
 def print_report(name: str, stats: ProviderStats, baseline: float, n: int) -> None:
     savings = 1 - (stats.total_cost / baseline) if baseline > 0 else 0
     print(f"\n{name}")
-    print(f"  writes {stats.writes:>5}  reads {stats.reads:>5}  misses {stats.misses:>5}")
-    print(f"  input cost  ${stats.input_cost:>7.4f}")
+    print(f"  写入 {stats.writes:>5}  读取 {stats.reads:>5}  未命中 {stats.misses:>5}")
+    print(f"  输入成本  ${stats.input_cost:>7.4f}")
     if stats.storage_cost:
-        print(f"  storage     ${stats.storage_cost:>7.4f}")
-    print(f"  vs no-cache ${baseline:>7.4f}  ->  saves {savings*100:>5.1f}%")
-    print(f"  per 1K req  ${stats.total_cost * 1000 / n:>7.4f}")
+        print(f"  存储成本  ${stats.storage_cost:>7.4f}")
+    print(f"  无缓存成本 ${baseline:>7.4f}  ->  节省 {savings*100:>5.1f}%")
+    print(f"  每千次请求 ${stats.total_cost * 1000 / n:>7.4f}")
 
 
 def main() -> None:
     traffic = make_traffic(n_requests=500, n_prefixes=3, prefix_size=15000, suffix_size=400)
-    seconds_between = 4  # one request every 4 seconds
+    seconds_between = 4  # 每4秒请求一次
 
     anthro_5m = simulate_anthropic(traffic, ttl_seconds=300, seconds_between=seconds_between)
     anthro_1h = simulate_anthropic(traffic, ttl_seconds=3600, seconds_between=seconds_between)
     openai = simulate_openai(traffic, seconds_between=seconds_between)
     gemini = simulate_gemini(traffic, ttl_seconds=3600, seconds_between=seconds_between)
 
-    print(f"Scenario: 500 requests, 3 rotating prefixes (15K tok each), 4s apart\n")
+    print("场景：500 次请求，轮换使用 3 个前缀（每个 15K token），间隔 4 秒\n")
 
-    print_report("Anthropic Claude Opus 4.7 (5-min TTL)", anthro_5m, baseline_cost(traffic, "anthropic_claude_opus_4_7"), len(traffic))
-    print_report("Anthropic Claude Opus 4.7 (1-hour TTL)", anthro_1h, baseline_cost(traffic, "anthropic_claude_opus_4_7"), len(traffic))
-    print_report("OpenAI GPT-5 (automatic)", openai, baseline_cost(traffic, "openai_gpt_5"), len(traffic))
-    print_report("Gemini 3 Pro (explicit, 1-hour)", gemini, baseline_cost(traffic, "gemini_3_pro"), len(traffic))
+    print_report("Anthropic Claude Opus 4.7（TTL 5 分钟）", anthro_5m, baseline_cost(traffic, "anthropic_claude_opus_4_7"), len(traffic))
+    print_report("Anthropic Claude Opus 4.7（TTL 1 小时）", anthro_1h, baseline_cost(traffic, "anthropic_claude_opus_4_7"), len(traffic))
+    print_report("OpenAI GPT-5（自动缓存）", openai, baseline_cost(traffic, "openai_gpt_5"), len(traffic))
+    print_report("Gemini 3 Pro（显式缓存，1 小时）", gemini, baseline_cost(traffic, "gemini_3_pro"), len(traffic))
 
 
 if __name__ == "__main__":
