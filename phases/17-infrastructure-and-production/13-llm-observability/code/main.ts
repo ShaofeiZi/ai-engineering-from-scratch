@@ -1,25 +1,24 @@
 /**
- * Observability — OpenTelemetry-shaped GenAI tracer + retention simulator (TypeScript).
+ * 可观测性——采用 OpenTelemetry 结构的 GenAI 追踪器与保留策略模拟器（TypeScript）。
  *
- * Two halves:
- *   1. Minimal in-memory tracer using the OpenTelemetry GenAI Semantic Convention
- *      attribute names (gen_ai.system, gen_ai.request.model, gen_ai.usage.*).
- *      No SDK. Just a structured log emitter you can ship to Helicone/Phoenix/Langfuse
- *      by swapping the exporter.
- *   2. The same 1M-trace day retention simulator as main.py, with the five
- *      sampling strategies and 2026 price approximations.
+ * 分为两部分：
+ *   1. 使用 OpenTelemetry GenAI 语义约定属性名（gen_ai.system、
+ *      gen_ai.request.model、gen_ai.usage.*）的最小内存追踪器。无需 SDK，
+ *      只需替换导出器，即可将结构化日志发送到 Helicone/Phoenix/Langfuse。
+ *   2. 与 main.py 相同的每日 100 万条追踪保留模拟器，包含五种采样策略
+ *      和 2026 年价格估算。
  *
- * Citations: see docs/en.md for OpenTelemetry GenAI conventions, Arize AX zero-copy
- * pricing claim, Langfuse/Helicone tier comparison.
+ * 参考资料：OpenTelemetry GenAI 约定、Arize AX 零拷贝定价声明以及
+ * Langfuse/Helicone 层级比较见 docs/en.md。
  *
- * Runs on Node 20+ stdlib. No npm deps.
+ * 使用 Node 20+ 标准库运行，无 npm 依赖。
  */
 
 import { randomUUID, createHash } from "node:crypto";
 
-// -- Tracer ----------------------------------------------------------------
+// -- 追踪器 ----------------------------------------------------------------
 
-// OpenTelemetry GenAI Semantic Conventions (2025 spec).
+// OpenTelemetry GenAI 语义约定（2025 年规范）。
 // https://opentelemetry.io/docs/specs/semconv/gen-ai/
 type GenAIAttributes = {
   "gen_ai.system": string;
@@ -30,7 +29,7 @@ type GenAIAttributes = {
   "gen_ai.response.model"?: string;
   "gen_ai.response.finish_reasons"?: string[];
   "gen_ai.response.id"?: string;
-  // Optional but useful for cost / cache analysis.
+  // 可选，但有助于成本与缓存分析。
   "gen_ai.usage.cached_input_tokens"?: number;
   "gen_ai.request.temperature"?: number;
 };
@@ -55,8 +54,8 @@ type SpanEvent = {
   attributes?: Record<string, unknown>;
 };
 
-// Exporter contract: how a real shipper (Helicone, OpenLLMetry, Phoenix) would
-// receive a finished span. Swap this with a real OTLP HTTP exporter in prod.
+// 导出器契约：真实发送器（Helicone、OpenLLMetry、Phoenix）如何接收已结束的 span。
+// 在生产环境中可将其替换为真正的 OTLP HTTP 导出器。
 type SpanExporter = (span: Readonly<Span>) => void;
 
 class GenAITracer {
@@ -90,14 +89,14 @@ class GenAITracer {
   endSpan(span: Span, status: SpanStatus = "OK"): void {
     span.endNs = process.hrtime.bigint();
     span.status = status;
-    // Remove from active stack regardless of strict ordering.
+    // 无论结束顺序是否严格，都从活动栈中移除。
     const idx = this.active.lastIndexOf(span);
     if (idx >= 0) this.active.splice(idx, 1);
     this.exporter(span);
   }
 }
 
-// Console exporter (development). A real exporter would batch and POST to OTLP.
+// 控制台导出器（开发用途）。真实导出器会分批 POST 到 OTLP。
 function consoleExporter(span: Readonly<Span>): void {
   const durMs =
     span.endNs !== undefined
@@ -119,8 +118,8 @@ function consoleExporter(span: Readonly<Span>): void {
   console.log(JSON.stringify(obj));
 }
 
-// Sampling exporter — wraps another exporter. Matches the rule set in the
-// retention simulator below: keep all errors + high-cost, sample success at p.
+// 采样导出器——包装另一个导出器。规则与下方保留策略模拟器一致：
+// 保留所有错误和高成本 span，并以概率 p 采样成功 span。
 function makeSamplingExporter(
   inner: SpanExporter,
   successRate: number,
@@ -141,7 +140,7 @@ function makeSamplingExporter(
   };
 }
 
-// -- Mocked LLM call (no network) ------------------------------------------
+// -- 模拟 LLM 调用（无网络） -----------------------------------------------
 
 type MockProvider = "openai" | "anthropic" | "self-hosted";
 
@@ -161,9 +160,9 @@ function mockLLMCall(
   forceError = false,
 ): MockLLMResult {
   if (forceError) {
-    throw new Error(`${provider}/${model}: simulated rate_limit_exceeded`);
+    throw new Error(`${provider}/${model}：模拟的 rate_limit_exceeded`);
   }
-  // Toy token counter — 4 chars/token, deterministic per prompt.
+  // 简化的 token 计数器——每 4 个字符算一个 token，对相同提示词结果固定。
   const inputTokens = Math.max(1, Math.floor(prompt.length / 4));
   const seed = parseInt(
     createHash("sha256").update(prompt).digest("hex").slice(0, 8),
@@ -174,7 +173,7 @@ function mockLLMCall(
     ? Math.floor(inputTokens * 0.9)
     : 0;
   return {
-    text: `[mock ${provider}/${model}] echo: ${prompt.slice(0, 40)}`,
+    text: `[模拟 ${provider}/${model}] 回显：${prompt.slice(0, 40)}`,
     inputTokens,
     outputTokens,
     cachedInputTokens,
@@ -216,12 +215,12 @@ function traceLLMCall(
   }
 }
 
-// -- Retention / cost simulator -------------------------------------------
+// -- 保留策略与成本模拟器 --------------------------------------------------
 
 const BYTES_PER_TRACE = 4500;
-const COST_PER_GB_MONTH = 0.023; // S3 standard 2026 approx
-const OBSERVABILITY_INGEST_PER_GB = 0.5; // Datadog-class
-const ARIZE_AX_PER_GB = 0.005; // zero-copy Iceberg claim
+const COST_PER_GB_MONTH = 0.023; // 2026 年 S3 标准存储估算价
+const OBSERVABILITY_INGEST_PER_GB = 0.5; // Datadog 级别
+const ARIZE_AX_PER_GB = 0.005; // 零拷贝 Iceberg 声明价
 
 type Strategy = {
   name: string;
@@ -231,14 +230,14 @@ type Strategy = {
 };
 
 const STRATEGIES: Strategy[] = [
-  { name: "100% retain", sampleRate: 1.0, keepErrors: true, keepHighCost: true },
-  { name: "10% random sample", sampleRate: 0.1, keepErrors: false, keepHighCost: false },
-  { name: "5% success + 100% errors", sampleRate: 0.05, keepErrors: true, keepHighCost: false },
-  { name: "5% success + errors + $$$", sampleRate: 0.05, keepErrors: true, keepHighCost: true },
-  { name: "1% aggregates only", sampleRate: 0.01, keepErrors: true, keepHighCost: true },
+  { name: "保留 100%", sampleRate: 1.0, keepErrors: true, keepHighCost: true },
+  { name: "随机采样 10%", sampleRate: 0.1, keepErrors: false, keepHighCost: false },
+  { name: "成功 5% + 错误 100%", sampleRate: 0.05, keepErrors: true, keepHighCost: false },
+  { name: "成功 5% + 错误 + 高成本", sampleRate: 0.05, keepErrors: true, keepHighCost: true },
+  { name: "仅 1% 聚合数据", sampleRate: 0.01, keepErrors: true, keepHighCost: true },
 ];
 
-// Mulberry32 PRNG — deterministic, no deps.
+// Mulberry32 伪随机数生成器——结果确定且无依赖。
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
   return function () {
@@ -296,31 +295,31 @@ function pad(s: string | number, n: number, left = true): string {
 function reportRow(r: SimResult): void {
   console.log(
     `${pad(r.name, 30, false)}  ` +
-      `retained=${pad(r.retained, 7)}  ` +
-      `lost=${pad(r.lost, 7)}  ` +
-      `${pad(r.gbPerDay.toFixed(2), 6)} GB/day  ` +
+      `保留=${pad(r.retained, 7)}  ` +
+      `丢弃=${pad(r.lost, 7)}  ` +
+      `${pad(r.gbPerDay.toFixed(2), 6)} GB/天  ` +
       `mono=$${pad(r.monolithicMonth.toFixed(2), 8)}  ` +
       `arize=$${pad(r.arizeMonth.toFixed(2), 6)}  ` +
       `s3=$${pad(r.s3Month.toFixed(2), 5)}`,
   );
 }
 
-// -- Demo ------------------------------------------------------------------
+// -- 演示 ------------------------------------------------------------------
 
 function tracerDemo(): void {
-  console.log("--- GenAI tracer (OpenTelemetry attribute shape) ---");
+  console.log("--- GenAI 追踪器（OpenTelemetry 属性结构）---");
   const tracer = new GenAITracer(consoleExporter);
-  traceLLMCall(tracer, "openai", "gpt-4o-mini", "What is the capital of France?");
-  traceLLMCall(tracer, "anthropic", "claude-3-5-sonnet", "Summarise system prompt cached document");
-  // Simulate an error path.
-  traceLLMCall(tracer, "self-hosted", "llama-3-70b", "boom", true);
+  traceLLMCall(tracer, "openai", "gpt-4o-mini", "法国的首都是哪里？");
+  traceLLMCall(tracer, "anthropic", "claude-3-5-sonnet", "请总结 system prompt cached 文档");
+  // 模拟错误路径。
+  traceLLMCall(tracer, "self-hosted", "llama-3-70b", "触发错误", true);
 
-  console.log("\n--- Sampling exporter: 5% success + 100% errors + high-cost ---");
+  console.log("\n--- 采样导出器：成功 5% + 错误 100% + 高成本 ---");
   const sampled = new GenAITracer(
     makeSamplingExporter(consoleExporter, 0.05, makeRng(42)),
   );
   for (let i = 0; i < 5; i++) {
-    traceLLMCall(sampled, "openai", "gpt-4o-mini", `query ${i}`);
+    traceLLMCall(sampled, "openai", "gpt-4o-mini", `查询 ${i}`);
   }
   traceLLMCall(sampled, "openai", "gpt-4o-mini", "ratelimit", true);
 }
@@ -328,18 +327,18 @@ function tracerDemo(): void {
 function retentionDemo(): void {
   console.log("\n" + "=".repeat(120));
   console.log(
-    "OBSERVABILITY SAMPLING — 1M traces/day, 2026 price approximations",
+    "可观测性采样——每天 100 万条追踪，采用 2026 年价格估算",
   );
   console.log("=".repeat(120));
   for (const s of STRATEGIES) reportRow(simulateDay(s));
   console.log(
-    "\nRead: 100% retention on Datadog-class costs hundreds of $/day.",
+    "\n解读：在 Datadog 级别的平台上保留 100% 数据，每天需花费数百美元。",
   );
   console.log(
-    "5% success + 100% errors + high-cost keeps signal, cuts 90% of bill.",
+    "保留 5% 成功请求、100% 错误和高成本请求，既保留信号，又能削减 90% 账单。",
   );
   console.log(
-    "Arize AX zero-copy pattern wins at scale when you already have a data lake.",
+    "已有数据湖时，Arize AX 零拷贝模式在规模化场景中更具优势。",
   );
 }
 
