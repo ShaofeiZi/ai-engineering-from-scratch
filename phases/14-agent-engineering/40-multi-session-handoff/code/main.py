@@ -1,9 +1,9 @@
-"""Generate a handoff packet from workbench artifacts.
+"""从工作台产物生成交接包。
 
-Reads state, verdict, review, and feedback (here stubbed in-memory),
-writes handoff.md for humans and handoff.json for the next agent.
+读取状态、裁决、审查和反馈（此处以 in-memory 桩件模拟），
+为人类写入 handoff.md，为下一个代理写入 handoff.json。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
