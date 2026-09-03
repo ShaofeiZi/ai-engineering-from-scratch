@@ -281,7 +281,7 @@ class StreamableHttpTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn("MCP 2026-07-28 Streamable HTTP probe", completed.stdout)
+        self.assertIn("MCP 2026-07-28 可流式 HTTP 探测", completed.stdout)
 
 
 if __name__ == "__main__":
