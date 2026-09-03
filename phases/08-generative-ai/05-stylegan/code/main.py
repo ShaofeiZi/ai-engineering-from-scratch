@@ -46,7 +46,7 @@ def init_mapping(z_dim, w_dim, depth, rng):
 
 
 def stylegan_forward(w, const, synth, noise_sigma, rng, adain_on=True):
-    """Very small 'synthesis' network: three resolution blocks on a 4-channel constant."""
+    """极小型“合成”网络：在 4 通道常量上叠加三个分辨率块。"""
     h = list(const)
     for i in range(3):
         W = synth[f"W{i}"]
@@ -80,8 +80,8 @@ def main():
     synth = init_synth(hidden, w_dim, rng)
     const = [rng.gauss(0, 0.3) for _ in range(hidden)]
 
-    print("=== compare: style inputs via AdaIN vs no AdaIN ===")
-    print("sample 5 random z, look at std of output under each mode")
+    print("=== 对比：通过 AdaIN 注入风格与不使用 AdaIN ===")
+    print("采样 5 个随机 z，观察每种模式下输出的标准差")
 
     for mode in [True, False]:
         outs = []
@@ -93,10 +93,10 @@ def main():
         flat = [v for row in outs for v in row]
         m, s = mean_std(flat)
         label = "with AdaIN" if mode else "no AdaIN  "
-        print(f"  {label}: mean {m:+.3f}  std {s:.3f}")
+        print(f"  {label}：均值 {m:+.3f}  标准差 {s:.3f}")
 
     print()
-    print("=== truncation trick: sample many w, take mean, interpolate ===")
+    print("=== 截断技巧：采样多个 w，取均值后插值 ===")
     ws = []
     for _ in range(200):
         z = [rng.gauss(0, 1) for _ in range(z_dim)]
@@ -109,20 +109,20 @@ def main():
     for psi in [0.0, 0.5, 0.7, 1.0]:
         w_psi = [w_bar[i] + psi * (w_test[i] - w_bar[i]) for i in range(w_dim)]
         h = stylegan_forward(w_psi, const, synth, 0.0, rng, adain_on=True)
-        print(f"  psi={psi:.1f}: output = {[f'{v:+.2f}' for v in h]}")
+        print(f"  psi={psi:.1f}：输出 = {[f'{v:+.2f}' for v in h]}")
 
     print()
-    print("=== per-layer noise injection (pose fixed, stochastic detail changes) ===")
+    print("=== 逐层注入噪声（姿态固定，随机细节变化）===")
     z_fixed = [rng.gauss(0, 1) for _ in range(z_dim)]
     w_fixed = mapping(z_fixed, mapping_net)
     for seed in range(3):
         rng_local = random.Random(seed)
         h = stylegan_forward(w_fixed, const, synth, 0.1, rng_local, adain_on=True)
-        print(f"  seed {seed}: {[f'{v:+.2f}' for v in h]}")
+        print(f"  种子 {seed}：{[f'{v:+.2f}' for v in h]}")
 
     print()
-    print("notice: with the same w, outputs vary slightly with noise seed.")
-    print("         that is the stochastic-detail vs global-style split.")
+    print("请注意：使用相同 w 时，输出会随噪声种子略有变化。")
+    print("          这就是随机细节与全局风格的分离。")
 
 
 if __name__ == "__main__":
