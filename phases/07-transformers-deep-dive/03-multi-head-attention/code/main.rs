@@ -1,12 +1,12 @@
-// Multi-head attention + grouped-query attention, stdlib only.
-// Topic: head split, per-head scaled dot-product attention, concat, output projection.
-// References (cited in spirit, not as deps):
-//   - Vaswani 2017:                  https://arxiv.org/abs/1706.03762
-//   - GQA paper (Ainslie 2023):      https://arxiv.org/abs/2305.13245
-//   - candle multi-head impl:        https://github.com/huggingface/candle/blob/main/candle-transformers/src/models/llama.rs
-//   - llm.c attention forward:       https://github.com/karpathy/llm.c/blob/master/train_gpt2.c
+// 多头注意力 + 分组查询注意力，仅使用标准库。
+// 主题：头拆分、逐头缩放点积注意力、拼接和输出投影。
+// 参考资料（仅作为引用，不作为依赖）：
+//   - Vaswani 2017：https://arxiv.org/abs/1706.03762
+//   - GQA 论文（Ainslie 2023）：https://arxiv.org/abs/2305.13245
+//   - candle 多头实现：https://github.com/huggingface/candle/blob/main/candle-transformers/src/models/llama.rs
+//   - llm.c 注意力前向传播：https://github.com/karpathy/llm.c/blob/master/train_gpt2.c
 //
-// Compile + run:  rustc --edition 2021 main.rs -o /tmp/mha && /tmp/mha
+// 编译并运行：rustc --edition 2021 main.rs -o /tmp/mha && /tmp/mha
 
 struct Mat {
     rows: usize,
@@ -107,9 +107,9 @@ fn scaled_dot_product_attention(q: &Mat, k: &Mat, v: &Mat) -> (Mat, Mat) {
     (out, weights)
 }
 
-// Split [n, d_model] into n_heads chunks of [n, d_head] along the last axis.
+// 沿最后一个轴将 [n, d_model] 拆分为 n_heads 个 [n, d_head] 块。
 fn split_heads(x: &Mat, n_heads: usize) -> Vec<Mat> {
-    assert_eq!(x.cols % n_heads, 0, "d_model {} not divisible by n_heads {}", x.cols, n_heads);
+    assert_eq!(x.cols % n_heads, 0, "d_model {} 不能被 n_heads {} 整除", x.cols, n_heads);
     let d_head = x.cols / n_heads;
     let mut heads = Vec::with_capacity(n_heads);
     for h in 0..n_heads {
@@ -124,7 +124,7 @@ fn split_heads(x: &Mat, n_heads: usize) -> Vec<Mat> {
     heads
 }
 
-// Concat n_heads chunks of [n, d_head] back to [n, n_heads * d_head].
+// 将 n_heads 个 [n, d_head] 块重新拼接为 [n, n_heads * d_head]。
 fn combine_heads(heads: &[Mat]) -> Mat {
     let n = heads[0].rows;
     let d_head = heads[0].cols;
@@ -163,13 +163,13 @@ fn multi_head_attention(
     (concat.matmul(wo), per_head_weights)
 }
 
-// GQA: Q has n_heads, K and V have n_kv_heads. Replicate each KV head across its group.
+// GQA：Q 有 n_heads 个头，K 和 V 有 n_kv_heads 个头。在组内复制各 KV 头。
 fn grouped_query_attention(
     x: &Mat,
     wq: &Mat, wk: &Mat, wv: &Mat, wo: &Mat,
     n_heads: usize, n_kv_heads: usize,
 ) -> Mat {
-    assert_eq!(n_heads % n_kv_heads, 0, "n_heads must be a multiple of n_kv_heads");
+    assert_eq!(n_heads % n_kv_heads, 0, "n_heads 必须是 n_kv_heads 的整数倍");
     let q = x.matmul(wq);
     let k = x.matmul(wk);
     let v = x.matmul(wv);
@@ -214,18 +214,18 @@ fn main() {
 
     let (out, weights) = multi_head_attention(&x, &wq, &wk, &wv, &wo, n_heads);
 
-    println!("=== multi-head attention: {} heads, d_model={}, d_head={} ===",
+    println!("=== 多头注意力：{} 个头，d_model={}，d_head={} ===",
         n_heads, d_model, d_model / n_heads);
-    println!("input  shape: ({}, {})", x.rows, x.cols);
-    println!("output shape: ({}, {})", out.rows, out.cols);
+    println!("输入形状：({}, {})", x.rows, x.cols);
+    println!("输出形状：({}, {})", out.rows, out.cols);
     println!();
     for (h, w) in weights.iter().enumerate() {
-        println!("-- head {} attention weights --", h);
+        println!("-- 第 {} 个头的注意力权重 --", h);
         print_head_weights(w, &tokens);
         println!();
     }
 
-    // GQA demo: 4 Q heads, 2 KV heads.
+    // GQA 演示：4 个 Q 头，2 个 KV 头。
     let d_model = 8usize;
     let n_heads = 4usize;
     let n_kv = 2usize;
@@ -240,16 +240,16 @@ fn main() {
     let wo = randn(d_model, d_model, &mut rng);
 
     let out_gqa = grouped_query_attention(&x, &wq, &wk, &wv, &wo, n_heads, n_kv);
-    println!("=== GQA: {} Q heads, {} KV heads ===", n_heads, n_kv);
-    println!("output shape: ({}, {})", out_gqa.rows, out_gqa.cols);
+    println!("=== GQA：{} 个 Q 头，{} 个 KV 头 ===", n_heads, n_kv);
+    println!("输出形状：({}, {})", out_gqa.rows, out_gqa.cols);
 
     let kv_full = n_heads * n * d_head * 2;
     let kv_gqa = n_kv * n * d_head * 2;
-    println!("KV cache elements (MHA):  {}", kv_full);
-    println!("KV cache elements (GQA):  {}  ({}x smaller)", kv_gqa, kv_full / kv_gqa);
+    println!("KV cache 元素数（MHA）：{}", kv_full);
+    println!("KV cache 元素数（GQA）：{}  （缩小 {} 倍）", kv_gqa, kv_full / kv_gqa);
 
     println!();
-    println!("=== microbench: 5K MHA forwards (n=6, d=8, 2 heads) ===");
+    println!("=== 微基准测试：5000 次 MHA 前向传播（n=6，d=8，2 个头）===");
     let mut rng = Rng::new(13);
     let x_b = randn_unit(n, d_model, &mut rng);
     let wq_b = randn(d_model, d_model, &mut rng);
@@ -263,7 +263,7 @@ fn main() {
         sink += o.at(0, 0);
     }
     let elapsed = start.elapsed();
-    println!("5K forwards in {:.2}ms ({:.0}/sec)  sink={:.4}",
+    println!("5000 次前向传播耗时 {:.2}ms（{:.0}/秒）  累加值={:.4}",
         elapsed.as_secs_f64() * 1000.0,
         5_000.0 / elapsed.as_secs_f64(),
         sink,
