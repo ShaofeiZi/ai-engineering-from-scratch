@@ -60,15 +60,15 @@ def majority_baseline(y_train, y_test):
 
 def demo_nearest_centroid():
     print("=" * 60)
-    print("NEAREST CENTROID CLASSIFIER FROM SCRATCH")
+    print("从零实现的最近质心分类器")
     print("=" * 60)
     print()
 
     X, y = generate_classification_data(n_per_class=150, separation=2.0)
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-    print(f"Dataset: {len(y)} samples, {X.shape[1]} features, 2 classes")
-    print(f"Train: {len(y_train)} samples, Test: {len(y_test)} samples")
+    print(f"数据集：{len(y)} 个样本，{X.shape[1]} 个特征，2 个类别")
+    print(f"训练集：{len(y_train)} 个样本，测试集：{len(y_test)} 个样本")
     print()
 
     clf = NearestCentroid()
@@ -77,36 +77,36 @@ def demo_nearest_centroid():
     train_acc = clf.score(X_train, y_train)
     test_acc = clf.score(X_test, y_test)
 
-    print(f"Centroids:")
+    print(f"质心：")
     for i, c in enumerate(clf.classes):
-        print(f"  Class {c}: [{clf.centroids[i][0]:.3f}, {clf.centroids[i][1]:.3f}]")
+        print(f"  类别 {c}：[{clf.centroids[i][0]:.3f}, {clf.centroids[i][1]:.3f}]")
     print()
 
-    print(f"{'Method':<25} {'Train Acc':>10} {'Test Acc':>10}")
+    print(f"{'方法':<25} {'训练准确率':>10} {'测试准确率':>10}")
     print("-" * 50)
-    print(f"{'Nearest Centroid':<25} {train_acc:>10.3f} {test_acc:>10.3f}")
+    print(f"{'最近质心':<25} {train_acc:>10.3f} {test_acc:>10.3f}")
 
     rand_acc = random_baseline(y_train, y_test)
-    print(f"{'Random Baseline':<25} {'--':>10} {rand_acc:>10.3f}")
+    print(f"{'随机基线':<25} {'--':>10} {rand_acc:>10.3f}")
 
     maj_acc = majority_baseline(y_train, y_test)
-    print(f"{'Majority Baseline':<25} {'--':>10} {maj_acc:>10.3f}")
+    print(f"{'多数类基线':<25} {'--':>10} {maj_acc:>10.3f}")
 
     print()
     improvement_over_random = (test_acc - rand_acc) / rand_acc * 100
-    print(f"Nearest Centroid beats random baseline by {improvement_over_random:.1f}%")
+    print(f"最近质心相比随机基线提升了 {improvement_over_random:.1f}%")
 
 
 def demo_varying_difficulty():
     print()
     print("=" * 60)
-    print("EFFECT OF CLASS SEPARATION ON ACCURACY")
+    print("类别间隔对准确率的影响")
     print("=" * 60)
     print()
 
     separations = [0.5, 1.0, 1.5, 2.0, 3.0, 5.0]
 
-    print(f"{'Separation':>12} {'Train Acc':>10} {'Test Acc':>10} {'Random':>10}")
+    print(f"{'间隔':>12} {'训练准确率':>10} {'测试准确率':>10} {'随机基线':>10}")
     print("-" * 50)
 
     for sep in separations:
@@ -123,20 +123,20 @@ def demo_varying_difficulty():
         print(f"{sep:>12.1f} {train_acc:>10.3f} {test_acc:>10.3f} {rand_acc:>10.3f}")
 
     print()
-    print("Small separation: classes overlap heavily, accuracy drops.")
-    print("Large separation: classes are far apart, even this simple model excels.")
+    print("间隔较小时，类别高度重叠，准确率会下降。")
+    print("间隔较大时，类别相距较远，即使这个简单模型也表现出色。")
 
 
 def demo_higher_dimensions():
     print()
     print("=" * 60)
-    print("NEAREST CENTROID IN HIGHER DIMENSIONS")
+    print("高维空间中的最近质心分类")
     print("=" * 60)
     print()
 
     dimensions = [2, 5, 10, 20, 50]
 
-    print(f"{'Features':>10} {'Test Acc':>10}")
+    print(f"{'特征数':>10} {'测试准确率':>10}")
     print("-" * 25)
 
     for d in dimensions:
@@ -150,16 +150,16 @@ def demo_higher_dimensions():
         print(f"{d:>10d} {test_acc:>10.3f}")
 
     print()
-    print("With Gaussian data and fixed separation, more dimensions help.")
-    print("The centroids become more distinct in higher-dimensional space.")
-    print("Real data behaves differently -- the curse of dimensionality kicks in")
-    print("when many features are noise.")
+    print("对于间隔固定的高斯数据，增加维度会有帮助。")
+    print("在更高维空间中，各质心之间的区别会更加明显。")
+    print("真实数据的表现不同——当大量特征都是噪声时，")
+    print("维度灾难就会显现。")
 
 
 def demo_multiclass():
     print()
     print("=" * 60)
-    print("MULTICLASS NEAREST CENTROID (3 CLASSES)")
+    print("多分类最近质心（3 个类别）")
     print("=" * 60)
     print()
 
@@ -178,13 +178,13 @@ def demo_multiclass():
     clf = NearestCentroid()
     clf.fit(X_train, y_train)
 
-    print(f"3-class problem: {len(y)} samples")
-    print(f"Centroids:")
+    print(f"三分类问题：{len(y)} 个样本")
+    print(f"质心：")
     for i, c in enumerate(clf.classes):
-        print(f"  Class {c}: [{clf.centroids[i][0]:.3f}, {clf.centroids[i][1]:.3f}]")
+        print(f"  类别 {c}：[{clf.centroids[i][0]:.3f}, {clf.centroids[i][1]:.3f}]")
     print()
-    print(f"Test accuracy: {clf.score(X_test, y_test):.3f}")
-    print(f"Random baseline (1/3): {random_baseline(y_train, y_test):.3f}")
+    print(f"测试准确率：{clf.score(X_test, y_test):.3f}")
+    print(f"随机基线（1/3）：{random_baseline(y_train, y_test):.3f}")
 
 
 if __name__ == "__main__":
@@ -193,4 +193,4 @@ if __name__ == "__main__":
     demo_higher_dimensions()
     demo_multiclass()
     print()
-    print("All ML intro demos complete.")
+    print("所有机器学习入门演示均已完成。")
