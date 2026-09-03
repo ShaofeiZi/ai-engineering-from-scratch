@@ -1,8 +1,7 @@
-"""Streaming mock LLM with three scripted personas.
+"""带流式输出与三种预设角色的模拟大语言模型。
 
-The model yields chunks of up to four tokens at a time. The 'attacker-lazy'
-persona is supposed to be caught by the during-gen filter because it
-produces an obvious continuation that the input detector might have missed.
+模型每次最多产出四个 token 的文本块。'attacker-lazy' 角色应当被生成过程中的过滤器拦截，
+因为它会产出一段输入检测器可能遗漏的、明显的续写内容。
 """
 
 from __future__ import annotations

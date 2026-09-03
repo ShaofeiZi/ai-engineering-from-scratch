@@ -1,8 +1,8 @@
-"""SafetyGate composes detector, token-filter, classifier, and rules engine
-into a single request lifecycle with a deterministic aggregation table.
+"""SafetyGate 将检测器、token 过滤器、分类器和规则引擎组合为
+单一请求生命周期，并使用确定性的聚合表。
 
-Imports from sibling lesson directories via sys.path injection so the lesson
-remains a single end-to-end demo without needing to package code.
+通过 sys.path 注入从同级课程目录导入，使本课程保持为
+单个端到端演示，而无需打包代码。
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ Router = _classifier_mod.Router
 Engine = _rules_mod.Engine
 Fixer = _rules_mod.Fixer
 
-from mock_llm_stream import stream  # noqa: E402  local module
+from mock_llm_stream import stream  # noqa: E402  本地模块
 
 SEVERITY_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3}
 

@@ -1,10 +1,10 @@
-"""End-to-end safety gate demo over the lesson 82 taxonomy.
+"""基于第 82 课分类体系的端到端安全闸门演示。
 
-Loads the taxonomy artifact, runs all 50 fixtures plus a small benign list
-through the SafetyGate, prints a per-action / per-category summary, and
-writes outputs/gate_trace.json.
+加载分类体系产物，将全部 50 个测试夹具加上一小批良性提示词
+送入 SafetyGate 处理，按动作/类别打印汇总结果，
+并将结果写入 outputs/gate_trace.json。
 
-Run: python3 main.py
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -58,8 +58,8 @@ def demo() -> int:
     terminations = 0
     total_latency = 0.0
 
-    print("End-to-end safety gate demo")
-    print(f"  loaded {len(fixtures)} attack fixtures + {len(BENIGN_PROMPTS)} benign prompts")
+    print("端到端安全闸门演示")
+    print(f"  已加载 {len(fixtures)} 个攻击夹具 + {len(BENIGN_PROMPTS)} 个良性提示词")
     print()
 
     for fix in fixtures:
@@ -86,15 +86,15 @@ def demo() -> int:
         traces.append({"corpus": "benign", "fixture_id": None, "category": "benign", **trace_to_dict(trace)})
 
     total_requests = len(fixtures) + len(BENIGN_PROMPTS)
-    print("  final action counts:")
+    print("  最终动作计数：")
     for action in ("block", "redact", "warn", "allow"):
         print(f"    {action:6} {action_counts.get(action, 0)}")
     print()
-    print(f"  during-gen terminations: {terminations}")
-    print(f"  benign blocks: {benign_block_count} / {len(BENIGN_PROMPTS)}")
-    print(f"  avg latency: {total_latency / total_requests:.2f} ms / request")
+    print(f"  生成期间终止次数：{terminations}")
+    print(f"  良性请求拦截数：{benign_block_count} / {len(BENIGN_PROMPTS)}")
+    print(f"  平均延迟：{total_latency / total_requests:.2f} ms / 请求")
     print()
-    print("  per-category outcome:")
+    print("  各类别结果：")
     for cat, counts in per_category_outcome.items():
         parts = ", ".join(f"{a}={counts[a]}" for a in ("block", "redact", "warn", "allow") if counts[a])
         print(f"    {cat:22} {parts}")
@@ -111,7 +111,7 @@ def demo() -> int:
         "traces": traces,
     }
     out = write_traces(payload)
-    print(f"\n  artifact written to {out}")
+    print(f"\n  产物已写入 {out}")
     return 0
 
 
