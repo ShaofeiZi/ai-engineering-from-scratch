@@ -87,21 +87,21 @@ def main():
     lengths = [500, 2000, 8000, 20000, 40000]
     depths = [0.1, 0.3, 0.5, 0.7, 0.9]
 
-    print("=== toy NIAH grid (mock model with effective capacity = 20k) ===")
-    print("marker: 1 = needle found in-context,  0 = needle missed")
+    print("=== 简化 NIAH 网格（模拟模型的有效容量 = 20k）===")
+    print("标记：1 = 在上下文中找到针，0 = 未找到针")
     print()
     run_niah_grid(lengths, depths)
 
     print()
-    print("=== multi-needle at length=10000, n=3 ===")
+    print("=== 多针测试：长度=10000，n=3 ===")
     score = run_multi_needle(10000, n_needles=3)
-    print(f"  found {score * 3:.0f} / 3 needles")
+    print(f"  找到 {score * 3:.0f} / 3 根针")
 
     print()
-    print("notes:")
-    print("  mock model has hard effective-capacity cutoff; real LLMs degrade gradually.")
-    print("  real NIAH: sweep 5 depths × 6 lengths, produce heatmap per model.")
-    print("  always pair with one multi-hop / aggregation task (RULER) — single-needle is saturable.")
+    print("注意事项：")
+    print("  模拟模型采用硬性有效容量截断；真正的 LLM 会逐渐退化。")
+    print("  真正的 NIAH：扫描 5 个深度 × 6 个长度，为每个模型生成热力图。")
+    print("  始终搭配一个多跳/聚合任务（RULER）——单针测试容易饱和。")
 
 
 if __name__ == "__main__":
