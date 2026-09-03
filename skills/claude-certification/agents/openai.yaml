@@ -1,4 +1,4 @@
 interface:
-  display_name: "Claude Certification Tutor"
-  short_description: "AI-native certification path, labs, and review"
-  default_prompt: "Use claude-certification to choose a Claude certification track and teach me the next step."
+  display_name: "Claude 认证导师"
+  short_description: "AI 原生认证路径、实验与复习"
+  default_prompt: "使用 claude-certification 帮我选择 Claude 认证方向，并教授下一步内容。"
