@@ -1,4 +1,4 @@
-"""Tests for MultiHeadSelfAttention."""
+"""MultiHeadSelfAttention 的测试。"""
 
 from __future__ import annotations
 
