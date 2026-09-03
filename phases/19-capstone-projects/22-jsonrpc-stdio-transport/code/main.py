@@ -1,11 +1,11 @@
-"""JSON-RPC 2.0 over newline-delimited stdio.
+"""通过换行分隔 stdio 传输 JSON-RPC 2.0。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
+概念参考：
+- ./docs/en.md（本课程）
 - JSON-RPC 2.0 specification (https://www.jsonrpc.org/specification)
 - RFC 8259 (JSON)
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -68,9 +68,9 @@ def _is_valid_envelope(msg: Any) -> bool:
 
 
 def parse_request(raw: str) -> tuple[Request | None, dict | None]:
-    """Parse one JSON line. Returns (Request, None) on success or (None, error_dict).
+    """解析一行 JSON。成功时返回 (Request, None)，失败时返回 (None, error_dict)。
 
-    error_dict is a JSON-RPC error response ready to write out.
+    error_dict 是可直接写出的 JSON-RPC 错误响应。
     """
     try:
         msg = json.loads(raw)
@@ -107,7 +107,7 @@ def _notification_envelope(method: str, params: Any | None) -> dict:
 
 
 class StdioTransport:
-    """Newline-delimited JSON-RPC 2.0 over a pair of byte streams."""
+    """在一对字节流上传输以换行分隔的 JSON-RPC 2.0。"""
 
     def __init__(self, stdin: BinaryIO, stdout: BinaryIO) -> None:
         self._in: BinaryIO = stdin
@@ -138,7 +138,7 @@ Handler = Callable[[str, Any], Any]
 
 
 def _handle_one(handler: Handler, transport: StdioTransport, req: Request) -> dict | None:
-    """Dispatch a single Request. Returns the response envelope (or None for notification)."""
+    """分发单个 Request。返回响应 envelope（notification 则返回 None）。"""
     try:
         result = handler(req.method, req.params)
     except MethodNotFound as exc:
@@ -184,7 +184,7 @@ def _write_raw(transport: StdioTransport, obj: Any) -> None:
 
 
 def serve(handler: Handler, transport: StdioTransport) -> None:
-    """Read requests from transport until EOF. Dispatch each through handler."""
+    """从传输层读取请求直到 EOF，并通过 handler 逐个分发。"""
     while True:
         line = transport.read_line()
         if line is None:
@@ -215,17 +215,17 @@ def serve(handler: Handler, transport: StdioTransport) -> None:
 
 
 def _demo() -> None:
-    """Self-terminating demo using io.BytesIO. No process spawn."""
+    """使用 io.BytesIO 且会自行终止的演示，不创建进程。"""
 
     def handler(method: str, params: Any) -> Any:
         if method == "math.add":
             if not isinstance(params, dict) or "a" not in params or "b" not in params:
-                raise InvalidParams("a and b required")
+                raise InvalidParams("需要 a 和 b")
             return params["a"] + params["b"]
         if method == "echo":
             return params
         if method == "boom":
-            raise RuntimeError("intentional")
+            raise RuntimeError("有意触发")
         raise MethodNotFound(f"method {method!r}")
 
     requests = [
