@@ -1,8 +1,8 @@
-# Perceptron + 1-hidden-layer MLP in Julia. Single-layer Rosenblatt
-# perceptron for AND/OR/NOT, then a hand-wired XOR network to show
-# why the perceptron fails on XOR, then a trained 2-2-1 sigmoid MLP
-# with manual backpropagation.
-# Stdlib only. Sources:
+# 感知机 + 单隐藏层 MLP 的 Julia 实现。先用单层 Rosenblatt
+# 感知机实现 AND/OR/NOT，再用手动连接的 XOR 网络展示
+# 感知机为何无法解决 XOR，最后训练一个 2-2-1 sigmoid MLP
+# 并手动实现反向传播。
+# 仅使用标准库。参考资料：
 #   https://en.wikipedia.org/wiki/Perceptron
 #   https://docs.julialang.org/en/v1/manual/types/#Composite-Types
 
@@ -38,11 +38,11 @@ function train!(p::Perceptron, data::Vector{Tuple{Vector{Float64}, Int}}; epochs
             end
         end
         if errors == 0
-            println("Converged at epoch $epoch")
+            println("在第 $epoch 轮收敛")
             return
         end
     end
-    println("Did not converge after $epochs epochs")
+    println("经过 $epochs 轮后未收敛")
 end
 
 
@@ -50,18 +50,18 @@ function test_gate(name::String, n_inputs::Int, data::Vector{Tuple{Vector{Float6
     println("=== $name ===")
     p = Perceptron(n_inputs)
     train!(p, data)
-    println("  Weights: $(p.weights), Bias: $(p.bias)")
+    println("  权重: $(p.weights), 偏置: $(p.bias)")
     for (inputs, expected) in data
         result = predict(p, inputs)
-        status = result == expected ? "OK" : "WRONG"
-        println("  $inputs -> $result (expected $expected) $status")
+        status = result == expected ? "正确" : "错误"
+        println("  $inputs -> $result (期望 $expected) $status")
     end
     println()
 end
 
 
-# Hand-wired XOR via OR + NAND + AND. Demonstrates that a 2-layer
-# network of perceptrons can compute XOR even though a single one cannot.
+# 手动连接的 XOR：通过 OR + NAND + AND 实现。展示两层
+# 感知机网络可以计算 XOR，而单层感知机则不能。
 function xor_network(x1::Float64, x2::Float64)::Int
     or_neuron = Perceptron(2)
     or_neuron.weights = Float64[1.0, 1.0]
@@ -81,14 +81,14 @@ function xor_network(x1::Float64, x2::Float64)::Int
 end
 
 
-# Tiny trained MLP: 2 inputs -> 2 hidden sigmoid neurons -> 1 sigmoid output.
+# 小型训练 MLP：2 个输入 -> 2 个 sigmoid 隐藏神经元 -> 1 个 sigmoid 输出。
 mutable struct TwoLayerNetwork
     w_hidden::Matrix{Float64}    # 2x2
     b_hidden::Vector{Float64}    # 2
     w_output::Vector{Float64}    # 2
     b_output::Float64
     lr::Float64
-    # caches for backprop
+    # 反向传播缓存
     last_input::Vector{Float64}
     hidden_out::Vector{Float64}
     output::Float64
@@ -156,7 +156,7 @@ function train!(net::TwoLayerNetwork, data::Vector{Tuple{Vector{Float64}, Float6
             backward!(net, target)
         end
         if epoch % 2000 == 0
-            @printf("  Epoch %d, error: %.4f\n", epoch, total_err)
+            @printf("  轮次 %d, 误差: %.4f\n", epoch, total_err)
         end
     end
 end
@@ -186,29 +186,29 @@ function main()
         (Float64[1, 1], 0),
     ]
 
-    test_gate("AND Gate", 2, and_data)
-    test_gate("OR Gate", 2, or_data)
-    test_gate("NOT Gate", 1, not_data)
+    test_gate("AND 门", 2, and_data)
+    test_gate("OR 门", 2, or_data)
+    test_gate("NOT 门", 1, not_data)
 
-    println("=== XOR Gate (single perceptron - will fail) ===")
+    println("=== XOR 门（单层感知机 - 会失败）===")
     p_xor = Perceptron(2)
     train!(p_xor, xor_data; epochs=1000)
     for (inputs, expected) in xor_data
         result = predict(p_xor, inputs)
-        status = result == expected ? "OK" : "WRONG"
-        println("  $inputs -> $result (expected $expected) $status")
+        status = result == expected ? "正确" : "错误"
+        println("  $inputs -> $result (期望 $expected) $status")
     end
     println()
 
-    println("=== XOR Gate (multi-layer network - works) ===")
+    println("=== XOR 门（多层网络 - 可行）===")
     for (inputs, expected) in xor_data
         result = xor_network(inputs[1], inputs[2])
-        status = result == expected ? "OK" : "WRONG"
-        println("  $inputs -> $result (expected $expected) $status")
+        status = result == expected ? "正确" : "错误"
+        println("  $inputs -> $result (期望 $expected) $status")
     end
     println()
 
-    println("=== XOR Gate (trained 2-layer network with backpropagation) ===")
+    println("=== XOR 门（带反向传播的训练两层网络）===")
     xor_train = Tuple{Vector{Float64}, Float64}[
         (Float64[0, 0], 0.0),
         (Float64[0, 1], 1.0),

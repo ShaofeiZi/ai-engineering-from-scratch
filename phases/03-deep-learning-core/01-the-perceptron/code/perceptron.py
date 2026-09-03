@@ -21,20 +21,20 @@ class Perceptron:
                         self.weights[i] += self.lr * error * inputs[i]
                     self.bias += self.lr * error
             if errors == 0:
-                print(f"Converged at epoch {epoch + 1}")
+                print(f"在第 {epoch + 1} 轮收敛")
                 return
-        print(f"Did not converge after {epochs} epochs")
+        print(f"经过 {epochs} 轮后仍未收敛")
 
 
 def test_gate(name, n_inputs, data):
     print(f"=== {name} ===")
     p = Perceptron(n_inputs)
     p.train(data)
-    print(f"  Weights: {p.weights}, Bias: {p.bias}")
+    print(f"  权重: {p.weights}, 偏置: {p.bias}")
     for inputs, expected in data:
         result = p.predict(inputs)
-        status = "OK" if result == expected else "WRONG"
-        print(f"  {inputs} -> {result} (expected {expected}) {status}")
+        status = "正确" if result == expected else "错误"
+        print(f"  {inputs} -> {result} (期望 {expected}) {status}")
     print()
 
 
@@ -64,17 +64,17 @@ xor_data = [
     ([1, 1], 0),
 ]
 
-test_gate("AND Gate", 2, and_data)
-test_gate("OR Gate", 2, or_data)
-test_gate("NOT Gate", 1, not_data)
+test_gate("AND 门", 2, and_data)
+test_gate("OR 门", 2, or_data)
+test_gate("NOT 门", 1, not_data)
 
-print("=== XOR Gate (single perceptron - will fail) ===")
+print("=== XOR 门（单个感知机 - 会失败）===")
 p_xor = Perceptron(2)
 p_xor.train(xor_data, epochs=1000)
 for inputs, expected in xor_data:
     result = p_xor.predict(inputs)
-    status = "OK" if result == expected else "WRONG"
-    print(f"  {inputs} -> {result} (expected {expected}) {status}")
+    status = "正确" if result == expected else "错误"
+    print(f"  {inputs} -> {result} (期望 {expected}) {status}")
 print()
 
 
@@ -96,11 +96,11 @@ def xor_network(x1, x2):
     return and_neuron.predict([hidden1, hidden2])
 
 
-print("=== XOR Gate (multi-layer network - works) ===")
+print("=== XOR 门（多层网络 - 可行）===")
 for inputs, expected in xor_data:
     result = xor_network(inputs[0], inputs[1])
-    status = "OK" if result == expected else "WRONG"
-    print(f"  {inputs} -> {result} (expected {expected}) {status}")
+    status = "正确" if result == expected else "错误"
+    print(f"  {inputs} -> {result} (期望 {expected}) {status}")
 print()
 
 
@@ -156,14 +156,14 @@ class TwoLayerNetwork:
                     self.b_hidden[i] += self.lr * hidden_deltas[i]
 
             if epoch % 2000 == 0:
-                print(f"  Epoch {epoch}, error: {total_error:.4f}")
+                print(f"  轮次 {epoch}, 误差: {total_error:.4f}")
 
 
-print("=== XOR Gate (trained 2-layer network with backpropagation) ===")
+print("=== XOR 门（用反向传播训练的 2 层网络）===")
 net = TwoLayerNetwork(learning_rate=2.0)
 net.train(xor_data, epochs=10000)
 print()
 for inputs, expected in xor_data:
     result = net.forward(inputs)
     predicted = 1 if result >= 0.5 else 0
-    print(f"  {inputs} -> {result:.4f} (rounded: {predicted}, expected {expected})")
+    print(f"  {inputs} -> {result:.4f} (取整: {predicted}, 期望 {expected})")
