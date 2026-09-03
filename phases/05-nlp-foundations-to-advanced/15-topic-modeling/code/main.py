@@ -12,11 +12,11 @@ def tokenize(text):
 
 def collapsed_gibbs_lda(docs, n_topics, n_iters=200, alpha=0.1, beta=0.01, seed=0):
     if not isinstance(n_topics, int) or n_topics <= 0:
-        raise ValueError(f"n_topics must be a positive int, got {n_topics!r}")
+        raise ValueError(f"n_topics 必须为正整数，实际为 {n_topics!r}")
     if alpha <= 0 or beta <= 0:
-        raise ValueError(f"alpha and beta must be positive, got alpha={alpha}, beta={beta}")
+        raise ValueError(f"alpha 和 beta 必须为正数，实际为 alpha={alpha}, beta={beta}")
     if not docs:
-        raise ValueError("docs must not be empty")
+        raise ValueError("docs 不能为空")
 
     rng = random.Random(seed)
     vocab = {}
@@ -27,7 +27,7 @@ def collapsed_gibbs_lda(docs, n_topics, n_iters=200, alpha=0.1, beta=0.01, seed=
     V = len(vocab)
     D = len(docs)
     if V == 0:
-        raise ValueError("docs produced an empty vocabulary (no tokens found)")
+        raise ValueError("docs 生成了空词表（未找到 token）")
     indexed = [[vocab[w] for w in doc] for doc in docs]
 
     z = [[rng.randint(0, n_topics - 1) for _ in doc] for doc in indexed]
@@ -98,11 +98,11 @@ def main():
     docs = [tokenize(d) for d in docs_raw]
     topics, doc_topic = collapsed_gibbs_lda(docs, n_topics=3, n_iters=300, seed=42)
 
-    print("=== LDA topics (collapsed Gibbs, 300 iters) ===")
+    print("=== LDA 主题（折叠 Gibbs，300 次迭代）===")
     for k, words in enumerate(topics):
-        print(f"  topic {k}: {', '.join(words)}")
+        print(f"  主题 {k}：{', '.join(words)}")
     print()
-    print("=== document mixtures ===")
+    print("=== 文档主题混合 ===")
     for doc_raw, mix in zip(docs_raw, doc_topic):
         pretty = [f"{p:.2f}" for p in mix]
         print(f"  [{', '.join(pretty)}]  {doc_raw[:50]}")
