@@ -1,13 +1,13 @@
-"""Vision transformer patch tokenizer and geometry calculator — stdlib Python.
+"""视觉 Transformer 补丁分词器与几何计算器 — 纯标准库 Python。
 
-Given a ViT config (patch size, resolution, hidden dim, depth, heads), computes:
-  - grid shape and sequence length after patch tokenization
-  - per-component parameter count (patch embed, pos, blocks, LN)
-  - FLOPs per forward (dominated by attention + MLP)
-  - comparison table across canonical 2026 encoders
+给定 ViT 配置（补丁大小、分辨率、隐藏维度、深度、头数），计算：
+  - 补丁分词后的网格形状与序列长度
+  - 分组件参数量（补丁嵌入、位置、各块、LN）
+  - 每次前向传播的 FLOPs（主要由注意力 + MLP 主导）
+  - 2026 年主流编码器对比表
 
-Also walks a toy 8x8 grayscale image through the patch-flatten-project pipeline
-so the primitive is concrete. No numpy, no torch — just ints and lists.
+同时将一张 8x8 灰度玩具图像走一遍补丁化、展平、投影流程，
+让这一原语变得具体可见。不使用 numpy，不使用 torch — 只用整数和列表。
 """
 
 from __future__ import annotations
@@ -104,12 +104,12 @@ def fmt(n: int) -> str:
 
 
 def patch_toy_image() -> None:
-    """Walk an 8x8 grayscale image through patch-tokenize with P=4.
-    Grid is 2x2 → 4 tokens. Each patch is 4x4=16 pixels flat."""
-    print("\nToy image patch tokenization (8x8 grayscale, patch_size=4)")
+    """以 P=4 对一张 8x8 灰度图像执行补丁分词。
+    网格为 2x2，共 4 个 token；每个补丁展平后含 4x4=16 个像素。"""
+    print("\n玩具图像补丁分词（8x8 灰度，patch_size=4）")
     print("-" * 60)
     img = [[(r * 8 + c) % 256 for c in range(8)] for r in range(8)]
-    print("pixel grid (row 0..7):")
+    print("像素网格（第 0..7 行）：")
     for row in img:
         print("  " + " ".join(f"{v:3d}" for v in row))
 
@@ -123,9 +123,9 @@ def patch_toy_image() -> None:
                     patch.append(img[pr + dr][pc + dc])
             patches.append(patch)
 
-    print(f"\npatches ({len(patches)} total, each length {P*P}):")
+    print(f"\n补丁（共 {len(patches)} 个，每个长度 {P*P}）：")
     for i, p in enumerate(patches):
-        print(f"  patch {i}: {p}")
+        print(f"  补丁 {i}: {p}")
 
     fake_W = [[((i + j) % 5) - 2 for j in range(P * P)] for i in range(4)]
     embeddings = []
@@ -136,10 +136,10 @@ def patch_toy_image() -> None:
             emb.append(s)
         embeddings.append(emb)
 
-    print("\nlinear projection (P*P=16 -> hidden=4):")
+    print("\n线性投影（P*P=16 -> 隐藏维度=4）：")
     for i, emb in enumerate(embeddings):
         print(f"  token {i}: {emb}")
-    print("→ 4 tokens of dim 4 ready for the transformer.")
+    print("→ 4 个维度为 4 的 token，已可输入 Transformer。")
 
 
 def print_config(cfg: ViTConfig) -> None:
@@ -149,22 +149,22 @@ def print_config(cfg: ViTConfig) -> None:
     fl = flops_per_forward(cfg)
     print(f"\n{cfg.name}")
     print("-" * 60)
-    print(f"  image            : {cfg.image_size}x{cfg.image_size}")
-    print(f"  patch size       : {cfg.patch_size}")
-    print(f"  grid             : {gh}x{gw}")
-    print(f"  seq length       : {seq} (incl {'CLS' if cfg.cls_token else 'no CLS'},"
-          f" {cfg.registers} registers)")
-    print(f"  hidden / depth   : {cfg.hidden} / {cfg.depth}")
-    print(f"  patch embed      : {fmt(params['patch_embed'])}")
-    print(f"  position embed   : {fmt(params['position'])}")
-    print(f"  blocks total     : {fmt(params['blocks'])}")
-    print(f"  ** total params **: {fmt(params['total'])}")
-    print(f"  flops / forward  : {fmt(fl)}")
+    print(f"  图像            : {cfg.image_size}x{cfg.image_size}")
+    print(f"  补丁大小       : {cfg.patch_size}")
+    print(f"  网格             : {gh}x{gw}")
+    print(f"  序列长度         : {seq}（{'包含 CLS' if cfg.cls_token else '不含 CLS'}，"
+          f"{cfg.registers} 个 register token）")
+    print(f"  隐藏维度 / 深度   : {cfg.hidden} / {cfg.depth}")
+    print(f"  补丁嵌入      : {fmt(params['patch_embed'])}")
+    print(f"  位置嵌入   : {fmt(params['position'])}")
+    print(f"  各块合计     : {fmt(params['blocks'])}")
+    print(f"  ** 总参数量 **: {fmt(params['total'])}")
+    print(f"  FLOPs / 前向传播 : {fmt(fl)}")
 
 
 def main() -> None:
     print("=" * 60)
-    print("VIT PATCH-TOKEN GEOMETRY CALCULATOR (Phase 12, Lesson 01)")
+    print("VIT 补丁 TOKEN 几何计算器（第 12 阶段，第 01 课）")
     print("=" * 60)
 
     patch_toy_image()
@@ -173,14 +173,14 @@ def main() -> None:
         print_config(cfg)
 
     print("\n" + "=" * 60)
-    print("KEY RATIOS")
+    print("关键比率")
     print("-" * 60)
     vit_b = ZOO[0]
     qwen = ZOO[-1]
-    print(f"  ViT-B/16 @ 224    seq length: {seq_length(vit_b)}")
-    print(f"  Qwen2.5-VL @ 896  seq length: {seq_length(qwen)}")
-    print(f"  ratio: {seq_length(qwen) / seq_length(vit_b):.1f}x more tokens")
-    print("  That is why high-resolution VLMs need token-merging or pooling.")
+    print(f"  ViT-B/16 @ 224    序列长度: {seq_length(vit_b)}")
+    print(f"  Qwen2.5-VL @ 896  序列长度: {seq_length(qwen)}")
+    print(f"  比率: {seq_length(qwen) / seq_length(vit_b):.1f}x 更多的 token")
+    print("  这就是高分辨率 VLM 需要 token 合并或池化的原因。")
 
 
 if __name__ == "__main__":
