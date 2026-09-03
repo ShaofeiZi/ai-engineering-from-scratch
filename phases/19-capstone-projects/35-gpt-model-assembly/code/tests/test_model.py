@@ -1,4 +1,4 @@
-"""Unit tests for the assembled GPT model and generation pipeline."""
+"""组装后的 GPT 模型与生成流水线的单元测试。"""
 
 from __future__ import annotations
 
