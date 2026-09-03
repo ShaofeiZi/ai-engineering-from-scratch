@@ -1,11 +1,11 @@
-"""End-to-end LLM pipeline orchestrator.
+"""端对端LLM管道管线器.
 
-Twelve stages wired as a DAG. Each stage is a placeholder that emits a typed
-artifact with a content-addressed hash. The orchestrator resolves dependencies,
-runs stages, records a manifest, and applies eval gates before shipping.
+12个阶段作为DAG装配. 每个阶段都有一个占位符,发出一个键
+有内容地址的散列物 管弦乐师解决依赖性,
+运行阶段,记录一个清单,并在装运前应用eval门。
 
-No network, no GPUs, stdlib only. Replace each stage's `run` with the real
-training script from the corresponding Phase 10 lesson.
+没有网络 没有GPU 只有Stdlib 将每个阶段的 `run` 替换为真实
+从相应的第10阶段课程中培训脚本。
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ class Manifest:
 
 
 class ArtifactStore:
-    """In-memory stand-in for an S3 / R2 / GCS bucket addressed by SHA-256."""
+    """使用 SHA-256 寻址的内存存储，用于模拟 S3、R2 或 GCS bucket。"""
 
     def __init__(self) -> None:
         self._store: dict[str, bytes] = {}
@@ -89,8 +89,7 @@ class ArtifactStore:
 
 
 def simulate_stage(name: str, stage_type: str, inputs: list[str], seed: int) -> tuple[bytes, float, float]:
-    """Placeholder: emits a deterministic blob, a wall-clock, and a cost.
-    Swap this for the real Phase 10 lesson scripts."""
+    """生成确定性的模拟产物、耗时和成本；可替换为阶段 10 各课程的真实实现。"""
 
     payload = {
         "stage": name,
@@ -115,7 +114,7 @@ def simulate_stage(name: str, stage_type: str, inputs: list[str], seed: int) -> 
 
 
 def plan(manifest: Manifest) -> str:
-    """Validate the manifest, print the DAG, compute the cost estimate."""
+    """验证清单、打印 DAG 并计算成本估算。"""
 
     lines = ["PLAN"]
     lines.append("=" * 60)
@@ -135,7 +134,7 @@ def plan(manifest: Manifest) -> str:
 
 
 def run(manifest: Manifest, store: ArtifactStore, injected_eval: dict | None = None) -> Manifest:
-    """Execute stages in DAG order. Halts on budget or hash failure."""
+    """按 DAG 顺序执行各阶段；预算超限或缺少输入散列时停止。"""
 
     name_to_hash: dict[str, str] = {}
 
@@ -143,7 +142,7 @@ def run(manifest: Manifest, store: ArtifactStore, injected_eval: dict | None = N
         input_hashes = [name_to_hash[d] for d in deps]
         for h in input_hashes:
             if not store.has(h):
-                raise RuntimeError(f"input hash missing for stage {name}: {h[:12]}...")
+                raise RuntimeError(f"阶段 {name} 缺少输入散列：{h[:12]}...")
 
         blob, wall, cost = simulate_stage(name, stage_type, input_hashes, manifest.seed)
         output_hash = store.put(blob)
@@ -179,7 +178,7 @@ def run(manifest: Manifest, store: ArtifactStore, injected_eval: dict | None = N
 
 
 def gate(manifest: Manifest) -> tuple[bool, list[str]]:
-    """Apply each gate. Return (ship?, reasons)."""
+    """应用所有门禁，并返回（是否可发布，原因列表）。"""
 
     reasons = []
     all_pass = True
@@ -233,7 +232,7 @@ def main(argv: list[str]) -> int:
         print(plan(manifest))
         print()
         print("=" * 60)
-        print("RUN")
+        print("运行")
         print("=" * 60)
         t0 = time.time()
         manifest = run(manifest, store)
@@ -243,13 +242,13 @@ def main(argv: list[str]) -> int:
                 f"hash={s.output_hash[:10] if s.output_hash else '-':10s} "
                 f"cost=${s.cost_usd:7.0f}  wall={s.wall_clock_sec:6.0f}s"
             )
-        print(f"\nartifacts stored : {len(store)}")
-        print(f"total cost_usd   : ${manifest.total_cost_usd:,.0f}")
-        print(f"wall (simulated) : {time.time() - t0:.3f}s of orchestrator overhead")
+        print(f"\n已存储产物数：{len(store)}")
+        print(f"总成本 cost_usd：${manifest.total_cost_usd:,.0f}")
+        print(f"模拟编排开销：{time.time() - t0:.3f} 秒")
 
         print()
         print("=" * 60)
-        print("GATE (passing eval)")
+        print("GATE (通过 eval)")
         print("=" * 60)
         ok, reasons = gate(manifest)
         for r in reasons:
@@ -258,7 +257,7 @@ def main(argv: list[str]) -> int:
 
         print()
         print("=" * 60)
-        print("GATE (failing eval)")
+        print("GATE( 崩溃 )")
         print("=" * 60)
         manifest.eval_metrics["mmlu"] = 42.0
         manifest.eval_metrics["kl_from_reference"] = 40.0
@@ -268,8 +267,8 @@ def main(argv: list[str]) -> int:
         print("  -> " + ("SHIP" if ok2 else "HOLD"))
         return 0
 
-    print(f"unknown command: {command}", file=sys.stderr)
-    print("usage: main.py [plan|run|gate|demo]", file=sys.stderr)
+    print(f"未知命令：{command}", file=sys.stderr)
+    print("用法：main.py [plan|run|gate|demo]", file=sys.stderr)
     return 1
 
 
