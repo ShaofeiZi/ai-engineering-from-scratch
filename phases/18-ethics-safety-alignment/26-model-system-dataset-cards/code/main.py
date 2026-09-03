@@ -1,14 +1,13 @@
-"""Minimal model-card, datasheet, system-card generator — stdlib Python.
+"""最小化的 model card、datasheet、system card 生成器——仅使用 Python 标准库。
 
-Generates three canonical documents for a toy deployment:
+为玩具部署生成三种规范文档：
   - Model Card (Mitchell et al. 2019)
   - Datasheet (Gebru et al. 2018)
   - System Card (Sidhpurwala 2024 / "Blueprints of Trust" 2025)
 
-Each is a Markdown string printed to stdout. Sections follow the canonical
-templates.
+每份文档都是打印到 stdout 的 Markdown 字符串，各章节遵循规范模板。
 
-Usage: python3 code/main.py
+用法：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -16,117 +15,116 @@ from __future__ import annotations
 
 def model_card() -> str:
     return """
-# Model Card: ToyClassifier-1.0
+# Model Card：ToyClassifier-1.0
 
-## Model Details
-- Developer: ai-engineering-from-scratch / Phase 18 / Lesson 26
-- Version: 1.0.0
-- Type: binary logistic classifier (toy)
-- License: MIT
-- Contact: phase-18-lesson-26
+## 模型详情
+- 开发者：ai-engineering-from-scratch / Phase 18 / Lesson 26
+- 版本：1.0.0
+- 类型：二元逻辑分类器（玩具示例）
+- 许可证：MIT
+- 联系方式：phase-18-lesson-26
 
-## Intended Use
-- Primary: pedagogical demonstration
-- Out-of-scope: any production decision
+## 预期用途
+- 主要用途：教学演示
+- 范围外：任何生产决策
 
-## Factors
-- Sensitive attributes: gender (binary in toy), age bucket
-- Environment: controlled synthetic data
+## 因素
+- 敏感属性：性别（玩具示例中为二元）、年龄分组
+- 环境：受控合成数据
 
-## Metrics
-- Accuracy, demographic parity, equalized odds (see Lesson 21)
+## 指标
+- 准确率、demographic parity、equalized odds（参见第 21 课）
 
-## Training Data
-- Synthetic dataset; see accompanying Datasheet
+## 训练数据
+- 合成数据集；参见随附的 Datasheet
 
-## Quantitative Analysis
-- accuracy: 0.97 overall
-- demographic parity gap: +0.03 (group0 vs group1)
-- equalized odds TPR gap: -0.01
+## 定量分析
+- 总体准确率：0.97
+- demographic parity 差距：+0.03（group0 与 group1）
+- equalized odds TPR 差距：-0.01
 
-## Ethical Considerations
-- Toy classifier; not validated for real-world use.
-- Bias metrics are placeholder; ship a full audit before any deployment.
+## 伦理考量
+- 玩具分类器；未验证可用于现实场景。
+- 偏见指标仅为占位示例；任何部署前都应完成全面审计。
 
-## Caveats and Recommendations
-- Retrain on deployment-specific data.
-- Apply Lesson 22 (DP) if training data contains PII.
+## 注意事项与建议
+- 使用部署场景特定数据重新训练。
+- 若训练数据包含 PII，请应用第 22 课（DP）。
 """
 
 
 def datasheet() -> str:
     return """
-# Datasheet: ToyBinaryClassification-1.0
+# Datasheet：ToyBinaryClassification-1.0
 
-## Motivation
-- Created for pedagogical demonstration in Phase 18, Lesson 26
-- Funded by no one; not for production use
+## 动机
+- 为阶段 18 第 26 课的教学演示而创建
+- 无资助方；不用于生产环境
 
-## Composition
-- 1,500 synthetic examples
-- Features: 2-d continuous, 1 binary sensitive attribute
-- Labels: binary, derived from x[0] + x[1] > 0 rule
+## 构成
+- 1,500 个合成样本
+- 特征：两个连续维度和一个二元敏感属性
+- 标签：二元，根据 x[0] + x[1] > 0 规则生成
 
-## Collection Process
-- Synthetically generated via Python random.gauss with fixed seed
-- No human subjects involved
+## 收集过程
+- 使用固定种子的 Python random.gauss 合成生成
+- 不涉及人类受试者
 
-## Labeling
-- Labels programmatically derived; no annotation error
+## 标注
+- 标签由程序生成，不存在人工标注错误
 
-## Uses
-- Intended: teaching fairness metrics (Lesson 21) and bias probes (Lesson 20)
-- Not to be used: as a proxy for any production-scale dataset
+## 用途
+- 预期用途：讲授公平性指标（第 21 课）和偏见探针（第 20 课）
+- 禁止用途：作为任何生产规模数据集的代理
 
-## Distribution
-- Included in Phase 18 / Lesson 26 repository
+## 分发
+- 包含在 Phase 18 / Lesson 26 仓库目录中
 
-## Maintenance
-- Static; regenerated on every run from fixed seed
+## 维护
+- 静态数据；每次运行时根据固定种子重新生成
 """
 
 
 def system_card() -> str:
     return """
-# System Card: ToyClassifier Service
+# System Card：ToyClassifier 服务
 
-## Deployment
-- Scope: localhost pedagogical service
-- Stack: ToyClassifier-1.0 behind a single-threaded HTTP server
+## 部署
+- 范围：localhost 教学服务
+- 技术栈：单线程 HTTP 服务器后的 ToyClassifier-1.0
 
-## Security Capabilities
-- Prompt-injection: N/A (non-generative)
-- Data-exfiltration detection: basic egress rate limit
-- Rate limiting: 100 req/min per client
+## 安全能力
+- 提示词注入：不适用（非生成式）
+- 数据外泄检测：基础出口速率限制
+- 速率限制：每个客户端 100 req/min
 
-## Alignment
-- Model reflects the synthetic-label rule only
-- No RLHF; no refusal policy
+## 对齐
+- 模型仅反映合成标签规则
+- 无 RLHF；无拒绝策略
 
-## Incident Response
-- No production SLA; escalation goes nowhere
-- Issue tracker: Phase 18 / Lesson 26
+## 事件响应
+- 无生产 SLA；没有升级渠道
+- Issue 跟踪器：Phase 18 / Lesson 26
 
-## Regulatory Alignment
-- EU AI Act: N/A (toy; no EU deployment)
-- GPAI Code of Practice: N/A (non-GPAI)
-- Transparency Code: N/A (no AI-generated content output)
+## 监管对齐
+- EU AI Act：不适用（玩具示例；未在欧盟部署）
+- GPAI Code of Practice：不适用（非 GPAI）
+- Transparency Code：不适用（不输出 AI 生成内容）
 """
 
 
 def main() -> None:
     print("=" * 74)
-    print("CARDS GENERATOR (Phase 18, Lesson 26)")
+    print("CARDS 生成器（阶段 18，第 26 课）")
     print("=" * 74)
     print(model_card())
     print(datasheet())
     print(system_card())
     print("=" * 74)
-    print("TAKEAWAY: three canonical cards cover three scopes. model cards")
-    print("document the model; datasheets document the data; system cards")
-    print("document the deployment. in 2026, EU AI Act GPAI Code of Practice")
-    print("requires model cards as compliance artifacts. verifiable")
-    print("attestations (Laminator 2024) are the next phase.")
+    print("要点：三种规范卡片覆盖三个范围。model card 记录模型，datasheet 记录")
+    print("数据，system card 记录部署。到 2026 年，EU AI Act GPAI Code of")
+    print("Practice 要求将 model card 作为合规工件。可验证证明（Laminator 2024）")
+    print("是下一阶段。")
     print("=" * 74)
 
 
