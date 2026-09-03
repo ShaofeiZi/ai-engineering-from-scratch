@@ -1,16 +1,16 @@
-"""Colocated vs disaggregated serving simulator — stdlib Python.
+"""共置与分离式服务模拟器——使用 Python 标准库。
 
-Models one request through colocated (same GPU) vs disaggregated (prefill pool + decode pool + KV transfer).
-Sweeps prompt length to find the crossover.
+对比一个请求在共置（同一 GPU）与分离式（预填充池 + 解码池 + KV 传输）架构下的表现。
+扫描提示词长度以找到交叉点。
 """
 
 from __future__ import annotations
 
 
-# illustrative 2026 constants for 70B FP8 on H100 class
-PREFILL_TOK_PER_MS = 40.0         # prefill throughput per GPU per ms
+# 2026 年 H100 级 GPU 运行 70B FP8 模型的示意常量
+PREFILL_TOK_PER_MS = 40.0         # 每块 GPU 每毫秒的预填充吞吐量
 DECODE_TOK_PER_MS_COLOCATED = 0.10
-DECODE_TOK_PER_MS_DECODE_GPU = 0.18   # memory-optimized pool (H200-like)
+DECODE_TOK_PER_MS_DECODE_GPU = 0.18   # 内存优化池（类似 H200）
 KV_BYTES_PER_TOKEN_70B_FP8 = 125_000
 NIXL_RDMA_GB_S = 100
 NIXL_TCP_GB_S = 10
@@ -33,9 +33,9 @@ def ms_disaggregated(prompt: int, output: int, use_rdma: bool = True) -> float:
 
 def main() -> None:
     print("=" * 95)
-    print("DISAGGREGATED vs COLOCATED — same request, different GPU placement")
+    print("分离式与共置服务——同一请求，不同 GPU 部署方式")
     print("=" * 95)
-    header = f"{'prompt':>7}  {'output':>7}  {'colocated (ms)':>15}  {'disagg RDMA (ms)':>17}  {'disagg TCP (ms)':>16}  Winner"
+    header = f"{'提示':>7}  {'输出':>7}  {'共置（毫秒）':>15}  {'分离 RDMA（毫秒）':>17}  {'分离 TCP（毫秒）':>16}  胜出方案"
     print(header)
     print("-" * len(header))
     cases = [
@@ -46,13 +46,13 @@ def main() -> None:
         colo = ms_colocated(prompt, output)
         rdma = ms_disaggregated(prompt, output, use_rdma=True)
         tcp = ms_disaggregated(prompt, output, use_rdma=False)
-        winner = "colocated" if colo < rdma else "disaggregated"
+        winner = "共置" if colo < rdma else "分离式"
         print(f"{prompt:>7}  {output:>7}  {colo:>14.1f}  {rdma:>17.1f}  {tcp:>16.1f}  {winner}")
 
     print()
-    print("Read: disaggregation wins at longer prompts where decode throughput improvement")
-    print("on memory-optimized pool outweighs the KV transfer tax. TCP transport raises the")
-    print("break-even; RDMA makes disaggregation profitable earlier.")
+    print("解读：提示词较长时，内存优化池带来的解码吞吐提升超过 KV 传输开销，")
+    print("分离式架构因而胜出。TCP 传输会抬高盈亏平衡点；RDMA 则让分离式架构")
+    print("更早获得收益。")
 
 
 if __name__ == "__main__":
