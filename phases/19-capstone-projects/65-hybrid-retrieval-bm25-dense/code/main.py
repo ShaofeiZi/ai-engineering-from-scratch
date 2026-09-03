@@ -1,15 +1,15 @@
-"""Hybrid retrieval: BM25 + dense + reciprocal rank fusion.
+"""混合检索：BM25 + 稠密向量 + 倒数排名融合。
 
-Pure-Python implementation. BM25 from the Robertson/Sparck Jones paper.
-RRF from the 2009 Cormack/Clarke/Buettcher SIGIR paper.
+纯 Python 实现。BM25 来自 Robertson/Sparck Jones 论文。
+RRF 来自 2009 年 Cormack/Clarke/Buettcher 的 SIGIR 论文。
 
-References:
+参考：
 - ./docs/en.md
-- Phase 19 lesson 64 (chunkers feeding this retriever)
-- Phase 19 lesson 66 (reranker consuming the fused top-k)
-- Phase 19 lesson 68 (eval harness over this retriever)
+- 第 19 阶段第 64 课（切分器向该检索器输入）
+- 第 19 阶段第 66 课（重排器消费融合后的 top-k）
+- 第 19 阶段第 68 课（基于该检索器的评估框架）
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class Doc:
 
 
 # ---------------------------------------------------------------------------
-# tokenizer
+# 分词器
 # ---------------------------------------------------------------------------
 
 _TOKEN = re.compile(r"[a-z0-9]+")
@@ -43,7 +43,7 @@ def tokenize(text: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# BM25 from scratch
+# 从零实现 BM25
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -97,7 +97,7 @@ class BM25Index:
 
 
 # ---------------------------------------------------------------------------
-# deterministic mock embedding + dense retriever
+# 确定性模拟 embedding + 稠密检索器
 # ---------------------------------------------------------------------------
 
 def mock_embed(text: str, dim: int = 96) -> list[float]:
@@ -109,7 +109,7 @@ def mock_embed(text: str, dim: int = 96) -> list[float]:
             h &= 0xFFFFFFFF
         vec[h % dim] += 1.0
         vec[(h >> 7) % dim] += 0.5
-        # add bigram-style mixing to spread synonyms differently from BM25.
+        # 加入 bigram 风格的混合，使同义词的分布与 BM25 有所不同。
         for i in range(len(tok) - 1):
             bg = (ord(tok[i]) * 31 + ord(tok[i + 1])) & 0xFFFFFFFF
             vec[bg % dim] += 0.25
@@ -137,7 +137,7 @@ class DenseIndex:
 
 
 # ---------------------------------------------------------------------------
-# Reciprocal Rank Fusion
+# 倒数排名融合（Reciprocal Rank Fusion）
 # ---------------------------------------------------------------------------
 
 def rrf(
@@ -148,7 +148,7 @@ def rrf(
     if weights is None:
         weights = [1.0] * len(rankings)
     if len(weights) != len(rankings):
-        raise ValueError("weights length must match rankings length")
+        raise ValueError("weights 长度必须与 rankings 长度一致")
     score: dict[str, float] = defaultdict(float)
     by_id: dict[str, Doc] = {}
     for w, ranks in zip(weights, rankings):
@@ -160,7 +160,7 @@ def rrf(
 
 
 # ---------------------------------------------------------------------------
-# Hybrid retriever
+# 混合检索器
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -191,7 +191,7 @@ class HybridRetriever:
 
 
 # ---------------------------------------------------------------------------
-# fixture corpus and demo queries
+# 固定语料库与示例查询
 # ---------------------------------------------------------------------------
 
 CORPUS = [
@@ -235,11 +235,11 @@ def main() -> None:
 
     queries = [
         ("AbortMultipartOnFail",
-         "literal symbol; BM25 wins easily, dense should still rank d1 high through hashed tokens"),
+         "字面符号；BM25 轻松胜出，稠密检索也应通过哈希 token 把 d1 排在前面"),
         ("how do we handle cancelled uploads",
-         "paraphrased; dense should find the upload doc; BM25 less directly"),
+         "改写表述；稠密检索应找到上传文档；BM25 则不够直接"),
         ("centralized authorization for service accounts",
-         "mixed; both modalities should agree on the auth doc"),
+         "混合情形；两种模态都应命中授权文档"),
     ]
 
     for q, note in queries:
