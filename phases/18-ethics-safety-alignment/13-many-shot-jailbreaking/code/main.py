@@ -1,10 +1,9 @@
-"""Many-shot jailbreaking toy — stdlib Python.
+"""Many-shot 越狱玩具示例——仅使用 Python 标准库。
 
-Target: a filter whose refusal probability decays as a power law in the
-number of compliance pairs present in the context. Reproduces the shape of
-Anil et al. 2024 Figure 2 without training a model.
+目标：一种过滤器，其拒绝概率会随着上下文中服从样本对数量的增加而按幂律
+衰减。无需训练模型即可复现 Anil 等人 2024 年论文图 2 的曲线形态。
 
-Usage: python3 code/main.py
+用法：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -17,11 +16,11 @@ random.seed(41)
 
 
 def target_asr(n_shots: int, alpha: float = 0.5, a0: float = 0.02) -> float:
-    """Target's attack-success-rate as a function of shot count.
-    Power-law shape: ASR(n) = min(1, a0 + c * n^alpha).
+    """目标的攻击成功率是 shot 数量的函数。
+    幂律形态：ASR(n) = min(1, a0 + c * n^alpha)。
 
-    This is the empirical pattern Anil et al. 2024 observe: fails reliably
-    at 5 shots, begins to succeed around 32, saturates around 256.
+    这是 Anil 等人 2024 观察到的经验模式：5-shot 时稳定失败，约 32-shot
+    开始成功，约 256-shot 时趋于饱和。
     """
     if n_shots <= 0:
         return 0.0
@@ -30,8 +29,8 @@ def target_asr(n_shots: int, alpha: float = 0.5, a0: float = 0.02) -> float:
 
 
 def defense_adjusted(n_shots: int, alpha: float = 0.5) -> float:
-    """A simple defense: classifier detects the many-shot pattern and caps
-    effective shot count at 16. ASR curve saturates at the 16-shot value."""
+    """一种简单防御：分类器检测 many-shot 模式，并将有效 shot 数上限设为 16。
+    ASR 曲线在 16-shot 的值处饱和。"""
     eff = min(n_shots, 16)
     return target_asr(eff, alpha)
 
@@ -43,7 +42,7 @@ def simulate(n_shots: int, asr_fn, trials: int = 500) -> float:
 
 
 def fit_power_law(shots: list[int], asrs: list[float]) -> tuple[float, float]:
-    """Simple log-log linear regression: log(ASR) = log(c) + alpha * log(n)."""
+    """简单的 log-log 线性回归：log(ASR) = log(c) + alpha * log(n)。"""
     xs = [math.log(s) for s in shots if s > 0]
     ys = [math.log(max(a, 1e-4)) for a in asrs]
     n = len(xs)
@@ -58,31 +57,30 @@ def fit_power_law(shots: list[int], asrs: list[float]) -> tuple[float, float]:
 
 def main() -> None:
     print("=" * 70)
-    print("MANY-SHOT JAILBREAKING TOY (Phase 18, Lesson 13)")
+    print("MANY-SHOT 越狱玩具示例（阶段 18，第 13 课）")
     print("=" * 70)
 
     shots = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 
-    print("\n-- undefended target (power-law ASR curve) --")
+    print("\n-- 无防御目标（幂律 ASR 曲线）--")
     undef = []
     for s in shots:
         rate = simulate(s, target_asr)
         undef.append(rate)
-        print(f"  shots={s:4d}   ASR={rate:.3f}")
+        print(f"  shot 数={s:4d}   ASR={rate:.3f}")
     alpha, c = fit_power_law(shots, undef)
-    print(f"\n  fitted power law: ASR ~= {c:.3f} * n^{alpha:.3f}")
+    print(f"\n  拟合幂律：ASR ~= {c:.3f} * n^{alpha:.3f}")
 
-    print("\n-- classifier-defended target (caps effective shots at 16) --")
+    print("\n-- 分类器防御目标（有效 shot 数上限为 16）--")
     for s in shots:
         rate = simulate(s, defense_adjusted)
-        print(f"  shots={s:4d}   ASR={rate:.3f}")
+        print(f"  shot 数={s:4d}   ASR={rate:.3f}")
 
     print("\n" + "=" * 70)
-    print("TAKEAWAY: ASR grows power-law in shot count. the defense caps the")
-    print("effective number of shots. preserving benign ICL while suppressing")
-    print("harmful ICL requires a classifier that distinguishes the two at the")
-    print("context level -- which is why classifier-based prompt modification")
-    print("(Anthropic 2024) reports 61%->2% reduction without breaking ICL.")
+    print("要点：ASR 随 shot 数按幂律增长，防御机制限制了有效 shot 数。")
+    print("要在保留无害 ICL 的同时抑制有害 ICL，需要分类器在上下文层面区分二者。")
+    print("因此，基于分类器的提示词修改（Anthropic 2024）能在不破坏 ICL 的情况下")
+    print("将成功率从 61% 降至 2%。")
     print("=" * 70)
 
 
