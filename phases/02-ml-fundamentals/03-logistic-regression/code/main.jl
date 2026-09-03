@@ -1,6 +1,5 @@
-# Logistic regression in Julia. Sigmoid + binary cross-entropy gradient
-# descent for two classes, plus multi-class softmax regression. Reports
-# confusion-matrix metrics. Stdlib only. Sources:
+# Julia 版逻辑回归。使用 Sigmoid 加二元交叉熵梯度下降处理二分类，
+# 并包含多分类 Softmax 回归。输出混淆矩阵相关指标。仅使用标准库。参考资料：
 #   https://docs.julialang.org/en/v1/manual/mathematical-operations/
 #   https://docs.julialang.org/en/v1/stdlib/Random/
 #   https://docs.julialang.org/en/v1/stdlib/Statistics/
@@ -91,7 +90,7 @@ function fit_logistic!(model::LogisticRegression, X::Vector{Vector{Float64}},
         loss = bce_loss(model, X, ys)
         push!(model.history, loss)
         if epoch % print_every == 0
-            @printf("  epoch %4d  loss=%.4f  w=[%.3f, %.3f]  b=%.3f\n",
+            @printf("  轮次 %4d  损失=%.4f  w=[%.3f, %.3f]  b=%.3f\n",
                     epoch, loss, model.weights[1], model.weights[2], model.bias)
         end
     end
@@ -143,15 +142,15 @@ end
 
 
 function print_report(m::ClassificationMetrics)
-    println("\n  Confusion Matrix:")
-    println("                  Predicted")
-    println("                  Pos   Neg")
-    @printf("  Actual Pos     %4d  %4d\n", m.tp, m.fn)
-    @printf("  Actual Neg     %4d  %4d\n", m.fp, m.tn)
-    @printf("\n  Accuracy:  %.4f\n", metric_accuracy(m))
-    @printf("  Precision: %.4f\n", metric_precision(m))
-    @printf("  Recall:    %.4f\n", metric_recall(m))
-    @printf("  F1 Score:  %.4f\n", metric_f1(m))
+    println("\n  混淆矩阵：")
+    println("                  预测")
+    println("                  正    负")
+    @printf("  实际 正      %4d  %4d\n", m.tp, m.fn)
+    @printf("  实际 负      %4d  %4d\n", m.fp, m.tn)
+    @printf("\n  准确率：%.4f\n", metric_accuracy(m))
+    @printf("  精确率：%.4f\n", metric_precision(m))
+    @printf("  召回率：%.4f\n", metric_recall(m))
+    @printf("  F1 值：%.4f\n", metric_f1(m))
 end
 
 
@@ -222,7 +221,7 @@ function fit_softmax!(model::SoftmaxRegression, X::Vector{Vector{Float64}},
             model.biases[k] -= model.lr * (grad_b[k] / n)
         end
         if epoch % print_every == 0
-            @printf("  epoch %4d  loss=%.4f\n", epoch, total_loss / n)
+            @printf("  轮次 %4d  损失=%.4f\n", epoch, total_loss / n)
         end
     end
     return model
@@ -247,7 +246,7 @@ end
 
 function demo_binary_logistic()
     println("=" ^ 60)
-    println("BINARY LOGISTIC REGRESSION")
+    println("二元逻辑回归")
     println("=" ^ 60)
     X, ys = generate_two_class_data()
     split = Int(round(0.8 * length(X)))
@@ -256,16 +255,16 @@ function demo_binary_logistic()
     ys_train = ys[1:split]
     ys_test = ys[(split + 1):end]
 
-    @printf("\nSamples: %d  features: 2  classes: {0, 1}\n", length(X))
-    @printf("Train: %d  Test: %d\n", length(X_train), length(X_test))
+    @printf("\n样本数：%d  特征数：2  类别：{0, 1}\n", length(X))
+    @printf("训练集：%d  测试集：%d\n", length(X_train), length(X_test))
 
     model = LogisticRegression(2, 0.1)
     fit_logistic!(model, X_train, ys_train; epochs=1000, print_every=200)
 
-    @printf("\nTrain accuracy: %.4f\n", accuracy(model, X_train, ys_train))
-    @printf("Test  accuracy: %.4f\n", accuracy(model, X_test, ys_test))
-    @printf("Weights: [%.4f, %.4f]\n", model.weights[1], model.weights[2])
-    @printf("Bias:    %.4f\n", model.bias)
+    @printf("\n训练集准确率：%.4f\n", accuracy(model, X_train, ys_train))
+    @printf("测试集准确率：%.4f\n", accuracy(model, X_test, ys_test))
+    @printf("权重：[%.4f, %.4f]\n", model.weights[1], model.weights[2])
+    @printf("偏置：%.4f\n", model.bias)
 
     y_pred = [predict_class(model, x) for x in X_test]
     metrics = build_metrics(ys_test, y_pred)
@@ -276,21 +275,21 @@ end
 
 function demo_decision_boundary(model::LogisticRegression)
     println("\n" * "=" ^ 60)
-    println("DECISION BOUNDARY")
+    println("决策边界")
     println("=" ^ 60)
     w1, w2 = model.weights[1], model.weights[2]
     b = model.bias
-    @printf("\nBoundary: %.4f*x1 + %.4f*x2 + %.4f = 0\n", w1, w2, b)
+    @printf("\n边界：%.4f*x1 + %.4f*x2 + %.4f = 0\n", w1, w2, b)
     if abs(w2) > 1e-10
-        @printf("Solved for x2: x2 = %.4f*x1 + %.4f\n", -w1 / w2, -b / w2)
+        @printf("解出 x2：x2 = %.4f*x1 + %.4f\n", -w1 / w2, -b / w2)
     end
     test_points = [Float64[3.0, 3.0], Float64[3.5, 3.5], Float64[4.0, 4.0],
                    Float64[2.5, 2.5], Float64[5.0, 5.0]]
-    println("\nProbabilities near the boundary:")
+    println("\n边界附近的概率：")
     for point in test_points
         prob = predict_proba(model, point)
         pred = predict_class(model, point)
-        @printf("  [%.2f, %.2f] -> prob=%.4f  class=%d\n",
+        @printf("  [%.2f, %.2f] -> 概率=%.4f  类别=%d\n",
                 point[1], point[2], prob, pred)
     end
 end
@@ -299,11 +298,11 @@ end
 function demo_threshold_tuning(model::LogisticRegression,
                               X_test::Vector{Vector{Float64}}, ys_test::Vector{Int})
     println("\n" * "=" ^ 60)
-    println("THRESHOLD TUNING")
+    println("阈值调节")
     println("=" ^ 60)
-    println("Default threshold 0.5. Lower = more recall, higher = more precision.\n")
+    println("默认阈值为 0.5。阈值越低召回率越高，越高则精确率越高。\n")
     @printf("%10s %10s %10s %10s %10s\n",
-            "Threshold", "Accuracy", "Precision", "Recall", "F1")
+            "阈值", "准确率", "精确率", "召回率", "F1")
     println("-" ^ 54)
     for t in (0.3, 0.4, 0.5, 0.6, 0.7)
         y_pred_t = [predict_proba(model, x) >= t ? 1 : 0 for x in X_test]
@@ -317,7 +316,7 @@ end
 
 function demo_softmax_regression()
     println("\n" * "=" ^ 60)
-    println("SOFTMAX (MULTI-CLASS) REGRESSION")
+    println("Softmax（多分类）回归")
     println("=" ^ 60)
     X, ys = generate_three_class_data()
     split = Int(round(0.8 * length(X)))
@@ -333,14 +332,14 @@ function demo_softmax_regression()
                        for i in 1:length(ys_train))
     test_correct = sum(predict_class_softmax(model, X_test[i]) == ys_test[i]
                       for i in 1:length(ys_test))
-    @printf("\nTrain accuracy: %.4f\n", train_correct / length(ys_train))
-    @printf("Test  accuracy: %.4f\n", test_correct / length(ys_test))
+    @printf("\n训练集准确率：%.4f\n", train_correct / length(ys_train))
+    @printf("测试集准确率：%.4f\n", test_correct / length(ys_test))
 
-    println("\nSample predictions:")
+    println("\n样本预测：")
     for i in 1:5
         probs = predict_proba_softmax(model, X_test[i])
         pred = predict_class_softmax(model, X_test[i])
-        @printf("  true=%d pred=%d probs=[%.3f, %.3f, %.3f]\n",
+        @printf("  真实=%d 预测=%d 概率=[%.3f, %.3f, %.3f]\n",
                 ys_test[i], pred, probs[1], probs[2], probs[3])
     end
 end
@@ -348,7 +347,7 @@ end
 
 function demo_why_not_linear()
     println("\n" * "=" ^ 60)
-    println("WHY LINEAR REGRESSION FAILS FOR CLASSIFICATION")
+    println("为什么线性回归不适用于分类")
     println("=" ^ 60)
     hours = Float64[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     pass = Float64[0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
@@ -359,15 +358,15 @@ function demo_why_not_linear()
     den = sum((hours .- x_mean) .^ 2)
     w_lin = num / den
     b_lin = y_mean - w_lin * x_mean
-    @printf("\nLinear fit: y = %.4f*x + %.4f\n", w_lin, b_lin)
-    @printf("%6s %8s %8s %8s\n", "Hours", "Actual", "Linear", "Sigmoid")
+    @printf("\n线性拟合：y = %.4f*x + %.4f\n", w_lin, b_lin)
+    @printf("%6s %8s %8s %8s\n", "小时数", "实际", "线性", "Sigmoid")
     for i in 1:n
         lin_pred = w_lin * hours[i] + b_lin
         sig_pred = sigmoid(3 * (hours[i] - 4.5))
         @printf("%6.0f %8.0f %8.3f %8.3f\n", hours[i], pass[i], lin_pred, sig_pred)
     end
-    println("\nLinear regression can output values outside [0, 1].")
-    println("Sigmoid keeps probabilities inside the valid range.")
+    println("\n线性回归会输出超出 [0, 1] 范围的值。")
+    println("Sigmoid 则将概率保持在有效范围内。")
 end
 
 
