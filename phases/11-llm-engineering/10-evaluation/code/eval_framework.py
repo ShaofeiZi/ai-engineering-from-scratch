@@ -370,40 +370,40 @@ def compare_eval_runs(baseline_results, new_results, criteria=None):
 
 def print_comparison_report(report):
     print("=" * 70)
-    print("  EVAL COMPARISON REPORT")
+    print("评估报告")
     print("=" * 70)
 
     overall = report.get("overall", {})
     decision = overall.get("ship_decision", "UNKNOWN")
-    print(f"\n  Decision: {decision}")
-    print(f"  Test cases: {overall.get('n_test_cases', 0)}")
-    print(f"  Overall: {overall.get('baseline_mean', 0):.3f} -> {overall.get('new_mean', 0):.3f} (diff: {overall.get('diff', 0):+.3f})")
+    print(f"\n  决策：{decision}")
+    print(f"  测试用例：{overall.get('n_test_cases', 0)}")
+    print(f"  总体得分：{overall.get('baseline_mean', 0):.3f} -> {overall.get('new_mean', 0):.3f}（差值：{overall.get('diff', 0):+.3f}）")
 
-    print(f"\n  {'Criterion':<15} {'Baseline':>10} {'New':>10} {'Diff':>8} {'Status':>12}")
+    print(f"\n  {'评估标准':<15} {'基线':>10} {'新版':>10} {'差值':>8} {'状态':>12}")
     print(f"  {'-'*55}")
     for criterion, data in report.get("criteria", {}).items():
         print(f"  {criterion:<15} {data['baseline_mean']:>10.3f} {data['new_mean']:>10.3f} {data['diff']:>+8.3f} {data['status']:>12}")
-        print(f"  {'':15} CI: {data['baseline_ci']} -> {data['new_ci']}")
+        print(f"  {'':15} 置信区间：{data['baseline_ci']} -> {data['new_ci']}")
 
     if report.get("regressions"):
-        print(f"\n  REGRESSIONS DETECTED: {', '.join(report['regressions'])}")
+        print(f"\n  检测到回归：{', '.join(report['regressions'])}")
     if report.get("improvements"):
-        print(f"  IMPROVEMENTS: {', '.join(report['improvements'])}")
+        print(f"  检测到改进：{', '.join(report['improvements'])}")
 
     print("=" * 70)
 
 
 def run_demo():
     print("=" * 70)
-    print("  Evaluation & Testing LLM Applications")
+    print("评估与测试 LLM 应用程序")
     print("=" * 70)
 
     test_suite = build_test_suite()
-    print(f"\n--- Test Suite: {len(test_suite)} cases ---")
+    print(f"\n--- 测试套件：{len(test_suite)} 个用例 ---")
     for tc in test_suite:
         print(f"  [{tc.id}] {tc.category}: {tc.input_text[:60]}...")
 
-    print(f"\n--- ROUGE-L Scores ---")
+    print("\n--- ROUGE-L 分数 ---")
     rouge_tests = [
         ("The capital of France is Paris.", "Paris is the capital of France."),
         ("Machine learning uses data to learn patterns.", "Deep learning is a subset of AI."),
@@ -412,49 +412,49 @@ def run_demo():
     for ref, hyp in rouge_tests:
         score = rouge_l_score(ref, hyp)
         print(f"  ROUGE-L: {score:.4f}")
-        print(f"    ref: {ref[:50]}")
-        print(f"    hyp: {hyp[:50]}")
+        print(f"    参考：{ref[:50]}")
+        print(f"    候选：{hyp[:50]}")
 
-    print(f"\n--- LLM-as-Judge Scoring ---")
+    print("\n--- LLM-as-Judge 评分 ---")
     sample_case = test_suite[1]
     sample_output = run_model("gpt-4o", sample_case.input_text)
     scores = score_with_llm_judge(
         sample_case.input_text, sample_output, sample_case.reference_output
     )
-    print(f"  Input: {sample_case.input_text[:60]}...")
-    print(f"  Output: {sample_output[:60]}...")
+    print(f"  输入：{sample_case.input_text[:60]}...")
+    print(f"  输出：{sample_output[:60]}...")
     for s in scores:
         print(f"    {s.criterion}: {s.score}/5 -- {s.reasoning[:70]}...")
 
-    print(f"\n--- Confidence Intervals ---")
+    print("\n--- 置信区间 ---")
     sample_scores = [4, 5, 3, 4, 4, 5, 3, 4, 5, 4, 3, 4, 4, 5, 4]
     ci = bootstrap_confidence_interval(sample_scores)
-    print(f"  Scores: {sample_scores}")
+    print(f"  分数：{sample_scores}")
     print(f"  Bootstrap CI: [{ci[0]:.4f}, {ci[1]:.4f}, {ci[2]:.4f}]")
-    print(f"  (lower bound, mean, upper bound)")
+    print("  （下界、均值、上界）")
 
     passing = sum(1 for s in sample_scores if s >= 4)
     wilson_ci = wilson_confidence_interval(passing, len(sample_scores))
-    print(f"  Pass rate (>=4): {passing}/{len(sample_scores)} = {passing/len(sample_scores):.1%}")
+    print(f"  通过率（>=4）：{passing}/{len(sample_scores)} = {passing/len(sample_scores):.1%}")
     print(f"  Wilson CI: [{wilson_ci[0]:.4f}, {wilson_ci[1]:.4f}]")
 
-    print(f"\n--- Full Eval Run: baseline-v1 ---")
+    print("\n--- 完整评估运行：baseline-v1 ---")
     baseline_results = run_eval_suite(test_suite, "baseline-v1", "v1.0")
     for r in baseline_results:
         avg = r.average_score()
-        print(f"  [{r.test_case_id}] avg={avg:.2f} | {', '.join(f'{s.criterion}={s.score}' for s in r.scores)}")
+        print(f"  [{r.test_case_id}] 平均分={avg:.2f} | {', '.join(f'{s.criterion}={s.score}' for s in r.scores)}")
 
-    print(f"\n--- Full Eval Run: baseline-v2 ---")
+    print("\n--- 完整评估运行：baseline-v2 ---")
     new_results = run_eval_suite(test_suite, "baseline-v2", "v2.0")
     for r in new_results:
         avg = r.average_score()
-        print(f"  [{r.test_case_id}] avg={avg:.2f} | {', '.join(f'{s.criterion}={s.score}' for s in r.scores)}")
+        print(f"  [{r.test_case_id}] 平均分={avg:.2f} | {', '.join(f'{s.criterion}={s.score}' for s in r.scores)}")
 
-    print(f"\n--- Comparison Report ---")
+    print("\n--- 对比报告 ---")
     report = compare_eval_runs(baseline_results, new_results)
     print_comparison_report(report)
 
-    print(f"\n--- Per-Category Breakdown ---")
+    print("\n--- 分类明细 ---")
     categories = {}
     for tc, result in zip(test_suite, new_results):
         if tc.category not in categories:
@@ -462,13 +462,13 @@ def run_demo():
         categories[tc.category].append(result.average_score())
     for cat, cat_scores in sorted(categories.items()):
         avg = sum(cat_scores) / len(cat_scores)
-        print(f"  {cat}: avg={avg:.2f} ({len(cat_scores)} cases)")
+        print(f"  {cat}：平均分={avg:.2f}（{len(cat_scores)} 个用例）")
 
-    print(f"\n--- Sample Size Analysis ---")
+    print("\n--- 样本量分析 ---")
     for n in [50, 100, 200, 500, 1000]:
         ci = wilson_confidence_interval(int(n * 0.9), n)
         width = ci[1] - ci[0]
-        print(f"  n={n:>5}: 90% accuracy -> CI [{ci[0]:.3f}, {ci[1]:.3f}] (width: {width:.3f})")
+        print(f"  n={n:>5}：准确率 90% -> CI [{ci[0]:.3f}, {ci[1]:.3f}]（宽度：{width:.3f}）")
 
 
 if __name__ == "__main__":
