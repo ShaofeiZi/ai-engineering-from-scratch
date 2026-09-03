@@ -103,45 +103,45 @@ def fmt(v, decimals=4):
 
 def demo_basic_transformations():
     print("=" * 60)
-    print("BASIC TRANSFORMATIONS")
+    print("基本变换")
     print("=" * 60)
 
     point = [1.0, 0.0]
     theta = math.pi / 4
 
     rotated = mat_vec_mul(rotation_2d(theta), point)
-    print(f"\nRotate (1,0) by 45 deg: {fmt(rotated)}")
+    print(f"\n将 (1,0) 旋转 45 度: {fmt(rotated)}")
 
     scaled = mat_vec_mul(scaling_2d(2, 3), [1.0, 1.0])
-    print(f"Scale (1,1) by (2,3): {fmt(scaled)}")
+    print(f"将 (1,1) 按 (2,3) 缩放: {fmt(scaled)}")
 
     sheared = mat_vec_mul(shearing_2d(1, 0), [1.0, 1.0])
-    print(f"Shear (1,1) kx=1: {fmt(sheared)}")
+    print(f"将 (1,1) 按 kx=1 剪切: {fmt(sheared)}")
 
     reflected = mat_vec_mul(reflection_y(), [2.0, 1.0])
-    print(f"Reflect (2,1) across y-axis: {fmt(reflected)}")
+    print(f"将 (2,1) 沿 y 轴反射: {fmt(reflected)}")
 
     reflected_x = mat_vec_mul(reflection_x(), [2.0, 1.0])
-    print(f"Reflect (2,1) across x-axis: {fmt(reflected_x)}")
+    print(f"将 (2,1) 沿 x 轴反射: {fmt(reflected_x)}")
 
 
 def demo_unit_square():
     print("\n" + "=" * 60)
-    print("TRANSFORMATIONS ON A UNIT SQUARE")
+    print("单位正方形上的变换")
     print("=" * 60)
 
     square = [[0, 0], [1, 0], [1, 1], [0, 1]]
-    labels = ["origin", "right", "top-right", "top"]
+    labels = ["原点", "右", "右上", "上"]
 
-    print("\nOriginal square:")
+    print("\n原始正方形:")
     for label, pt in zip(labels, square):
         print(f"  {label}: {pt}")
 
     transforms = [
-        ("Rotate 45 deg", rotation_2d(math.pi / 4)),
-        ("Scale (2, 0.5)", scaling_2d(2, 0.5)),
-        ("Shear kx=0.5", shearing_2d(0.5, 0)),
-        ("Reflect y-axis", reflection_y()),
+        ("旋转 45 度", rotation_2d(math.pi / 4)),
+        ("缩放 (2, 0.5)", scaling_2d(2, 0.5)),
+        ("剪切 kx=0.5", shearing_2d(0.5, 0)),
+        ("沿 y 轴反射", reflection_y()),
     ]
 
     for name, matrix in transforms:
@@ -154,7 +154,7 @@ def demo_unit_square():
 
 def demo_composition():
     print("\n" + "=" * 60)
-    print("COMPOSITION OF TRANSFORMATIONS")
+    print("变换的复合")
     print("=" * 60)
 
     R = rotation_2d(math.pi / 2)
@@ -168,21 +168,21 @@ def demo_composition():
     result1 = mat_vec_mul(rotate_then_scale, point)
     result2 = mat_vec_mul(scale_then_rotate, point)
 
-    print(f"\nPoint: {point}")
-    print(f"Rotate 90 then scale (2, 0.5): {fmt(result1)}")
-    print(f"Scale (2, 0.5) then rotate 90: {fmt(result2)}")
-    print("Order matters.")
+    print(f"\n点: {point}")
+    print(f"先旋转 90 度再按 (2, 0.5) 缩放: {fmt(result1)}")
+    print(f"先按 (2, 0.5) 缩放再旋转 90 度: {fmt(result2)}")
+    print("顺序很重要。")
 
     print(f"\ndet(R) = {fmt(det_2x2(R))}")
     print(f"det(S) = {fmt(det_2x2(S))}")
     print(f"det(S @ R) = {fmt(det_2x2(rotate_then_scale))}")
     print(f"det(S) * det(R) = {fmt(det_2x2(S) * det_2x2(R))}")
-    print("Determinant of composition = product of determinants.")
+    print("复合变换的行列式等于各行列式的乘积。")
 
 
 def demo_3d_rotations():
     print("\n" + "=" * 60)
-    print("3D ROTATIONS")
+    print("三维旋转")
     print("=" * 60)
 
     point = [1.0, 0.0, 0.0]
@@ -192,33 +192,33 @@ def demo_3d_rotations():
     rx = mat_vec_mul(rotation_3d_x(theta), point)
     ry = mat_vec_mul(rotation_3d_y(theta), point)
 
-    print(f"\nPoint: {point}")
-    print(f"Rotate 90 around z: {fmt(rz)}")
-    print(f"Rotate 90 around x: {fmt(rx)}")
-    print(f"Rotate 90 around y: {fmt(ry)}")
+    print(f"\n点: {point}")
+    print(f"绕 z 轴旋转 90 度: {fmt(rz)}")
+    print(f"绕 x 轴旋转 90 度: {fmt(rx)}")
+    print(f"绕 y 轴旋转 90 度: {fmt(ry)}")
 
     print(f"\ndet(Rz) = {fmt(det_3x3(rotation_3d_z(theta)))}")
     print(f"det(Rx) = {fmt(det_3x3(rotation_3d_x(theta)))}")
     print(f"det(Ry) = {fmt(det_3x3(rotation_3d_y(theta)))}")
-    print("All rotation determinants = 1 (volume preserved).")
+    print("所有旋转矩阵的行列式均为 1（体积不变）。")
 
 
 def demo_eigenvalues_from_scratch():
     print("\n" + "=" * 60)
-    print("EIGENVALUES AND EIGENVECTORS (FROM SCRATCH, 2x2)")
+    print("特征值与特征向量（从零实现，2x2）")
     print("=" * 60)
 
     matrices = [
-        ("Symmetric", [[2, 1], [1, 2]]),
-        ("Upper triangular", [[3, 1], [0, 2]]),
-        ("Scaling", [[3, 0], [0, 5]]),
-        ("Rotation 90", [[0, -1], [1, 0]]),
+        ("对称矩阵", [[2, 1], [1, 2]]),
+        ("上三角矩阵", [[3, 1], [0, 2]]),
+        ("缩放矩阵", [[3, 0], [0, 5]]),
+        ("旋转 90 度", [[0, -1], [1, 0]]),
     ]
 
     for name, A in matrices:
         vals = eigenvalues_2x2(A)
         print(f"\n{name}: {A}")
-        print(f"  Eigenvalues: {vals[0]}, {vals[1]}")
+        print(f"  特征值: {vals[0]}, {vals[1]}")
 
         if all(isinstance(v, (int, float)) for v in vals):
             for val in vals:
@@ -229,12 +229,12 @@ def demo_eigenvalues_from_scratch():
                 print(f"    A @ v = {fmt(result)}")
                 print(f"    l * v = {fmt(scaled)}")
         else:
-            print("  Complex eigenvalues: pure rotation, no real eigenvectors.")
+            print("  复数特征值：纯旋转，无实数特征向量。")
 
 
 def demo_eigendecomposition():
     print("\n" + "=" * 60)
-    print("EIGENDECOMPOSITION (2x2, FROM SCRATCH)")
+    print("特征分解（2x2，从零实现）")
     print("=" * 60)
 
     A = [[3, 1], [0, 2]]
@@ -255,54 +255,54 @@ def demo_eigendecomposition():
     reconstructed = mat_mul(mat_mul(V, D), V_inv)
 
     print(f"\nA = {A}")
-    print(f"Eigenvalues: {fmt(vals[0])}, {fmt(vals[1])}")
-    print(f"V (eigenvectors as columns):")
+    print(f"特征值: {fmt(vals[0])}, {fmt(vals[1])}")
+    print(f"V（特征向量作为列）:")
     for row in V:
         print(f"  {fmt(row)}")
-    print(f"D (eigenvalues on diagonal):")
+    print(f"D（特征值在对角线上）:")
     for row in D:
         print(f"  {fmt(row)}")
-    print(f"Reconstructed A = V @ D @ V^-1:")
+    print(f"重建 A = V @ D @ V^-1:")
     for row in reconstructed:
         print(f"  {fmt(row)}")
 
 
 def demo_determinant_meaning():
     print("\n" + "=" * 60)
-    print("DETERMINANT AS VOLUME SCALING FACTOR")
+    print("行列式作为体积缩放因子")
     print("=" * 60)
 
     cases = [
-        ("Rotation 45 deg", rotation_2d(math.pi / 4)),
-        ("Scale (2, 3)", scaling_2d(2, 3)),
-        ("Shear kx=1", shearing_2d(1, 0)),
-        ("Reflect y-axis", reflection_y()),
-        ("Singular [[1,2],[2,4]]", [[1, 2], [2, 4]]),
+        ("旋转 45 度", rotation_2d(math.pi / 4)),
+        ("缩放 (2, 3)", scaling_2d(2, 3)),
+        ("剪切 kx=1", shearing_2d(1, 0)),
+        ("沿 y 轴反射", reflection_y()),
+        ("奇异矩阵 [[1,2],[2,4]]", [[1, 2], [2, 4]]),
     ]
 
     print()
     for name, m in cases:
         d = det_2x2(m)
         if d == 0:
-            meaning = "space collapses, irreversible"
+            meaning = "空间坍缩，不可逆"
         elif d < 0:
-            meaning = "orientation flipped"
+            meaning = "方向翻转"
         elif abs(d - 1.0) < 1e-10:
-            meaning = "area preserved"
+            meaning = "面积不变"
         else:
-            meaning = f"area scaled by {abs(d):.1f}x"
+            meaning = f"面积缩放 {abs(d):.1f} 倍"
         print(f"det({name}) = {fmt(d):>8}  ({meaning})")
 
 
 def demo_numpy_comparison():
     print("\n" + "=" * 60)
-    print("NUMPY COMPARISON")
+    print("与 NumPy 对比")
     print("=" * 60)
 
     try:
         import numpy as np
     except ImportError:
-        print("\nNumPy not installed. Skipping.")
+        print("\n未安装 NumPy，跳过。")
         return
 
     theta = math.pi / 4
@@ -310,13 +310,13 @@ def demo_numpy_comparison():
                   [math.sin(theta), math.cos(theta)]])
 
     point = np.array([1.0, 0.0])
-    print(f"\nRotate (1,0) by 45 deg: {R @ point}")
+    print(f"\n将 (1,0) 旋转 45 度: {R @ point}")
 
     A = np.array([[2, 1], [1, 2]], dtype=float)
     eigenvalues, eigenvectors = np.linalg.eig(A)
     print(f"\nA = {A.tolist()}")
-    print(f"Eigenvalues (numpy): {eigenvalues}")
-    print(f"Eigenvectors (numpy, columns):\n{eigenvectors}")
+    print(f"特征值 (numpy): {eigenvalues}")
+    print(f"特征向量 (numpy，按列排列):\n{eigenvectors}")
 
     for i in range(len(eigenvalues)):
         v = eigenvectors[:, i]
@@ -328,19 +328,19 @@ def demo_numpy_comparison():
     D = np.diag(vals)
     V = vecs
     reconstructed = V @ D @ np.linalg.inv(V)
-    print(f"\nEigendecomposition of {B.tolist()}:")
-    print(f"  Reconstructed: {reconstructed.tolist()}")
+    print(f"\n{B.tolist()} 的特征分解:")
+    print(f"  重建结果: {reconstructed.tolist()}")
 
     Rz = np.array(rotation_3d_z(math.pi / 2))
     point_3d = np.array([1.0, 0.0, 0.0])
-    print(f"\n3D rotate (1,0,0) 90 deg around z: {np.round(Rz @ point_3d, 4)}")
+    print(f"\n三维点 (1,0,0) 绕 z 轴旋转 90 度: {np.round(Rz @ point_3d, 4)}")
 
     cov = np.array([[2.0, 1.0], [1.0, 3.0]])
     vals, vecs = np.linalg.eig(cov)
-    print(f"\nCovariance matrix: {cov.tolist()}")
-    print(f"Principal components (eigenvectors): columns of\n{vecs}")
-    print(f"Variance along each (eigenvalues): {vals}")
-    print("PCA picks the eigenvectors with the largest eigenvalues.")
+    print(f"\n协方差矩阵: {cov.tolist()}")
+    print(f"主成分（特征向量）: 矩阵的列\n{vecs}")
+    print(f"各方向方差（特征值）: {vals}")
+    print("PCA 选取特征值最大的特征向量。")
 
 
 if __name__ == "__main__":
