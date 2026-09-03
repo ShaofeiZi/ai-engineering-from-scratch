@@ -99,7 +99,7 @@ def main():
     for sent in test_sentences:
         mft = predict_mft(sent, word_best, default_tag)
         hmm = viterbi(sent, transitions, emissions, tags, vocab)
-        print(f"tokens: {sent}")
+        print(f"token：{sent}")
         print(f"  mft : {mft}")
         print(f"  hmm : {hmm}")
         print()
