@@ -1,4 +1,4 @@
-"""Tests for the OTel GenAI span builder and Prometheus exposition."""
+"""OTel GenAI span 构建器与 Prometheus 暴露格式的测试。"""
 
 from __future__ import annotations
 

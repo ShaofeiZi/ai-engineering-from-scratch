@@ -1,13 +1,13 @@
 """
-Observability for an agent harness: GenAI spans + Prometheus metrics.
+智能体运行框架的可观测性：GenAI span 与 Prometheus 指标。
 
 See: phases/19-capstone-projects/28-observability-otel-traces/docs/en.md
-Concept refs:
-  - OpenTelemetry GenAI semantic conventions (gen_ai.* attribute keys).
-  - Prometheus text exposition format (counters and histograms).
-  - W3C Trace Context (16-byte trace_id, 8-byte span_id).
-The demo at the bottom emits spans to a temp jsonl, prints the
-Prometheus exposition, and exits zero.
+概念参考：
+  - OpenTelemetry GenAI 语义约定（gen_ai.* 属性键）。
+  - Prometheus 文本展示格式（计数器和直方图）。
+  - W3C Trace Context（16 字节 trace_id、8 字节 span_id）。
+文件末尾的演示会把 span 发送到临时 jsonl 文件，打印 Prometheus 展示文本，
+并以状态码 0 退出。
 """
 
 from __future__ import annotations
@@ -25,11 +25,11 @@ from typing import Any, Iterator
 
 
 # ---------------------------------------------------------------------------
-# OTel semantic-convention keys
+# OTel 语义约定键
 # ---------------------------------------------------------------------------
 
-# Standard GenAI attributes (OpenTelemetry GenAI semantic conventions).
-# These keys are stable; only new keys get added, never renamed.
+# 标准 GenAI 属性（OpenTelemetry GenAI 语义约定）。
+# 这些键保持稳定；只会添加新键，不会重命名已有键。
 GEN_AI_SYSTEM = "gen_ai.system"
 GEN_AI_REQUEST_MODEL = "gen_ai.request.model"
 GEN_AI_REQUEST_MAX_TOKENS = "gen_ai.request.max_tokens"
@@ -43,7 +43,7 @@ GEN_AI_TOOL_NAME = "gen_ai.tool.name"
 GEN_AI_TOOL_CALL_ID = "gen_ai.tool.call.id"
 GEN_AI_TOOL_RESULT_BYTES = "gen_ai.tool.result.bytes"
 
-# Harness-specific attributes (under a non-conflicting prefix).
+# 运行框架专用属性（使用不会冲突的前缀）。
 HARNESS_GATE_DECISION = "agent.harness.gate.decision"
 HARNESS_GATE_REASON = "agent.harness.gate.reason"
 
@@ -53,13 +53,13 @@ STATUS_ERROR = "ERROR"
 
 
 # ---------------------------------------------------------------------------
-# Span data shape
+# Span 数据结构
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class SpanEvent:
-    """Discrete event recorded inside a span (per OTel)."""
+    """记录在 span 内的离散事件（遵循 OTel）。"""
 
     name: str
     timestamp_unix_nano: int
@@ -75,7 +75,7 @@ class SpanEvent:
 
 @dataclass
 class GenAISpan:
-    """A single span shaped to OTel GenAI conventions."""
+    """符合 OTel GenAI 约定的单个 span。"""
 
     trace_id: str
     span_id: str
@@ -112,18 +112,18 @@ class GenAISpan:
 
 
 # ---------------------------------------------------------------------------
-# ID generation
+# ID 生成
 # ---------------------------------------------------------------------------
 
 
 def new_trace_id() -> str:
-    """Random 16-byte hex string. Matches W3C trace context."""
+    """随机 16 字节十六进制字符串，符合 W3C Trace Context。"""
 
-    return uuid.uuid4().hex + uuid.uuid4().hex[:0]  # uuid4 hex is already 32 chars
+    return uuid.uuid4().hex + uuid.uuid4().hex[:0]  # uuid4 的十六进制形式已经是 32 个字符
 
 
 def new_span_id() -> str:
-    """Random 8-byte hex string. Matches W3C trace context span id."""
+    """随机 8 字节十六进制字符串，符合 W3C Trace Context span ID。"""
 
     return uuid.uuid4().hex[:16]
 
@@ -133,13 +133,13 @@ def now_unix_nano() -> int:
 
 
 # ---------------------------------------------------------------------------
-# Exporter
+# 导出器
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class JSONLExporter:
-    """Append-only exporter: one span per JSON line."""
+    """只追加的导出器：每行 JSON 记录一个 span。"""
 
     path: str
     fh: Any = None
@@ -163,7 +163,7 @@ class JSONLExporter:
 
 
 class InMemoryExporter:
-    """Test-friendly exporter that keeps spans in a list."""
+    """便于测试的导出器，把 span 保存在列表中。"""
 
     def __init__(self) -> None:
         self.spans: list[GenAISpan] = []
@@ -176,7 +176,7 @@ class InMemoryExporter:
 
 
 # ---------------------------------------------------------------------------
-# Metrics primitives
+# 指标基本组件
 # ---------------------------------------------------------------------------
 
 
@@ -196,7 +196,7 @@ def _format_labels(labels: dict[str, str]) -> str:
 
 @dataclass
 class Counter:
-    """A simple labelled counter."""
+    """简单的带标签计数器。"""
 
     name: str
     help: str = ""
@@ -212,7 +212,7 @@ class Counter:
 
 @dataclass
 class Histogram:
-    """A histogram with explicit buckets, in line with OTel's default ms set."""
+    """使用显式桶的直方图，与 OTel 默认毫秒桶集合一致。"""
 
     name: str
     help: str = ""
@@ -272,7 +272,7 @@ class MetricsRegistry:
 
 
 def prometheus_exposition(registry: MetricsRegistry) -> str:
-    """Render the registry into Prometheus text exposition format."""
+    """把注册表渲染为 Prometheus 文本展示格式。"""
 
     lines: list[str] = []
     for name in sorted(registry.counters):
@@ -321,13 +321,13 @@ def _format_le(bound: float) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Span builder
+# Span 构建器
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class SpanBuilder:
-    """Owns a trace id and emits spans through one or more exporters."""
+    """持有 trace ID，并通过一个或多个导出器发送 span。"""
 
     trace_id: str = field(default_factory=new_trace_id)
     exporters: list[Any] = field(default_factory=list)
@@ -375,16 +375,16 @@ class SpanBuilder:
                 tool = span.attributes.get(GEN_AI_TOOL_NAME)
                 if tool is not None:
                     self.metrics.counter(
-                        "tools_called_total", help="Total tool calls"
+                        "tools_called_total", help="工具调用总数"
                     ).inc({"tool": str(tool)})
                     self.metrics.histogram(
                         "tool_latency_ms",
-                        help="Tool call latency in milliseconds",
+                        help="工具调用延迟（毫秒）",
                     ).observe(span.duration_ms, {"tool": str(tool)})
 
 
 # ---------------------------------------------------------------------------
-# Demo
+# 演示
 # ---------------------------------------------------------------------------
 
 
@@ -397,11 +397,11 @@ def run_demo() -> int:
     in_mem = InMemoryExporter()
     builder = SpanBuilder(exporters=[jsonl, in_mem], metrics=metrics)
 
-    print("OBSERVABILITY DEMO")
+    print("可观测性演示")
     print(f"trace_id={builder.trace_id}")
-    print(f"writing traces to {trace_path}")
+    print(f"正在把追踪写入 {trace_path}")
 
-    # Synthesize an agent turn: a gen_ai.chat span around two tool spans.
+    # 合成一轮智能体交互：用一个 gen_ai.chat span 包住两个工具 span。
     with builder.span(
         "gen_ai.chat",
         attributes={
@@ -435,7 +435,7 @@ def run_demo() -> int:
                     timestamp_unix_nano=now_unix_nano(),
                     attributes={
                         HARNESS_GATE_DECISION: "ALLOW",
-                        HARNESS_GATE_REASON: "passed gate chain",
+                        HARNESS_GATE_REASON: "已通过门禁链",
                     },
                 )
             )
@@ -451,7 +451,7 @@ def run_demo() -> int:
             time.sleep(0.003)
             tool2.attributes[GEN_AI_TOOL_RESULT_BYTES] = 256
 
-    # A second turn with an intentionally denied gate to exercise an error span.
+    # 第二轮故意让门禁拒绝，以覆盖错误 span。
     try:
         with builder.span(
             "gen_ai.tool.execution",
@@ -466,16 +466,16 @@ def run_demo() -> int:
                     timestamp_unix_nano=now_unix_nano(),
                     attributes={
                         HARNESS_GATE_DECISION: "DENY",
-                        HARNESS_GATE_REASON: "tool not in allow-set",
+                        HARNESS_GATE_REASON: "工具不在允许集合中",
                     },
                 )
             )
-            raise PermissionError("tool 'shell' not in allow-set")
+            raise PermissionError("工具 'shell' 不在允许集合中")
     except PermissionError:
         pass
 
     print("")
-    print(f"emitted {len(in_mem.spans)} span(s):")
+    print(f"已发送 {len(in_mem.spans)} 个 span：")
     for span in in_mem.spans:
         attrs_compact = {
             k: v
@@ -488,15 +488,15 @@ def run_demo() -> int:
         )
 
     print("")
-    print("--- prometheus exposition ---")
+    print("--- Prometheus 展示文本 ---")
     print(prometheus_exposition(metrics))
 
     jsonl.close()
 
-    # Sanity: roundtrip the jsonl file.
+    # 健全性检查：往返读取 jsonl 文件。
     with open(trace_path, "r", encoding="utf-8") as fh:
         lines = [json.loads(line) for line in fh if line.strip()]
-    print(f"roundtrip parsed {len(lines)} spans from {trace_path}")
+    print(f"从 {trace_path} 往返解析了 {len(lines)} 个 span")
 
     return 0
 
