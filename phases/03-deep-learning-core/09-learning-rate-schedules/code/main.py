@@ -46,7 +46,7 @@ def visualize_schedule(name, schedule_fn, total_steps=500, **kwargs):
     for s, lr_val in zip(steps, lrs):
         bar_len = int(lr_val / max_lr * 40)
         bar = "#" * bar_len
-        print(f"  Step {s:4d}: lr={lr_val:.6f} {bar}")
+        print(f"  步骤 {s:4d}: lr={lr_val:.6f} {bar}")
 
 
 def sigmoid(x):
@@ -135,7 +135,7 @@ def compare_schedules(data):
         ("1cycle", one_cycle_schedule, {}),
     ]
 
-    print(f"\n{'Schedule':<20} {'Start Loss':>12} {'Mid Loss':>12} {'End Loss':>12} {'Best Loss':>12}")
+    print(f"\n{'调度策略':<20} {'起始损失':>12} {'中间损失':>12} {'最终损失':>12} {'最佳损失':>12}")
     print("-" * 70)
 
     for name, schedule_fn, extra_kwargs in configs:
@@ -148,7 +148,7 @@ def compare_schedules(data):
 def lr_sensitivity(data):
     learning_rates = [1.0, 0.1, 0.05, 0.01, 0.001, 0.0001]
 
-    print(f"\n{'LR':>10} {'Start Loss':>12} {'End Loss':>12} {'Status':>15}")
+    print(f"\n{'LR':>10} {'起始损失':>12} {'最终损失':>12} {'状态':>15}")
     print("-" * 52)
 
     for lr in learning_rates:
@@ -157,13 +157,13 @@ def lr_sensitivity(data):
         end = losses[-1]
 
         if math.isnan(end) or end > 1.0:
-            status = "DIVERGED"
+            status = "已发散"
         elif end > start * 0.9:
-            status = "BARELY MOVED"
+            status = "几乎未动"
         elif end < 0.15:
-            status = "CONVERGED"
+            status = "已收敛"
         else:
-            status = "LEARNING"
+            status = "学习中"
 
         end_str = f"{end:.6f}" if not math.isnan(end) else "NaN"
         print(f"{lr:>10.4f} {start:>12.6f} {end_str:>12} {status:>15}")
@@ -173,7 +173,7 @@ def warmup_impact(data):
     warmup_fractions = [0.0, 0.01, 0.05, 0.10, 0.20]
     total_steps = 300 * len(data)
 
-    print(f"\n{'Warmup %':>10} {'Warmup Steps':>14} {'End Loss':>12} {'Best Loss':>12}")
+    print(f"\n{'Warmup %':>10} {'Warmup 步数':>14} {'最终损失':>12} {'最佳损失':>12}")
     print("-" * 52)
 
     for frac in warmup_fractions:
@@ -196,8 +196,8 @@ def schedule_trajectory(data):
         ("1cycle", one_cycle_schedule, {"lr": 0.05}),
     ]
 
-    print("\nLR at key training points:")
-    print(f"  {'Schedule':<20} {'Step 0':>10} {'Step T/4':>10} {'Step T/2':>10} {'Step 3T/4':>10} {'Step T':>10}")
+    print("\n关键训练节点的学习率:")
+    print(f"  {'调度策略':<20} {'步骤 0':>10} {'步骤 T/4':>10} {'步骤 T/2':>10} {'步骤 3T/4':>10} {'步骤 T':>10}")
     print("  " + "-" * 60)
 
     for name, fn, kw in schedules:
@@ -209,7 +209,7 @@ def schedule_trajectory(data):
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("STEP 1: Schedule Shapes")
+    print("步骤 1: 调度策略形状")
     print("=" * 70)
     visualize_schedule("Constant", constant_schedule, lr=0.05)
     visualize_schedule("Step Decay", step_decay_schedule, lr=0.05, step_size=125, gamma=0.5)
@@ -220,21 +220,21 @@ if __name__ == "__main__":
     data = make_circle_data()
 
     print("\n" + "=" * 70)
-    print("STEP 2: LR Sensitivity")
+    print("步骤 2：学习率敏感度")
     print("=" * 70)
     lr_sensitivity(data)
 
     print("\n" + "=" * 70)
-    print("STEP 3: Schedule Comparison")
+    print("步骤 3：调度策略对比")
     print("=" * 70)
     compare_schedules(data)
 
     print("\n" + "=" * 70)
-    print("STEP 4: Warmup Impact")
+    print("步骤 4：Warmup 的影响")
     print("=" * 70)
     warmup_impact(data)
 
     print("\n" + "=" * 70)
-    print("STEP 5: Schedule Trajectory")
+    print("步骤 5：调度轨迹")
     print("=" * 70)
     schedule_trajectory(data)
