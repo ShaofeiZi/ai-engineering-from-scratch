@@ -1,8 +1,7 @@
-"""Production scaling demo: checkpoints, queues, async vs threads.
+"""生产扩展演示：checkpoint、队列，以及 async 与线程的对比。
 
-All stdlib. CheckpointStore uses SQLite. AgentQueue is a per-agent state
-machine with 3 states. async vs threads benchmark runs 500 concurrent
-simulated LLM calls.
+全部仅使用 stdlib。CheckpointStore 使用 SQLite。AgentQueue 是逐 Agent 的三状态
+状态机。async 与线程的基准测试会运行 500 个并发的模拟 LLM 调用。
 """
 from __future__ import annotations
 
@@ -17,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 
 
-# ---------- CheckpointStore ----------
+# ---------- 检查点存储 ----------
 
 class CheckpointStore:
     def __init__(self, path: str) -> None:
@@ -50,7 +49,7 @@ class CheckpointStore:
 
 def run_agent_with_checkpoint(store: CheckpointStore, thread_id: str,
                               start: int = 0, crash_at: int | None = None, goal: int = 5) -> int:
-    """Run a tiny 5-step agent; optionally crash at a given step."""
+    """运行一个微型五步 Agent；可选择在指定步骤崩溃。"""
     restored = store.latest(thread_id)
     if restored:
         super_step, state = restored
@@ -61,15 +60,15 @@ def run_agent_with_checkpoint(store: CheckpointStore, thread_id: str,
 
     while state["counter"] < goal:
         if crash_at is not None and super_step == crash_at:
-            print(f"    worker crashes at super_step={super_step}")
-            raise RuntimeError("simulated crash")
+            print(f"    worker 在 super_step={super_step} 时崩溃")
+            raise RuntimeError("模拟崩溃")
         state["counter"] += 1
         store.write(thread_id, super_step, dict(state))
         super_step += 1
     return state["counter"]
 
 
-# ---------- AgentQueue ----------
+# ---------- Agent 队列 ----------
 
 class AgentState(enum.Enum):
     IDLE = "idle"
@@ -92,7 +91,7 @@ class AgentQueue:
             self.state = AgentState.PROCESSING
         elif self.state == AgentState.PROCESSING:
             msg = self.in_queue.pop(0)
-            self.out_queue.append({"reply_to": msg, "body": f"{self.agent_id} processed {msg}"})
+            self.out_queue.append({"reply_to": msg, "body": f"{self.agent_id} 已处理 {msg}"})
             self.state = AgentState.RESPONSE
         elif self.state == AgentState.RESPONSE:
             self.state = AgentState.IDLE
@@ -100,18 +99,18 @@ class AgentQueue:
 
 def demo_queue() -> None:
     print("\n" + "=" * 72)
-    print("PER-AGENT QUEUE — 3-state machine (idle / processing / response)")
+    print("逐 AGENT 队列 — 三状态机（idle / processing / response）")
     print("=" * 72)
     a = AgentQueue("agent-a")
-    a.enqueue({"task": "compress logs"})
-    a.enqueue({"task": "write summary"})
-    print(f"  initial: {a.state.value}  in_queue={len(a.in_queue)}")
+    a.enqueue({"task": "压缩日志"})
+    a.enqueue({"task": "编写总结"})
+    print(f"  初始状态：{a.state.value}  in_queue={len(a.in_queue)}")
     for _ in range(7):
         a.step()
         print(f"  state={a.state.value:11s} in={len(a.in_queue)} out={len(a.out_queue)}")
 
 
-# ---------- async vs threads ----------
+# ---------- async 与线程 ----------
 
 async def sim_llm_call_async(delay: float = 0.05) -> None:
     await asyncio.sleep(delay)
@@ -139,30 +138,30 @@ def bench_threads(n: int) -> float:
 
 def demo_async_vs_threads() -> None:
     print("\n" + "=" * 72)
-    print("ASYNC vs THREADS — 500 concurrent 'LLM calls' (50ms each)")
+    print("ASYNC 与线程对比 — 500 个并发“LLM 调用”（每个 50ms）")
     print("=" * 72)
 
     async_elapsed = asyncio.run(bench_async(500))
-    print(f"  async (asyncio):  {async_elapsed:.3f} s")
+    print(f"  异步（asyncio）：{async_elapsed:.3f} 秒")
 
     thread_elapsed = bench_threads(500)
-    print(f"  threads:          {thread_elapsed:.3f} s")
+    print(f"  线程：           {thread_elapsed:.3f} 秒")
 
-    print("  ratio: threads are {:.1f}x slower (and allocate ~1MB per thread stack)".format(
+    print("  比率：线程慢 {:.1f}x（且每个线程栈分配约 1MB）".format(
         thread_elapsed / async_elapsed if async_elapsed > 0 else float("inf")
     ))
 
 
 def demo_checkpoint_resume() -> None:
     print("=" * 72)
-    print("CHECKPOINT RESUME — worker crashes mid-run, second worker resumes")
+    print("CHECKPOINT 恢复 — worker 运行中崩溃，由第二个 worker 恢复")
     print("=" * 72)
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = f.name
     try:
         store = CheckpointStore(db_path)
 
-        print("  worker 1 starts thread t-1, targeting counter=5")
+        print("  worker 1 启动线程 t-1，目标 counter=5")
         try:
             run_agent_with_checkpoint(store, "t-1", crash_at=3, goal=5)
         except RuntimeError:
@@ -170,11 +169,11 @@ def demo_checkpoint_resume() -> None:
 
         last = store.latest("t-1")
         assert last is not None
-        print(f"  last checkpoint: super_step={last[0]}, state={last[1]}")
+        print(f"  最后一个 checkpoint：super_step={last[0]}，state={last[1]}")
 
-        print("  worker 2 resumes thread t-1")
+        print("  worker 2 恢复线程 t-1")
         final = run_agent_with_checkpoint(store, "t-1", goal=5)
-        print(f"  worker 2 completed; final counter = {final}")
+        print(f"  worker 2 已完成；最终 counter = {final}")
     finally:
         os.unlink(db_path)
 
@@ -183,11 +182,11 @@ def main() -> None:
     demo_checkpoint_resume()
     demo_queue()
     demo_async_vs_threads()
-    print("\nTakeaways:")
-    print("  durable execution = persist state per super-step + idempotent resume.")
-    print("  per-agent queues with 3-state machines scale to thousands of concurrent agents.")
-    print("  async is structural for I/O-bound LLM workloads, not just an optimization.")
-    print("  Bedi's rule: FastAPI + Postgres covers most teams; escalate on measured need.")
+    print("\n要点：")
+    print("  持久执行 = 每个 super-step 持久化状态 + 幂等恢复。")
+    print("  带三状态机的逐 Agent 队列可扩展到数千个并发 Agent。")
+    print("  对 I/O 密集型 LLM 工作负载而言，async 是结构性选择，而不只是优化。")
+    print("  Bedi 的原则：FastAPI + Postgres 能满足大多数团队；根据实测需求再升级。")
 
 
 if __name__ == "__main__":
