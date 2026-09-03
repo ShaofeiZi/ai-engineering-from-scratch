@@ -1,13 +1,13 @@
-"""Phase 13 Lesson 03 - parallel and streaming tool calls.
+"""阶段 13 第 03 课 - 并行与流式工具调用。
 
-Two demos, stdlib only:
-  1. Three-city weather run, sequential vs parallel (thread pool).
-     Measures wall-clock and shows the max vs sum pattern.
-  2. Stream accumulator for out-of-order argument chunks.
-     Replays a fake OpenAI-shaped stream of three interleaved parallel calls
-     and reassembles each per-id before executing.
+两个演示，仅使用标准库：
+  1. Three-city 天气查询，顺序与并行对比（线程池）。
+     测量 wall-clock 并展示最大值与求和模式。
+  2. out-of-order 参数块的流式累加器。
+     回放一个由三次交错并行调用组成的模拟 OpenAI-shaped 流，
+     并在执行前重新组装每个 per-id。
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 
 # ------------------------------------------------------------------
-# demo 1: sequential vs parallel weather lookup
+# 演示 1：顺序与并行天气查询
 # ------------------------------------------------------------------
 
 SIMULATED_LATENCY_MS = {"Bengaluru": 400, "Tokyo": 600, "Zurich": 800}
@@ -47,7 +47,7 @@ def run_parallel(cities: list[str]) -> tuple[float, list[dict]]:
 
 
 # ------------------------------------------------------------------
-# demo 2: stream accumulator
+# 演示 2：流式累加器
 # ------------------------------------------------------------------
 
 @dataclass
@@ -84,7 +84,7 @@ class StreamAccumulator:
 
 
 def fake_openai_stream():
-    """Three interleaved parallel calls. Real streams look like this."""
+    """三次交错的并行调用。真实的流就是这样的。"""
     yield {"type": "call_start", "id": "call_A", "name": "get_weather"}
     yield {"type": "call_start", "id": "call_B", "name": "get_weather"}
     yield {"type": "call_start", "id": "call_C", "name": "get_weather"}
@@ -109,7 +109,7 @@ def replay_and_execute() -> dict[str, dict]:
             completed = acc.on_event(event)
             for buf in completed:
                 args = buf.try_parse()
-                print(f"  call {buf.id} args complete -> {args}")
+                print(f"  调用 {buf.id} 参数完成 -> {args}")
                 in_flight[buf.id] = pool.submit(executor_weather, args["city"])
         for cid, fut in in_flight.items():
             results[cid] = fut.result()
@@ -117,34 +117,34 @@ def replay_and_execute() -> dict[str, dict]:
 
 
 # ------------------------------------------------------------------
-# main
+# 主函数
 # ------------------------------------------------------------------
 
 def main() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 03 - PARALLEL AND STREAMING TOOL CALLS")
+    print("第 13 阶段第 03 课 - 并行与流式工具调用")
     print("=" * 72)
 
     cities = ["Bengaluru", "Tokyo", "Zurich"]
     sum_lat = sum(SIMULATED_LATENCY_MS.values())
     max_lat = max(SIMULATED_LATENCY_MS.values())
 
-    print("\n--- demo 1: three-city weather (simulated) ---")
-    print(f"per-city simulated latency : {SIMULATED_LATENCY_MS}")
-    print(f"theoretical sequential     : {sum_lat} ms  (sum)")
-    print(f"theoretical parallel       : {max_lat} ms  (max)")
+    print("\n--- 演示 1：三城市天气查询（模拟） ---")
+    print(f"各城市模拟延迟 : {SIMULATED_LATENCY_MS}")
+    print(f"理论顺序耗时           : {sum_lat} 毫秒  (求和)")
+    print(f"理论并行耗时           : {max_lat} 毫秒  (最大值)")
 
     seq_ms, seq_res = run_sequential(cities)
     par_ms, par_res = run_parallel(cities)
-    print(f"\nactual sequential : {seq_ms:.0f} ms")
-    print(f"actual parallel   : {par_ms:.0f} ms")
+    print(f"\n实际顺序耗时 : {seq_ms:.0f} 毫秒")
+    print(f"实际并行耗时   : {par_ms:.0f} 毫秒")
     speedup = seq_ms / par_ms if par_ms else 0
-    print(f"speedup           : {speedup:.2f}x")
+    print(f"加速比           : {speedup:.2f}x")
 
-    print("\n--- demo 2: stream accumulator ---")
-    print("replaying fake interleaved stream of three parallel calls ...")
+    print("\n--- 演示 2：流式累加器 ---")
+    print("回放由三次并行调用组成的模拟交错流 ……")
     results = replay_and_execute()
-    print("\nfinal results (keyed by tool_call_id):")
+    print("\n最终结果（按 tool_call_id 索引）：")
     for cid, r in results.items():
         print(f"  {cid} -> {r}")
 
