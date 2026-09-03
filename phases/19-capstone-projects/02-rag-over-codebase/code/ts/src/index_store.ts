@@ -6,7 +6,7 @@ export function tokenize(text: string): string[] {
   return text.toLowerCase().match(TOKEN_RE) ?? [];
 }
 
-// Tiny deterministic 32-bit hash (FNV-1a) so embeddings are stable across runs.
+// 小型确定性 32 位哈希（FNV-1a），确保 embedding 在多次运行间保持稳定。
 export function fnv1a(s: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
@@ -32,7 +32,7 @@ export function fakeEmbed(text: string, dim = 64): number[] {
 export function cosine(a: readonly number[], b: readonly number[]): number {
   if (a.length !== b.length) {
     throw new Error(
-      `cosine: vector length mismatch (${a.length} vs ${b.length})`,
+      `cosine：向量长度不匹配（${a.length} 与 ${b.length}）`,
     );
   }
   let dot = 0;
@@ -85,7 +85,7 @@ export class BM25Index {
       for (let i = 0; i < times; i++) out.push(...toks);
       return out;
     };
-    // Field-weighted tokenization: symbol x4, summary x2, body x1.
+    // 字段加权分词：symbol x4、summary x2、body x1。
     const tokens = [
       ...repeat(tokenize(chunk.symbol), 4),
       ...repeat(tokenize(chunk.summary), 2),

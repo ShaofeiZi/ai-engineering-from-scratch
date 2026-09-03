@@ -1,13 +1,11 @@
-"""Code RAG — AST-aware chunking + hybrid retrieval scaffold.
+"""代码 RAG——感知 AST 的分块与混合检索脚手架。
 
-The hard architectural primitive here is hybrid retrieval with rank fusion:
-two index structures (dense vector, BM25) run in parallel, results are merged
-with reciprocal rank fusion, then a re-ranker picks the final top-k. This
-scaffold implements both halves with stdlib: a naive dense index (hash-based
-fake embeddings so the loop runs deterministically offline) and a real BM25
-from scratch. The fusion + rerank logic is the part that matters.
+这里关键的架构原语是带排名融合的混合检索：两个索引结构（稠密向量、BM25）
+并行运行，结果通过倒数排名融合合并，再由重排器选出最终 top-k。此脚手架使用
+标准库实现两部分：朴素稠密索引（采用基于哈希的伪 embedding，使循环可在离线
+环境中确定性运行），以及从零实现的真实 BM25。融合与重排逻辑才是重点。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -19,7 +17,7 @@ from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
-# chunk shape  --  AST-aware function-level chunks
+# 分块结构——感知 AST 的函数级分块
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -59,11 +57,11 @@ SAMPLE_CORPUS = [
 
 
 # ---------------------------------------------------------------------------
-# naive dense index  --  deterministic fake embeddings for scaffold testing
+# 朴素稠密索引——用于测试脚手架的确定性伪 embedding
 # ---------------------------------------------------------------------------
 
 def fake_embed(text: str, dim: int = 64) -> list[float]:
-    """Hash-based deterministic embedding; stands in for Voyage-code-3."""
+    """基于哈希的确定性 embedding，用作 Voyage-code-3 的替代实现。"""
     vec = [0.0] * dim
     for tok in re.findall(r"\w+", text.lower()):
         h = hash(tok)
@@ -93,7 +91,7 @@ class DenseIndex:
 
 
 # ---------------------------------------------------------------------------
-# BM25 from scratch  --  the real algorithm, documents are Chunks
+# 从零实现 BM25——真实算法，文档类型为 Chunk
 # ---------------------------------------------------------------------------
 
 def tokenize(text: str) -> list[str]:
@@ -111,7 +109,7 @@ class BM25Index:
     avgdl: float = 0.0
 
     def add(self, chunk: Chunk) -> None:
-        # field-weighted: symbol x4, summary x2, body x1
+        # 字段加权：symbol x4、summary x2、body x1
         tokens = (tokenize(chunk.symbol) * 4 +
                   tokenize(chunk.summary) * 2 +
                   tokenize(chunk.body))
@@ -143,7 +141,7 @@ class BM25Index:
 
 
 # ---------------------------------------------------------------------------
-# reciprocal rank fusion  --  the merge step of hybrid retrieval
+# 倒数排名融合——混合检索的合并步骤
 # ---------------------------------------------------------------------------
 
 def rrf(dense: list[tuple[Chunk, float]], sparse: list[tuple[Chunk, float]],
@@ -161,7 +159,7 @@ def rrf(dense: list[tuple[Chunk, float]], sparse: list[tuple[Chunk, float]],
 
 
 # ---------------------------------------------------------------------------
-# stub reranker  --  cross-encoder stand-in; rerank by query-symbol overlap
+# stub 重排器——cross-encoder 替代实现；按查询与符号的重叠度重排
 # ---------------------------------------------------------------------------
 
 def rerank(query: str, candidates: list[tuple[Chunk, float]],
@@ -177,7 +175,7 @@ def rerank(query: str, candidates: list[tuple[Chunk, float]],
 
 
 # ---------------------------------------------------------------------------
-# orchestrator  --  the full retrieve -> fuse -> rerank flow
+# 编排器——完整的检索 -> 融合 -> 重排流程
 # ---------------------------------------------------------------------------
 
 def answer(query: str, dense: DenseIndex, bm25: BM25Index) -> dict[str, object]:
@@ -207,10 +205,10 @@ def main() -> None:
               "how does rank fusion work"):
         result = answer(q, dense, bm25)
         print(f"Q: {result['query']}")
-        print(f"  dense  : {result['dense_top']}")
-        print(f"  sparse : {result['sparse_top']}")
-        print(f"  fused  : {result['fused_top']}")
-        print(f"  rerank : {result['rerank_top']}")
+        print(f"  稠密检索：{result['dense_top']}")
+        print(f"  稀疏检索：{result['sparse_top']}")
+        print(f"  融合结果：{result['fused_top']}")
+        print(f"  重排结果：{result['rerank_top']}")
         print()
 
 

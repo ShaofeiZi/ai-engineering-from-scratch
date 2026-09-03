@@ -1,14 +1,14 @@
-// Capstone 19/02: code RAG query API (multi-file TypeScript).
+// 综合项目 19/02：代码 RAG 查询 API（多文件 TypeScript）。
 //
-// Sources:
-//   This lesson's docs/en.md (hybrid retrieval + cited answer API)
-//   Hono web framework           https://hono.dev/docs/
+// 资料来源：
+//   本课程的 docs/en.md（混合检索 + 带引用的回答 API）
+//   Hono Web 框架                https://hono.dev/docs/
 //   BM25 (Robertson + Zaragoza) https://en.wikipedia.org/wiki/Okapi_BM25
 //   Reciprocal Rank Fusion       https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf
 //
-// Hybrid retrieval API split into modules: index_store.ts (FNV-1a embedder + BM25),
-// retrieval.ts (RRF merge), server.ts (hono routes /healthz, /query), this entry
-// (boots node:http behind the hono fetch handler, runs a self-probe, exits 0).
+// 混合检索 API 拆分为多个模块：index_store.ts（FNV-1a embedder + BM25）、
+// retrieval.ts（RRF 合并）、server.ts（Hono 路由 /healthz、/query），以及本入口
+//（在 Hono fetch handler 后启动 node:http，执行自检并以状态码 0 退出）。
 
 import * as http from "node:http";
 import { Readable } from "node:stream";
@@ -79,23 +79,23 @@ async function probe(server: http.Server, port: number): Promise<void> {
 
   const health = await get("/healthz");
   console.log(`GET /healthz -> ${health.status} ${health.body}`);
-  if (health.status !== 200) throw new Error(`healthz returned ${health.status}`);
+  if (health.status !== 200) throw new Error(`healthz 返回 ${health.status}`);
 
   for (const q of queries) {
     const r = await get(`/query?q=${encodeURIComponent(q)}`);
-    if (r.status !== 200) throw new Error(`query '${q}' returned ${r.status}`);
+    if (r.status !== 200) throw new Error(`查询 '${q}' 返回 ${r.status}`);
     const parsed = JSON.parse(r.body) as QueryResponse;
     console.log(`GET /query?q=${JSON.stringify(q)} -> ${r.status}`);
-    console.log(`  dense  : ${JSON.stringify(parsed.denseTop)}`);
-    console.log(`  sparse : ${JSON.stringify(parsed.sparseTop)}`);
-    console.log(`  fused  : ${JSON.stringify(parsed.fusedTop)}`);
+    console.log(`  稠密检索：${JSON.stringify(parsed.denseTop)}`);
+    console.log(`  稀疏检索：${JSON.stringify(parsed.sparseTop)}`);
+    console.log(`  融合结果：${JSON.stringify(parsed.fusedTop)}`);
     console.log(
-      `  cites  : ${parsed.citations
+      `  引用：${parsed.citations
         .map((c) => `${c.anchor}@${c.score.toFixed(4)}`)
         .join(", ")}`,
     );
     if (parsed.citations.length === 0) {
-      throw new Error(`query '${q}' returned no citations`);
+      throw new Error(`查询 '${q}' 未返回引用`);
     }
   }
   await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -103,14 +103,14 @@ async function probe(server: http.Server, port: number): Promise<void> {
 
 async function main(): Promise<void> {
   const { dense, bm25 } = buildIndices();
-  console.log(`indexed ${dense.size()} chunks across ${SAMPLE_CORPUS.length} entries`);
+  console.log(`已为 ${SAMPLE_CORPUS.length} 个条目索引 ${dense.size()} 个分块`);
   const app = buildApp(dense, bm25);
   const server = http.createServer(nodeListener(app.fetch as FetchLike));
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
   const addr = server.address();
-  if (!addr || typeof addr === "string") throw new Error("server address unavailable");
+  if (!addr || typeof addr === "string") throw new Error("服务器地址不可用");
   const port = addr.port;
-  console.log(`code-rag api listening on http://127.0.0.1:${port}`);
+  console.log(`代码 RAG API 正在监听 http://127.0.0.1:${port}`);
   if (process.argv.includes("--serve")) {
     process.on("SIGINT", () => server.close(() => process.exit(0)));
     return;
