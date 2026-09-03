@@ -1,8 +1,8 @@
-"""Three output-side classifiers and their redactors.
+"""三个输出侧 classifier 及其 redactor。
 
-Each classifier exposes classify(text) -> ClassifierVerdict and
-redact(text) -> str. Severity is one of none, low, medium, high. All are
-rule-based so latency is zero and tests are deterministic.
+每个 classifier 暴露 classify(text) -> ClassifierVerdict 和
+redact(text) -> str。severity 为 none、low、medium、high 之一。全部基于
+规则，因此延迟为零且测试可确定性地复现。
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ HARASSMENT_TERMS = [
 ]
 
 
-_NEGATION_WINDOW = 20
+_NEGATION_WINDOW = 20  # 否定词检测窗口大小
 
 
 class ToxicityClassifier:

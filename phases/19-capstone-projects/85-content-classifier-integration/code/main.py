@@ -1,10 +1,10 @@
-"""Content classifier router.
+"""Content classifier router。
 
-Wires three output-side classifiers behind a single router that picks the
-maximum severity, runs the corresponding action (block, redact, warn, log),
-and returns a structured Action object the safety gate can consume.
+将三个输出侧 classifier 接到一个 router 之后，由 router 选取最高
+severity，执行对应动作（block、redact、warn、log），
+并返回一个结构化的 Action 对象供 safety gate 消费。
 
-Run: python3 main.py
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from classifiers import (
 HERE = Path(__file__).parent
 OUTPUTS = HERE.parent / "outputs"
 
-REFUSAL_TEXT = "I cannot share that. The response was blocked by an output safety classifier."
+REFUSAL_TEXT = "我无法分享该内容。该响应已被输出侧 safety classifier 拦截。"
 
 
 @dataclass
@@ -77,7 +77,7 @@ class Router:
             redacted = self._apply_redactors(text, verdicts)
             return Action(verb="redact", output=redacted, severity=max_sev, verdicts=serialized, metadata=metadata)
         if max_sev == "low":
-            note = "\n\n[note: an output safety classifier flagged this response at low severity]"
+            note = "\n\n[note: 一个输出侧 safety classifier 以 low severity 标记了此响应]"
             return Action(verb="warn", output=text + note, severity=max_sev, verdicts=serialized, metadata=metadata)
         return Action(verb="log", output=text, severity=max_sev, verdicts=serialized, metadata=metadata)
 
@@ -120,7 +120,7 @@ def write_report(actions: list[dict[str, object]]) -> Path:
 def demo() -> int:
     router = Router()
     report = []
-    print("Content classifier router demo")
+    print("Content classifier router 演示")
     print()
     print(f"  {'case':28} {'verb':8} {'severity':9} fired")
     for fixture in _DEMO_OUTPUTS:
@@ -139,7 +139,7 @@ def demo() -> int:
             }
         )
     path = write_report(report)
-    print(f"\n  artifact written to {path}")
+    print(f"\n  产物已写入 {path}")
     return 0
 
 
