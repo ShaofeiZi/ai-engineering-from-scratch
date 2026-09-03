@@ -1,4 +1,4 @@
-"""Deterministic tests for the semantic-segmentation U-Net lesson."""
+"""语义分割 U-Net 课程的确定性测试。"""
 
 from __future__ import annotations
 

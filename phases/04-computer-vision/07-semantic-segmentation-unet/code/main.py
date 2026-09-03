@@ -1,7 +1,7 @@
-# Lesson implementation for phases/04-computer-vision/07-semantic-segmentation-unet/docs/en.md.
-# Builds a compact U-Net, combined cross-entropy/Dice loss, and per-class IoU.
-# Reference: U-Net (Ronneberger et al., 2015), https://arxiv.org/abs/1505.04597.
-# The seeded synthetic dataset keeps the training demonstration self-contained.
+# phases/04-computer-vision/07-semantic-segmentation-unet/docs/en.md 的课程实现。
+# 构建紧凑的 U-Net、交叉熵/Dice 组合损失，以及各类别 IoU。
+# 参考资料：U-Net（Ronneberger 等，2015），https://arxiv.org/abs/1505.04597。
+# 使用固定种子的合成数据集，使训练演示可以独立运行。
 
 import numpy as np
 import torch
@@ -123,7 +123,7 @@ def iou_per_class(logits, targets, num_classes):
 
 def synthetic_segmentation(num_samples=120, size=64, seed=0):
     if size < 16:
-        raise ValueError("size must be at least 16 pixels")
+        raise ValueError("尺寸必须至少为 16 像素")
 
     rng = np.random.default_rng(seed)
     images = np.zeros((num_samples, size, size, 3), dtype=np.float32)
@@ -178,7 +178,7 @@ def main():
     num_classes = 3
     model = UNet(in_channels=3, num_classes=num_classes, base=16).to(device)
     optimizer = Adam(model.parameters(), lr=1e-3)
-    print(f"params: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"参数量：{sum(p.numel() for p in model.parameters()):,}")
 
     for epoch in range(8):
         model.train()
@@ -205,7 +205,7 @@ def main():
                 intersections += batch_intersections
                 unions += batch_unions
         iou_mean = iou_from_counts(intersections, unions).cpu().tolist()
-        print(f"epoch {epoch}  train_loss {loss_sum/total:.3f}  iou {[f'{v:.2f}' for v in iou_mean]}")
+        print(f"轮次 {epoch}  训练损失 {loss_sum/total:.3f}  IoU {[f'{v:.2f}' for v in iou_mean]}")
 
 
 if __name__ == "__main__":
