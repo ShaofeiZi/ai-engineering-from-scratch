@@ -1,4 +1,4 @@
-"""Tests for the stateless MCP Tasks extension lesson."""
+"""无状态 MCP Tasks 扩展课程测试。"""
 
 from __future__ import annotations
 

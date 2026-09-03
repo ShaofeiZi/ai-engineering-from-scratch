@@ -1,9 +1,9 @@
-"""Phase 13 Lesson 13: the stateless MCP Tasks extension.
+"""第 13 阶段第 13 课：无状态的 MCP Tasks 扩展。
 
-Lesson: ../docs/en.md
-Extension: https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks
-This example uses only Python's standard library.
-Run: python3 main.py
+课程：../docs/en.md
+扩展：https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks
+本示例仅使用 Python 标准库。
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -502,7 +502,7 @@ def main() -> None:
             )
         task_id = transcript[1]["result"]["taskId"]
         print(
-            "notification:",
+            "通知：",
             json.dumps(
                 service.task_notification(task_id, subscription_id="listen-demo"),
                 indent=2,
