@@ -1,4 +1,4 @@
-"""Tests for the end-to-end RAG pipeline and the eval threshold gate."""
+"""端到端 RAG 流水线与评估阈值门禁的测试。"""
 
 from __future__ import annotations
 
@@ -151,7 +151,7 @@ class TestDemoEval(unittest.TestCase):
         metrics = run_eval(p)
         for name, threshold in THRESHOLDS.items():
             self.assertGreaterEqual(metrics[name], threshold,
-                                    f"{name} below threshold")
+                                    f"{name} 低于阈值")
 
     def test_run_demo_exits_zero(self) -> None:
         rc = run_demo()

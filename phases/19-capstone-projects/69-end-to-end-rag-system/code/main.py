@@ -1,17 +1,17 @@
-"""End-to-end RAG pipeline composing lessons 64-68.
+"""端到端 RAG 流水线，整合第 64–68 课内容。
 
-Self-terminating demo: ingests fixture corpus, runs queries, runs eval,
-prints results, exits 0 on success or non-zero on threshold failure.
+自终止演示：导入固定语料库，运行查询，执行评估，
+打印结果，成功时以 0 退出，未达阈值时以非零值退出。
 
-References:
+参考资料：
 - ./docs/en.md
-- Phase 19 lesson 64 (chunker)
-- Phase 19 lesson 65 (hybrid retriever)
-- Phase 19 lesson 66 (cross-encoder reranker)
-- Phase 19 lesson 67 (query rewriter)
-- Phase 19 lesson 68 (eval suite)
+- 第 19 阶段第 64 课（分块器）
+- 第 19 阶段第 65 课（混合检索器）
+- 第 19 阶段第 66 课（交叉编码器重排器）
+- 第 19 阶段第 67 课（查询改写器）
+- 第 19 阶段第 68 课（评估套件）
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ SEED = 19660101
 
 
 # ---------------------------------------------------------------------------
-# tokenizer + deterministic embeddings (shared across stages)
+# 分词器 + 确定性嵌入（各阶段共用）
 # ---------------------------------------------------------------------------
 
 _TOK = re.compile(r"[a-z0-9]+")
@@ -81,7 +81,7 @@ def cosine(a: list[float], b: list[float]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# chunk shape used across the pipeline
+# 流水线中通用的分块结构
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -95,7 +95,7 @@ class Chunk:
 
 
 # ---------------------------------------------------------------------------
-# chunker - recursive split (default strategy from lesson 64)
+# 分块器——递归切分（第 64 课的默认策略）
 # ---------------------------------------------------------------------------
 
 DEFAULT_SEPARATORS = ("\n\n", "\n", ". ", " ")
@@ -137,7 +137,7 @@ class Chunker:
 
 
 # ---------------------------------------------------------------------------
-# hybrid index (BM25 + dense + RRF)
+# 混合索引（BM25 + 稠密检索 + RRF）
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -230,7 +230,7 @@ class HybridIndex:
 
 
 # ---------------------------------------------------------------------------
-# query rewriter (selects strategy by heuristics)
+# 查询改写器（通过启发式规则选择策略）
 # ---------------------------------------------------------------------------
 
 _REWRITE_HYDE: dict[str, str] = {
@@ -272,7 +272,7 @@ class Rewriter:
 
 
 # ---------------------------------------------------------------------------
-# cross-encoder reranker (compressed from lesson 66)
+# 交叉编码器重排器（第 66 课的精简版）
 # ---------------------------------------------------------------------------
 
 def _token_to_id(token: str) -> int:
@@ -323,11 +323,10 @@ class CrossEncoder(nn.Module):
         return self.head(pooled).squeeze(-1)
 
 
-# Rerank training set: positive doc + hard negative distractor per query class.
-# The hard negatives teach the cross-encoder to avoid the very distractor docs
-# that the lexical baseline would pick up at retrieval time.
+# 重排训练集：每类查询包含正样本文档和困难负样本干扰项。
+# 困难负样本让交叉编码器学会避开词法基线在检索时容易选中的干扰文档。
 TRAIN_TRIPLES: list[tuple[str, str, float]] = [
-    # auth class
+    # 鉴权类
     ("function for centralized auth check",
      "Authorization is centralized in check_permission which evaluates a policy against principal, resource, and action.", 1.0),
     ("function for centralized auth check",
@@ -338,7 +337,7 @@ TRAIN_TRIPLES: list[tuple[str, str, float]] = [
      "Authorization is centralized in check_permission which evaluates a policy against principal, resource, and action.", 1.0),
     ("which document implements authorization",
      "A central permission gate inherits roles from the parent group. This document does not describe the authorization implementation; see d4.", 0.0),
-    # abort class
+    # 中止类
     ("what controls the upload abort policy",
      "AbortMultipartOnFail aborts an in-flight S3 multipart upload and decrements the per-bucket retry budget.", 1.0),
     ("what controls the upload abort policy",
@@ -351,14 +350,14 @@ TRAIN_TRIPLES: list[tuple[str, str, float]] = [
      "The abort threshold is configured per bucket at three failed parts. Past that threshold the upload is aborted.", 1.0),
     ("at what point is a multipart upload aborted",
      "Stale records are dropped from the in-memory cache after a TTL. This is unrelated to the upload abort threshold.", 0.0),
-    # fusion class
+    # 融合类
     ("how is rank fusion performed",
      "Production search combines lexical and semantic retrieval through reciprocal rank fusion at k = 60.", 1.0),
     ("how is rank fusion performed",
      "Multiple query results can be combined by simple union or by intersection. Production engines prefer rank fusion; see d6.", 0.1),
     ("how is rank fusion performed",
      "Plan for one kilobyte per vector at 256 dimensions.", 0.0),
-    # worker class
+    # worker 类
     ("how is a worker cancelled",
      "Long-running jobs accept a cancellation signal that stops the worker and releases the queue slot.", 1.0),
     ("how is a worker cancelled",
@@ -396,11 +395,10 @@ def train_reranker(model: CrossEncoder, triples: list[tuple[str, str, float]],
 
 def rerank(model: CrossEncoder, query: str, candidates: list[Chunk],
            top_k: int, overlap_weight: float = 0.3) -> list[tuple[Chunk, float]]:
-    """Blend the cross-encoder score with a content-overlap signal.
+    """融合交叉编码器分数与内容重合信号。
 
-    A small cross-encoder (this lesson) is noisy on out-of-training-set queries.
-    A production-shaped fix is to mix in a lexical overlap signal at score time.
-    The overlap_weight knob trades pure-rerank quality against robustness.
+    本课程的小型交叉编码器在训练集外查询上噪声较大。符合生产形态的修正方法
+    是在评分时加入词法重合信号。overlap_weight 用于权衡纯重排质量与稳健性。
     """
     if not candidates:
         return []
@@ -425,7 +423,7 @@ def rerank(model: CrossEncoder, query: str, candidates: list[Chunk],
 
 
 # ---------------------------------------------------------------------------
-# answer generator
+# 答案生成器
 # ---------------------------------------------------------------------------
 
 REFUSE_THRESHOLD = 0.05
@@ -455,7 +453,7 @@ def generate_answer(query: str, ranked: list[tuple[Chunk, float]]) -> tuple[str,
 
 
 # ---------------------------------------------------------------------------
-# the full pipeline
+# 完整流水线
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -530,7 +528,7 @@ class Pipeline:
 
 
 # ---------------------------------------------------------------------------
-# fixture corpus + eval qrels
+# 夹具语料库 + 评估 qrels
 # ---------------------------------------------------------------------------
 
 CORPUS = [
@@ -582,7 +580,7 @@ EVAL_QUERIES = [
 
 
 # ---------------------------------------------------------------------------
-# metrics (subset of lesson 68, applied at the doc_id level)
+# 指标（第 68 课的子集，应用于 doc_id 层级）
 # ---------------------------------------------------------------------------
 
 def doc_level_recall(retrieved_chunks: list[tuple[Chunk, float]], gold: set[str], k: int) -> float:
@@ -620,7 +618,7 @@ def faithfulness_score(answer: str, top_k: list[tuple[Chunk, float]]) -> float:
     ctx_tokens = set()
     for c, _ in top_k:
         ctx_tokens |= _content_tokens(c.text)
-    # Strip citation anchors before splitting so they do not produce empty trailing claims.
+    # 切分前去除引用锚点，避免产生空的尾随主张。
     body = re.sub(r"\[[^\]]+\]", "", answer)
     claims = [s.strip() for s in re.split(r"(?<=[.!?])\s+", body.strip()) if s.strip()]
     if not claims:
@@ -648,7 +646,7 @@ def answer_relevance_score(query: str, answer: str) -> float:
 
 
 # ---------------------------------------------------------------------------
-# self-terminating demo
+# 自终止演示
 # ---------------------------------------------------------------------------
 
 THRESHOLDS = {
@@ -682,38 +680,38 @@ def run_eval(p: Pipeline) -> dict[str, float]:
 
 
 def run_demo() -> int:
-    print("== ingest + train ==")
+    print("== 导入 + 训练 ==")
     p = build_pipeline()
-    print(f"  chunks indexed: {len(p.index.bm25.chunks)}")
+    print(f"  已索引分块：{len(p.index.bm25.chunks)}")
 
     print()
-    print("== one query trace ==")
+    print("== 单次查询追踪 ==")
     sample_q = EVAL_QUERIES[2].query
     result = p.query(sample_q)
-    print(f"  query: {sample_q}")
-    print(f"  rewriter strategy: {result.rewriter_strategy}")
+    print(f"  查询：{sample_q}")
+    print(f"  改写策略：{result.rewriter_strategy}")
     print(f"  top-k: {[(c.anchor(), round(s, 3)) for c, s in result.top_k[:3]]}")
-    print(f"  answer: {result.answer}")
-    print(f"  citations: {result.citations}")
+    print(f"  答案：{result.answer}")
+    print(f"  引用：{result.citations}")
     print(f"  latency_ms: { {k: round(v, 2) for k, v in result.latency_ms.items()} }")
 
     print()
-    print("== eval ==")
+    print("== 评估 ==")
     metrics = run_eval(p)
     failed: list[str] = []
     for name, threshold in THRESHOLDS.items():
         observed = metrics[name]
         ok = observed >= threshold
         marker = "PASS" if ok else "FAIL"
-        print(f"  {marker}  {name:<18} {observed:.3f}  (threshold {threshold:.2f})")
+        print(f"  {marker}  {name:<18} {observed:.3f}  (阈值 {threshold:.2f})")
         if not ok:
             failed.append(name)
 
     print()
     if failed:
-        print(f"== demo FAILED: {failed} ==")
+        print(f"== 演示失败：{failed} ==")
         return 1
-    print("== demo PASSED ==")
+    print("== 演示通过 ==")
     return 0
 
 
