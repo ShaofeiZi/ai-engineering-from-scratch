@@ -104,7 +104,7 @@ def main():
         },
     ]
 
-    print("=== toy RAG eval: faithfulness / relevance / context precision & recall / G-Eval ===")
+    print("=== 简化 RAG 评估：忠实度 / 相关性 / 上下文精确率与召回率 / G-Eval ===")
     print()
     for i, case in enumerate(cases):
         ctx_joined = " ".join(case["context"])
@@ -113,23 +113,23 @@ def main():
         cp = context_precision(case["context"], case["gold_relevant"])
         cr = context_recall(case["context"], tokenize(case["expected"]))
         ge = g_eval_correctness(case["answer"], case["expected"])
-        print(f"case {i}: {case['question']}")
-        print(f"  answer:   {case['answer']}")
-        print(f"  expected: {case['expected']}")
-        print(f"  faithfulness        = {f:.2f}")
-        print(f"  answer-relevance    = {r:.2f}")
-        print(f"  context-precision   = {cp:.2f}")
-        print(f"  context-recall      = {cr:.2f}")
-        print(f"  g-eval correctness  = {ge:.2f}")
+        print(f"用例 {i}：{case['question']}")
+        print(f"  回答：       {case['answer']}")
+        print(f"  预期回答：   {case['expected']}")
+        print(f"  忠实度              = {f:.2f}")
+        print(f"  回答相关性          = {r:.2f}")
+        print(f"  上下文精确率        = {cp:.2f}")
+        print(f"  上下文召回率        = {cr:.2f}")
+        print(f"  G-Eval 正确性       = {ge:.2f}")
         print()
 
-    print("interpretation:")
-    print("  case 0 = faithful + correct      -> all metrics high")
-    print("  case 1 = hallucinated date        -> g-eval drops, faithfulness partial")
-    print("  case 2 = off-topic answer         -> relevance + g-eval collapse")
+    print("解读：")
+    print("  用例 0 = 忠实且正确         -> 所有指标均高")
+    print("  用例 1 = 日期出现幻觉       -> G-Eval 下降，忠实度仅获部分分数")
+    print("  用例 2 = 回答偏离主题       -> 相关性和 G-Eval 均大幅下降")
     print()
-    print("note: toy uses lexical overlap. production uses NLI + LLM-as-judge.")
-    print("shape of the eval loop is identical.")
+    print("注意：简化实现使用词汇重叠，生产环境使用 NLI + LLM-as-judge。")
+    print("评估循环的结构完全相同。")
 
 
 if __name__ == "__main__":
