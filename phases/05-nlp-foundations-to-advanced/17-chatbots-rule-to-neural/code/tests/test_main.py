@@ -1,4 +1,4 @@
-"""Deterministic tests for the chatbot architecture examples."""
+"""聊天机器人架构示例的确定性测试。"""
 
 from __future__ import annotations
 
@@ -94,8 +94,8 @@ class ChatbotTests(unittest.TestCase):
             main.main()
 
         rendered = output.getvalue()
-        self.assertIn("=== rule-based ELIZA-style ===", rendered)
-        self.assertIn("=== hybrid routing ===", rendered)
+        self.assertIn("=== 基于规则的 ELIZA 风格系统 ===", rendered)
+        self.assertIn("=== 混合路由 ===", rendered)
         for route in ("[faq  ]", "[rule ]", "[agent]"):
             with self.subTest(route=route):
                 self.assertIn(route, rendered)

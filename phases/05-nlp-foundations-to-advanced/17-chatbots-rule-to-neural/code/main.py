@@ -1,8 +1,8 @@
-# Phase 05, Lesson 17: chatbots from rules to neural systems.
-# Lesson guide: ../docs/en.md
-# Implements deterministic rule, FAQ-retrieval, and hybrid routing examples.
-# Canonical source: Weizenbaum (1966), "ELIZA--A Computer Program For the
-# Study of Natural Language Communication Between Man and Machine."
+# 阶段 05，课程 17：从规则到神经系统的聊天机器人。
+# 课程指南：../docs/en.md
+# 实现确定性的规则、FAQ 检索和混合路由示例。
+# 经典来源：Weizenbaum（1966），《ELIZA——一种用于人与机器自然语言交流的
+# 计算机程序》。
 
 import re
 
@@ -76,13 +76,13 @@ def hybrid_respond(user_input):
 
 
 def main():
-    print("=== rule-based ELIZA-style ===")
+    print("=== 基于规则的 ELIZA 风格系统 ===")
     for msg in ["Hi there", "My name is Alex", "I want coffee", "I feel tired", "The sky is blue"]:
-        print(f"  user : {msg}")
-        print(f"  bot  : {rule_based_respond(msg)}")
+        print(f"  用户：{msg}")
+        print(f"  机器人：{rule_based_respond(msg)}")
     print()
 
-    print("=== hybrid routing ===")
+    print("=== 混合路由 ===")
     for msg in ["how do i reset my password", "cancel my order", "what's the weather like", "I want a refund"]:
         response, route = hybrid_respond(msg)
         print(f"  [{route:5s}] {msg}")
