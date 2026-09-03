@@ -1,9 +1,9 @@
-"""Run the same task on a sample app twice: prompt-only vs workbench-guided.
+"""对同一个示例应用执行两次相同任务：仅提示词与工作台引导。
 
-Both pipelines are scripted (no LLM) so the measurement is reproducible.
-Writes before-after-report.md and comparison.json next to this file.
+两条流水线均为脚本化（无 LLM），因此测量结果可复现。
+在本文件旁写入 before-after-report.md 和 comparison.json。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ FORBIDDEN = {"sample_app/scripts/release.sh"}
 
 
 def run_prompt_only() -> TaskOutcome:
-    """Edits a couple of files, never runs the test, claims done."""
+    """编辑了几个文件，从未运行测试，就声称完成。"""
     touched = ["sample_app/app.py", "README.md", "sample_app/scripts/release.sh"]
     return TaskOutcome(
         pipeline="prompt-only",
@@ -63,7 +63,7 @@ def run_prompt_only() -> TaskOutcome:
 
 
 def run_workbench() -> TaskOutcome:
-    """Reads scope, edits inside scope, runs acceptance through feedback, gates, reviews, hands off."""
+    """读取范围，在范围内编辑，通过反馈运行验收，执行门禁检查、审查，然后交接。"""
     touched = ["sample_app/app.py", "sample_app/test_app.py"]
     return TaskOutcome(
         pipeline="workbench-guided",
