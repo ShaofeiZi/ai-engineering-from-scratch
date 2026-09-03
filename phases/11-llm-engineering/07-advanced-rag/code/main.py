@@ -360,7 +360,7 @@ SAMPLE_DOCUMENTS = [
 
 if __name__ == "__main__":
     print("=" * 65)
-    print("STEP 1: BM25 Keyword Search")
+    print("步骤1:BM25 关键词搜索")
     print("=" * 65)
 
     all_chunks = []
@@ -377,14 +377,14 @@ if __name__ == "__main__":
 
     test_query = "What was revenue last quarter?"
     bm25_results = bm25.search(test_query, top_k=5)
-    print(f"  Query: {test_query}")
-    print(f"  BM25 top-5:")
+    print(f"  查询：{test_query}")
+    print("  BM25 前 5 项：")
     for rank, (idx, score) in enumerate(bm25_results):
         preview = all_chunks[idx][:70].replace("\n", " ")
         print(f"    #{rank+1} [{chunk_sources[idx]}] score={score:.4f} | {preview}...")
 
     print("\n" + "=" * 65)
-    print("STEP 2: Vector Search vs BM25")
+    print("步骤 2：向量搜索与 BM25 对比")
     print("=" * 65)
 
     vocab = build_vocabulary(all_chunks)
@@ -404,81 +404,81 @@ if __name__ == "__main__":
         vec_top1 = vector_search(query_emb, embeddings, top_k=1)[0]
         bm25_top1 = bm25.search(query, top_k=1)[0]
 
-        print(f"\n  Query: {query}")
-        print(f"    Vector #1: [{chunk_sources[vec_top1[0]]}] score={vec_top1[1]:.4f}")
+        print(f"\n  查询：{query}")
+        print(f"    向量检索第 1 名：[{chunk_sources[vec_top1[0]]}] score={vec_top1[1]:.4f}")
         print(f"    BM25   #1: [{chunk_sources[bm25_top1[0]]}] score={bm25_top1[1]:.4f}")
-        agree = "AGREE" if chunk_sources[vec_top1[0]] == chunk_sources[bm25_top1[0]] else "DISAGREE"
+        agree = "一致" if chunk_sources[vec_top1[0]] == chunk_sources[bm25_top1[0]] else "不一致"
         print(f"    {agree}")
 
     print("\n" + "=" * 65)
-    print("STEP 3: Reciprocal Rank Fusion (Hybrid Search)")
+    print("步骤 3：倒数排名融合（混合搜索）")
     print("=" * 65)
 
     query = "What was revenue last quarter?"
-    print(f"  Query: {query}")
+    print(f"  查询：{query}")
 
     query_emb = tfidf_embed(query, vocab, idf)
     vec_results = vector_search(query_emb, embeddings, top_k=10)
     bm25_results = bm25.search(query, top_k=10)
 
-    print(f"\n  Vector top-3:")
+    print("\n  向量检索前 3 项：")
     for rank, (idx, score) in enumerate(vec_results[:3]):
         print(f"    #{rank+1} [{chunk_sources[idx]}] {score:.4f}")
 
-    print(f"\n  BM25 top-3:")
+    print("\n  BM25 前 3 项：")
     for rank, (idx, score) in enumerate(bm25_results[:3]):
         print(f"    #{rank+1} [{chunk_sources[idx]}] {score:.4f}")
 
     fused = reciprocal_rank_fusion([vec_results, bm25_results])
-    print(f"\n  RRF fused top-5:")
+    print("\n  RRF 融合后的前 5 项：")
     for rank, (idx, score) in enumerate(fused[:5]):
         preview = all_chunks[idx][:60].replace("\n", " ")
         print(f"    #{rank+1} [{chunk_sources[idx]}] rrf={score:.4f} | {preview}...")
 
     print("\n" + "=" * 65)
-    print("STEP 4: Reranking")
+    print("步骤4:重新排序")
     print("=" * 65)
 
     query = "enterprise refund policy"
-    print(f"  Query: {query}")
+    print(f"  查询：{query}")
 
     hybrid_results = hybrid_search(query, all_chunks, embeddings, vocab, idf, bm25, top_k=10)
     reranked = rerank(query, hybrid_results, all_chunks)
 
-    print(f"\n  Before reranking (top-5):")
+    print("\n  重排前（前 5 项）：")
     for rank, (idx, score) in enumerate(hybrid_results[:5]):
         preview = all_chunks[idx][:60].replace("\n", " ")
         print(f"    #{rank+1} [{chunk_sources[idx]}] score={score:.4f} | {preview}...")
 
-    print(f"\n  After reranking (top-5):")
+    print("\n  重排后（前 5 项）：")
     for rank, (idx, score) in enumerate(reranked[:5]):
         preview = all_chunks[idx][:60].replace("\n", " ")
         print(f"    #{rank+1} [{chunk_sources[idx]}] score={score:.4f} | {preview}...")
 
     print("\n" + "=" * 65)
-    print("STEP 5: HyDE (Hypothetical Document Embeddings)")
+    print("步骤 5：HyDE（假设文档 Embedding）")
     print("=" * 65)
 
     query = "How much money did the company make?"
-    print(f"  Query: {query}")
-    print(f"  (Note: query uses 'money', docs use 'revenue' and 'earnings')")
+    print(f"  查询：{query}")
+    print("  （注意：查询使用 'money'，文档使用 'revenue' 和 'earnings'）")
 
     query_emb = tfidf_embed(query, vocab, idf)
     direct_results = vector_search(query_emb, embeddings, top_k=3)
     hyde_results, hypothesis = hyde_search(query, embeddings, vocab, idf, top_k=3)
 
-    print(f"\n  Hypothesis: {hypothesis[:100]}...")
+    print(f"\n  假设文档：{hypothesis[:100]}...")
 
-    print(f"\n  Direct search top-3:")
+    print("\n  直接搜索前 3 项：")
     for rank, (idx, score) in enumerate(direct_results):
         print(f"    #{rank+1} [{chunk_sources[idx]}] {score:.4f}")
 
-    print(f"\n  HyDE search top-3:")
+    print("\n  HyDE 搜索前 3 项：")
     for rank, (idx, score) in enumerate(hyde_results):
         print(f"    #{rank+1} [{chunk_sources[idx]}] {score:.4f}")
 
     print("\n" + "=" * 65)
-    print("STEP 6: Parent-Child Chunking")
+    print("步骤 6：父子分块检索")
     print("=" * 65)
 
     full_text = " ".join(SAMPLE_DOCUMENTS)
@@ -486,10 +486,10 @@ if __name__ == "__main__":
         full_text, parent_size=100, child_size=25
     )
 
-    print(f"  Total words: {len(full_text.split())}")
-    print(f"  Parent chunks: {len(parents)} (100 words each)")
-    print(f"  Child chunks: {len(children)} (25 words each)")
-    print(f"  Ratio: {len(children)/len(parents):.1f} children per parent")
+    print(f"  总词数：{len(full_text.split())}")
+    print(f"  父分块：{len(parents)} 个（每块 100 个词）")
+    print(f"  子分块：{len(children)} 个（每块 25 个词）")
+    print(f"  比例：每个父分块对应 {len(children)/len(parents):.1f} 个子分块")
 
     child_vocab = build_vocabulary(children)
     child_idf = compute_idf(children, child_vocab)
@@ -499,16 +499,16 @@ if __name__ == "__main__":
     query_emb = tfidf_embed(query, child_vocab, child_idf)
     child_results = vector_search(query_emb, child_embeddings, top_k=3)
 
-    print(f"\n  Query: {query}")
-    print(f"\n  Matched children:")
+    print(f"\n  查询：{query}")
+    print("\n  匹配的子分块：")
     for rank, (idx, score) in enumerate(child_results):
         parent_idx = child_to_parent[idx]
-        print(f"    Child #{idx} (score={score:.4f}):")
-        print(f"      Child text: {children[idx][:80]}...")
-        print(f"      Parent #{parent_idx}: {parents[parent_idx][:80]}...")
+        print(f"    子分块 #{idx}（score={score:.4f}）：")
+        print(f"      子分块文本：{children[idx][:80]}...")
+        print(f"      父分块 #{parent_idx}：{parents[parent_idx][:80]}...")
 
     print("\n" + "=" * 65)
-    print("STEP 7: Faithfulness Evaluation")
+    print("步骤 7：忠实度评估")
     print("=" * 65)
 
     good_answer = (
@@ -528,23 +528,23 @@ if __name__ == "__main__":
     good_score, good_ungrounded = evaluate_faithfulness(good_answer, context_chunks)
     bad_score, bad_ungrounded = evaluate_faithfulness(bad_answer, context_chunks)
 
-    print(f"  Context: {len(context_chunks)} chunks about refund policy")
-    print(f"\n  Good answer: \"{good_answer[:80]}...\"")
-    print(f"  Faithfulness: {good_score:.2f}")
+    print(f"  上下文：{len(context_chunks)} 个关于退款政策的分块")
+    print(f"\n  良好回答：\"{good_answer[:80]}...\"")
+    print(f"  忠实度：{good_score:.2f}")
     if good_ungrounded:
-        print(f"  Ungrounded claims: {good_ungrounded}")
+        print(f"  无依据的陈述：{good_ungrounded}")
     else:
-        print(f"  All claims grounded in context.")
+        print("  所有陈述都能在上下文中找到依据。")
 
-    print(f"\n  Bad answer: \"{bad_answer[:80]}...\"")
-    print(f"  Faithfulness: {bad_score:.2f}")
+    print(f"\n  不良回答：\"{bad_answer[:80]}...\"")
+    print(f"  忠实度：{bad_score:.2f}")
     if bad_ungrounded:
-        print(f"  Ungrounded claims:")
+        print("  无依据的陈述：")
         for claim in bad_ungrounded:
             print(f"    - \"{claim}\"")
 
     print("\n" + "=" * 65)
-    print("STEP 8: Full Advanced RAG Pipeline Comparison")
+    print("步骤 8：完整高级 RAG 管道比较")
     print("=" * 65)
 
     comparison_queries = [
@@ -555,7 +555,7 @@ if __name__ == "__main__":
         ("What is the uptime guarantee?", "uptime"),
     ]
 
-    print(f"  {'Query':<45s} {'Vector':>8s} {'BM25':>8s} {'Hybrid':>8s} {'Rerank':>8s}")
+    print(f"  {'查询':<45s} {'向量':>8s} {'BM25':>8s} {'混合':>8s} {'重排':>8s}")
     print("  " + "-" * 77)
 
     for query, expected_source in comparison_queries:
@@ -577,18 +577,18 @@ if __name__ == "__main__":
         print(f"  {query:<45s} {vec_hit:>8s} {bm25_hit:>8s} {hybrid_hit:>8s} {rerank_hit:>8s}")
 
     print("\n" + "=" * 65)
-    print("SUMMARY")
+    print("总结")
     print("=" * 65)
-    print("  Advanced RAG techniques:")
-    print("    1. BM25 keyword search catches exact term matches")
-    print("    2. Hybrid search (vector + BM25 + RRF) combines both signals")
-    print("    3. Reranking scores candidates more carefully with cross-attention")
-    print("    4. HyDE bridges the query-document vocabulary gap")
-    print("    5. Parent-child chunking: precise search, rich context")
-    print("    6. Faithfulness evaluation catches hallucinated claims")
-    print("\n  In production:")
-    print("    - Replace TF-IDF with neural embeddings")
-    print("    - Replace the simple reranker with a cross-encoder model")
-    print("    - Replace HyDE templates with actual LLM hypothesis generation")
-    print("    - Add metadata filtering before search")
-    print("    - Evaluate with Recall@k and faithfulness on a test set")
+    print("高级 RAG 技术：")
+    print("1. BM25 关键词搜索捕获精确术语匹配")
+    print("2. 混合搜索（向量 + BM25 + RRF）结合两类信号")
+    print("3. 重排器以更高精度重新评估候选结果")
+    print("4. HyDE 弥合查询与文档之间的词汇差异")
+    print("5. 父子分块兼顾精确检索与丰富上下文")
+    print("6. 忠实度评估发现无依据的幻觉陈述")
+    print("\n注意：在生产环境中：")
+    print("- 将 TF-IDF 替换为神经网络 Embedding")
+    print("- 用 cross-encoder 模型替换简单的重排器")
+    print("- 将 HyDE 模板替换为真实的 LLM 假设文档生成")
+    print("- 在搜索前添加元数据过滤")
+    print("- 在测试集上评估 recall@k 和忠实度")
