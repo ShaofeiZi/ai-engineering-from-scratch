@@ -38,7 +38,7 @@ class Complex:
             other = Complex(other)
         denom = other.real ** 2 + other.imag ** 2
         if denom == 0:
-            raise ZeroDivisionError("division by zero complex number")
+            raise ZeroDivisionError("复数除以零")
         r = (self.real * other.real + self.imag * other.imag) / denom
         i = (self.imag * other.real - self.real * other.imag) / denom
         return Complex(r, i)
@@ -111,7 +111,7 @@ def roots_of_unity(N):
 
 def demo_arithmetic():
     print("=" * 65)
-    print("  COMPLEX ARITHMETIC")
+    print("  复数运算")
     print("=" * 65)
     print()
 
@@ -129,7 +129,7 @@ def demo_arithmetic():
     print()
 
     print(f"  |z1|     = {z1.magnitude():.6f}")
-    print(f"  phase(z1)= {z1.phase():.6f} rad ({math.degrees(z1.phase()):.2f} deg)")
+    print(f"  phase(z1)= {z1.phase():.6f} 弧度 ({math.degrees(z1.phase()):.2f} 度)")
     print(f"  conj(z1) = {z1.conjugate()}")
     print()
 
@@ -137,23 +137,23 @@ def demo_arithmetic():
     expected = z1.real ** 2 + z1.imag ** 2
     print(f"  z1 * conj(z1) = {product}")
     print(f"  a^2 + b^2     = {expected:.6f}")
-    print(f"  Match: {abs(product.real - expected) < 1e-10}")
+    print(f"  是否一致: {abs(product.real - expected) < 1e-10}")
     print()
 
     z3 = Complex(5, 2)
     z4 = Complex(1, -3)
     quotient = z3 / z4
     reconstructed = quotient * z4
-    print(f"  Division check: (5+2i) / (1-3i) = {quotient}")
-    print(f"  Reconstruct:    result * (1-3i)  = {reconstructed}")
-    print(f"  Match original: {abs(reconstructed.real - 5) < 1e-10 and abs(reconstructed.imag - 2) < 1e-10}")
+    print(f"  除法验证: (5+2i) / (1-3i) = {quotient}")
+    print(f"  重构:    结果 * (1-3i)  = {reconstructed}")
+    print(f"  与原值匹配: {abs(reconstructed.real - 5) < 1e-10 and abs(reconstructed.imag - 2) < 1e-10}")
 
 
 def demo_polar_conversion():
     print()
     print()
     print("=" * 65)
-    print("  POLAR FORM AND CONVERSION")
+    print("  极坐标形式与转换")
     print("=" * 65)
     print()
 
@@ -166,7 +166,7 @@ def demo_polar_conversion():
         Complex(-2, 3),
     ]
 
-    print(f"  {'Rectangular':<25s} {'r':>8s}  {'theta (deg)':>12s}  {'Reconstructed':<25s}")
+    print(f"  {'直角坐标':<25s} {'r':>8s}  {'theta (度)':>12s}  {'重构结果':<25s}")
     print(f"  {'-' * 25} {'-' * 8}  {'-' * 12}  {'-' * 25}")
 
     for z in test_cases:
@@ -179,7 +179,7 @@ def demo_euler_formula():
     print()
     print()
     print("=" * 65)
-    print("  EULER'S FORMULA: e^(i*theta) = cos(theta) + i*sin(theta)")
+    print("  欧拉公式: e^(i*theta) = cos(theta) + i*sin(theta)")
     print("=" * 65)
     print()
 
@@ -199,41 +199,41 @@ def demo_euler_formula():
     print()
     e_pi = euler(math.pi)
     result = e_pi + Complex(1, 0)
-    print(f"  Euler's identity: e^(i*pi) + 1 = {result}")
-    print(f"  |e^(i*pi) + 1| = {result.magnitude():.2e} (should be ~0)")
+    print(f"  欧拉恒等式: e^(i*pi) + 1 = {result}")
+    print(f"  |e^(i*pi) + 1| = {result.magnitude():.2e}（应约为 0）")
 
 
 def demo_rotation():
     print()
     print()
     print("=" * 65)
-    print("  ROTATION VIA COMPLEX MULTIPLICATION")
+    print("  通过复数乘法实现旋转")
     print("=" * 65)
     print()
 
     point = Complex(3, 4)
-    print(f"  Original point: {point}")
-    print(f"  Magnitude: {point.magnitude():.4f}")
-    print(f"  Phase: {math.degrees(point.phase()):.2f} deg")
+    print(f"  原始点: {point}")
+    print(f"  模: {point.magnitude():.4f}")
+    print(f"  相位: {math.degrees(point.phase()):.2f} 度")
     print()
 
     rotation_angles = [45, 90, 180, 270, 360]
 
-    print(f"  {'Rotation':<12s} {'Result':<30s} {'Magnitude':>10s} {'Phase (deg)':>12s}")
+    print(f"  {'旋转角度':<12s} {'结果':<30s} {'模':>10s} {'相位（度）':>12s}")
     print(f"  {'-' * 12} {'-' * 30} {'-' * 10} {'-' * 12}")
 
     for deg in rotation_angles:
         rad = math.radians(deg)
         rotated = point * euler(rad)
         r, theta = to_polar(rotated)
-        print(f"  {deg:>3d} deg     {str(rotated):<30s} {r:>10.4f} {math.degrees(theta):>12.2f}")
+        print(f"  {deg:>3d} 度      {str(rotated):<30s} {r:>10.4f} {math.degrees(theta):>12.2f}")
 
     print()
-    print("  Magnitude is preserved through all rotations.")
-    print("  360 degrees returns to the original point.")
+    print("  所有旋转都会保持模不变。")
+    print("  旋转 360 度后会回到原始点。")
     print()
 
-    print("  Rotation matrix equivalence check:")
+    print("  旋转矩阵等价性检查:")
     print()
 
     test_angles = [math.pi / 6, math.pi / 4, math.pi / 3, math.pi / 2, math.pi]
@@ -252,22 +252,22 @@ def demo_rotation():
                             (complex_result.imag - matrix_y) ** 2)
             max_error = max(max_error, err)
 
-    print(f"  Max difference between complex multiplication")
-    print(f"  and rotation matrix: {max_error:.2e}")
+    print("  复数乘法与旋转矩阵之间的")
+    print(f"  最大差值: {max_error:.2e}")
 
 
 def demo_roots_of_unity():
     print()
     print()
     print("=" * 65)
-    print("  ROOTS OF UNITY")
+    print("  单位根")
     print("=" * 65)
     print()
 
     for N in [4, 8]:
         roots = roots_of_unity(N)
-        print(f"  {N}-th roots of unity:")
-        print(f"  {'k':<4s} {'Root':<30s} {'|root|':>8s}")
+        print(f"  {N} 次单位根:")
+        print(f"  {'k':<4s} {'根':<30s} {'|根|':>8s}")
         print(f"  {'-' * 4} {'-' * 30} {'-' * 8}")
 
         total = Complex(0, 0)
@@ -275,19 +275,19 @@ def demo_roots_of_unity():
             total = total + root
             print(f"  {k:<4d} {str(root):<30s} {root.magnitude():>8.6f}")
 
-        print(f"  Sum of all roots: {total}")
-        print(f"  |sum| = {total.magnitude():.2e} (should be ~0)")
+        print(f"  所有根之和: {total}")
+        print(f"  |总和| = {total.magnitude():.2e}（应约为 0）")
         print()
 
-    print("  Roots of unity always sum to zero.")
-    print("  Each root has magnitude exactly 1.")
+    print("  所有单位根之和始终为零。")
+    print("  每个单位根的模都恰好为 1。")
 
 
 def demo_dft():
     print()
     print()
     print("=" * 65)
-    print("  DFT OF A SIMPLE SIGNAL")
+    print("  简单信号的 DFT")
     print("=" * 65)
     print()
 
@@ -303,13 +303,13 @@ def demo_dft():
         val = amp1 * math.sin(2 * math.pi * freq1 * t) + amp2 * math.sin(2 * math.pi * freq2 * t)
         signal.append(val)
 
-    print(f"  Signal: {amp1}*sin(2*pi*{freq1}*t) + {amp2}*sin(2*pi*{freq2}*t)")
-    print(f"  {N} samples")
+    print(f"  信号: {amp1}*sin(2*pi*{freq1}*t) + {amp2}*sin(2*pi*{freq2}*t)")
+    print(f"  {N} 个样本")
     print()
 
     spectrum = dft(signal)
 
-    print(f"  {'Freq bin':<10s} {'|X[k]|':>10s} {'Phase (deg)':>12s}")
+    print(f"  {'频率分桶':<10s} {'|X[k]|':>10s} {'相位（度）':>12s}")
     print(f"  {'-' * 10} {'-' * 10} {'-' * 12}")
 
     for k in range(N // 2 + 1):
@@ -319,30 +319,30 @@ def demo_dft():
             print(f"  k={k:<6d} {mag:>10.4f} {phase_deg:>12.2f}")
 
     print()
-    print(f"  Expected peaks at k={freq1} (amplitude {amp1 * N / 2:.1f})")
-    print(f"  and k={freq2} (amplitude {amp2 * N / 2:.1f})")
+    print(f"  预期峰值位于 k={freq1}（振幅 {amp1 * N / 2:.1f}）")
+    print(f"  和 k={freq2}（振幅 {amp2 * N / 2:.1f}）")
     print()
 
     reconstructed = idft(spectrum)
     max_err = max(abs(reconstructed[n].real - signal[n]) for n in range(N))
-    print(f"  IDFT reconstruction error: {max_err:.2e}")
-    print(f"  Perfect reconstruction: {max_err < 1e-10}")
+    print(f"  IDFT 重构误差: {max_err:.2e}")
+    print(f"  是否完美重构: {max_err < 1e-10}")
 
 
 def demo_phasor():
     print()
     print()
     print("=" * 65)
-    print("  PHASORS: ROTATING COMPLEX NUMBERS AS SIGNALS")
+    print("  相量：将旋转复数视为信号")
     print("=" * 65)
     print()
 
     omega = 2 * math.pi * 3
     N = 16
 
-    print(f"  Phasor: e^(i*{3}*2*pi*t), sampled at {N} points")
+    print(f"  相量: e^(i*{3}*2*pi*t)，在 {N} 个点采样")
     print()
-    print(f"  {'t':>6s} {'Real (cos)':>12s} {'Imag (sin)':>12s} {'Magnitude':>10s}")
+    print(f"  {'t':>6s} {'实部 (cos)':>12s} {'虚部 (sin)':>12s} {'模':>10s}")
     print(f"  {'-' * 6} {'-' * 12} {'-' * 12} {'-' * 10}")
 
     for n in range(N):
@@ -351,33 +351,33 @@ def demo_phasor():
         print(f"  {t:>6.3f} {phasor.real:>12.6f} {phasor.imag:>12.6f} {phasor.magnitude():>10.6f}")
 
     print()
-    print("  The real part traces cos(6*pi*t).")
-    print("  The imaginary part traces sin(6*pi*t).")
-    print("  Magnitude is always 1 -- the phasor stays on the unit circle.")
+    print("  实部描绘 cos(6*pi*t)。")
+    print("  虚部描绘 sin(6*pi*t)。")
+    print("  模始终为 1——相量保持在单位圆上。")
 
 
 def demo_positional_encoding():
     print()
     print()
     print("=" * 65)
-    print("  TRANSFORMER POSITIONAL ENCODING FREQUENCIES")
+    print("  Transformer 位置编码频率")
     print("=" * 65)
     print()
 
     d_model = 8
     max_pos = 10
 
-    print(f"  d_model = {d_model}, showing first {max_pos} positions")
+    print(f"  d_model = {d_model}，显示前 {max_pos} 个位置")
     print()
-    print(f"  Frequencies (1/10000^(2i/d)):")
+    print("  频率 (1/10000^(2i/d)):")
     freqs = []
     for i in range(d_model // 2):
         freq = 1.0 / (10000 ** (2 * i / d_model))
         freqs.append(freq)
-        print(f"    dim pair {i}: freq = {freq:.6f}")
+        print(f"    维度对 {i}: 频率 = {freq:.6f}")
 
     print()
-    print(f"  PE matrix (sin/cos pairs for each position):")
+    print("  PE 矩阵（每个位置对应一组 sin/cos）:")
     print()
 
     header = "  pos"
@@ -394,9 +394,9 @@ def demo_positional_encoding():
         print(line)
 
     print()
-    print("  Each (sin, cos) pair is the real and imaginary part")
-    print("  of e^(i * pos * freq). Different frequencies give each")
-    print("  position a unique 'fingerprint' in the complex plane.")
+    print("  每组 (sin, cos) 都是 e^(i * pos * freq) 的实部与虚部。")
+    print("  不同频率会在复平面上为每个位置赋予")
+    print("  独一无二的“指纹”。")
 
 
 def write_skill_output():
@@ -438,27 +438,27 @@ def write_skill_output():
             f.write("   - Built-in: z = 3+2j, abs(z), z.conjugate(), z.real, z.imag\n")
             f.write("   - cmath: cmath.phase(z), cmath.exp(1j*theta), cmath.polar(z)\n")
             f.write("   - numpy: np.abs(z), np.angle(z), np.conj(z), np.fft.fft(signal)\n")
-        print(f"\n  Skill output written to {output_path}")
+        print(f"\n  Skill 输出已写入 {output_path}")
     except OSError:
-        print("\n  Could not write skill output (run from the lesson directory)")
+        print("\n  无法写入 Skill 输出（请从课程目录运行）")
 
 
 def print_summary():
     print()
     print()
     print("=" * 65)
-    print("  SUMMARY")
+    print("  总结")
     print("=" * 65)
     print()
-    print("  1. A complex number z = a + bi is a point (a, b) in the plane.")
-    print("  2. Multiplication rotates and scales. Division reverses it.")
-    print("  3. Euler's formula: e^(i*theta) = cos(theta) + i*sin(theta).")
-    print("  4. Multiplying by e^(i*theta) rotates by theta radians.")
-    print("  5. Complex multiplication IS 2D rotation (same as rotation matrix).")
-    print("  6. DFT decomposes signals into rotating phasors (roots of unity).")
-    print("  7. Transformer positional encodings are complex exponentials")
-    print("     at different frequencies.")
-    print("  8. RoPE uses explicit complex multiplication for position.")
+    print("  1. 复数 z = a + bi 是平面上的一个点 (a, b)。")
+    print("  2. 乘法实现旋转和缩放；除法执行逆操作。")
+    print("  3. 欧拉公式: e^(i*theta) = cos(theta) + i*sin(theta)。")
+    print("  4. 乘以 e^(i*theta) 会旋转 theta 弧度。")
+    print("  5. 复数乘法就是二维旋转（等价于旋转矩阵）。")
+    print("  6. DFT 将信号分解为旋转相量（单位根）。")
+    print("  7. Transformer 位置编码是不同频率的")
+    print("     复指数。")
+    print("  8. RoPE 使用显式复数乘法编码位置。")
     print()
 
 
