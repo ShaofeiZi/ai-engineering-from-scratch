@@ -1,18 +1,18 @@
-"""Hogwild! Inference toy simulator — stdlib Python.
+"""(原始内容存档于2017-09-29). 推论玩具模拟器——stdlib Python.
 
-Two workers run concurrently against a shared token cache. Each worker reads
-the cache and decides whether to add a work-token to category A or B, using
-a simple coordination heuristic: if the other worker already produced enough
-tokens in a category, switch.
+两名工人同时与共享的“ph4”缓存对峙。 每个工人读
+缓存,并使用
+简单的协调heuristic:如果其他工人已经生产足够了
+类别中的tokens,切换。
 
-Outputs:
-  - total work-tokens produced in fixed step budget
-  - wall-time speedup vs a single-worker baseline
-  - a trace of which worker wrote which token and what category
-  - a coordination-weight sweep showing the effect of poor coordination
+产出:
+- 固定职档预算产生的总工作-tokens
+- 墙上加速度与单一工人基线
+- 哪些工人写了 "ph6 " 和什么类别
+- 协调加权检查,显示协调不力的影响
 
-Not a faithful LLM simulation. The point is to demonstrate emergent work
-division driven by shared-cache reads.
+不是忠实的LLM模拟。 关键是展示新工作
+由 share-cache 驱动的分区读取 。
 """
 
 from __future__ import annotations
@@ -46,12 +46,12 @@ class Worker:
 
 def decide_next_category(worker: Worker, cache: SharedCache,
                          target_per_category: int) -> Category:
-    """Read the shared cache. With probability coordination_weight, switch
-    to the least-filled work category (noticing redundancy). Otherwise stay
-    on the worker's intended category. coordination_weight = 0 models
-    workers that cannot coordinate (full redundancy). weight = 1 models
-    ideal reasoning-model coordination.
-    """
+    """读取共享缓存 。 概率协调  重量, 切换
+改为最少工作类别(注解冗余)。 否则留下
+在工人的预定类别。 坐标 重量=0
+无法协调的工人(完全冗余)。 重量=1个型号
+理想的推理模式协调。
+"""
     if worker.rng.random() < 0.05:
         return "noise"
 
@@ -70,10 +70,10 @@ def decide_next_category(worker: Worker, cache: SharedCache,
 
 def run_hogwild(n_workers: int, step_budget: int, target_per_category: int,
                 coordination_weight: float, seed: int = 42) -> dict:
-    """All workers default to category A. Coordination makes them diverge.
-    Without coordination, redundant tokens (same category from multiple
-    workers) are counted once. With coordination, workers pick different
-    categories so each token is unique and contributes to total progress."""
+    """所有工人都不遵守A类。 协调使他们有分歧。
+没有协调,冗余的tokens(同一类别来自多个)
+工人)计算一次. 通过协调,工人选择不同的
+因此,每个token的分类是独一无二的,有助于全面进展。"""
     cache = SharedCache()
     workers = []
     for i in range(n_workers):
@@ -129,51 +129,51 @@ def expected_speedup(T_serial: int, p: float, c: int, N: int,
 
 def main() -> None:
     print("=" * 70)
-    print("HOGWILD! INFERENCE TOY SIMULATOR (Phase 10, Lesson 22)")
+    print("Hogwild 推理模拟器（第 10 阶段，第 22 课）")
     print("=" * 70)
     print()
 
     print("-" * 70)
-    print("Step 1: baseline — single worker, 200 steps")
+    print("步骤 1：基线——单 worker，200 步")
     print("-" * 70)
     r_1 = run_hogwild(n_workers=1, step_budget=200, target_per_category=100,
                       coordination_weight=0.8)
-    print(f"  tokens emitted    : {r_1['tokens_emitted']}")
+    print(f"  输出 token 数：{r_1['tokens_emitted']}")
     print(f"  work-tokens       : {r_1['work_tokens']}  ({r_1['work_per_step']:.2f} / step)")
-    print(f"  unique progress   : {r_1['unique_progress']}  ({r_1['progress_per_step']:.2f} / step)")
-    print(f"  category counts   : {r_1['category_counts']}")
+    print(f"  唯一进展量： {r_1['unique_progress']}（每步 {r_1['progress_per_step']:.2f}）")
+    print(f"  类别计数：   {r_1['category_counts']}")
     print()
 
     print("-" * 70)
-    print("Step 2: Hogwild — 2 workers, shared cache, strong coordination")
+    print("步骤 2：Hogwild——2 个 worker，共享 cache，轻量协调")
     print("-" * 70)
     r_2 = run_hogwild(n_workers=2, step_budget=200, target_per_category=100,
                       coordination_weight=0.8)
-    print(f"  tokens emitted    : {r_2['tokens_emitted']}  ({r_2['tokens_per_step']:.2f} / step)")
+    print(f"  输出 token 数：{r_2['tokens_emitted']}（每步 {r_2['tokens_per_step']:.2f}）")
     print(f"  work-tokens       : {r_2['work_tokens']}  ({r_2['work_per_step']:.2f} / step)")
-    print(f"  unique progress   : {r_2['unique_progress']}  ({r_2['progress_per_step']:.2f} / step)")
-    print(f"  category counts   : {r_2['category_counts']}")
-    print(f"  speedup vs N=1    : {r_2['unique_progress'] / r_1['unique_progress']:.2f}x")
+    print(f"  唯一进展量： {r_2['unique_progress']}（每步 {r_2['progress_per_step']:.2f}）")
+    print(f"  类别计数：   {r_2['category_counts']}")
+    print(f"  相对 N=1 的加速比：{r_2['unique_progress'] / r_1['unique_progress']:.2f}x")
     print()
 
     print("-" * 70)
-    print("Step 3: coordination-weight sweep (N=2, same step budget)")
+    print("步骤3:协调加权扫描(N=2,同一步骤预算)")
     print("-" * 70)
-    print(f"  {'coord weight':>14}  {'progress':>10}  {'speedup vs N=1':>15}")
+    print(f"  {'coord 重量':>14}  {'进展':>10}  {'速度对 N=1':>15}")
     for cw in (0.0, 0.2, 0.5, 0.8, 1.0):
         r = run_hogwild(n_workers=2, step_budget=200, target_per_category=100,
                         coordination_weight=cw)
         speedup = r["unique_progress"] / r_1["unique_progress"]
         print(f"  {cw:>14.2f}  {r['unique_progress']:>10}  {speedup:>15.2f}x")
-    print("  (coord weight 0.0 = both workers stay in category A = full redundancy)")
+    print("(编码重量0.0=两名工人都留在A类=完全冗余)")
     print()
 
     print("-" * 70)
-    print("Step 4: Amdahl-style theoretical speedup")
+    print("第四步:阿姆达尔式理论加速")
     print("-" * 70)
     T_serial = 10_000
-    print(f"  reasoning task = 10000 decode tokens")
-    print(f"  c = coordination overhead per worker")
+    print("  推理任务 = 10000 个解码 token")
+    print("  c = 每个 worker 的协调开销")
     print(f"  {'p':>5}  " + "".join(
         f"{f'N={N}':>10}" for N in (2, 4, 8)))
     for p in (0.3, 0.5, 0.7, 0.9):
@@ -183,11 +183,11 @@ def main() -> None:
                                  steps_per_worker=T_serial // N)
             row += f"{s:>9.2f}x"
         print(row)
-    print("  (values: Hogwild! speedup over serial single-worker)")
+    print("(值: Hogwild! 超過序列单工)")
     print()
 
     print("-" * 70)
-    print("Step 5: worst case (short task, weak coordination)")
+    print("步骤5:最坏情况(任务短,协调不力)")
     print("-" * 70)
     print(f"  {'p':>5}  " + "".join(
         f"{f'N={N}':>10}" for N in (2, 4, 8)))
@@ -198,14 +198,13 @@ def main() -> None:
                                  steps_per_worker=1000 // N)
             row += f"{s:>9.2f}x"
         print(row)
-    print("  (short 1000-token task, 150-token coordination overhead)")
-    print("  values below 1.0 mean parallel inference is SLOWER than serial")
+    print("(短1000-token任务,150-token协调间接费用)")
+    print("数值低于 1.0 表示并行推理比串行更慢")
     print()
 
-    print("takeaway: Hogwild! speedup depends on parallelizable fraction p and")
-    print("          coordination overhead c. Reasoning tasks with p > 0.5 and")
-    print("          low per-step overhead are the sweet spot. Short chat with")
-    print("          c comparable to T_serial is the wrong place to use it.")
+    print("要点：Hogwild 的加速比取决于可并行比例 p 和协调开销 c。")
+    print("p > 0.5 且每步协调开销较低时最有优势；短对话中，")
+    print("如果 c 与串行总耗时 T 相当，就不适合采用这种方法。")
 
 
 if __name__ == "__main__":
