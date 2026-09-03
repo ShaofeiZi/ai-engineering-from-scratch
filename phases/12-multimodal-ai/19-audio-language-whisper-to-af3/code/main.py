@@ -1,8 +1,7 @@
-"""Audio-LLM toys: log-Mel spectrogram + audio Q-former + cascaded vs end-to-end.
+"""Audio-LLM 玩具：log-Mel 频谱图、音频 Q-former 与级联/端到端对比。
 
-Stdlib. Computes a naive DFT-based log-Mel spec from a synthetic waveform,
-runs a toy Q-former over the resulting frames, and compares task coverage
-between cascaded and end-to-end pipelines.
+标准库实现。从合成波形计算基于朴素 DFT 的 log-Mel 频谱，
+对结果帧运行玩具 Q-former，并比较级联与端到端流水线的任务覆盖范围。
 """
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ def window_frames(x: list[float], sr: int, win_ms: int = 25, hop_ms: int = 10) -
 
 
 def naive_dft_mag(frame: list[float], n_bins: int = 64) -> list[float]:
-    """Compute magnitude spectrum at n_bins frequencies using naive DFT."""
+    """在 n_bins 个频率处使用朴素 DFT 计算幅度谱。"""
     n = len(frame)
     out = []
     for k in range(n_bins):
@@ -49,7 +48,7 @@ def naive_dft_mag(frame: list[float], n_bins: int = 64) -> list[float]:
 
 
 def mel_filterbank(n_bins: int = 64, n_mels: int = 20) -> list[list[float]]:
-    """Triangular Mel filter bank (simplified, linear warp as proxy)."""
+    """三角梅尔滤波器组（简化版，以线性变换作为代理）。"""
     fbank = []
     band = n_bins // n_mels
     for m in range(n_mels):
@@ -71,18 +70,18 @@ def log_compress(xs: list[float]) -> list[float]:
 
 
 def demo_melspec() -> None:
-    print("\nLOG-MEL SPECTROGRAM (1s @ 16kHz, 25ms win, 10ms hop, 20 mel bins)")
+    print("\nLOG-MEL SPECTROGRAM（1s @ 16kHz，25ms 窗，10ms 步长，20 个梅尔 bins）")
     print("-" * 60)
     wave = synth_waveform(1.0, 16000)
     frames = window_frames(wave, 16000, 25, 10)
-    print(f"  frames : {len(frames)} (should be ~99 at 1s)")
+    print(f"  帧数 : {len(frames)}（1s 时应约为 99）")
 
     spec = naive_dft_mag(frames[0], n_bins=64)
     fbank = mel_filterbank(n_bins=64, n_mels=20)
     mel = apply_mel(spec, fbank)
     log_mel = log_compress(mel)
-    print(f"  per-frame mel dim: {len(mel)}")
-    print(f"  first frame log-mel (rounded): "
+    print(f"  每帧梅尔维度：{len(mel)}")
+    print(f"  第一帧 log-Mel（已四舍五入）："
           f"{[round(v, 2) for v in log_mel[:10]]}...")
 
 
@@ -96,7 +95,7 @@ class QFormer:
                         for _ in range(self.n_queries)]
 
     def forward(self, frames: list[list[float]]) -> list[list[float]]:
-        """Naive cross-attention: each query attends over all frames."""
+        """朴素 cross-attention：每个查询对所有帧进行注意力计算。"""
         out = []
         for q in self.queries:
             scores = [sum(qi * fi for qi, fi in zip(q, f)) for f in frames]
@@ -111,54 +110,54 @@ class QFormer:
 
 
 def demo_qformer() -> None:
-    print("\nAUDIO Q-FORMER (N=8 queries over 20-dim frames)")
+    print("\nAUDIO Q-FORMER（N=8 个查询，对 20 维帧）")
     print("-" * 60)
     frames = [[random.gauss(0, 1) for _ in range(20)] for _ in range(99)]
     qf = QFormer(n_queries=8, hidden=20)
     tokens = qf.forward(frames)
-    print(f"  input frames: {len(frames)}")
-    print(f"  output tokens: {len(tokens)} of dim {len(tokens[0])}")
-    print("  each token attends over the full audio by soft attention weights")
+    print(f"  输入帧: {len(frames)}")
+    print(f"  输出 token: {len(tokens)} 个，维度为 {len(tokens[0])}")
+    print("  每个 token 通过软注意力权重对完整音频进行注意力计算")
 
 
 def task_coverage_table() -> None:
-    print("\nCASCADED (Whisper -> LLM) vs END-TO-END AUDIO-LLM")
+    print("\n级联（Whisper -> LLM）与端到端 AUDIO-LLM 对比")
     print("-" * 60)
     tasks = [
-        ("transcription",            "yes", "yes"),
-        ("keyword extraction",       "yes", "yes"),
-        ("summarization",            "yes", "yes"),
-        ("speaker diarization",      "partial", "yes"),
-        ("emotion inference",        "no",  "yes"),
-        ("music genre classification","no", "yes"),
-        ("instrument recognition",   "no",  "yes"),
-        ("environmental sound ID",   "no",  "yes"),
-        ("temporal event grounding", "partial", "yes"),
-        ("deepfake detection",       "no",  "yes"),
+        ("转录",             "是",   "是"),
+        ("关键词提取",       "是",   "是"),
+        ("摘要",             "是",   "是"),
+        ("说话人分离",       "部分", "是"),
+        ("情感推断",         "否",   "是"),
+        ("音乐流派分类",     "否",   "是"),
+        ("乐器识别",         "否",   "是"),
+        ("环境声音识别",     "否",   "是"),
+        ("时序事件定位",     "部分", "是"),
+        ("深度伪造检测",     "否",   "是"),
     ]
-    print(f"  {'task':<30}{'cascaded':<14}{'end-to-end'}")
+    print(f"  {'任务':<30}{'级联':<14}{'端到端'}")
     for name, cas, e2e in tasks:
         print(f"  {name:<30}{cas:<14}{e2e}")
-    print("\n  cascaded: fast + reliable for text-extractable signals")
-    print("  end-to-end: required for acoustic-only signals (~40% of MMAU)")
+    print("\n  级联：快速且可靠，适用于可提取文本的信号")
+    print("  端到端：纯声学信号所需（约占 MMAU 的 40%）")
 
 
 def main() -> None:
     print("=" * 60)
-    print("AUDIO-LANGUAGE: WHISPER TO AF3 (Phase 12, Lesson 19)")
+    print("音频语言：从 WHISPER 到 AF3（阶段 12，第 19 课）")
     print("=" * 60)
 
     demo_melspec()
     demo_qformer()
     task_coverage_table()
 
-    print("\n2026 RECIPE")
+    print("\n2026 年配方")
     print("-" * 60)
-    print("  encoder : AF-Whisper + BEATs concat")
-    print("  bridge  : 64-query Q-former")
-    print("  LLM     : Qwen2.5-7B with audio tokens")
-    print("  training: AudioCaps + Clotho + MMAU-style instructions")
-    print("  option  : on-demand thinking for complex reasoning")
+    print("  编码器 : AF-Whisper + BEATs 拼接")
+    print("  桥接  : 64 查询 Q-former")
+    print("  LLM     : Qwen2.5-7B 携带音频 token")
+    print("  训练：AudioCaps + Clotho + MMAU 风格指令")
+    print("  选项：按需思维用于复杂推理")
 
 
 if __name__ == "__main__":
