@@ -1,8 +1,8 @@
-"""Consensus and BFT for LLM agents, stdlib only.
+"""用于 LLM Agent 的共识与 BFT，仅使用 stdlib。
 
-Implements three aggregators (plurality, CP-WBFT, DecentLLMs) and three
-attack patterns (byzantine, sycophancy, monoculture). Prints a table of
-(attack, aggregator) -> final answer, highlighting correct decisions.
+实现三种聚合器（plurality、CP-WBFT、DecentLLMs）和三种攻击模式
+（byzantine、sycophancy、monoculture）。打印 (攻击, 聚合器) -> 最终答案
+的表格，并突出显示正确决策。
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ class Vote:
     confidence: float
 
     def canonical(self) -> str:
-        """Rough semantic clustering: lowercase + strip whitespace/punct."""
+        """粗略的语义聚类：转为小写并去除空白和标点。"""
         return "".join(c for c in self.answer.lower().strip() if c.isalnum() or c == "." or c == "%")
 
 
@@ -48,11 +48,10 @@ def cp_wbft(votes: list[Vote], threshold: float = 0.5) -> tuple[str | None, dict
 
 
 def decentllms(votes: list[Vote]) -> tuple[str | None, dict[str, float]]:
-    """Score proposals 0-1 via evaluator agents, pick geometric-median cluster.
+    """由 evaluator Agent 对提案进行 0-1 评分，并选择几何中位数聚类。
 
-    Simplified: evaluator is the aggregator itself, scoring = confidence. The
-    'geometric median' selects the cluster whose members have min sum of
-    pairwise distance-to-median in confidence space; tie-break by size.
+    简化方式：evaluator 就是聚合器本身，评分等于置信度。“几何中位数”会选择
+    置信度空间中成员到中位数距离之和最小的聚类；平局时按聚类大小决胜。
     """
     clusters: dict[str, list[Vote]] = {}
     for v in votes:
@@ -71,11 +70,11 @@ def decentllms(votes: list[Vote]) -> tuple[str | None, dict[str, float]]:
 
 def scenario(name: str, correct: str, votes: list[Vote]) -> None:
     print("\n" + "=" * 72)
-    print(f"SCENARIO: {name}")
-    print(f"  correct answer: {correct!r}")
+    print(f"场景：{name}")
+    print(f"  正确答案：{correct!r}")
     print("=" * 72)
     for v in votes:
-        print(f"  {v.agent:12s} -> {v.answer!r:20s}  conf={v.confidence:.2f}")
+        print(f"  {v.agent:12s} -> {v.answer!r:20s}  置信度={v.confidence:.2f}")
 
     plural, counts = plurality(votes)
     cp, weights = cp_wbft(votes)
@@ -83,18 +82,18 @@ def scenario(name: str, correct: str, votes: list[Vote]) -> None:
 
     def mark(a: str | None) -> str:
         if a is None:
-            return "[rejected below threshold]"
-        return "[CORRECT]" if a == correct else "[WRONG]"
+            return "[低于阈值，已拒绝]"
+        return "[正确]" if a == correct else "[错误]"
 
-    print(f"\n  plurality    -> {plural!r:22s} {mark(plural)}")
+    print(f"\n  多数投票     -> {plural!r:22s} {mark(plural)}")
     print(f"  CP-WBFT      -> {str(cp)!r:22s} {mark(cp)}")
     print(f"  DecentLLMs   -> {dec!r:22s} {mark(dec)}")
 
 
 def main() -> None:
-    # Scenario 1: honest majority, no attack
+    # 场景 1：诚实多数，无攻击
     scenario(
-        "no attack",
+        "无攻击",
         correct="4.2%",
         votes=[
             Vote("agent-a", "4.2%", 0.85),
@@ -105,9 +104,9 @@ def main() -> None:
         ],
     )
 
-    # Scenario 2: one byzantine liar with high confidence
+    # 场景 2：一个高置信度的 Byzantine 欺骗者
     scenario(
-        "byzantine lie",
+        "Byzantine 欺骗",
         correct="4.2%",
         votes=[
             Vote("agent-a", "4.2%", 0.75),
@@ -118,10 +117,10 @@ def main() -> None:
         ],
     )
 
-    # Scenario 3: sycophancy. Two conformers echo whoever spoke first (42%) with
-    # low confidence because they did not derive the answer.
+    # 场景 3：sycophancy。两个从众者附和最先发言者（42%），由于它们并未
+    # 自行推导答案，因此置信度较低。
     scenario(
-        "sycophantic conformity",
+        "谄媚式从众",
         correct="4.2%",
         votes=[
             Vote("agent-a", "42%", 0.35),
@@ -132,10 +131,10 @@ def main() -> None:
         ],
     )
 
-    # Scenario 4: correlated-error monoculture. Three agents share a model and
-    # confidently hallucinate the same wrong answer.
+    # 场景 4：相关错误的 monoculture。三个 Agent 共用一个模型，并以高置信度
+    # 对同一个错误答案产生幻觉。
     scenario(
-        "monoculture (correlated errors)",
+        "monoculture（相关错误）",
         correct="4.2%",
         votes=[
             Vote("agent-a", "42%", 0.70),
@@ -146,13 +145,13 @@ def main() -> None:
         ],
     )
 
-    print("\nTakeaways:")
-    print("  plurality is wrong whenever a correlated cluster is >= half the votes.")
-    print("  CP-WBFT mitigates sycophancy because conformers have low confidence.")
-    print("  DecentLLMs scoring penalizes high-variance clusters -- helps on monoculture when")
-    print("  the dissenting agents are at least as confident as the majority.")
-    print("  no aggregator solves monoculture when the wrong cluster is both larger AND more")
-    print("  confident than the right cluster. That case needs diversity or verification.")
+    print("\n要点：")
+    print("  只要相关聚类占到至少一半票数，plurality 就会得出错误结果。")
+    print("  CP-WBFT 能缓解 sycophancy，因为从众者的置信度较低。")
+    print("  DecentLLMs 评分会惩罚高方差聚类；当异议 Agent 的置信度不低于多数派时，")
+    print("  这对处理 monoculture 有帮助。")
+    print("  当错误聚类规模更大且置信度也更高时，没有任何聚合器能解决 monoculture。")
+    print("  此时需要多样性或验证机制。")
 
 
 if __name__ == "__main__":
