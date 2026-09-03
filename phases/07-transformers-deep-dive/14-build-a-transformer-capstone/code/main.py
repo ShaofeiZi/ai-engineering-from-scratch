@@ -1,10 +1,10 @@
-"""Capstone: decoder-only transformer from scratch.
+"""综合项目：从零实现仅解码器 transformer。
 
-Uses PyTorch. If torch is not installed, prints a friendly message and
-degrades to a parameter-count estimator so the script still runs cleanly.
+使用 PyTorch。如果未安装 torch，则输出友好提示并降级为参数量估算器，
+使脚本仍能顺利运行。
 
-Default: 4 layers, 4 heads, d_model=128, seq_len=128, 500 steps on a
-tiny built-in Shakespeare excerpt. Finishes in ~2 minutes on a laptop.
+默认设置：4 层、4 个头、d_model=128、seq_len=128，在内置的莎士比亚
+短文上训练 500 步。在笔记本电脑上约 2 分钟完成。
 """
 
 import math
@@ -56,18 +56,18 @@ speak this in hunger for bread, not in thirst for revenge.
 
 
 def param_count(vocab_size, d_model, n_layers, n_heads, ffn_expansion=2.67, block_size=128):
-    # token emb + pos emb
+    # token 嵌入 + 位置嵌入
     emb = vocab_size * d_model + block_size * d_model
-    # per-layer: 4*d*d (attn) + 3*d*(exp*d) (SwiGLU) + 2*d (RMSNorm)
+    # 每层：4*d*d（注意力）+ 3*d*(exp*d)（SwiGLU）+ 2*d（RMSNorm）
     per_layer = 4 * d_model * d_model + 3 * d_model * int(d_model * ffn_expansion) + 2 * d_model
-    # final norm + lm head tied to token emb (so 0 extra if tied)
+    # 最终归一化 + 与 token 嵌入绑定的 LM 头（绑定时不增加参数）
     final = 2 * d_model
     return emb + per_layer * n_layers + final
 
 
 def run_param_preview():
-    print("=== parameter counts for capstone configs ===")
-    print(f"{'name':<16}  {'V':>5}  {'L':>3}  {'H':>3}  {'d':>5}  {'~params':>10}")
+    print("=== 综合项目配置的参数量 ===")
+    print(f"{'名称':<16}  {'V':>5}  {'L':>3}  {'H':>3}  {'d':>5}  {'约参数量':>10}")
     configs = [
         ("nano",    65,   4,  4,  128),
         ("mini",    65,   6,  6,  192),
@@ -85,15 +85,15 @@ def try_train():
         import torch.nn as nn
         import torch.nn.functional as F
     except ImportError:
-        print("torch not installed. install with: pip install torch")
-        print("once installed, rerunning will train a 4-layer char-level GPT")
-        print("on the embedded Shakespeare excerpt and sample from it.")
+        print("尚未安装 torch。请运行：pip install torch")
+        print("安装后再次运行，将在内嵌的莎士比亚节选上训练四层字符级 GPT，")
+        print("然后从中采样。")
         return
 
     torch.manual_seed(42)
     random.seed(42)
 
-    # --- data ---
+    # --- 数据 ---
     data_path = os.path.join(os.path.dirname(__file__), "tinyshakespeare.txt")
     if os.path.exists(data_path):
         with open(data_path) as f:
@@ -110,7 +110,7 @@ def try_train():
     train_data = data[:n]
     val_data = data[n:]
 
-    # --- config ---
+    # --- 配置 ---
     block_size = 64
     d_model = 64
     n_heads = 4
@@ -122,7 +122,7 @@ def try_train():
     lr = 3e-4
     device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
 
-    # --- model ---
+    # --- 模型 ---
     class RMSNorm(nn.Module):
         def __init__(self, d, eps=1e-6):
             super().__init__()
@@ -187,7 +187,7 @@ def try_train():
             self.blocks = nn.ModuleList([Block(d, h, block_size, expansion) for _ in range(n_layers)])
             self.norm_f = RMSNorm(d)
             self.lm_head = nn.Linear(d, vocab_size, bias=False)
-            self.lm_head.weight = self.tok_emb.weight  # tied
+            self.lm_head.weight = self.tok_emb.weight  # 权重绑定
             self.block_size = block_size
 
         def forward(self, idx, targets=None):
@@ -227,19 +227,19 @@ def try_train():
 
     model = GPT(vocab_size, d_model, n_heads, n_layers, block_size, ffn_expansion).to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"=== capstone transformer ===")
-    print(f"device:        {device}")
-    print(f"vocab_size:    {vocab_size}")
-    print(f"block_size:    {block_size}")
-    print(f"d_model:       {d_model}")
-    print(f"n_heads:       {n_heads}")
-    print(f"n_layers:      {n_layers}")
-    print(f"parameters:    {n_params}")
+    print(f"=== transformer 综合项目 ===")
+    print(f"设备：         {device}")
+    print(f"词表大小：     {vocab_size}")
+    print(f"块大小：       {block_size}")
+    print(f"模型维度：     {d_model}")
+    print(f"头数：         {n_heads}")
+    print(f"层数：         {n_layers}")
+    print(f"参数量：       {n_params}")
     print()
 
     opt = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.95), weight_decay=0.1)
 
-    print(f"training for {max_steps} steps...")
+    print(f"训练 {max_steps} 步...")
     for step in range(max_steps + 1):
         if step % eval_interval == 0:
             model.eval()
@@ -249,7 +249,7 @@ def try_train():
                 x, y = get_batch("val")
                 _, val_loss = model(x, y)
             model.train()
-            print(f"  step {step:>4}  train={train_loss.item():.3f}  val={val_loss.item():.3f}")
+            print(f"  步骤 {step:>4}  训练={train_loss.item():.3f}  验证={val_loss.item():.3f}")
         if step == max_steps:
             break
         x, y = get_batch("train")
@@ -260,7 +260,7 @@ def try_train():
         opt.step()
 
     print()
-    print("=== sample ===")
+    print("=== 样本 ===")
     prompt = torch.tensor([[stoi["F"], stoi["i"], stoi["r"], stoi["s"], stoi["t"]]], dtype=torch.long, device=device)
     out = model.generate(prompt, max_new_tokens=200, temperature=0.9, top_k=10)
     sampled = "".join(itos[int(i)] for i in out[0].tolist())
