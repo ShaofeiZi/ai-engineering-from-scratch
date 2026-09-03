@@ -1,9 +1,8 @@
-"""CAIS four-risk inventory — stdlib Python.
+"""CAIS four-risk 清单 — stdlib Python。
 
-Given a proposed deployment described by a short feature set, tag the
-deployment against the CAIS four-risk categories (malicious use, AI
-races, organizational risks, rogue AIs) and return a mitigation checklist.
-Pedagogical only; the framework requires human judgment for real use.
+给定一个由简短功能集描述的拟议部署，根据 CAIS four-risk 类别（恶意使用、AI
+竞赛、组织风险、流氓 AIs）对该部署进行标记，并返回缓解清单。
+仅供教学用途；该框架在真实场景中需要人工判断。
 """
 
 from __future__ import annotations
@@ -15,36 +14,36 @@ from dataclasses import dataclass
 class Deployment:
     name: str
     public_facing: bool
-    handles_harmful_capabilities: bool   # e.g. bio/cyber uplift possible?
-    competitive_pressure: bool           # rushed to launch ahead of rivals?
+    handles_harmful_capabilities: bool   # e.g. bio/cyber 有提升可能？
+    competitive_pressure: bool           # 是否急于抢先对手发布？
     independent_audit: bool
     multi_layer_defense: bool
-    information_security: bool           # weights / evals / keys hardened
-    agent_autonomy_hours: float          # per Lesson 1 / 21
+    information_security: bool           # 权重 / 评测 / 密钥已加固
+    agent_autonomy_hours: float          # 参见第 1 / 21 课
 
 
 MITIGATIONS = {
     "malicious_use": [
-        "constitutional hardcoded prohibitions (Lesson 17)",
-        "Llama Guard input/output classifier (Lesson 18)",
-        "tool allowlist per task (Lessons 10, 11)",
+        "宪法式硬编码禁令（第 17 课）",
+        "Llama Guard 输入/输出分类器（第 18 课）",
+        "按任务设置工具允许列表（第 10、11 课）",
     ],
     "ai_races": [
-        "scaling policy with standing Risk Reports (Lessons 19, 20)",
-        "public Frontier Safety Roadmap with declared cadence",
-        "external capability evaluation by METR / CAISI (Lesson 21)",
+        "包含常设风险报告的扩展政策（第 19、20 课）",
+        "公开前沿安全路线图，并声明更新周期",
+        "由 METR / CAISI 开展外部能力评测（第 21 课）",
     ],
     "organizational_risks": [
-        "internal safety culture; escalation paths without career cost",
-        "independent audit on declared cadence",
-        "multi-layered defenses (Lessons 10, 13, 14, 17, 18)",
-        "information security per RAND SL-4 (Lesson 19 industry tier)",
+        "内部安全文化；不会带来职业代价的升级路径",
+        "按声明的周期开展独立审计",
+        "多层防御（第 10、13、14、17、18 课）",
+        "依照 RAND SL-4 实施信息安全（第 19 课行业层级）",
     ],
     "rogue_ais": [
-        "kill switches and canary tokens (Lesson 14)",
-        "propose-then-commit HITL (Lesson 15)",
-        "deceptive-alignment monitoring (Lesson 20 DeepMind FSF)",
-        "durable checkpoints and rollback (Lesson 16)",
+        "熔断开关与金丝雀 token（第 14 课）",
+        "先提议后提交的 HITL 流程（第 15 课）",
+        "欺骗性对齐监控（第 20 课 DeepMind FSF）",
+        "持久检查点与回滚（第 16 课）",
     ],
 }
 
@@ -55,7 +54,7 @@ def tag(d: Deployment) -> list[str]:
         tags.append("malicious_use")
     if d.competitive_pressure:
         tags.append("ai_races")
-    # Organizational risk fires when any sub-lever is missing.
+    # 当任何 sub-lever 缺失时，组织风险触发。
     org_missing = (
         (not d.independent_audit)
         or (not d.multi_layer_defense)
@@ -63,7 +62,7 @@ def tag(d: Deployment) -> list[str]:
     )
     if org_missing:
         tags.append("organizational_risks")
-    # Rogue AI risk grows with autonomy horizon.
+    # 流氓 AI 风险随自主时间跨度扩大而增长。
     if d.agent_autonomy_hours >= 4.0:
         tags.append("rogue_ais")
     return tags
@@ -71,7 +70,7 @@ def tag(d: Deployment) -> list[str]:
 
 def report(d: Deployment) -> None:
     tags = tag(d)
-    print(f"\nDeployment: {d.name}")
+    print(f"\n部署：{d.name}")
     print("-" * 70)
     print(f"  public_facing            = {d.public_facing}")
     print(f"  handles_harmful_caps     = {d.handles_harmful_capabilities}")
@@ -82,22 +81,22 @@ def report(d: Deployment) -> None:
     print(f"  agent_autonomy_hours     = {d.agent_autonomy_hours}")
     print()
     if tags:
-        print(f"  tagged risks: {tags}")
+        print(f"  标记的风险：{tags}")
         for t in tags:
-            print(f"\n  mitigations for {t}:")
+            print(f"\n  针对 {t} 的缓解措施：")
             for m in MITIGATIONS[t]:
                 print(f"    - {m}")
     else:
-        print("  no tagged risks (check sub-levers manually)")
+        print("  无标记风险（手动检查 sub-levers）")
 
 
 def main() -> None:
     print("=" * 70)
-    print("CAIS FOUR-RISK INVENTORY (Phase 15, Lesson 22)")
+    print("CAIS FOUR-RISK INVENTORY（第 15 阶段，第 22 课）")
     print("=" * 70)
 
     low = Deployment(
-        name="internal refactor helper (scoped project repo)",
+        name="内部重构助手（限定于项目仓库）",
         public_facing=False,
         handles_harmful_capabilities=False,
         competitive_pressure=False,
@@ -107,7 +106,7 @@ def main() -> None:
         agent_autonomy_hours=1.0,
     )
     mid = Deployment(
-        name="public coding agent (SaaS, general user base)",
+        name="面向公众的编码 Agent（SaaS，普通用户群体）",
         public_facing=True,
         handles_harmful_capabilities=False,
         competitive_pressure=True,
@@ -117,7 +116,7 @@ def main() -> None:
         agent_autonomy_hours=4.0,
     )
     high = Deployment(
-        name="autonomous ML research agent (frontier)",
+        name="自主 ML 研究 Agent（前沿系统）",
         public_facing=True,
         handles_harmful_capabilities=True,
         competitive_pressure=True,
@@ -132,14 +131,14 @@ def main() -> None:
 
     print()
     print("=" * 70)
-    print("HEADLINE: organizational risk is the lever practitioners actually pull")
+    print("要点：组织风险是从业者真正能拉动的杠杆")
     print("-" * 70)
-    print("  Malicious use, AI races, and rogue AIs are structural forces.")
-    print("  Organizational risk is internal to your org. Safety culture,")
-    print("  independent audit, multi-layered defenses, and information")
-    print("  security are four levers every team controls. Deployment speed")
-    print("  pressure trades against all four; CAIS lists this as a named")
-    print("  risk class for a reason.")
+    print("  恶意使用、AI 竞赛和流氓 AIs 是结构性力量。")
+    print("  组织风险是组织内部的。安全文化、")
+    print("  独立审计、multi-layered 防御和信息")
+    print("  安全是每个团队可控的四个杠杆。部署速度")
+    print("  压力与这四者相互权衡；CAIS 将其列为一个命名的")
+    print("  风险类别是有原因的。")
 
 
 if __name__ == "__main__":
