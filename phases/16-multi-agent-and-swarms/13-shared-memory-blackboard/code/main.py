@@ -1,9 +1,7 @@
-"""Shared memory patterns: MessagePool, Blackboard, and a poisoning demo.
+"""共享内存模式：MessagePool、Blackboard 与投毒演示。
 
-Runs a three-agent research task twice. The first run has a hallucinated
-decimal that propagates through shared memory into the final report. The
-second run adds a read-only verifier that re-fetches the source and flags
-the inconsistency.
+同一个三 Agent 调研任务运行两次。第一次运行中，一个幻觉小数会通过共享内存
+传播到最终报告。第二次运行加入一个只读 verifier，它重新获取来源并标记不一致。
 """
 from __future__ import annotations
 
@@ -28,7 +26,7 @@ class ProvenanceEntry:
 
 
 class MessagePool:
-    """Append-only full-pool shared state."""
+    """仅追加的全池共享状态。"""
 
     def __init__(self) -> None:
         self.entries: list[ProvenanceEntry] = []
@@ -66,7 +64,7 @@ class MessagePool:
 
 
 class Blackboard:
-    """Topic-keyed pub/sub blackboard."""
+    """按主题设键的发布/订阅 blackboard。"""
 
     def __init__(self) -> None:
         self.topics: dict[str, list[ProvenanceEntry]] = {}
@@ -104,8 +102,8 @@ class Blackboard:
 
 
 FAKE_SOURCES = {
-    "https://arxiv.org/paper-1": "The study reports a 4.2% accuracy improvement over the baseline.",
-    "https://arxiv.org/paper-2": "Dataset size was 12,500 examples.",
+    "https://arxiv.org/paper-1": "研究报告称，准确率比基线提高了 4.2%。",
+    "https://arxiv.org/paper-2": "数据集包含 12,500 个样本。",
 }
 
 
@@ -124,40 +122,40 @@ def retrieval_agent(pool: MessagePool, uri: str, hallucinate: bool) -> int:
 def summarizer_agent(pool: MessagePool) -> int:
     retrieved = [e for e in pool.read_all() if e.writer == "retriever"]
     if not retrieved:
-        return pool.write("summarizer", "no source", "Summarize retrieval", None)
+        return pool.write("summarizer", "没有来源", "总结检索结果", None)
     latest = retrieved[-1].content
-    summary = f"Summary: study reports a significant result -- {latest.split('.')[0]}."
-    return pool.write("summarizer", summary, "Summarize retrieval", None)
+    summary = f"总结：研究报告了一个显著结果 —— {latest.split('。')[0]}。"
+    return pool.write("summarizer", summary, "总结检索结果", None)
 
 
 def analyst_agent(pool: MessagePool) -> int:
     summaries = [e for e in pool.read_all() if e.writer == "summarizer"]
     if not summaries:
-        return pool.write("analyst", "no summary", "Draw conclusions", None)
+        return pool.write("analyst", "没有总结", "得出结论", None)
     latest = summaries[-1].content
-    verdict = "Recommend adoption" if "42%" in latest else "Recommend further review"
-    return pool.write("analyst", f"Analyst verdict: {verdict} (based on: {latest})",
-                      "Draw conclusions", None)
+    verdict = "建议采用" if "42%" in latest else "建议进一步审查"
+    return pool.write("analyst", f"分析结论：{verdict}（依据：{latest}）",
+                      "得出结论", None)
 
 
 def verifier_agent(pool: MessagePool) -> list[tuple[int, str]]:
-    """Read-only agent. Re-fetches cited sources and flags inconsistencies.
+    """只读 Agent。重新获取引用来源并标记不一致。
 
-    Returns a list of (entry_id, reason) tuples for the caller to act on.
-    The verifier never writes back to the pool -- the caller decides what to do.
+    返回 (entry_id, reason) 元组列表，由调用方采取行动。
+    verifier 绝不会写回消息池；如何处理由调用方决定。
     """
     findings = []
     for e in pool.read_all():
         if e.source_uri and e.source_uri in FAKE_SOURCES:
             truth = FAKE_SOURCES[e.source_uri]
             if e.content != truth:
-                findings.append((e.id, f"mismatch with {e.source_uri}: fetched text was {truth!r}"))
+                findings.append((e.id, f"与 {e.source_uri} 不一致：获取的文本为 {truth!r}"))
     return findings
 
 
 def run_without_verifier() -> None:
     print("=" * 72)
-    print("RUN 1 — no verifier; hallucination propagates")
+    print("运行 1 — 无 verifier；幻觉继续传播")
     print("=" * 72)
     pool = MessagePool()
     retrieval_agent(pool, "https://arxiv.org/paper-1", hallucinate=True)
@@ -165,12 +163,12 @@ def run_without_verifier() -> None:
     analyst_agent(pool)
     for e in pool.read_all():
         print(f"  [{e.id}] {e.writer:11s} ({e.prompt_hash}) :: {e.content}")
-    print("\nfinal report uses hallucinated 42% figure; no alarm raised.")
+    print("\n最终报告使用了幻觉产生的 42% 数字，却没有触发任何警报。")
 
 
 def run_with_verifier() -> None:
     print("\n" + "=" * 72)
-    print("RUN 2 — read-only verifier re-fetches sources and flags")
+    print("运行 2 — 只读 verifier 重新获取来源并加以标记")
     print("=" * 72)
     pool = MessagePool()
     retrieval_agent(pool, "https://arxiv.org/paper-1", hallucinate=True)
@@ -181,15 +179,15 @@ def run_with_verifier() -> None:
     analyst_agent(pool)
 
     for e in pool.read_all():
-        flag_str = f" [FLAGGED: {'; '.join(e.flags)}]" if e.flags else ""
+        flag_str = f" [已标记：{'; '.join(e.flags)}]" if e.flags else ""
         print(f"  [{e.id}] {e.writer:11s} ({e.prompt_hash}) :: {e.content}{flag_str}")
     if findings:
-        print(f"\nverifier surfaced {len(findings)} inconsistency. downstream agents can suppress the verdict.")
+        print(f"\nverifier 发现 {len(findings)} 处不一致。下游 Agent 可据此抑制该结论。")
 
 
 def demo_blackboard() -> None:
     print("\n" + "=" * 72)
-    print("BLACKBOARD DEMO — topic-keyed pub/sub, not every agent reads everything")
+    print("BLACKBOARD 演示 — 按主题设键的发布/订阅，并非每个 Agent 都读取全部内容")
     print("=" * 72)
     bb = Blackboard()
     received = {"prices": [], "alerts": []}
@@ -207,19 +205,19 @@ def demo_blackboard() -> None:
     bb.publish("scraper-2", "prices", "MSFT=401.2", "poll market")
     bb.publish("risk-engine", "alerts", "ALERT: AAPL moved >2% in 60s", "watch prices")
 
-    print(f"  price subscribers got ids: {received['prices']}")
-    print(f"  alert subscribers got ids: {received['alerts']}")
-    print("  (note: price subscribers never saw the alert; that is the point)")
+    print(f"  价格订阅者收到的 ID：{received['prices']}")
+    print(f"  警报订阅者收到的 ID：{received['alerts']}")
+    print("  （注意：价格订阅者从未看到警报，这正是该设计的目的）")
 
 
 def main() -> None:
     run_without_verifier()
     run_with_verifier()
     demo_blackboard()
-    print("\nTakeaways:")
-    print("  1. shared state without provenance launders hallucinations into downstream reasoning")
-    print("  2. a read-only verifier with independent source access catches memory poisoning")
-    print("  3. a blackboard scales past a full pool because agents only read what they subscribe to")
+    print("\n要点：")
+    print("  1. 没有来源记录的共享状态，会把幻觉漂白后送入下游推理")
+    print("  2. 能独立访问来源的只读 verifier 可以发现内存投毒")
+    print("  3. blackboard 比全量消息池更易扩展，因为 Agent 只读取自己订阅的内容")
 
 
 if __name__ == "__main__":
