@@ -1,7 +1,7 @@
-# Lesson program: audits workflow evidence, ordering, confidence, and friction.
-# Lesson: phases/14-agent-engineering/48-discover-the-real-workflow/docs/en.md
-# Canonical source: Nuseibeh and Easterbrook, Requirements Engineering: A Roadmap.
-# Canonical source: Gotel and Finkelstein, ICRE 1994, DOI 10.1109/ICRE.1994.292398.
+# 课程程序：审核工作流证据、顺序、置信度与摩擦。
+# 课程：phases/14-agent-engineering/48-discover-the-real-workflow/docs/en.md
+# 规范来源：Nuseibeh 和 Easterbrook，《需求工程：路线图》。
+# 规范来源：Gotel 和 Finkelstein，ICRE 1994，DOI 10.1109/ICRE.1994.292398.
 from __future__ import annotations
 
 import json
