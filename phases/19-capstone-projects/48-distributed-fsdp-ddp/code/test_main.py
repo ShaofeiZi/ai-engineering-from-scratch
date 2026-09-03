@@ -1,7 +1,7 @@
-"""Tests for the from-scratch DDP wrapper and FSDP sharding sketch.
+"""从零实现的 DDP 包装器与 FSDP 分片示意的测试。
 
-The collective tests spawn worker processes through torch.multiprocessing
-on the gloo backend; this works on CPU and does not require CUDA.
+集合通信测试通过 torch.multiprocessing 派生 worker 进程并使用 gloo 后端；
+它可在 CPU 上运行，不需要 CUDA。
 """
 
 from __future__ import annotations
@@ -60,9 +60,9 @@ class GradNormTests(unittest.TestCase):
 class DistributedDemoTests(unittest.TestCase):
     def setUp(self):
         if not torch.distributed.is_available():
-            self.skipTest("torch.distributed not available")
+            self.skipTest("torch.distributed 不可用")
         if not torch.distributed.is_gloo_available():
-            self.skipTest("gloo backend not available")
+            self.skipTest("gloo 后端不可用")
 
     def test_two_rank_param_sums_match(self):
         result = ddp.run_distributed_demo(
