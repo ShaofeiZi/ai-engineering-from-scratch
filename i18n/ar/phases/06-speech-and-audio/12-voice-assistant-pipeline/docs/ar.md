@@ -11,45 +11,45 @@
 
 بناء مساعد من نهاية إلى نهاية:
 
-1. يلتقط المدخلات الميكروفونية (16 كيلوهرتز)
+1. يلتقط المدخلات الميكروفونية (16 kHz (مونو)
 2. يكتشف بداية/نهاية خطاب المستخدم.
 3. ينسخ التدفق
-4. يمر النسخة إلى ماجستير في العلوم التي يمكن أن تدعو الأدوات (تايمر، الطقس، التقويم).
-5. تُشغل رسالة ماجستير في العلوم إلى TTS
+4. يمر النص إلى LLM التي يمكن أن تدعو الأدوات (التوقيت، الطقس، التقويم).
+5. التيارات LLM نص إلى TTS.
 6. يعيد الصوت إلى المستخدم
 7. يتوقف إذا قام المستخدم بتقاطع الرد في منتصفها.
 
-هدف التأخير: أول بايت صوتي TTS في غضون 800 ميس من الانتهاء من المستخدم من التعبير على جهاز كمبيوتر محمول. هدف الجودة: لا كلمات مفقودة، لا ترجمة الهلوسة على الصمت، لا تسرب من نسخ الصوت، لا نجاح في الحقن السريع.
+هدف التأخير: أولاً TTS البايت الصوتي في غضون 800 ميس من الانتهاء من المستخدم من كلامه على جهاز كمبيوتر محمول CPU. هدف الجودة: لا كلمات مفقودة، لا ترجمات هالوسينات على الصمت، لا تسرب نسخ الصوت، لا نجاح في الحقن السريع.
 
 ## المفهوم
 
-![Voice assistant pipeline: mic → VAD → STT → LLM+tools → TTS → speaker](../assets/voice-assistant.svg)
+![خط أنابيب المساعد الصوتي: ميكروفون → VAD → STT → LLM+tools → TTS المتحدث](../assets/voice-assistant.svg)
 
 ### المكونات السبعة
 
-1. **Audio capture.**ميكروفونات → 16 كيلوهرتز مونو → 20 ميس قطعة. عادة `sounddevice`في Python أو AudioUnit/ALSA/WASAPI الأصلي في الإنتاج.
-2. **VAD (Lesson 11).**سيلرو فاد @ عتبة 0.5، تقرير الدقيقة 250 ms، صمت تعليق 500 ms. إشارات "بدء" و "نهاية".
-3. **Streaming STT (Lesson 4-5).**التدفقات الهزيمة، Parakeet-TDT، أو Deepgram Nova-3 (API). النسخ الجزئية + النهائية.
-4. **LLM with tool calling.**GPT-4o / Claude 3.5 / Gemini 2.5 Flash. مخطط JSON للأدوات. رموز التدفق.
-5. **Streaming TTS (Lesson 7).**كوكورو-82M (أسرع فتح) أو كارتيسيا سونيك (التجارية). بدء TTS بعد 20 رمزا LLM.
-6. **Playback.**المتكلم خارج، رمزية للشبكات ذات النطاق النطاق المنخفض.
-7. **Interruption handler.**إذا أطلقت (فاد) أثناء تشغيل (تيتس) ، توقف تشغيل (تيتس) ، إلغ (اللم) ، إعادة تشغيل (ستيتس)
+1. **-التقاط الصوت** ميك → 16 kHz واحد → 20 ms قطع. عادة `sounddevice` في Python أو أصلي AudioUnit/ALSA/WASAPI في الإنتاج
+2. **VAD (الدرس 11)** سيلرو VAD @ عتبة 0.5، تقرير الدقيقة 250 ms، صمت التوقف 500 ms. إشارات "بدء" و "نهاية".
+3. **التدفق STT (الدرس 4-5).** -تصفيق الشائعات، (باراكيت)TDTأو ديبجرام نوفا-3 (API). Partial + final transcripts.
+4. **LLM مع الاتصال بالأدوات.** GPT-4o / Claude 3.5 / Gemini 2.5 Flash. JSON مخطط للأدوات، إشارات التدفق
+5. **التدفق TTS (الدرس السابع)** كوكورو-82M (أسرع فتح) أو كارتيسيا سونيك (التجارية). TTS بعد 20 LLM رموز
+6. **التشغيل** المتكلم خارج، رمزية للشبكات ذات النطاق النطاق المنخفض.
+7. **مدير التوقف** إذا VAD الحرائق خلال TTS التشغيل، توقف التشغيل، إلغاء LLM, إعادة تشغيل STT.
 
 ### الوضعين الثلاثة التي ستضربها
 
-1. **First-word clip.**يبدأ VAD ضربة متأخرة جداً، "هي" المستخدم مفقود، حد البدء عند 0.3، وليس 0.5.
-2. **Mid-response interrupt confusion.**يواصل LLM توليد بعد انقطاع المستخدم؛ يتحدث المساعد على المستخدم.
-3. **Silence hallucination.**"تخرج النصائح "شكراً على مشاهدتك على الإطار الصامت للتدفئة
+1. **كلمة كلمة أولى** VAD يبدأ النبض متأخراً جداً، "هي" المستخدم مفقود، حد البدء عند 0.3، وليس 0.5.
+2. **الرد المتوسط يقاطع الارتباك** LLM يستمر في توليد بعد انقطاع المستخدم، ويقول المساعد عن المستخدم. VAD → إلغاءLLM.
+3. **الهلوسة الصمت** "تخرج النصائح "شكراً على مشاهدتك على الإطار الصامت VAD-gate.
 
 ### 2026 مستويات الإشارة الإنتاجية
 
-| Stack | Latency | License | Notes |
+| الـ"كثيرة" | التأخير | رخصة | ملاحظات |
 |-------|---------|---------|-------|
-| LiveKit + Deepgram + GPT-4o + Cartesia | 350-500 ms | commercial API | Industry default 2026 |
-| Pipecat + Whisper-streaming + GPT-4o + Kokoro | 500-800 ms | mostly open | DIY-friendly |
-| Moshi (full-duplex) | 200-300 ms | CC-BY 4.0 | Single-model; different architecture, lesson 15 |
-| Vapi / Retell (managed) | 300-500 ms | commercial | Fastest to launch; limited customization |
-| Whisper.cpp + llama.cpp + Kokoro-ONNX | offline | open | Privacy / edge |
+| LiveKit + Deepgram + GPT-4o + Cartesia | 350-500 ms | التجارية API | الصناعة المتخلفة 2026 |
+| Pipecat + Whisper-streaming + GPT-4o + Kokoro | 500-800 سم | معظمها مفتوح | DIY-friendly |
+| موشي (مكون كامل) | 200-300 سم | CC-BY 4.0 | نموذج واحد، بنية مختلفة، الدروس 15 |
+| Vapi / Retell (مدار) | 300-500 سم | التجارية | أسرع إطلاق؛ محدودة التخصيص |
+| Whisper.cpp + llama.cpp + Kokoro-ONNX | خارج الاتصال | مفتوح | الخصوصية / الحافة |
 
 ```figure
 v4-voice-latency
@@ -71,7 +71,7 @@ def mic_stream(chunk_ms=20, sr=16000):
             yield q.get()
 ```
 
-### الخطوة الثانية: التقاط المديرات المضمنة بمفتاح VAD
+### الخطوة الثانية: VAD-gated التقاط المدير
 
 ```python
 def capture_turn(stream, vad, pre_roll_ms=300, silence_ms=500):
@@ -92,7 +92,7 @@ def capture_turn(stream, vad, pre_roll_ms=300, silence_ms=500):
                 return b"".join(buf)
 ```
 
-### الخطوة الثالثة: التدفق على STT → LLM → TTS
+### الخطوة الثالثة: التدفق STT → LLM → TTS
 
 ```python
 async def turn(audio_bytes):
@@ -102,7 +102,7 @@ async def turn(audio_bytes):
             await speaker.play(audio)
 ```
 
-### الخطوة الرابعة: أداة الدعوة داخل حلقة LLM
+### الخطوة الرابعة: أداة الدعوة داخل LLM حلقة
 
 ```python
 tools = [
@@ -133,49 +133,49 @@ while True:
 
 ## استخدمها
 
-انظر`code/main.py`لتنمية قابلة للتشغيل التي تصل جميع المكونات السبعة مع نماذج القطع، حتى تتمكن من رؤية شكل خط الأنابيب حتى دون أجهزة.
+انظر `code/main.py` لتنمية قابلة للتشغيل التي تصل جميع المكونات السبعة مع نماذج القطع، حتى تتمكن من رؤية شكل خط الأنابيب حتى دون أجهزة.
 
-- `silero-vad`(`pip install silero-vad`)
-- `deepgram-sdk`أو`openai-whisper`
-- `openai`(`gpt-4o`) أو `anthropic`
-- `kokoro`أو`cartesia`
-- `sounddevice`لـ (I/O)
+- `silero-vad` (`pip install silero-vad`)
+- `deepgram-sdk` أو `openai-whisper`
+- `openai` (`gpt-4o`) أو `anthropic`
+- `kokoro` أو `cartesia`
+- `sounddevice` لـ (I/O)
 
 ## الفخاخ
 
-- **Logging PII forever.**الصوت المُتَحرك بالكامل هو المعلومات الشخصية في معظم الولايات القضائية.
-- **No barge-in.**المستخدمون سيقاطعون، يجب أن يتوقف مساعدك عن الحديث
-- **TTS that blocks.**تث سمنشري يمنع حلقة الحدث. استخدم async أو خيط منفصل.
-- **No tool-call error handling.**أدوات الفشل يجب أن يحصل ماجستير في العلوم على الخطأ + محاولة مرة أخرى ثم تخفيض gracefully.
-- **Overzealous hallucination filters.**"فلتراً أكثر" ويقول المساعد "لا أستطيع المساعدة" "فلتراً أقل" ويقول أي شيء
-- **No wake-word option.**الاستماع دائماً هو مسؤولية خصوصية. أضف بوابة استيقظ (Porcupine أو openWakeWord).
+- **التقطيع PII إلى الأبد** الصوت الكامل التحول هو PII في معظم الولايات القضائية، احتفاظ لمدة 30 يوماً، مشفرة في حالة الراحة.
+- **لا تدخل** المستخدمون سيقاطعون، يجب أن يتوقف مساعدك عن الحديث
+- **TTS هذا يمنع** متزامن TTS يمنع حلقة الحدث. استخدم التزامن أو خيط منفصل.
+- **لا يوجد إصابة بالخطأ في الاتصال بالأدوات** الأدوات تفشل LLM يجب أن تعيد الخطأ + محاولة مرة أخرى ، ثم تخفيض gracefully.
+- **ملفات الهلوسة المفرطة الحماس** "فلتراً أكثر" ويقول المساعد "لا أستطيع المساعدة" "فلتراً أقل" ويقول أي شيء
+- **لا خيار للكلمة الاستيقاظ.** الاستماع دائما هو مسؤولية خصوصية. openWakeWord).
 
 ## أرسله
 
-إبقوا`outputs/skill-voice-assistant-architect.md`. بالنظر إلى القيود المفروضة على الميزانية + الحجم + اللغة + الامتثال، قم بإعداد تحديد كامل للمجموعة.
+إحتفظ بها `outputs/skill-voice-assistant-architect.md`. بالنظر إلى القيود المفروضة على الميزانية + الحجم + اللغة + الامتثال، قم بإعداد تحديد كامل للمجموعة.
 
 ## التمارين
 
-1. **Easy.**أركض`code/main.py`إنه يحاكي دور كامل واحد من نهاية إلى نهاية مع وحدات الصفوف والطبعات في كل مرحلة
-2. **Medium.**استبدل النصيب من STT بنموذج Whisper الحقيقي على نسخة مسجلة مسبقاً`.wav`. قياس WER و التأخير من نهاية إلى نهاية
-3. **Hard.**إضافة دعوة أداة: تنفيذ `get_weather`(أي إطار إطار إطار عمل) و `set_timer`. توجيه الدرجة العليا من خلال الأدوات والتحقق من أنه عندما يقول المستخدم "وضع 5 دقيقة التوقيت" تعمل الوظيفة الصحيحة والرد المتكلم يؤكد ذلك.
+1. **-بسهولة** أركض `code/main.py`إنه يحاكي دور كامل واحد من نهاية إلى نهاية مع وحدات الصفوف والطبعات في كل مرحلة
+2. **متوسط** استبدال STT معصم مع نموذج فيسبر الحقيقي على تسجيل مسبق `.wav`- قياس WER و التأخير من نهاية إلى نهاية
+3. **صعب** إضافة دعوة الأداة: تنفيذ `get_weather` (أي API) و `set_timer`- إرشاد الطريق LLM عبر الأدوات والتحقق من أنه عندما يقول المستخدم "وضع توقيت 5 دقائق" يتم تشغيل الوظيفة الصحيحة والرد المتكلم يؤكد ذلك.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
+| المدة | ما يقوله الناس | ما يعنيه هذا في الواقع |
 |------|-----------------|-----------------------|
-| Turn | A user + assistant round-trip | One VAD-bounded user speech + one LLM-TTS response. |
-| Barge-in | Interruption | User speaks while assistant talks; assistant stops. |
-| Wake word | "Hey assistant" | Short keyword detector; Porcupine, Snowboy, openWakeWord. |
-| End-pointing | Turn ending | VAD + min-silence decision that user has finished. |
-| Pre-roll | Pre-speech buffer | Keep 200-400 ms of audio before VAD fires to avoid first-word clip. |
-| Tool call | Function invocation | LLM emits JSON; runtime dispatches; result feeds back in-loop. |
+| إلتفت | A user + assistant round-trip | واحد VAD-bounded user speech + one LLM-TTS رد فعل |
+| -إختراق | الإقلاع | يتحدث المستخدم بينما يتحدث المساعد، يتوقف المساعد. |
+| أيقظوا | "مرحباً مساعدتي" | كلمات مفاتيح قصيرة الكشف، البوركوبين، سنو بوي، openWakeWord. |
+| الإشارة النهائية | نهاية الجولة | VAD + min-silence decision that user has finished. |
+| المقبل | عازف قبل الكلام | إبق 200-400 ms من الصوت قبل VAD حرائق لتجنب التقاط الكلمة الأولى |
+| دعوة الأدوات | دعوة الوظيفة | LLM الإصدارات JSON· إرسال الوقت؛ إرسال النتيجة في الدائرة. |
 
 ## المزيد من القراءة
 
-- [LiveKit — voice agent quickstart](https://docs.livekit.io/agents/) إشارة إلى مستوى الإنتاج
-- [Pipecat — voice agent examples](https://github.com/pipecat-ai/pipecat)إطار عمل صديقي للشراء
-- [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime) المسار المُدار الصوتي الأصلي
-- [Kyutai Moshi](https://github.com/kyutai-labs/moshi) إشارة كاملة (الدرس 15).
-- [Porcupine wake-word](https://picovoice.ai/products/porcupine/)-إغلاق الكلمات المُستيقظة
-- [Anthropic — tool use guide](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) دعوة وظيفة LLM.
+- [LiveKit وكيل الصوت سريع](https://docs.livekit.io/agents/) إشارة إلى مستوى الإنتاج
+- [مثال على وكيل صوتي](https://github.com/pipecat-ai/pipecat) — DIY-friendly الإطار
+- [OpenAI الوقت الحقيقي API](https://platform.openai.com/docs/guides/realtime) المسار المُدار الصوتي الأصلي
+- [كيوتاي موشي](https://github.com/kyutai-labs/moshi) إشارة كاملة (الدرس 15).
+- [كلمة استيقظ الخنزير](https://picovoice.ai/products/porcupine/) -إغلاق الكلمات المُستيقظة
+- [Anthropic دليل استخدام الأدوات](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) — LLM الدعوة الوظيفية

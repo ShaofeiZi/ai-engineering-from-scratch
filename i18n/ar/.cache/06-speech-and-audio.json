@@ -1,19 +1,121 @@
 {
-  "phases/06-speech-and-audio/01-audio-fundamentals/docs/en.md": "b50c405e879b2f560036ced3d62fdaccd8c1d5fa47604f823a8d99b2391095a6",
-  "phases/06-speech-and-audio/02-spectrograms-mel-features/docs/en.md": "f59fdf24432cbb8cb256aac7d9dd723115935021614a42581160d74845c86568",
-  "phases/06-speech-and-audio/03-audio-classification/docs/en.md": "3764a4ecf6c369d918f1122bd3d8496afc4d01c62caf6ace237f06c94a9a8241",
-  "phases/06-speech-and-audio/04-speech-recognition-asr/docs/en.md": "8636c6f5f698e085af96b807aff2733d606e41728a174fe1b80e31508c02f721",
-  "phases/06-speech-and-audio/05-whisper-architecture-finetuning/docs/en.md": "90a39b539e0065af945955829839edeaaa63883fa9b5e21bf15c9b8c7db0efb5",
-  "phases/06-speech-and-audio/06-speaker-recognition-verification/docs/en.md": "63ddce2e943e59e1b2aa18bb698df67409fd0011f0d8421139ec7c46cba2f217",
-  "phases/06-speech-and-audio/07-text-to-speech/docs/en.md": "d974cde93a3a8e692caf62fd9e48e18ebd8b889043bef6cf2367b4d89049a561",
-  "phases/06-speech-and-audio/08-voice-cloning-conversion/docs/en.md": "dc41114b9bfa5d8fdc151f0efebe947230683806c1d2f888031a457c9bb8a480",
-  "phases/06-speech-and-audio/09-music-generation/docs/en.md": "4e0e66aee4ae937574ff9dfe0fc0369ed311a93683af1f3b0f7c66c3b6d49eaa",
-  "phases/06-speech-and-audio/10-audio-language-models/docs/en.md": "ed7987f01dba1440b53561d85648b63bae2396f6b4b0494151e272dfa071e046",
-  "phases/06-speech-and-audio/11-real-time-audio-processing/docs/en.md": "38770fe883e05dd7bc541c3d3dbca612686e46d48c7d9a2f4ab2b8b9bb9735db",
-  "phases/06-speech-and-audio/12-voice-assistant-pipeline/docs/en.md": "42adee0778ecf907bc8312c65cde0d75a8cc6db9ee3780bcc441cbc768a884ee",
-  "phases/06-speech-and-audio/13-neural-audio-codecs/docs/en.md": "4fc76820d2dc2bafeda60c77018b05b52b4ee1febbdbe2a32b2ac76bcd4f3feb",
-  "phases/06-speech-and-audio/14-voice-activity-detection-turn-taking/docs/en.md": "2e733e0d8a70489cf07220f0a6a420169c956164df7761872980207436592223",
-  "phases/06-speech-and-audio/15-streaming-speech-to-speech-moshi-hibiki/docs/en.md": "e21cb5cde8e5c2f46a027328b5d1eee69ad8231661d78f8b6509803a6dde3802",
-  "phases/06-speech-and-audio/16-anti-spoofing-audio-watermarking/docs/en.md": "e10d33a6c2f542fa1a2a08bd484f7b78b04b6511bd4a5a9dc4720eca850ce504",
-  "phases/06-speech-and-audio/17-audio-evaluation-metrics/docs/en.md": "ac206830044a3d8baf1d99de9a7d56080d08662b3607a329f1164ea7a768a6b7"
+  "phases/06-speech-and-audio/01-audio-fundamentals/docs/en.md": {
+    "source_sha256": "b50c405e879b2f560036ced3d62fdaccd8c1d5fa47604f823a8d99b2391095a6",
+    "output_sha256": "b78a6531db6bc30bbfc451ca8f86fab6f13b8f66d32dad5346aca230b64bcca1",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/02-spectrograms-mel-features/docs/en.md": {
+    "source_sha256": "f59fdf24432cbb8cb256aac7d9dd723115935021614a42581160d74845c86568",
+    "output_sha256": "55279c508cd99e1eb2645d7d20d5d197d6d37061ea2ac52ea19b8061e6c44316",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/03-audio-classification/docs/en.md": {
+    "source_sha256": "3764a4ecf6c369d918f1122bd3d8496afc4d01c62caf6ace237f06c94a9a8241",
+    "output_sha256": "cab30c4b3c07bc1b276ffae4d77810b9f8e0e975dbb36d1224ddfe7443782681",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/04-speech-recognition-asr/docs/en.md": {
+    "source_sha256": "8636c6f5f698e085af96b807aff2733d606e41728a174fe1b80e31508c02f721",
+    "output_sha256": "033ad77003cc2e45c4f367d9c233c1d9cd1e8419434cc957d5b36aaba66349d5",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/05-whisper-architecture-finetuning/docs/en.md": {
+    "source_sha256": "90a39b539e0065af945955829839edeaaa63883fa9b5e21bf15c9b8c7db0efb5",
+    "output_sha256": "452a264a3b83e82ac750c37568945284612870d92dd5953f5d569656306237b6",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/06-speaker-recognition-verification/docs/en.md": {
+    "source_sha256": "63ddce2e943e59e1b2aa18bb698df67409fd0011f0d8421139ec7c46cba2f217",
+    "output_sha256": "614e8a8141572ef5c9b54db20600fd1e74873ac7d2018b6f1bab563c17802e6f",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/07-text-to-speech/docs/en.md": {
+    "source_sha256": "d974cde93a3a8e692caf62fd9e48e18ebd8b889043bef6cf2367b4d89049a561",
+    "output_sha256": "3e4386ac47f402eedd2fd4f70c08d34d34e3398073d5b910f65a8cb6af0a0c87",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/08-voice-cloning-conversion/docs/en.md": {
+    "source_sha256": "dc41114b9bfa5d8fdc151f0efebe947230683806c1d2f888031a457c9bb8a480",
+    "output_sha256": "4bbe7e8677de92d1836bc0f031a49be46e361e5fde6d688f0c9415981a9eb2b2",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/09-music-generation/docs/en.md": {
+    "source_sha256": "4e0e66aee4ae937574ff9dfe0fc0369ed311a93683af1f3b0f7c66c3b6d49eaa",
+    "output_sha256": "f199333af44a25baf0c2fb1216701c991bc28f6370a42f0fbc454a5155f62d12",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/10-audio-language-models/docs/en.md": {
+    "source_sha256": "ed7987f01dba1440b53561d85648b63bae2396f6b4b0494151e272dfa071e046",
+    "output_sha256": "c7449af7c91bf517afab8220a681b563bc68f6f3707e0c79ae11b11e3786f680",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/11-real-time-audio-processing/docs/en.md": {
+    "source_sha256": "38770fe883e05dd7bc541c3d3dbca612686e46d48c7d9a2f4ab2b8b9bb9735db",
+    "output_sha256": "447b72eee12d4dda54ad6f3d015eadbcf96a4bdb046c34f4673309b489205534",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/12-voice-assistant-pipeline/docs/en.md": {
+    "source_sha256": "42adee0778ecf907bc8312c65cde0d75a8cc6db9ee3780bcc441cbc768a884ee",
+    "output_sha256": "b67e7b64547f219b8bac3b52c8840e07fb1d8fac20887ff8d6e577657aa9a2a6",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/13-neural-audio-codecs/docs/en.md": {
+    "source_sha256": "4fc76820d2dc2bafeda60c77018b05b52b4ee1febbdbe2a32b2ac76bcd4f3feb",
+    "output_sha256": "8698a6fdd86cda5d3b8cac6cfc5614fd19ca34589f378ce7a7969529b84ee6b5",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/14-voice-activity-detection-turn-taking/docs/en.md": {
+    "source_sha256": "2e733e0d8a70489cf07220f0a6a420169c956164df7761872980207436592223",
+    "output_sha256": "ed8a65b07e0fbdab593fdfe7a00bb5dad7bcc443cdec41bb2dd3718939a04411",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/15-streaming-speech-to-speech-moshi-hibiki/docs/en.md": {
+    "source_sha256": "e21cb5cde8e5c2f46a027328b5d1eee69ad8231661d78f8b6509803a6dde3802",
+    "output_sha256": "3f29aafbe2b69c7d0383406b59b5c61b97d0fd53d8c1804a827020970e8af2f1",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/16-anti-spoofing-audio-watermarking/docs/en.md": {
+    "source_sha256": "e10d33a6c2f542fa1a2a08bd484f7b78b04b6511bd4a5a9dc4720eca850ce504",
+    "output_sha256": "c3c4d07f2a7829e1fc7016cadd848a65695666f1a0fb8c5e36049809a5c8d71d",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/06-speech-and-audio/17-audio-evaluation-metrics/docs/en.md": {
+    "source_sha256": "ac206830044a3d8baf1d99de9a7d56080d08662b3607a329f1164ea7a768a6b7",
+    "output_sha256": "21435ada02c290b78e2bc01745169449184d178d807ed21d0631a693b12cfbe5",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  }
 }
