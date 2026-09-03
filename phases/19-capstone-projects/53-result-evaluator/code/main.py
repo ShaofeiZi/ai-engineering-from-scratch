@@ -1,11 +1,11 @@
-"""Result evaluator: improvement check, paired t test, log normalisation, verdict.
+"""结果评估器：改进检验、配对 t 检验、对数归一化、判定结论。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 Track A lessons 20-29 (agent harness primitives)
+概念参考：
+- ./docs/en.md（本课）
+- Phase 19 Track A 第 20-29 课（agent harness 原语）
 
-Stdlib + numpy (read of result lists). The t test math is pure stdlib.
-Run: python3 code/main.py
+仅依赖标准库与 numpy（读取结果列表）。t 检验的数学计算为纯标准库实现。
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -26,11 +26,10 @@ LINEAR = "linear"
 
 @dataclass
 class ExperimentResultLike:
-    """Subset of ExperimentResult fields the evaluator depends on.
+    """评估器所依赖的 ExperimentResult 字段的子集。
 
-    The runner in lesson 52 emits the same fields. The lesson 53 tests
-    construct lightweight instances directly so the evaluator can be tested
-    in isolation.
+    第 52 课的 runner 输出相同的字段。第 53 课的测试会直接构造轻量实例，
+    以便对评估器进行独立测试。
     """
     spec_id: str
     terminal: str
@@ -45,9 +44,9 @@ class MetricSpec:
 
     def validate(self) -> None:
         if self.direction not in (HIGHER, LOWER):
-            raise ValueError(f"unknown direction {self.direction!r}")
+            raise ValueError(f"未知的 direction {self.direction!r}")
         if self.scale not in (LINEAR, LOG):
-            raise ValueError(f"unknown scale {self.scale!r}")
+            raise ValueError(f"未知的 scale {self.scale!r}")
 
 
 @dataclass
@@ -83,11 +82,11 @@ class Verdict:
 
 
 class PairingError(ValueError):
-    """Raised when candidate and baseline results cannot be paired by seed."""
+    """当候选与基线结果无法按 seed 配对时抛出。"""
 
 
 def _lentz_betacf(a: float, b: float, x: float, max_iter: int = 200, eps: float = 1e-12) -> float:
-    """Continued fraction for the regularised incomplete beta function via Lentz."""
+    """通过 Lentz 算法计算正则化不完全 beta 函数的连分数。"""
     qab = a + b
     qap = a + 1.0
     qam = a - 1.0
@@ -124,9 +123,9 @@ def _lentz_betacf(a: float, b: float, x: float, max_iter: int = 200, eps: float 
 
 
 def regularised_incomplete_beta(a: float, b: float, x: float) -> float:
-    """I_x(a, b) via the standard Lentz continued fraction, symmetric in x."""
+    """通过标准 Lentz 连分数计算 I_x(a, b)，关于 x 对称。"""
     if x < 0.0 or x > 1.0:
-        raise ValueError("x out of [0, 1]")
+        raise ValueError("x 不在 [0, 1] 范围内")
     if x == 0.0:
         return 0.0
     if x == 1.0:
@@ -142,7 +141,7 @@ def regularised_incomplete_beta(a: float, b: float, x: float) -> float:
 
 
 def two_sided_t_p_value(t_stat: float, df: int) -> float:
-    """Two sided p value for a t statistic with df degrees of freedom."""
+    """自由度为 df 的 t 统计量的双侧 p 值。"""
     if df <= 0:
         return 1.0
     x = df / (df + t_stat * t_stat)
@@ -151,9 +150,9 @@ def two_sided_t_p_value(t_stat: float, df: int) -> float:
 
 
 def paired_t_test(candidate: list[float], baseline: list[float]) -> tuple[float, float | None, int]:
-    """Return (mean_diff, p_value, n). p_value is None when n < 2."""
+    """返回 (mean_diff, p_value, n)。当 n < 2 时 p_value 为 None。"""
     if len(candidate) != len(baseline):
-        raise PairingError("candidate and baseline lengths disagree")
+        raise PairingError("候选与基线长度不一致")
     n = len(candidate)
     if n < 2:
         if n == 0:
@@ -178,23 +177,23 @@ def _pair_by_seed(
     for r in candidates:
         seed = r.metrics.get("seed")
         if seed is None:
-            raise PairingError(f"candidate {r.spec_id} missing seed")
+            raise PairingError(f"候选 {r.spec_id} 缺少 seed")
         seed_i = int(seed)
         if seed_i in cand_map:
-            raise PairingError(f"duplicate candidate seed {seed_i} (spec {r.spec_id})")
+            raise PairingError(f"候选 seed {seed_i} 重复（spec {r.spec_id}）")
         cand_map[seed_i] = float(r.metrics[metric])
     base_map: dict[int, float] = {}
     for r in baselines:
         seed = r.metrics.get("seed")
         if seed is None:
-            raise PairingError(f"baseline {r.spec_id} missing seed")
+            raise PairingError(f"基线 {r.spec_id} 缺少 seed")
         seed_i = int(seed)
         if seed_i in base_map:
-            raise PairingError(f"duplicate baseline seed {seed_i} (spec {r.spec_id})")
+            raise PairingError(f"基线 seed {seed_i} 重复（spec {r.spec_id}）")
         base_map[seed_i] = float(r.metrics[metric])
     shared = sorted(set(cand_map.keys()) & set(base_map.keys()))
     if not shared:
-        raise PairingError("no shared seeds between candidate and baseline")
+        raise PairingError("候选与基线之间没有共享的 seed")
     return [cand_map[s] for s in shared], [base_map[s] for s in shared]
 
 
@@ -212,7 +211,7 @@ def _log_transform(values: list[float], scale: str) -> list[float]:
     out = []
     for v in values:
         if v <= 0.0:
-            raise ValueError(f"log scale metric must be positive, got {v}")
+            raise ValueError(f"对数尺度指标必须为正，得到 {v}")
         out.append(math.log(v))
     return out
 
@@ -224,7 +223,7 @@ class EvaluatorConfig:
 
 
 class Evaluator:
-    """Pure function over (candidate, baseline) result lists; returns a Verdict."""
+    """对（候选, 基线）结果列表的纯函数；返回一个 Verdict。"""
 
     def __init__(self, config: EvaluatorConfig | None = None) -> None:
         self._cfg = config or EvaluatorConfig()
@@ -269,7 +268,7 @@ class Evaluator:
         self, hypothesis_id: int, metric_spec: MetricSpec, bad: list[ExperimentResultLike]
     ) -> Verdict:
         terminals = sorted({r.terminal for r in bad})
-        rationale = f"runs failed with terminals {terminals}"
+        rationale = f"运行失败，terminal 为 {terminals}"
         return Verdict(
             hypothesis_id=hypothesis_id,
             metric=metric_spec.name,
@@ -288,22 +287,22 @@ class Evaluator:
     def _verdict(self, improvement: float, p_value: float | None, n: int) -> tuple[str, str]:
         if abs(improvement) < self._cfg.improvement_threshold:
             return "noise", (
-                f"improvement {improvement:.4f} is below threshold "
+                f"改进 {improvement:.4f} 低于阈值 "
                 f"{self._cfg.improvement_threshold}"
             )
         if p_value is None:
-            return "noise", f"only {n} paired sample(s); cannot run significance test"
+            return "noise", f"仅有 {n} 个配对样本；无法进行显著性检验"
         if p_value > self._cfg.significance_threshold:
             return "noise", (
-                f"p value {p_value:.4f} exceeds significance threshold "
+                f"p 值 {p_value:.4f} 超过显著性阈值 "
                 f"{self._cfg.significance_threshold}"
             )
         if improvement > 0:
             return "improved", (
-                f"improvement {improvement:.4f} significant at p={p_value:.4f}"
+                f"改进 {improvement:.4f} 在 p={p_value:.4f} 下显著"
             )
         return "regressed", (
-            f"regression {improvement:.4f} significant at p={p_value:.4f}"
+            f"回归 {improvement:.4f} 在 p={p_value:.4f} 下显著"
         )
 
 

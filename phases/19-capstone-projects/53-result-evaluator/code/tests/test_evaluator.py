@@ -1,4 +1,4 @@
-"""Tests for Evaluator: improvement, regression, noise, failed terminal, log scale, t test."""
+"""Evaluator 的测试：改进、回归、噪声、失败终态、对数尺度与 t 检验。"""
 
 from __future__ import annotations
 
