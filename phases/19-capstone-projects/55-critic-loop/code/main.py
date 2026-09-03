@@ -1,11 +1,11 @@
-"""Multi-turn critic loop for a paper draft with five fixed scoring dimensions.
+"""针对论文草稿的多轮评审循环，包含五个固定评分维度。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 lesson 54 (paper writer; provides the draft shape)
-- Phase 19 lessons 50-53 (earlier auto-research stages)
+概念参考：
+- ./docs/en.md（本课）
+- 第 19 阶段第 54 课（论文写作器；提供草稿结构）
+- 第 19 阶段第 50-53 课（更早的自动研究阶段）
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ DIMENSIONS: tuple[str, ...] = (
 
 @dataclass
 class MiniSection:
-    """Minimal section shape for the critic loop. Mirrors lesson 54 Section."""
+    """评审循环所用的最小章节结构。对应第 54 课的 Section。"""
     id: str
     title: str
     body: str = ""
@@ -36,7 +36,7 @@ class MiniSection:
 
 @dataclass
 class MiniPaper:
-    """Minimal paper shape for the critic loop. Mirrors lesson 54 Paper."""
+    """评审循环所用的最小论文结构。对应第 54 课的 Paper。"""
     title: str
     abstract: str
     sections: list[MiniSection] = field(default_factory=list)
@@ -129,7 +129,7 @@ class LoopResult:
 
 
 class CriticLoop:
-    """Drives critic -> reviser -> convergence-check until a stop condition fires."""
+    """驱动 评审 -> 修订 -> 收敛检查 的循环，直到触发停止条件。"""
 
     def __init__(
         self,
@@ -141,9 +141,9 @@ class CriticLoop:
         plateau_window: int = 2,
     ) -> None:
         if max_rounds < 1:
-            raise ValueError("max_rounds must be >= 1")
+            raise ValueError("max_rounds 必须 >= 1")
         if plateau_window < 1:
-            raise ValueError("plateau_window must be >= 1")
+            raise ValueError("plateau_window 必须 >= 1")
         self.critic = critic
         self.reviser = reviser
         self.max_rounds = max_rounds
@@ -212,7 +212,7 @@ class CriticLoop:
 
 
 def deterministic_score(paper: MiniPaper) -> dict[str, float]:
-    """Score a paper deterministically across the five dimensions, 0..10 each."""
+    """对论文在五个维度上进行确定性评分，每项 0..10 分。"""
     body_lens = [len(s.body) for s in paper.sections]
     avg_body = (sum(body_lens) / len(body_lens)) if body_lens else 0.0
     section_titles = {s.title.lower() for s in paper.sections}
@@ -254,7 +254,7 @@ def deterministic_score(paper: MiniPaper) -> dict[str, float]:
 
 
 def deterministic_critic(paper: MiniPaper, round_: int) -> Critique:
-    """Score the paper and emit one suggestion per dimension that is below target."""
+    """为论文评分，并为每个未达目标的维度生成一条建议。"""
     scores = deterministic_score(paper)
     suggestions: list[Suggestion] = []
 
@@ -298,7 +298,7 @@ def deterministic_critic(paper: MiniPaper, round_: int) -> Critique:
 
 
 def deterministic_reviser(paper: MiniPaper, suggestions: list[Suggestion]) -> MiniPaper:
-    """Apply each suggestion's edit deterministically. Returns a mutated paper (same object)."""
+    """确定性应用每条建议的编辑，返回原地修改后的同一 paper 对象。"""
     fig_counter = 0
     cite_counter = 0
     for s in paper.sections:
