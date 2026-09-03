@@ -1,15 +1,15 @@
-// Self-attention kernel from scratch, stdlib only.
-// Topic: scaled dot-product attention with explicit row-major memory.
-// References (cited in spirit, not as deps):
-//   - Vaswani 2017, "Attention Is All You Need": https://arxiv.org/abs/1706.03762
-//   - candle reference attention kernel:        https://github.com/huggingface/candle/blob/main/candle-nn/src/ops.rs
-//   - Karpathy llm.c attention forward pass:    https://github.com/karpathy/llm.c/blob/master/train_gpt2.c
+// 从零实现自注意力内核，仅使用标准库。
+// 主题：采用显式行主序内存的缩放点积注意力。
+// 参考资料（仅作为引用，不作为依赖）：
+//   - Vaswani 2017，《注意力机制就是你所需要的一切》：https://arxiv.org/abs/1706.03762
+//   - candle 参考注意力内核：https://github.com/huggingface/candle/blob/main/candle-nn/src/ops.rs
+//   - Karpathy llm.c 注意力前向传播：https://github.com/karpathy/llm.c/blob/master/train_gpt2.c
 //
-// Compile + run:  rustc --edition 2021 main.rs -o /tmp/sa && /tmp/sa
+// 编译并运行：rustc --edition 2021 main.rs -o /tmp/sa && /tmp/sa
 
 use std::f32::consts::E;
 
-// Row-major matrix backed by a flat Vec<f32>. Helpers index by (row, col).
+// 由扁平 Vec<f32> 支撑的行主序矩阵。辅助函数按 (row, col) 索引。
 struct Mat {
     rows: usize,
     cols: usize,
@@ -25,7 +25,7 @@ impl Mat {
     #[inline] fn set(&mut self, i: usize, j: usize, v: f32) { self.data[i * self.cols + j] = v; }
 
     fn matmul(&self, b: &Mat) -> Mat {
-        assert_eq!(self.cols, b.rows, "shape mismatch: {}x{} @ {}x{}", self.rows, self.cols, b.rows, b.cols);
+        assert_eq!(self.cols, b.rows, "形状不匹配：{}x{} @ {}x{}", self.rows, self.cols, b.rows, b.cols);
         let mut out = Mat::zeros(self.rows, b.cols);
         for i in 0..self.rows {
             for k in 0..self.cols {
@@ -56,7 +56,7 @@ impl Mat {
     }
 }
 
-// Softmax along the last axis (per row), numerically stable.
+// 沿最后一个轴（逐行）计算数值稳定的 softmax。
 fn softmax_rows(m: &Mat) -> Mat {
     let mut out = Mat::zeros(m.rows, m.cols);
     for i in 0..m.rows {
@@ -77,7 +77,7 @@ fn softmax_rows(m: &Mat) -> Mat {
     out
 }
 
-// Q @ K^T / sqrt(d_k), softmax, then @ V.
+// 计算 Q @ K^T / sqrt(d_k)，执行 softmax，再与 V 相乘。
 fn scaled_dot_product_attention(q: &Mat, k: &Mat, v: &Mat) -> (Mat, Mat) {
     let dk = q.cols as f32;
     let k_t = k.transpose();
@@ -88,7 +88,7 @@ fn scaled_dot_product_attention(q: &Mat, k: &Mat, v: &Mat) -> (Mat, Mat) {
     (out, weights)
 }
 
-// Deterministic, dependency-free Gaussian via Box-Muller from a Lehmer LCG.
+// 通过 Lehmer LCG 和 Box-Muller 生成确定性、无依赖的高斯分布。
 struct Rng { state: u64 }
 impl Rng {
     fn new(seed: u64) -> Self { Rng { state: seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1 } }
@@ -182,45 +182,45 @@ fn main() {
     let dv: usize = 8;
 
     println!("{}", "=".repeat(60));
-    println!("SELF-ATTENTION FROM SCRATCH (Rust port)");
+    println!("从零实现自注意力（Rust 移植版）");
     println!("{}", "=".repeat(60));
 
     let mut rng = Rng::new(42);
     let x = randn(n_tokens, d_model, 1.0, &mut rng);
-    println!("\nSentence: {}", sentence.join(" "));
-    println!("Tokens: {}, d_model: {}, dk: {}, dv: {}", n_tokens, d_model, dk, dv);
-    println!("Input shape: ({}, {})", x.rows, x.cols);
+    println!("\n句子：{}", sentence.join(" "));
+    println!("Token 数：{}，d_model：{}，dk：{}，dv：{}", n_tokens, d_model, dk, dv);
+    println!("输入形状：({}, {})", x.rows, x.cols);
 
     let mut rng_w = Rng::new(42);
     let attn = SelfAttention::new(d_model, dk, dv, &mut rng_w);
     let (out, weights) = attn.forward(&x);
 
-    println!("\nOutput shape: ({}, {})", out.rows, out.cols);
-    println!("\nAttention weights:");
+    println!("\n输出形状：({}, {})", out.rows, out.cols);
+    println!("\n注意力权重：");
     print_attention(&weights, &sentence);
 
-    println!("\nASCII heatmap (darker = higher attention):");
+    println!("\nASCII 热力图（颜色越深，注意力越高）：");
     ascii_heatmap(&weights, &sentence);
 
     println!("\n{}", "=".repeat(60));
-    println!("SOFTMAX DEMO");
+    println!("SOFTMAX 演示");
     println!("{}", "=".repeat(60));
 
     let logits = [2.0f32, 1.0, 0.1];
     let probs = softmax_vec(&logits);
-    println!("\nLogits:  {:?}", logits);
+    println!("\nLogits： {:?}", logits);
     println!("Softmax: {:?}", probs.iter().map(|p| (p * 10000.0).round() / 10000.0).collect::<Vec<_>>());
-    println!("Sum:     {:.4}", probs.iter().sum::<f32>());
+    println!("总和：   {:.4}", probs.iter().sum::<f32>());
 
     let large = [100.0f32, 200.0, 300.0];
     let probs_l = softmax_vec(&large);
-    println!("\nLarge logits:  {:?}", large);
+    println!("\n大 logits：{:?}", large);
     println!("Softmax:       {:?}", probs_l.iter().map(|p| (p * 10000.0).round() / 10000.0).collect::<Vec<_>>());
-    println!("Sum:           {:.4}", probs_l.iter().sum::<f32>());
-    println!("(numerically stable, no overflow)");
+    println!("总和：          {:.4}", probs_l.iter().sum::<f32>());
+    println!("（数值稳定，不会溢出）");
 
     println!("\n{}", "=".repeat(60));
-    println!("MICROBENCH: 10K attention forwards");
+    println!("微基准测试：1 万次注意力前向传播");
     println!("{}", "=".repeat(60));
     let start = std::time::Instant::now();
     let mut sink = 0.0f32;
@@ -229,7 +229,7 @@ fn main() {
         sink += o.at(0, 0);
     }
     let elapsed = start.elapsed();
-    println!("10K forwards in {:.2}ms ({:.0}/sec)  sink={:.4}",
+    println!("1 万次前向传播耗时 {:.2}ms（{:.0}/秒）  累加值={:.4}",
         elapsed.as_secs_f64() * 1000.0,
         10_000.0 / elapsed.as_secs_f64(),
         sink,

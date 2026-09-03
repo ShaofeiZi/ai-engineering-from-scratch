@@ -1,6 +1,5 @@
-# Self-attention from scratch in Julia. Scaled dot-product attention,
-# numerically-stable row-wise softmax, single-head and multi-head
-# self-attention. Stdlib only. Sources:
+# 用 Julia 从零实现自注意力：缩放点积注意力、数值稳定的逐行 softmax，
+# 以及单头和多头自注意力。仅使用标准库。资料来源：
 #   https://arxiv.org/abs/1706.03762
 #   https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/
 #   https://docs.julialang.org/en/v1/stdlib/Random/
@@ -68,9 +67,9 @@ end
 
 
 function MultiHeadSelfAttention(d_model::Int, n_heads::Int; seed::Int=42)
-    @assert n_heads > 0 "n_heads must be > 0"
-    @assert d_model > 0 "d_model must be > 0"
-    @assert d_model % n_heads == 0 "d_model must be divisible by n_heads"
+    @assert n_heads > 0 "n_heads 必须大于 0"
+    @assert d_model > 0 "d_model 必须大于 0"
+    @assert d_model % n_heads == 0 "d_model 必须能被 n_heads 整除"
     dk = d_model ÷ n_heads
     dv = d_model ÷ n_heads
     heads = [SelfAttention(d_model, dk, dv; seed=seed + i) for i in 1:n_heads]
@@ -133,28 +132,28 @@ end
 
 function demo_softmax_stability()
     println("\n" * "=" ^ 60)
-    println("SOFTMAX NUMERIC STABILITY")
+    println("SOFTMAX 数值稳定性")
     println("=" ^ 60)
     logits = reshape([2.0, 1.0, 0.1], 1, 3)
     probs = softmax_rows(logits)
-    @printf("\nLogits:  [%s]\n", join([@sprintf("%.4f", v) for v in logits], ", "))
+    @printf("\nLogits： [%s]\n", join([@sprintf("%.4f", v) for v in logits], ", "))
     @printf("Softmax: [%s]\n", join([@sprintf("%.4f", v) for v in probs], ", "))
-    @printf("Sum:     %.4f\n", sum(probs))
+    @printf("总和：    %.4f\n", sum(probs))
 
     big_logits = reshape([100.0, 200.0, 300.0], 1, 3)
     big_probs = softmax_rows(big_logits)
-    @printf("\nLarge logits:  [%s]\n",
+    @printf("\n大 logits：[%s]\n",
             join([@sprintf("%.1f", v) for v in big_logits], ", "))
     @printf("Softmax:       [%s]\n",
             join([@sprintf("%.4f", v) for v in big_probs], ", "))
-    @printf("Sum:           %.4f\n", sum(big_probs))
-    println("(no overflow because we subtract the row maximum before exp)")
+    @printf("总和：          %.4f\n", sum(big_probs))
+    println("（计算 exp 前减去行最大值，因此不会溢出）")
 end
 
 
 function demo_self_attention()
     println("=" ^ 60)
-    println("SELF-ATTENTION FROM SCRATCH")
+    println("从零实现自注意力")
     println("=" ^ 60)
 
     tokens = ["The", "cat", "sat", "on", "the", "mat"]
@@ -166,16 +165,16 @@ function demo_self_attention()
     rng = MersenneTwister(42)
     X = randn(rng, n_tokens, d_model)
 
-    @printf("\nSentence: %s\n", join(tokens, " "))
-    @printf("Tokens: %d  d_model: %d  dk: %d  dv: %d\n", n_tokens, d_model, dk, dv)
-    @printf("Input shape: (%d, %d)\n", size(X, 1), size(X, 2))
+    @printf("\n句子：%s\n", join(tokens, " "))
+    @printf("Token 数：%d  d_model：%d  dk：%d  dv：%d\n", n_tokens, d_model, dk, dv)
+    @printf("输入形状：(%d, %d)\n", size(X, 1), size(X, 2))
 
     attn = SelfAttention(d_model, dk, dv; seed=42)
     output, weights = forward(attn, X)
-    @printf("\nOutput shape: (%d, %d)\n", size(output, 1), size(output, 2))
-    println("\nAttention weights:")
+    @printf("\n输出形状：(%d, %d)\n", size(output, 1), size(output, 2))
+    println("\n注意力权重：")
     print_attention_matrix(weights, tokens)
-    println("\nASCII heatmap (denser char = higher attention):")
+    println("\nASCII 热力图（字符越密，注意力越高）：")
     ascii_heatmap(weights, tokens)
     return tokens, X, d_model
 end
@@ -183,15 +182,15 @@ end
 
 function demo_multi_head(tokens::Vector{String}, X::Matrix{Float64}, d_model::Int)
     println("\n" * "=" ^ 60)
-    println("MULTI-HEAD SELF-ATTENTION")
+    println("多头自注意力")
     println("=" ^ 60)
     n_heads = 2
     mha = MultiHeadSelfAttention(d_model, n_heads; seed=42)
     out, head_weights = forward(mha, X)
-    @printf("\nHeads: %d  Output shape: (%d, %d)\n",
+    @printf("\n头数：%d  输出形状：(%d, %d)\n",
             n_heads, size(out, 1), size(out, 2))
     for (h, w) in enumerate(head_weights)
-        @printf("\nHead %d attention weights:\n", h)
+        @printf("\n第 %d 个头的注意力权重：\n", h)
         print_attention_matrix(w, tokens)
     end
 end
