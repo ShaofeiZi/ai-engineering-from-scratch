@@ -1,4 +1,4 @@
-"""Deterministic tests for MCP tool contracts and content."""
+"""MCP 工具契约与内容的确定性测试。"""
 
 from __future__ import annotations
 

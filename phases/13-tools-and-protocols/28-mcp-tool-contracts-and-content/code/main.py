@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 28: MCP tool contracts and content.
-Lesson: ../docs/en.md
-Specification: https://modelcontextprotocol.io/specification/2026-07-28/server/tools
-Utilities: completion and pagination in the MCP 2026-07-28 specification.
-This example uses only Python's standard library.
+"""阶段 13 第 28 课：MCP 工具合约与内容。
+课程：../docs/en.md
+规范：https://modelcontextprotocol.io/specification/2026-07-28/server/tools
+工具函数：完成与分页，见 MCP 2026-07-28 规范。
+本示例仅使用 Python 标准库。
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ SENSITIVE_NAMES = {
 
 
 class ContractViolation(ValueError):
-    """Raised when a descriptor or result violates the enforced contract."""
+    """当描述符或结果违反了强制合约时抛出。"""
 
 
 @dataclass
@@ -98,7 +98,7 @@ def _matches_type(value: Any, expected: str) -> bool:
 
 
 def validate_json_schema(value: Any, schema: dict[str, Any], path: str = "$") -> None:
-    """Validate the small JSON Schema 2020-12 subset used by this lesson."""
+    """验证本课程使用的 JSON Schema 2020-12 小型子集。"""
 
     if not isinstance(schema, dict):
         raise ContractViolation(f"{path}: schema must be an object")
@@ -138,7 +138,7 @@ def iter_header_annotation_nodes(
     node: Any,
     path: tuple[str | int, ...] = (),
 ) -> list[tuple[tuple[str | int, ...], dict[str, Any]]]:
-    """Find x-mcp-header anywhere, including combinators and definitions."""
+    """查找任意位置的 x-mcp-header，包括组合器和定义。"""
 
     found: list[tuple[tuple[str | int, ...], dict[str, Any]]] = []
     if isinstance(node, dict):
@@ -155,7 +155,7 @@ def iter_header_annotation_nodes(
 
 
 def validate_header_annotations(tool: dict[str, Any]) -> list[tuple[tuple[str, ...], str]]:
-    """Validate x-mcp-header plus a deployment policy for sensitive fields."""
+    """验证 x-mcp-header 以及针对敏感字段的部署策略。"""
 
     input_schema = tool.get("inputSchema")
     if not isinstance(input_schema, dict):
@@ -535,7 +535,7 @@ def _is_plain_visible_ascii(value: str) -> bool:
 
 
 def encode_parameter_header_value(value: str) -> str:
-    """Apply MCP's exact sentinel encoding when plain transport is ambiguous."""
+    """当普通传输存在歧义时，应用 MCP 的精确哨兵编码。"""
 
     sentinel_looking = value.startswith(BASE64_SENTINEL_PREFIX)
     if _is_plain_visible_ascii(value) and not sentinel_looking:
@@ -545,7 +545,7 @@ def encode_parameter_header_value(value: str) -> str:
 
 
 def decode_parameter_header_value(value: str) -> str:
-    """Decode a canonical MCP parameter-header value at the HTTP boundary."""
+    """在 HTTP 边界处解码规范的 MCP parameter-header 值。"""
 
     if not isinstance(value, str):
         raise ContractViolation("parameter header value must be a string")
@@ -601,7 +601,7 @@ def validate_parameter_headers(
     headers: dict[str, str],
     audit_log: list[dict[str, Any]],
 ) -> None:
-    """Compare recognized parameter headers with body arguments exactly."""
+    """精确比较已识别的参数头与请求体参数。"""
 
     normalized: dict[str, list[tuple[str, str]]] = {}
     for supplied_name, supplied_value in headers.items():
@@ -645,7 +645,7 @@ def streamable_http_tool_call(
     *,
     principal: str = "analyst",
 ) -> tuple[int, dict[str, Any] | None]:
-    """Model the Streamable HTTP parity gate before JSON-RPC dispatch."""
+    """在 JSON-RPC 分发之前，对 Streamable HTTP 的一致性闸门进行建模。"""
 
     if request.get("method") == "tools/call":
         params = request.get("params")
@@ -778,16 +778,16 @@ def main() -> None:
         audit_log,
     )
 
-    print("visible tools:", ", ".join(sorted(tools)))
-    print("rejected tools:", ", ".join(item["tool"] for item in client.rejections))
-    print("cursor trace:", ["<first>" if item is None else repr(item) for item in client.cursor_trace])
-    print("array structuredContent:", tags["structuredContent"])
-    print("content block types:", [block["type"] for block in bundle["content"]])
-    print("mirrored header names:", sorted(headers))
-    print("encoded parameter value:", headers["Mcp-Param-Region"].startswith(BASE64_SENTINEL_PREFIX))
-    print("HTTP parity status:", http_status)
-    print("audit event:", audit_log[0])
-    print("analyst completions:", client.complete_environment(""))
+    print("可见工具：", ", ".join(sorted(tools)))
+    print("被拒绝的工具：", ", ".join(item["tool"] for item in client.rejections))
+    print("游标轨迹：", ["<first>" if item is None else repr(item) for item in client.cursor_trace])
+    print("结构化内容的 array：", tags["structuredContent"])
+    print("内容块类型：", [block["type"] for block in bundle["content"]])
+    print("镜像头名称：", sorted(headers))
+    print("编码后的参数值：", headers["Mcp-Param-Region"].startswith(BASE64_SENTINEL_PREFIX))
+    print("HTTP 一致性状态：", http_status)
+    print("审计事件：", audit_log[0])
+    print("分析师补全结果：", client.complete_environment(""))
 
 
 if __name__ == "__main__":
