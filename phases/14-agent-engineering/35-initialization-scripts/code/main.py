@@ -1,10 +1,10 @@
-"""Deterministic agent initialization script.
+"""确定性智能体初始化脚本。
 
-Runs probes (runtime, deps, test command, env, state freshness, last-known-good
-diff, timing budget), writes init_report.json, supports prereqs.lock TTL
-short-circuit, and exits non-zero when any block-severity probe fails.
+运行探针（运行时、依赖、测试命令、环境、状态新鲜度、last-known-good
+diff、时间预算），写入 init_report.json，支持 prereqs.lock TTL
+short-circuit，并在任意 block-severity 探针失败时以 non-zero 退出。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -106,9 +106,9 @@ def probe_state_freshness() -> Probe:
 
 @_timed
 def probe_lkg_diff() -> Probe:
-    """Refuse to launch when diff against last-known-good exceeds the file budget.
+    """当与最后已知良好状态的差异超过文件预算时拒绝启动。
 
-    Anchors every session against the same baseline so drift cannot compound.
+    将每次会话锚定在同一基线上，使漂移无法累积。
     """
     if not LKG_PATH.exists():
         return Probe("lkg_diff", "warn", "no last_known_good.json; pin one after first successful merge")
@@ -146,9 +146,9 @@ def _deps_fingerprint() -> str:
 
 
 def lock_is_fresh() -> bool:
-    """Cache pattern: re-use prior probe pass when nothing material changed.
+    """缓存模式：当没有实质性变化时，复用先前探针通过的结果。
 
-    Same shape as Docker layer caches: idempotent probe + content hash = skip.
+    与 Docker 层缓存相同机制：幂等探针 + 内容哈希 = 跳过。
     """
     if not LOCK_PATH.exists():
         return False
@@ -197,14 +197,14 @@ def main(argv: list[str] | None = None) -> int:
         try:
             head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=HERE, text=True, timeout=2.0).strip()
             LKG_PATH.write_text(json.dumps({"commit": head, "written_at": time.time()}, indent=2) + "\n")
-            print(f"pinned LKG -> {head[:7]}")
+            print(f"已固定的 LKG -> {head[:7]}")
             return 0
         except (FileNotFoundError, subprocess.CalledProcessError) as exc:
-            print(f"lkg pin failed: {exc}", file=sys.stderr)
+            print(f"lkg 固定失败：{exc}", file=sys.stderr)
             return 1
 
     if not args.no_cache and lock_is_fresh():
-        print(f"prereqs.lock fresh (TTL {LOCK_TTL_SECONDS}s); skipping probes")
+        print(f"prereqs.lock 新鲜（TTL {LOCK_TTL_SECONDS}秒）；跳过探针")
         return 0
 
     probes = run_probes()
@@ -217,13 +217,13 @@ def main(argv: list[str] | None = None) -> int:
 
     width = max(len(p.name) for p in probes)
     for p in probes:
-        print(f"  {p.name:<{width}}  {p.status:>4}  {p.duration_ms:>4}ms  {p.detail}")
+        print(f"  {p.name:<{width}}  {p.status:>4}  {p.duration_ms:>4}毫秒  {p.detail}")
 
     if not report["ok"]:
-        print("\ninit failed; refuse to launch agent", file=sys.stderr)
+        print("\n初始化失败；拒绝启动智能体", file=sys.stderr)
         return 1
     write_lock()
-    print("\ninit ok (lock refreshed)")
+    print("\n初始化成功（锁已刷新）")
     return 0
 
 
