@@ -1,11 +1,11 @@
-"""Architecture calculator for open LLMs.
+"""开放 LLM 的架构计算器。
 
-Given a HuggingFace-style config dict, compute parameter counts by component,
-KV cache at max context, MLP ratio, and a verdict on the architecture. Ships
-with configs for Llama 3 8B, Mistral 7B, Mixtral 8x7B, DeepSeek V3, Qwen 2.5,
-and GPT-2 Small for direct comparison.
+鉴于一个HuggingFace风格的配置 dict,计算参数数按组件计算,
+最大上下文的KV cache,MLP比例,和对架构的判断. 船舶
+带有Llama 3 8B,Mistral 7B,Mixtral 8x7B,DeepSeek V3,Quen 2.5的配置,
+和 GPT-2 键 小于直接比较.
 
-Stdlib only. No torch, no downloads. The point is to read configs, not weights.
+仅使用标准库，不依赖 PyTorch，也不下载权重；重点是理解配置，而非加载模型。
 """
 
 from __future__ import annotations
@@ -256,27 +256,27 @@ def fmt_bytes(b: int) -> str:
 def print_breakdown(b: Breakdown, config: dict) -> None:
     print(f"\n{b.name}")
     print("-" * 70)
-    print(f"  architecture    : {b.verdict}")
-    print(f"  total params    : {fmt_billions(b.total_params)}")
-    print(f"  active params   : {fmt_billions(b.active_params)}")
-    print(f"  embedding       : {fmt_billions(b.embedding_params)}")
-    print(f"  attn / layer    : {fmt_billions(b.attn_params_per_layer)}")
-    print(f"  mlp  / layer    : {fmt_billions(b.mlp_params_per_layer)}  "
-          f"(ratio ff/h = {b.mlp_ratio:.2f})")
-    print(f"  context length  : {config['max_position_embeddings']:,}")
-    print(f"  KV cache BF16   : {fmt_bytes(b.kv_cache_bytes_bf16)}  (per sequence at max context)")
+    print(f"  架构：          {b.verdict}")
+    print(f"  总参数量：      {fmt_billions(b.total_params)}")
+    print(f"  激活参数量：    {fmt_billions(b.active_params)}")
+    print(f"  embedding：     {fmt_billions(b.embedding_params)}")
+    print(f"  每层 attention：{fmt_billions(b.attn_params_per_layer)}")
+    print(f"  每层 MLP：      {fmt_billions(b.mlp_params_per_layer)}  "
+          f"（ff/h 比率 = {b.mlp_ratio:.2f}）")
+    print(f"  上下文长度：    {config['max_position_embeddings']:,}")
+    print(f"  BF16 KV cache： {fmt_bytes(b.kv_cache_bytes_bf16)}（最大上下文下每个序列）")
 
 
 def main() -> None:
     print("=" * 70)
-    print("OPEN MODEL ARCHITECTURE WALKTHROUGH")
+    print("开放模型架构解析")
     print("=" * 70)
     for name, config in CONFIGS.items():
         b = analyze(name, config)
         print_breakdown(b, config)
     print()
     print("=" * 70)
-    print("HEADLINE RATIOS")
+    print("架构汇总")
     print("=" * 70)
     for name, config in CONFIGS.items():
         b = analyze(name, config)
