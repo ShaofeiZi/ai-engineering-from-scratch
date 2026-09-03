@@ -99,6 +99,10 @@ function validLessonPath(value) {
   return /^(?:phases\/[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*|certifications\/claude\/lessons\/[a-z0-9][a-z0-9-]*)$/.test(value);
 }
 
+function isCertificationLessonPath(value) {
+  return typeof value === 'string' && value.startsWith('certifications/claude/lessons/');
+}
+
 function validTrackId(value) {
   return /^[a-z0-9][a-z0-9-]*$/.test(value || '');
 }
@@ -169,13 +173,25 @@ function lessonReference(ref) {
 }
 
 function lessonHead(entry, lessonPath, heading) {
+  const certificationLesson = entry.context && entry.context.kind === 'certification';
+  const localized = !certificationLesson
+    ? (entry.zh && typeof entry.zh === 'object' ? entry.zh : {})
+    : null;
+  if (!certificationLesson) heading = localized.title || '中文课程';
   const canonical = canonicalForLesson(lessonPath);
-  const title = entry.seoTitle || `${entry.title} - AI Engineering from Scratch`;
-  const description = entry.description || entry.excerpt || 'A lesson from the AI Engineering from Scratch curriculum.';
-  const courseName = contextLabel(entry.context);
-  const breadcrumbParent = entry.context && entry.context.kind === 'certification'
+  const title = localized
+    ? (localized.seoTitle || `${localized.title || '中文课程'} - AI Engineering from Scratch`)
+    : (entry.seoTitle || `${entry.title} - AI Engineering from Scratch`);
+  const description = localized
+    ? (localized.description || localized.excerpt || 'AI Engineering from Scratch 中文课程。')
+    : (entry.description || entry.excerpt || 'A lesson from the AI Engineering from Scratch curriculum.');
+  const courseName = certificationLesson
+    ? contextLabel(entry.context)
+    : 'AI Engineering from Scratch 中文课程';
+  const breadcrumbHome = certificationLesson ? 'Home' : '首页';
+  const breadcrumbParent = certificationLesson
     ? { name: 'Certifications', url: `${ORIGIN}/certifications.html` }
-    : { name: 'Course catalog', url: `${ORIGIN}/catalog.html` };
+    : { name: '课程目录', url: `${ORIGIN}/catalog.html` };
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -186,7 +202,7 @@ function lessonHead(entry, lessonPath, heading) {
         description,
         url: canonical,
         mainEntityOfPage: canonical,
-        inLanguage: 'en',
+        inLanguage: certificationLesson ? 'en' : 'zh-CN',
         isAccessibleForFree: true,
         isPartOf: {
           '@type': 'Course',
@@ -199,7 +215,7 @@ function lessonHead(entry, lessonPath, heading) {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: ORIGIN },
+          { '@type': 'ListItem', position: 1, name: breadcrumbHome, item: ORIGIN },
           { '@type': 'ListItem', position: 2, name: breadcrumbParent.name, item: breadcrumbParent.url },
           { '@type': 'ListItem', position: 3, name: heading, item: canonical },
         ],
@@ -224,6 +240,15 @@ function lessonHead(entry, lessonPath, heading) {
   ].join('\n');
 }
 
+function setDocumentLanguage(html, language) {
+  return html.replace(/<html(\s[^>]*)?>/i, function (tag) {
+    if (/\slang=["'][^"']*["']/i.test(tag)) {
+      return tag.replace(/\slang=["'][^"']*["']/i, ` lang="${language}"`);
+    }
+    return tag.replace(/>$/, ` lang="${language}">`);
+  });
+}
+
 function lessonHref(ref, contextParams) {
   const params = new URLSearchParams();
   params.set('path', ref.path);
@@ -234,35 +259,91 @@ function lessonHref(ref, contextParams) {
 }
 
 function lessonFallback(entry, lessonPath, contextParams, heading) {
+  const certificationLesson = entry.context && entry.context.kind === 'certification';
+  const localized = !certificationLesson
+    ? (entry.zh && typeof entry.zh === 'object' ? entry.zh : {})
+    : null;
+  if (!certificationLesson) heading = localized.title || '中文课程暂不可用';
   const trackId = contextParams && contextParams.track;
   const trackNavigation = trackId && entry.navigationByTrack && entry.navigationByTrack[trackId];
   const navigation = trackNavigation || entry;
   const previous = lessonReference(navigation.previous);
   const next = lessonReference(navigation.next);
-  const context = contextLabel(entry.context);
+  const context = certificationLesson ? contextLabel(entry.context) : 'AI Engineering from Scratch 中文课程';
   const sourceUrl = typeof entry.sourceUrl === 'string' && /^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+\/(?:tree|blob)\/[^/?#]+\//.test(entry.sourceUrl)
     ? entry.sourceUrl
     : '';
   const links = [];
-  if (previous) links.push(`<a class="lesson-nav-btn prev" href="${lessonHref(previous, contextParams)}"><span class="nav-label">&larr; Previous</span><span class="nav-title">${escapeHtml(previous.title)}</span></a>`);
-  if (next) links.push(`<a class="lesson-nav-btn next" href="${lessonHref(next, contextParams)}"><span class="nav-label">Next &rarr;</span><span class="nav-title">${escapeHtml(next.title)}</span></a>`);
-  const excerpt = entry.excerpt || entry.description;
+  if (previous) links.push(certificationLesson
+    ? `<a class="lesson-nav-btn prev" href="${lessonHref(previous, contextParams)}"><span class="nav-label">&larr; Previous</span><span class="nav-title">${escapeHtml(previous.title)}</span></a>`
+    : `<a class="lesson-nav-btn prev" href="${lessonHref(previous, contextParams)}"><span class="nav-label">&larr; 上一课</span></a>`);
+  if (next) links.push(certificationLesson
+    ? `<a class="lesson-nav-btn next" href="${lessonHref(next, contextParams)}"><span class="nav-label">Next &rarr;</span><span class="nav-title">${escapeHtml(next.title)}</span></a>`
+    : `<a class="lesson-nav-btn next" href="${lessonHref(next, contextParams)}"><span class="nav-label">下一课 &rarr;</span></a>`);
+  const excerpt = localized
+    ? (localized.excerpt || localized.description)
+    : (entry.excerpt || entry.description);
 
   return [
     '        <article class="lesson-article lesson-seo-fallback" data-server-rendered="true">',
     `          <p class="lesson-meta-tag">${escapeHtml(context)}</p>`,
     `          <h1>${escapeHtml(heading)}</h1>`,
     excerpt ? `          <p class="motto">${escapeHtml(excerpt)}</p>` : '',
-    entry.description && entry.description !== excerpt ? `          <p>${escapeHtml(entry.description)}</p>` : '',
-    `          <p>This free lesson is part of the AI Engineering from Scratch curriculum. Read the full explanation, run the lesson code, and verify the result in the interactive reader or from the repository source.</p>`,
-    '          <p><a href="catalog.html">Browse the complete course catalog</a>' + (sourceUrl ? ` or <a href="${escapeHtml(sourceUrl)}">open this lesson on GitHub</a>` : '') + '.</p>',
-    links.length ? `          <nav class="lesson-nav-bottom" aria-label="Lesson navigation">${links.join('')}</nav>` : '',
+    certificationLesson && entry.description && entry.description !== excerpt
+      ? `          <p>${escapeHtml(entry.description)}</p>`
+      : '',
+    certificationLesson
+      ? `          <p>This free lesson is part of the AI Engineering from Scratch curriculum. Read the full explanation, run the lesson code, and verify the result in the interactive reader or from the repository source.</p>`
+      : `          <p>本课程属于 AI Engineering from Scratch 中文课程。请阅读完整讲解、运行课程代码并验证结果。</p>`,
+    certificationLesson
+      ? '          <p><a href="catalog.html">Browse the complete course catalog</a>' + (sourceUrl ? ` or <a href="${escapeHtml(sourceUrl)}">open this lesson on GitHub</a>` : '') + '.</p>'
+      : '          <p><a href="catalog.html">浏览完整课程目录</a>' + (sourceUrl ? `，或<a href="${escapeHtml(sourceUrl)}">在 GitHub 打开本课程</a>` : '') + '。</p>',
+    links.length ? `          <nav class="lesson-nav-bottom" aria-label="${certificationLesson ? 'Lesson navigation' : '课程导航'}">${links.join('')}</nav>` : '',
     '        </article>',
   ].filter(Boolean).join('\n');
 }
 
-function errorPage(title, message) {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>${escapeHtml(title)} - AI Engineering from Scratch</title></head><body><main><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><nav aria-label="Recovery links"><ul><li><a href="/catalog.html">Course catalog</a></li><li><a href="/sitemap.xml">Sitemap</a></li><li><a href="/llms.txt">Agent curriculum index</a></li></ul></nav></main></body></html>`;
+function certificationLessonShell(headMarkup, fallbackMarkup) {
+  return [
+    '<!DOCTYPE html>',
+    '<html lang="en" data-theme="light">',
+    '<head>',
+    '  <meta charset="UTF-8">',
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    headMarkup,
+    '  <link rel="preconnect" href="https://fonts.googleapis.com">',
+    '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    '  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">',
+    '  <link rel="stylesheet" href="style.css?v=20260824a">',
+    '  <link rel="stylesheet" href="certifications.css?v=20260809a">',
+    '</head>',
+    '<body data-cert-page="lesson">',
+    '  <a href="#main" class="skip-link">Skip to content</a>',
+    '  <header class="site-header"><div class="header-inner">',
+    '    <a href="index.html" class="logo"><span class="logo-icon" aria-hidden="true"></span> AI / FROM SCRATCH</a>',
+    '    <nav class="header-nav"><a href="index.html#contents">Contents</a><a href="catalog.html">Catalog</a><a href="prereqs.html">Roadmap</a><a href="glossary.html">Glossary</a><a href="about.html">About</a><a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener" class="header-github"><span>GitHub</span><span class="star-count" data-loading="true">…</span></a></nav>',
+    '    <button class="search-toggle" type="button" data-cmd-palette aria-label="Search"><span aria-hidden="true">⌕</span></button>',
+    '    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" type="button"><span class="theme-icon" id="themeIcon">N</span></button>',
+    '  </div></header>',
+    '  <main id="main" class="cert-page">',
+    '    <section class="cert-container cert-track-hero lesson-seo-shell" aria-live="polite">',
+    fallbackMarkup,
+    '    </section>',
+    '  </main>',
+    '  <footer class="site-footer"><div class="container footer-inner"><p>AI Engineering from Scratch · open source · free forever.</p><div class="footer-links"><a href="certifications.html">All certifications</a><a href="catalog.html">Course catalog</a><a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">GitHub</a></div></div></footer>',
+    '  <script src="data.js?v=5c1c014aea05"></script><script src="certification-data.js?v=20260809c"></script><script src="progress.js?v=20260828a"></script><script src="certification-progress.js?v=20260808c"></script><script src="header.js?v=e3c97f011603" defer></script><script src="cmdpalette.js?v=82121b9ee852" defer></script><script src="certifications.js?v=20260809a" defer></script>',
+    '</body>',
+    '</html>',
+  ].join('\n');
+}
+
+function errorPage(title, message, certificationLesson) {
+  const language = certificationLesson ? 'en' : 'zh-CN';
+  const recoveryLabel = certificationLesson ? 'Recovery links' : '继续浏览';
+  const links = certificationLesson
+    ? '<li><a href="/catalog.html">Course catalog</a></li><li><a href="/sitemap.xml">Sitemap</a></li><li><a href="/llms.txt">Agent curriculum index</a></li>'
+    : '<li><a href="/catalog.html">课程目录</a></li><li><a href="/sitemap.xml">站点地图</a></li><li><a href="/llms.txt">智能体课程索引</a></li>';
+  return `<!DOCTYPE html><html lang="${language}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex"><title>${escapeHtml(title)} - AI Engineering from Scratch</title></head><body><main><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><nav aria-label="${recoveryLabel}"><ul>${links}</ul></nav></main></body></html>`;
 }
 
 function send(res, method, status, body, cacheControl) {
@@ -324,14 +405,7 @@ function normalizedLessonLocation(req, lessonPath, entry, assets) {
     needsRedirect = true;
   }
 
-  if (hasQuery(req, 'lang')) {
-    const lang = queryValue(req, 'lang');
-    if (!certificationLesson && validLanguageCode(lang) && listedValue(assets.languageCodes, lang)) {
-      params.set('lang', lang);
-    } else {
-      needsRedirect = true;
-    }
-  }
+  if (hasQuery(req, 'lang')) needsRedirect = true;
 
   if (hasQuery(req, 'ttsTest')) {
     if (isLocalRequest(req) && queryValue(req, 'ttsTest') === 'silent') {
@@ -364,15 +438,32 @@ function createHandler(options) {
     : loadProductionAssets;
   return function lessonHandler(req, res) {
     const method = String(req.method || 'GET').toUpperCase();
+    const lessonPath = queryValue(req, 'path');
+    const certificationLesson = isCertificationLessonPath(lessonPath);
     if (method !== 'GET' && method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');
-      send(res, method, 405, errorPage('Method not allowed', 'Use GET or HEAD for lesson pages.'), 'no-store');
+      send(
+        res,
+        method,
+        405,
+        certificationLesson
+          ? errorPage('Method not allowed', 'Use GET or HEAD for lesson pages.', true)
+          : errorPage('不支持此请求方式', '课程页面仅支持 GET 或 HEAD 请求。', false),
+        'no-store'
+      );
       return;
     }
 
-    const lessonPath = queryValue(req, 'path');
     if (!validLessonPath(lessonPath)) {
-      send(res, method, 404, errorPage('Lesson not found', 'This lesson path does not exist. Use the catalog, sitemap, or agent curriculum index to continue.'), 'no-store');
+      send(
+        res,
+        method,
+        404,
+        certificationLesson
+          ? errorPage('Lesson not found', 'This lesson path does not exist. Use the catalog, sitemap, or agent curriculum index to continue.', true)
+          : errorPage('未找到课程', '该课程路径不存在。请前往课程目录、站点地图或智能体课程索引继续浏览。', false),
+        'no-store'
+      );
       return;
     }
     try {
@@ -385,7 +476,15 @@ function createHandler(options) {
         ? manifest.lessons[lessonPath]
         : null;
       if (!entry || entry.path !== lessonPath || !entry.title) {
-        send(res, method, 404, errorPage('Lesson not found', 'This lesson path is not part of the current curriculum. Use the catalog, sitemap, or agent curriculum index to continue.'), 'no-store');
+        send(
+          res,
+          method,
+          404,
+          certificationLesson
+            ? errorPage('Lesson not found', 'This lesson path is not part of the current curriculum. Use the catalog, sitemap, or agent curriculum index to continue.', true)
+            : errorPage('未找到课程', '该课程路径不在当前课程体系中。请前往课程目录、站点地图或智能体课程索引继续浏览。', false),
+          'no-store'
+        );
         return;
       }
       const normalized = normalizedLessonLocation(req, lessonPath, entry, assets);
@@ -399,11 +498,27 @@ function createHandler(options) {
         if (normalized.params.has(name)) contextParams[name] = normalized.params.get(name);
       }
       const heading = lessonHeading(entry, manifest);
-      let html = replaceMarkedRegion(template, SEO_START, SEO_END, lessonHead(entry, lessonPath, heading));
-      html = replaceMarkedRegion(html, FALLBACK_START, FALLBACK_END, lessonFallback(entry, lessonPath, contextParams, heading));
+      const headMarkup = lessonHead(entry, lessonPath, heading);
+      const fallbackMarkup = lessonFallback(entry, lessonPath, contextParams, heading);
+      let html;
+      if (certificationLesson) {
+        html = certificationLessonShell(headMarkup, fallbackMarkup);
+      } else {
+        html = replaceMarkedRegion(template, SEO_START, SEO_END, headMarkup);
+        html = replaceMarkedRegion(html, FALLBACK_START, FALLBACK_END, fallbackMarkup);
+        html = setDocumentLanguage(html, 'zh-CN');
+      }
       send(res, method, 200, html, 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800');
     } catch (_) {
-      send(res, method, 500, errorPage('Lesson page unavailable', 'The lesson page could not be assembled. Continue from the course catalog while this page is restored.'), 'no-store');
+      send(
+        res,
+        method,
+        500,
+        certificationLesson
+          ? errorPage('Lesson page unavailable', 'The lesson page could not be assembled. Continue from the course catalog while this page is restored.', true)
+          : errorPage('课程页面暂不可用', '课程页面暂时无法生成。修复期间，请先从课程目录继续学习。', false),
+        'no-store'
+      );
     }
   };
 }

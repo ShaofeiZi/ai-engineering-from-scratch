@@ -38,8 +38,8 @@ function qualityFor(accepted, mediaType) {
 
 function markdownFor(requestPath) {
   const llms = fs.readFileSync(path.join(SITE_ROOT, 'llms.txt'), 'utf8');
-  if (requestPath === '/') return llms;
-  return `# AI Engineering from Scratch\n\nCanonical page: https://aiengineeringfromscratch.com${requestPath}\n\nThe agent-oriented curriculum index is available at https://aiengineeringfromscratch.com/llms.txt.\n\n${llms}`;
+  if (requestPath === '/') return `# AI Engineering from Scratch 中文课程\n\n${llms}`;
+  return `# AI Engineering from Scratch 中文课程\n\n规范页面：https://aiengineeringfromscratch.com${requestPath}\n\n面向智能体的课程索引：https://aiengineeringfromscratch.com/llms.txt。\n\n${llms}`;
 }
 
 module.exports = (req, res) => {
@@ -55,7 +55,7 @@ module.exports = (req, res) => {
     res.statusCode = 404;
     if (markdownQ >= htmlQ && markdownQ > 0) {
       res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
-      res.end('# AI Engineering from Scratch\n\nThis path does not exist.\n\nTry /llms.txt or /sitemap.xml.\n');
+      res.end('# 页面不存在\n\n该路径不存在。请尝试 /llms.txt 或 /sitemap.xml。\n');
     } else {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(fs.readFileSync(path.join(SITE_ROOT, '404.html'), 'utf8'));
