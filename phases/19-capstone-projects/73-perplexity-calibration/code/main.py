@@ -1,11 +1,11 @@
-"""Perplexity and calibration: ECE, Brier, reliability diagram.
+"""困惑度与校准：ECE、Brier 分数、可靠性图。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- lesson 70 (task spec format)
-- lesson 71 (classical metrics) for the scalar dispatch pattern
+概念参考：
+- ./docs/en.md（本节课）
+- 第 70 课（任务规格格式）
+- 第 71 课（经典指标）中的标量分发模式
 
-Stdlib + numpy. Run: python3 code/main.py
+仅依赖标准库 + numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -34,14 +34,14 @@ class PerplexityResult:
     @classmethod
     def from_token_nll(cls, neg_log_probs: Sequence[float], token_counts: Sequence[int]) -> "PerplexityResult":
         if len(neg_log_probs) != len(token_counts):
-            raise ValueError("neg_log_probs and token_counts must align")
+            raise ValueError("neg_log_probs 与 token_counts 的长度必须一致")
         total_nll = 0.0
         total_tokens = 0
         for nll, n in zip(neg_log_probs, token_counts):
             if nll < 0:
-                raise ValueError("neg_log_probs must be non-negative (did you forget the negation?)")
+                raise ValueError("neg_log_probs 必须非负（是否漏掉了取负号？）")
             if n < 0:
-                raise ValueError("token_counts must be non-negative")
+                raise ValueError("token_counts 必须非负")
             total_nll += float(nll)
             total_tokens += int(n)
         if total_tokens == 0:
@@ -56,16 +56,16 @@ def perplexity(neg_log_probs: Sequence[float], token_counts: Sequence[int]) -> f
 
 def _validate_probs(confidences: np.ndarray, correct: np.ndarray) -> None:
     if confidences.shape != correct.shape:
-        raise ValueError("confidences and correct must have the same shape")
+        raise ValueError("confidences 与 correct 的形状必须一致")
     if confidences.ndim != 1:
-        raise ValueError("confidences must be 1-D")
+        raise ValueError("confidences 必须是一维数组")
     if confidences.size == 0:
         return
     if float(confidences.min()) < 0.0 or float(confidences.max()) > 1.0:
-        raise ValueError("confidences must lie in [0, 1]")
+        raise ValueError("confidences 必须落在 [0, 1] 区间内")
     uniq = set(np.unique(correct).tolist())
     if not uniq.issubset({0, 1, 0.0, 1.0, True, False}):
-        raise ValueError("correct must be 0/1 or boolean")
+        raise ValueError("correct 必须是 0/1 或布尔值")
 
 
 def _bin_indices(confidences: np.ndarray, n_bins: int) -> np.ndarray:
@@ -80,7 +80,7 @@ def expected_calibration_error(confidences: Sequence[float], correct: Sequence[i
     corr = np.asarray(correct, dtype=np.float64)
     _validate_probs(conf, corr)
     if bins <= 0:
-        raise ValueError("bins must be positive")
+        raise ValueError("bins 必须为正数")
     n = conf.size
     if n == 0:
         return (0.0, 0)
@@ -110,7 +110,7 @@ def brier_score(confidences: Sequence[float], correct: Sequence[int]) -> float:
 
 def brier_decomposition(confidences: Sequence[float], correct: Sequence[int], bins: int = 10) -> dict:
     if bins <= 0:
-        raise ValueError("bins must be positive")
+        raise ValueError("bins 必须为正数")
     conf = np.asarray(confidences, dtype=np.float64)
     corr = np.asarray(correct, dtype=np.float64)
     _validate_probs(conf, corr)
@@ -142,7 +142,7 @@ def brier_decomposition(confidences: Sequence[float], correct: Sequence[int], bi
 
 def reliability_diagram(confidences: Sequence[float], correct: Sequence[int], bins: int = 10) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     if bins <= 0:
-        raise ValueError("bins must be positive")
+        raise ValueError("bins 必须为正数")
     conf = np.asarray(confidences, dtype=np.float64)
     corr = np.asarray(correct, dtype=np.float64)
     _validate_probs(conf, corr)

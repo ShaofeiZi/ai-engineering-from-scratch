@@ -1,4 +1,4 @@
-"""Tests for perplexity, ECE, Brier, reliability diagram, and CalibrationReport."""
+"""perplexity、ECE、Brier、可靠性图与 CalibrationReport 的测试。"""
 
 from __future__ import annotations
 
