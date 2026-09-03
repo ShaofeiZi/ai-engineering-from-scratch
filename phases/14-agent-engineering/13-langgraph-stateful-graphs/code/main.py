@@ -1,7 +1,7 @@
-"""LangGraph-shaped stateful graph in stdlib, with checkpoint and resume.
+"""仿 LangGraph 的标准库有状态图，支持检查点与恢复。
 
-State is a typed dict. Nodes return update dicts. Runtime serializes state
-after every node so resume picks up exactly where it left off.
+状态是一个带类型的字典。节点返回更新字典。运行时在每个节点之后
+序列化状态，因此恢复时会从上次中断的位置精确继续。
 """
 
 from __future__ import annotations
@@ -185,7 +185,7 @@ def build_graph() -> StateGraph:
 
 def main() -> None:
     print("=" * 70)
-    print("LANGGRAPH STATE MACHINE — Phase 14, Lesson 13")
+    print("LANGGRAPH 状态机 — 第 14 阶段，第 13 课")
     print("=" * 70)
 
     graph = build_graph()
@@ -196,20 +196,20 @@ def main() -> None:
     initial: State = {"input": "the CLI crashes on ctrl-c, please fix",
                       "step": 0, "human_approval": False}
 
-    print("\nfirst run (will pause at human_gate)")
+    print("\n首次运行（将在 human_gate 处暂停）")
     try:
         final = runner.run(session, initial)
-        print(f"  final: {final}")
+        print(f"  最终结果: {final}")
     except PausedAtNode as paused:
-        print(f"  PAUSED at {paused.node}")
-        print(f"  state at pause: {json.dumps(paused.state, default=str)}")
+        print(f"  PAUSED 位于 {paused.node}")
+        print(f"  暂停时的状态: {json.dumps(paused.state, default=str)}")
 
-    print("\ncheckpoint history")
+    print("\n检查点历史记录")
     for node, snap in ckpt.history(session):
         print(f"  {node}  route={snap.get('route')}  "
               f"ticket={snap.get('ticket')}  step={snap.get('step')}")
 
-    print("\nhuman approves; resume from next node after human_gate")
+    print("\n人工审批通过；从 human_gate 之后的下一个节点恢复")
     latest = ckpt.load_latest(session)
     assert latest is not None
     last_node, last_state = latest
@@ -223,11 +223,11 @@ def main() -> None:
         resume_from="send",
         state_override=approved_state,
     )
-    print(f"  final: {final}")
+    print(f"  最终结果: {final}")
 
     print()
-    print("property: state serializes after every node; resume is exact.")
-    print("no fresh re-runs after step 38 fails; pick up at step 39.")
+    print("特性说明：状态在每个节点之后都会序列化；恢复是精确的。")
+    print("第 38 步失败后不会重新执行；从第 39 步继续。")
 
 
 if __name__ == "__main__":
