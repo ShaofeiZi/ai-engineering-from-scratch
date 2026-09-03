@@ -1,10 +1,10 @@
-"""Hypothesis generator: temperature ramped sampling, novelty filter, ranked queue.
+"""假设生成器：温度递增采样、新颖性过滤、排序队列。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 Track A lessons 20-29 (agent harness primitives)
+概念参考：
+- ./docs/en.md（本课）
+- Phase 19 Track A 第 20-29 课（智能体框架原语）
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ class Hypothesis:
 
 
 class ParserError(ValueError):
-    """Raised when a sampler response does not match the hypothesis tag schema."""
+    """当采样器响应不符合假设标签 schema 时抛出。"""
 
 
 def _tokenise(text: str) -> list[str]:
@@ -64,7 +64,7 @@ def _tokenise(text: str) -> list[str]:
 
 
 def hashed_embed(text: str, dim: int = HASH_DIM) -> list[float]:
-    """Hashed bag of tokens embedding, L2 normalised. Deterministic stdlib only."""
+    """哈希词袋嵌入，L2 归一化。仅使用确定性标准库。"""
     vec = [0.0] * dim
     for tok in _tokenise(text):
         h = hashlib.md5(tok.encode("utf-8")).digest()
@@ -108,7 +108,7 @@ def parse_response(raw: str) -> dict:
 
 
 def temperature_bucket(temperature: float) -> int:
-    """Map a continuous temperature to a discrete bucket index."""
+    """将连续 temperature 映射到离散桶索引。"""
     if temperature < 0.35:
         return 0
     if temperature < 0.65:
@@ -119,11 +119,10 @@ def temperature_bucket(temperature: float) -> int:
 
 
 class MockLLM:
-    """Scripted sampler keyed on (prompt_signature, temperature_bucket).
+    """以 ``(prompt_signature, temperature_bucket)`` 为键的脚本化采样器。
 
-    The seed is folded into the response so identical prompts and buckets with
-    different seeds yield distinct drafts. Unknown keys return an unparseable
-    fallback so the parser-failure path is reachable from tests.
+    seed 会参与响应选择，因此相同提示词和桶在 seed 不同时会生成不同草稿。
+    未知键返回无法解析的回退文本，让测试能够覆盖解析失败路径。
     """
 
     def __init__(self, scripts: dict[tuple[str, int], list[str]]) -> None:
@@ -183,7 +182,7 @@ class GenerationLog:
 
 
 class HypothesisGenerator:
-    """Drives the mock LLM over a temperature schedule and ranks the survivors."""
+    """按 temperature 调度驱动模拟 LLM，并对保留结果排序。"""
 
     def __init__(
         self,
@@ -256,7 +255,7 @@ class HypothesisGenerator:
 
 
 def build_demo_scripts() -> dict[tuple[str, int], list[str]]:
-    """Scripted responses for the demo seed prompt across temperature buckets."""
+    """演示种子提示词在不同 temperature 桶中的脚本化响应。"""
     seed_prompt = "Investigate attention sparsity in small transformers"
     sig = MockLLM.prompt_signature(seed_prompt)
     return {
