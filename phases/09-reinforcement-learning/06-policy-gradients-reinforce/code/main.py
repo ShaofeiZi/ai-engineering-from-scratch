@@ -138,17 +138,17 @@ def main():
     rng = random.Random(42)
     theta_b, r_base = reinforce(episodes, use_baseline=True, rng=rng)
 
-    print(f"=== REINFORCE on 4x4 GridWorld, {episodes} episodes, lr=0.05, gamma=0.99 ===")
+    print(f"=== 4x4 GridWorld 上的 REINFORCE，{episodes} 个回合，lr=0.05，gamma=0.99 ===")
     print()
-    print("learning curves (mean return per 200 episodes):")
+    print("学习曲线（每 200 个回合的平均回报）：")
     for i, (a, b) in enumerate(zip(block_mean(r_plain, 200), block_mean(r_base, 200))):
-        print(f"  block {i+1}: vanilla={a:7.2f}   with-baseline={b:7.2f}")
+        print(f"  分组 {i+1}：原始方法={a:7.2f}   使用基线={b:7.2f}")
 
     print()
     print_policy(greedy_policy(theta_b), "final greedy policy (with-baseline)")
     print()
-    print(f"final mean return (last 200 eps): vanilla={sum(r_plain[-200:])/200:.2f}   with-baseline={sum(r_base[-200:])/200:.2f}")
-    print("(optimal return on this 4x4 GridWorld = -6.0)")
+    print(f"最终平均回报（最后 200 个回合）：原始方法={sum(r_plain[-200:])/200:.2f}   使用基线={sum(r_base[-200:])/200:.2f}")
+    print("（此 4x4 GridWorld 的最优回报 = -6.0）")
 
 
 if __name__ == "__main__":
