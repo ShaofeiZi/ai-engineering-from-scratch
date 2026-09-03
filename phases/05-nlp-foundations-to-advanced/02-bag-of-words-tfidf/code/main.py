@@ -76,15 +76,15 @@ def main():
     tfidf_vectors = l2_normalize(tfidf(bow))
 
     words = sorted(vocab, key=lambda w: vocab[w])
-    print(f"vocab: {words}")
+    print(f"词表：{words}")
     print()
     for i, (r, v) in enumerate(zip(raw, tfidf_vectors)):
         pretty = [f"{x:.2f}" for x in v]
         print(f"d{i}: {r}")
-        print(f"    tfidf: {pretty}")
+        print(f"    TF-IDF：{pretty}")
         print()
 
-    print("cosine similarity matrix:")
+    print("余弦相似度矩阵：")
     for i in range(len(tfidf_vectors)):
         row = [f"{cosine_similarity(tfidf_vectors[i], tfidf_vectors[j]):.2f}" for j in range(len(tfidf_vectors))]
         print(f"  d{i}: {row}")
