@@ -1,8 +1,8 @@
-"""Toy Self-Refine and CRITIC loop.
+"""玩具 Self-Refine 和 CRITIC 循环。
 
-Task: produce a 3-bullet summary under 60 chars per bullet that does not contain
-known factual errors. Self-Refine uses LLM-style self-critique; CRITIC routes
-verification through an external fact list.
+任务：生成一个3条要点摘要，每条不超过60个字符，且不含
+已知的事实错误。Self-Refine 使用 LLM-style self-critique；CRITIC 通过外部事实列表进行
+验证。
 """
 
 from __future__ import annotations
@@ -93,14 +93,14 @@ def print_run(label: str, history: list[Attempt]) -> None:
     print("-" * 60)
     for a in history:
         tag = "OK " if a.verified else "..."
-        print(f"  iter {a.iteration} {tag} critique: {a.critique}")
+        print(f"  迭代 {a.iteration} {tag} 批评：{a.critique}")
         for line in a.output.splitlines():
             print(f"    {line}")
 
 
 def main() -> None:
     print("=" * 70)
-    print("SELF-REFINE and CRITIC — Phase 14, Lesson 05")
+    print("SELF-REFINE 与 CRITIC — 第 14 阶段，第 05 课")
     print("=" * 70)
 
     hist_self = run_loop("world facts", use_critic=False)
@@ -113,11 +113,11 @@ def main() -> None:
         return "passed" if hist and hist[-1].verified else "did not converge"
 
     print()
-    print(f"Self-Refine ended: {summary(hist_self)}  after {len(hist_self)} iters")
-    print(f"CRITIC    ended: {summary(hist_critic)}  after {len(hist_critic)} iters")
+    print(f"Self-Refine 已结束：{summary(hist_self)}  在 {len(hist_self)} 次迭代后")
+    print(f"CRITIC    已结束：{summary(hist_critic)}  在 {len(hist_critic)} 次迭代后")
     print()
-    print("Observation: CRITIC's verifier is grounded against reference data; a")
-    print("self-critic can fail to flag its own confident-sounding hallucination.")
+    print("观察：CRITIC 的验证器基于参考数据进行校验；一个")
+    print("self-critic 可能无法发现其自身的 confident-sounding 幻觉。")
 
 
 if __name__ == "__main__":
