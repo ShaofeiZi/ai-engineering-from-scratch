@@ -1,7 +1,7 @@
-"""Multi-agent debate: full mesh vs sparse (star) topology.
+"""多智能体辩论：全网格（full mesh）与稀疏星型（star）拓扑。
 
-Scripted debaters with different opinion drifts. Measures convergent answer,
-rounds to consensus, and total critique ops (as a cost proxy).
+带有不同意见漂移的脚本化辩手。衡量收敛答案、
+达成共识的轮次，以及总批评操作数（作为成本代理）。
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ def run_debate(debaters: list[Debater], question: str, rounds: int,
 
 def main() -> None:
     print("=" * 70)
-    print("MULTI-AGENT DEBATE — Phase 14, Lesson 25")
+    print("多智能体辩论 — 第 14 阶段，第 25 课")
     print("=" * 70)
 
     questions_and_truth = {
@@ -113,7 +113,7 @@ def main() -> None:
     ]
 
     for q, truth in questions_and_truth.items():
-        print(f"\n--- {q}  (truth: {truth}) ---")
+        print(f"\n--- {q}  (真实值: {truth}) ---")
         for topology in ("full_mesh", "sparse_star"):
             answer, converged, ops = run_debate(
                 debaters, q, rounds=3, topology=topology,
@@ -123,8 +123,8 @@ def main() -> None:
                   f"converged_round={converged}  ops={ops}  {correct}")
 
     print()
-    print("sparse star matches full mesh on accuracy with fewer critique ops.")
-    print("debate helps factual and rule-based tasks; adds latency and cost.")
+    print("稀疏星型在准确率上与全网格相当，但批评操作更少。")
+    print("辩论有助于事实性任务和基于规则的任务，但会增加延迟和成本。")
 
 
 if __name__ == "__main__":
