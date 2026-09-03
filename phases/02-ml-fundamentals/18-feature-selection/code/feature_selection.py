@@ -251,13 +251,13 @@ def print_feature_scores(names, scores, label, top_k=None):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("FEATURE SELECTION METHODS")
+    print("特征选择方法")
     print("=" * 60)
 
     X, y, feature_names = make_feature_selection_data(500, seed=42)
-    print(f"\nDataset: {X.shape[0]} samples, {X.shape[1]} features")
-    print(f"Feature groups: 5 informative, 5 correlated, 10 noise")
-    print(f"Target: binary classification (y=1: {np.sum(y)}, y=0: {np.sum(y==0)})")
+    print(f"\n数据集: {X.shape[0]} 个样本，{X.shape[1]} 个特征")
+    print(f"特征分组: 5 个信息特征，5 个相关特征，10 个噪声特征")
+    print(f"目标: 二分类（y=1: {np.sum(y)}，y=0: {np.sum(y==0)}）")
 
     n = len(y)
     split = int(0.8 * n)
@@ -272,75 +272,75 @@ if __name__ == "__main__":
     X_scaled = np.vstack([X_scaled_train, X_scaled_test])
 
     print("\n" + "-" * 60)
-    print("1. VARIANCE THRESHOLD")
+    print("1. 方差阈值")
     print("-" * 60)
     var_mask, variances = variance_threshold(X_train, threshold=0.01)
-    print(f"  Threshold: 0.01, surviving: {np.sum(var_mask)} / {len(var_mask)}")
-    print_feature_scores(feature_names, variances, "Variances", top_k=10)
+    print(f"  阈值: 0.01，保留: {np.sum(var_mask)} / {len(var_mask)}")
+    print_feature_scores(feature_names, variances, "方差", top_k=10)
 
     print("\n" + "-" * 60)
-    print("2. MUTUAL INFORMATION")
+    print("2. 互信息")
     print("-" * 60)
     mi_scores = mutual_information(X_train, y_train, n_bins=10)
-    print_feature_scores(feature_names, mi_scores, "MI scores (top 10)", top_k=10)
+    print_feature_scores(feature_names, mi_scores, "互信息得分（前 10）", top_k=10)
     mi_selected = np.zeros(len(feature_names), dtype=bool)
     mi_selected[np.argsort(mi_scores)[-5:]] = True
 
     print("\n" + "-" * 60)
-    print("3. RECURSIVE FEATURE ELIMINATION (RFE)")
+    print("3. 递归特征消除（RFE）")
     print("-" * 60)
     rfe_mask, rfe_rankings = rfe(X_scaled_train, y_train, n_features_to_select=5, lr=0.1, epochs=200)
-    print(f"  Selected: {[feature_names[i] for i in range(len(feature_names)) if rfe_mask[i]]}")
+    print(f"  选中: {[feature_names[i] for i in range(len(feature_names)) if rfe_mask[i]]}")
     for idx, rank in sorted(enumerate(rfe_rankings), key=lambda x: x[1]):
-        print(f"    Rank {rank:>2}: {feature_names[idx]:<12} [{feature_group(feature_names[idx])}]")
+        print(f"    排名 {rank:>2}: {feature_names[idx]:<12} [{feature_group(feature_names[idx])}]")
 
     print("\n" + "-" * 60)
-    print("4. L1 (LASSO) FEATURE SELECTION")
+    print("4. L1（LASSO）特征选择")
     print("-" * 60)
     l1_mask, l1_weights = l1_feature_selection(X_scaled_train, y_train, alpha=0.05, lr=0.01, epochs=1000)
-    print(f"  Nonzero weights: {np.sum(l1_mask)}")
-    print(f"  Selected: {[feature_names[i] for i in range(len(feature_names)) if l1_mask[i]]}")
-    print_feature_scores(feature_names, np.abs(l1_weights), "|Weights| (top 10)", top_k=10)
+    print(f"  非零权重: {np.sum(l1_mask)}")
+    print(f"  选中: {[feature_names[i] for i in range(len(feature_names)) if l1_mask[i]]}")
+    print_feature_scores(feature_names, np.abs(l1_weights), "|权重|（前 10）", top_k=10)
 
     print("\n" + "-" * 60)
-    print("5. TREE-BASED IMPORTANCE")
+    print("5. 基于树的重要性")
     print("-" * 60)
     tree_imp = tree_importance(X_train, y_train, n_trees=100, max_depth=6, seed=42)
-    print_feature_scores(feature_names, tree_imp, "Importance (top 10)", top_k=10)
+    print_feature_scores(feature_names, tree_imp, "重要性（前 10）", top_k=10)
     tree_selected = np.zeros(len(feature_names), dtype=bool)
     tree_selected[np.argsort(tree_imp)[-5:]] = True
 
     print("\n" + "=" * 60)
-    print("METHOD AGREEMENT")
+    print("方法一致性")
     print("=" * 60)
     all_masks = {"MI": mi_selected, "RFE": rfe_mask, "L1": l1_mask, "Tree": tree_selected}
-    header = f"  {'Feature':<12}" + "".join(f" {n:>6}" for n in all_masks) + f" {'Total':>6}"
+    header = f"  {'特征':<12}" + "".join(f" {n:>6}" for n in all_masks) + f" {'合计':>6}"
     print(f"\n{header}")
     print(f"  {'-'*12}" + " ------" * (len(all_masks) + 1))
     for i, fname in enumerate(feature_names):
         row = f"  {fname:<12}"
         count = sum(1 for m in all_masks.values() if m[i])
         for mask in all_masks.values():
-            row += f" {'YES':>6}" if mask[i] else f" {'---':>6}"
+            row += f" {'是':>6}" if mask[i] else f" {'---':>6}"
         print(f"{row} {count:>6}")
 
     print("\n" + "=" * 60)
-    print("ACCURACY COMPARISON")
+    print("准确率对比")
     print("=" * 60)
 
     all_features_mask = np.ones(len(feature_names), dtype=bool)
     info_only_mask = np.array([i < 5 for i in range(len(feature_names))])
 
     experiments = [
-        ("All 20 features", all_features_mask),
-        ("Info only (5)", info_only_mask),
-        ("MI top-5", mi_selected),
-        ("RFE top-5", rfe_mask),
-        ("L1 selected", l1_mask),
-        ("Tree top-5", tree_selected),
+        ("全部 20 个特征", all_features_mask),
+        ("仅信息特征 (5)", info_only_mask),
+        ("MI 前 5", mi_selected),
+        ("RFE 前 5", rfe_mask),
+        ("L1 选中", l1_mask),
+        ("Tree 前 5", tree_selected),
     ]
 
-    print(f"\n  {'Method':<20} {'Features':>10} {'Accuracy':>10}")
+    print(f"\n  {'方法':<20} {'特征数':>10} {'准确率':>10}")
     print(f"  {'-'*20} {'-'*10} {'-'*10}")
 
     for name, mask in experiments:
@@ -350,4 +350,4 @@ if __name__ == "__main__":
         acc = evaluate_accuracy(X_scaled, y, mask, lr=0.1, epochs=300)
         print(f"  {name:<20} {int(np.sum(mask)):>10} {acc:>10.4f}")
 
-    print("\nDone.")
+    print("\n完成。")
