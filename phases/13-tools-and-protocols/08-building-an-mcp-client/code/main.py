@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 08: a stateless multi-server MCP client.
-Lesson: phases/13-tools-and-protocols/08-building-an-mcp-client/docs/en.md
-Specification: https://modelcontextprotocol.io/specification/2026-07-28/
-Demonstrates discovery, fail-closed legacy probing, deterministic merge, and routing.
-Run: python3 main.py
+"""Phase 13 Lesson 08：一个无状态的multi-server MCP客户端。
+课程：phases/13-tools-and-protocols/08-building-an-mcp-client/docs/en.md
+规范：https://modelcontextprotocol.io/specification/2026-07-28/
+演示发现、fail-closed旧版探测、确定性合并和路由。
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -570,17 +570,17 @@ def main() -> None:
     client.discover_tools()
     client.merge()
 
-    print("MCP client peers")
+    print("MCP客户端对等节点")
     for peer_name, peer in sorted(client.peers.items()):
         print(f"  {peer_name:8s} era={peer.era:6s} version={peer.protocol_version}")
-    print("\nMerged tools")
+    print("\n合并的工具")
     for canonical_name, merged in client.registry.items():
         print(f"  {canonical_name:20s} -> {merged.peer_name}:{merged.local_name}")
-    print("\nCalls")
+    print("\n调用")
     for name in ("create", "read", "notes/search", "search", "restore"):
         result = client.call(name, {})
         print(f"  {name:20s} -> {result['content'][0]['text']}")
-    print("\nNo modern protocol sessions were created.")
+    print("\n未创建任何现代协议会话。")
 
 
 if __name__ == "__main__":
