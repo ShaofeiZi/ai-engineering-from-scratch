@@ -1,8 +1,8 @@
-# Lesson program for delegating work with isolated ownership boundaries.
-# Read: phases/14-agent-engineering/45-delegate-with-isolation/docs/en.md
-# Reference: Git worktree documentation, git-scm.com/docs/git-worktree.
-# Reference: Lamport, Time, Clocks, and the Ordering of Events, 1978.
-# Run this file to generate outputs/delegation-plan.json.
+# 用于在隔离的所有权边界内委派工作的课程程序。
+# 阅读：phases/14-agent-engineering/45-delegate-with-isolation/docs/en.md
+# 参考：Git worktree 文档，git-scm.com/docs/git-worktree.
+# 参考：Lamport，《Time, Clocks, and the Ordering of Events》，1978年。
+# 运行此文件以生成 outputs/delegation-plan.json.
 from __future__ import annotations
 
 import json
