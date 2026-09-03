@@ -1,22 +1,19 @@
-"""Phase 13 Lesson 18: MCP 2026-07-28 authorization in production.
+"""第13阶段第18课：MCP 2026-07-28 生产环境授权。
 
-A stdlib walk-through of the current MCP authorization surface:
+对当前 MCP 授权面的标准库演练：
 
-  - RFC 8414 authorization server metadata
-  - Client ID Metadata Documents first, deprecated RFC 7591 DCR as fallback
-  - PKCE (RFC 7636) authorization code flow with audience pinning (RFC 8707)
-  - RFC 9207 authorization-response issuer validation
-  - JWT validation on the resource server
-  - JWKS cache refresh on a schedule (the IdP rotates keys; the resource
-    server only re-fetches them)
-  - Audience-replay rejection via the aud claim
-  - Client registration keyed by issuer and access tokens keyed by issuer plus resource
+  - RFC 8414 授权服务器元数据
+  - 客户端 ID 元数据文档优先，已弃用的 RFC 7591 DCR 作为后备
+  - PKCE（RFC 7636）带受众绑定的授权码流程（RFC 8707）
+  - RFC 9207 授权响应发行方验证
+  - 资源服务器上的 JWT 验证
+  - JWKS 缓存定时刷新（IdP 轮换密钥；资源服务器仅重新获取它们）
+  - 通过 aud 声明拒绝受众重放
+  - 客户端注册按发行方索引，访问令牌按发行方加资源索引
 
-Three roles model the system: an AuthorizationServer that issues tokens and
-rotates its signing keys, a ResourceServer (the MCP server) that caches the
-JWKS and validates every request, and a Client that enrolls and obtains tokens.
+系统由三个角色建模：一个签发令牌并轮换签名密钥的 AuthorizationServer，一个缓存 JWKS 并验证每个请求的 ResourceServer（MCP 服务器），以及一个注册并获取令牌的 Client。
 
-Stdlib only. Run: python3 main.py
+仅使用标准库。运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -33,7 +30,7 @@ from urllib.parse import urlparse
 
 
 # ---------------------------------------------------------------------------
-# JWT helpers - HS256 keeps the lesson stdlib-only; production uses RS256/EdDSA
+# JWT 辅助工具——HS256 仅用于保持课程只依赖标准库；生产环境使用 RS256/EdDSA
 # ---------------------------------------------------------------------------
 
 
@@ -78,14 +75,14 @@ def protected_resource_metadata_url(resource: str) -> str:
 MCP_RESOURCE = "https://notes.example.com"
 OTHER_MCP_RESOURCE = "https://tasks.example.com"
 
-# RFC 9728 protected-resource metadata URLs. Every 401/403 names this in the
-# WWW-Authenticate header so the client can rediscover the auth server.
+# RFC 9728 受保护资源元数据 URL。每个 401/403 响应都会在此
+# WWW-Authenticate 标头中指明，以便客户端可以重新发现授权服务器。
 MCP_RESOURCE_METADATA = protected_resource_metadata_url(MCP_RESOURCE)
 OTHER_MCP_RESOURCE_METADATA = protected_resource_metadata_url(OTHER_MCP_RESOURCE)
 
-# Each tool declares the scope it needs. Destructive tools sit behind a stronger
-# scope (mcp:tools.delete) that is NOT in the IdP's minimal scopes_supported, so
-# a client reaches it only via the step-up flow.
+# 每个工具声明其所需的权限范围。破坏性工具位于更强的
+# 权限范围（mcp:tools.delete）之后；该范围不在 IdP 的最小 scopes_supported 中，因此
+# 客户端只能通过权限提升流程访问它。
 TOOL_SCOPES = {
     "notes.list": "mcp:tools.invoke",
     "notes.read": "mcp:tools.invoke",
@@ -146,7 +143,7 @@ def valid_native_redirect_uri(value: object) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Authorization server - issues tokens, registers clients, rotates signing keys
+# 授权服务器 - 签发令牌、注册客户端、轮换签名密钥
 # ---------------------------------------------------------------------------
 
 
@@ -173,10 +170,10 @@ class AuthorizationServer:
         return self.keys[-1]
 
     def rotate_key(self) -> IdPKey:
-        """AS-side key rotation: introduce the next key, retire the oldest.
+        """授权服务器端密钥轮换：引入下一个密钥，淘汰最旧的密钥。
 
-        Steady state is two overlapping keys, so tokens signed by the previous
-        key stay valid until they expire.
+        稳态是两个重叠的密钥，因此由前一个密钥签名的
+        令牌在过期前保持有效。
         """
         new_kid = f"k_{int(time.time())}_{secrets.token_hex(2)}"
         new = IdPKey(kid=new_kid, secret=secrets.token_bytes(32), issued_at=time.time())
@@ -194,7 +191,7 @@ class AuthorizationServer:
         }
 
     def metadata(self) -> dict:
-        """RFC 8414 authorization server metadata."""
+        """RFC 8414授权服务器元数据。"""
         return {
             "issuer": self.issuer,
             "authorization_endpoint": f"{self.issuer}/authorize",
@@ -211,7 +208,7 @@ class AuthorizationServer:
         }
 
     def register_cimd(self, document_url: str, document: dict) -> str:
-        """Resolve a Client ID Metadata Document without minting an identifier."""
+        """解析客户端ID元数据文档，无需生成标识符。"""
         parsed = urlparse(document_url)
         if parsed.scheme != "https" or not parsed.netloc or parsed.path in {"", "/"}:
             raise ValueError("CIMD client_id must be an absolute HTTPS URL with a path")
@@ -258,7 +255,7 @@ class AuthorizationServer:
         return document_url
 
     def register_client(self, body: dict) -> dict:
-        """Deprecated RFC 7591 registration retained for compatibility."""
+        """已弃用的RFC 7591注册保留以兼容旧版本。"""
         redirect_uris = body.get("redirect_uris", [])
         if (
             not isinstance(redirect_uris, list)
@@ -284,7 +281,7 @@ class AuthorizationServer:
         self.clients[cid] = {
             "redirect_uris": redirect_uris,
             "grant_types": body.get("grant_types", ["authorization_code"]),
-            # Store only a hash; theft of this token lets an attacker rewrite redirect URIs.
+            # 仅存储哈希；窃取此令牌会让攻击者重写重定向 URI。
             "registration_access_token_hash": hashlib.sha256(reg_token.encode()).hexdigest(),
             "client_name": body.get("client_name", ""),
             "application_type": application_type,
@@ -426,7 +423,7 @@ class AuthorizationServer:
         )
 
     def issue_token(self, client_id: str, user: str, scopes: set[str], resource: str) -> str:
-        """Issue an audience-pinned access token signed by the current key."""
+        """签发由当前密钥签名且绑定受众的访问令牌。"""
         if client_id not in self.clients:
             raise ValueError("client is not enrolled with this issuer")
         key = self.current_key()
@@ -443,7 +440,7 @@ class AuthorizationServer:
 
 
 # ---------------------------------------------------------------------------
-# Resource server (the MCP server) - caches JWKS, validates every request
+# 资源服务器（MCP 服务器）——缓存 JWKS，验证每个请求
 # ---------------------------------------------------------------------------
 
 
@@ -459,15 +456,15 @@ class ResourceServer:
         return protected_resource_metadata_url(self.resource)
 
     def refresh_jwks(self) -> dict:
-        """Re-fetch the AS's published JWKS into the cache. Idempotent.
+        """将授权服务器发布的 JWKS 重新获取到缓存中。幂等。
 
-        Key *rotation* happens at the authorization server, not here. A resource
-        server cannot mint or roll the AS's signing keys; it can only re-pull the
-        published set. Both the scheduled refresh job and the validator's
-        cache-miss fall-back call this. Because it is a pure fetch, an attacker
-        who sends tokens with random `kid` values triggers at most one harmless
-        re-fetch, not an unbounded series of key rotations (the bug you get if
-        you wire the fall-back to a rotate-and-mint instead).
+        密钥*轮换*发生在授权服务器上，而非此处。资源
+        服务器无法生成或滚动授权服务器的签名密钥；它只能重新拉取已发布的
+        密钥集。定时刷新任务和验证器的
+        缓存未命中后备流程都会调用此方法。因为这是一个纯粹的获取操作，攻击者
+        发送带有随机`kid`值的令牌最多只会触发一次无害的
+        重新获取，而非无限系列的密钥轮换（如果将后备流程连接到
+        密钥轮换与令牌签发操作，就会出现这类缺陷）。
         """
         keys = self.auth_server.jwks()["keys"]
         self.jwks_cache[self.auth_server.issuer] = {"keys": keys, "fetched_at": time.time()}
@@ -489,8 +486,8 @@ class ResourceServer:
             return challenge(401, f'error="invalid_token", error_description="malformed", resource_metadata="{rm}"')
 
         iss = claims.get("iss", "")
-        # Check the issuer allow-list first: an untrusted iss should never cost
-        # us a JWKS refresh, and "iss not allowed" is the correct error to return.
+        # 首先检查发行方允许列表：不受信任的 iss 不应让我们付出
+        # 一次 JWKS 刷新的代价，且 "iss not allowed" 是应返回的正确错误。
         if iss not in self.allowed_issuers:
             return challenge(401, f'error="invalid_token", error_description="iss not allowed", resource_metadata="{rm}"')
         cache = self.jwks_cache.get(iss)
@@ -500,9 +497,9 @@ class ResourceServer:
 
         matching = next((k for k in cache["keys"] if k["kid"] == header.get("kid")), None) if cache else None
         if matching is None:
-            # Key-overlap window: a token signed by a key newer than our cache.
-            # Re-fetch (not rotate) once, then re-check. A bogus kid simply falls
-            # through to the 401 below after one idempotent fetch.
+            # 密钥重叠窗口：由比我们缓存更新的密钥签名的令牌。
+            # 重新获取（而非轮换）一次，然后重新检查。伪造的 kid 只需
+            # 在一次幂等获取后直接落入下面的401。
             self.refresh_jwks()
             cache = self.jwks_cache.get(iss)
             matching = next((k for k in cache["keys"] if k["kid"] == header.get("kid")), None) if cache else None
@@ -528,7 +525,7 @@ class ResourceServer:
 
 
 # ---------------------------------------------------------------------------
-# Client - discovery, DCR enrollment, PKCE + audience-pinned token request
+# 客户端——发现、DCR 注册、PKCE 和受众绑定令牌请求
 # ---------------------------------------------------------------------------
 
 
@@ -559,7 +556,7 @@ class Client:
         return meta
 
     def register(self) -> str:
-        """Use the deprecated DCR fallback and key the credential by issuer."""
+        """使用已弃用的DCR后备，并按发行方索引凭据。"""
         resp = self.auth_server.register_client(
             {
                 "redirect_uris": ["http://127.0.0.1:7333/callback"],
@@ -578,7 +575,7 @@ class Client:
         return self.client_ids_by_issuer[issuer]
 
     def enroll(self) -> str:
-        """Prefer CIMD; use DCR only when the current issuer cannot resolve it."""
+        """优先使用CIMD；仅在当前发行方无法解析时使用DCR。"""
         meta = self.discover()
         issuer = meta["issuer"]
         if issuer in self.client_ids_by_issuer:
@@ -610,7 +607,7 @@ class Client:
             raise ValueError("authorization response issuer mismatch")
 
     def use_authorization_server(self, auth_server: AuthorizationServer) -> None:
-        """Switch issuer without copying a client identifier or access token."""
+        """切换发行方，无需复制客户端标识符或访问令牌。"""
         self.auth_server = auth_server
         self.expected_issuer = None
         self.require_response_issuer = False
@@ -648,30 +645,30 @@ class Client:
 
 
 # ---------------------------------------------------------------------------
-# Demo - the production flow
+# 演示 - 生产流程
 # ---------------------------------------------------------------------------
 
 
 def demo() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 18 - MCP AUTH IN PRODUCTION")
+    print("第 13 阶段第 18 课 - 生产环境中的 MCP 身份验证")
     print("=" * 72)
 
-    print("\n--- step 1: stand up the authorization server (two overlapping keys) ---")
+    print("\n--- 步骤1：启动授权服务器（两个重叠密钥） ---")
     auth = AuthorizationServer()
     auth.rotate_key()
     auth.rotate_key()
-    print(f"  issuer={auth.issuer}, keys={[k.kid for k in auth.keys]}")
+    print(f"  发行方={auth.issuer}, 密钥={[k.kid for k in auth.keys]}")
 
-    print("\n--- step 2: client discovers the authorization server (RFC 8414) ---")
+    print("\n--- 步骤2：客户端发现授权服务器（RFC 8414） ---")
     cimd_url = "https://client.example.com/oauth/client.json"
     client = Client(
-        name="Example native client",
+        name="原生客户端示例",
         auth_server=auth,
         client_metadata_url=cimd_url,
         client_metadata={
             "client_id": cimd_url,
-            "client_name": "Example native client",
+            "client_name": "原生客户端示例",
             "redirect_uris": ["http://127.0.0.1:7333/callback"],
             "grant_types": ["authorization_code", "refresh_token"],
             "response_types": ["code"],
@@ -679,59 +676,59 @@ def demo() -> None:
         },
     )
     meta = client.discover()
-    print(f"  issuer={meta['issuer']}, S256 PKCE supported")
-    print(f"  CIMD supported={meta['client_id_metadata_document_supported']}")
+    print(f"  发行方={meta['issuer']}，支持 S256 PKCE")
+    print(f"  支持的 CIMD={meta['client_id_metadata_document_supported']}")
 
-    print("\n--- step 3: client enrolls through CIMD without DCR ---")
+    print("\n--- 步骤3：客户端通过CIMD注册，无需DCR ---")
     cid = client.enroll()
-    print(f"  client_id metadata URL: {cid}")
-    print(f"  credential cache issuer keys: {list(client.client_ids_by_issuer)}")
+    print(f"  client_id 元数据 URL：{cid}")
+    print(f"  凭据缓存发行方密钥: {list(client.client_ids_by_issuer)}")
 
-    print("\n--- step 4: client runs PKCE authorization flow with resource indicator ---")
+    print("\n--- 步骤4：客户端运行带资源指示器的PKCE授权流程 ---")
     bearer = client.authorize(scopes={"mcp:tools.invoke"}, resource=MCP_RESOURCE, user="alice@example.com")
-    print(f"  bearer issued (kid={auth.current_key().kid}, aud={MCP_RESOURCE})")
+    print(f"  已签发 bearer（kid={auth.current_key().kid}，aud={MCP_RESOURCE}）")
 
-    print("\n--- step 5: MCP server validates the request, JWKS cache primed on first use ---")
+    print("\n--- 步骤5：MCP服务器验证请求，JWKS缓存在首次使用时预热 ---")
     server = ResourceServer(resource=MCP_RESOURCE, auth_server=auth, allowed_issuers=[auth.issuer])
     resp = server.call_tool("notes.list", bearer)
-    print(f"  server response: {resp}")
+    print(f"  服务器响应: {resp}")
     assert resp["status"] == 200
 
-    print("\n--- step 6: IdP rotates a key, scheduled refresh re-pulls the JWKS ---")
-    print(f"  cached kids before refresh: {server.cached_kids()}")
-    auth.rotate_key()  # authorization-server-side rotation, independent of the MCP server
-    server.refresh_jwks()  # scheduled job re-pulls the published JWKS
-    print(f"  cached kids after refresh:  {server.cached_kids()}")
+    print("\n--- 步骤6：IdP 轮换密钥，定时刷新重新拉取 JWKS ---")
+    print(f"  刷新前缓存的 kid：{server.cached_kids()}")
+    auth.rotate_key()  # 授权服务器端轮换，与 MCP 服务器无关
+    server.refresh_jwks()  # 定时任务重新拉取已发布的 JWKS
+    print(f"  刷新后缓存的 kid：{server.cached_kids()}")
 
-    print("\n--- step 7: existing token still validates (overlap window) ---")
+    print("\n--- 步骤7：现有令牌仍然有效（重叠窗口） ---")
     resp = server.call_tool("notes.list", bearer)
-    print(f"  server response: {resp}")
+    print(f"  服务器响应: {resp}")
     assert resp["status"] == 200
 
-    print("\n--- step 8: new token signed with new key validates against refreshed JWKS ---")
+    print("\n--- 步骤8：用新密钥签名的新令牌通过刷新后的 JWKS 验证 ---")
     fresh_bearer = client.authorize(scopes={"mcp:tools.invoke"}, resource=MCP_RESOURCE, user="alice@example.com")
     fresh_header, _, _ = jwt_decode(fresh_bearer)
-    print(f"  fresh token kid: {fresh_header['kid']}")
+    print(f"  新令牌 kid：{fresh_header['kid']}")
     resp = server.call_tool("notes.read", fresh_bearer)
-    print(f"  server response: {resp}")
+    print(f"  服务器响应: {resp}")
     assert resp["status"] == 200
 
-    print("\n--- step 9: audience-replay attempt against a different MCP resource ---")
+    print("\n--- 步骤9：针对不同 MCP 资源的受众重放尝试 ---")
     other_server = ResourceServer(resource=OTHER_MCP_RESOURCE, auth_server=auth, allowed_issuers=[auth.issuer])
     resp = other_server.call_tool("tasks.list", bearer)
-    print(f"  other server response: {resp}")
+    print(f"  另一服务器响应: {resp}")
     assert resp["status"] == 401
     assert "audience mismatch" in resp["WWW-Authenticate"]
 
-    print("\n--- bonus: step-up flow for a higher-privilege scope ---")
+    print("\n--- 附加：用于更高权限范围的权限提升流程 ---")
     elevated = client.authorize(
         scopes={"mcp:tools.invoke", "mcp:tools.delete"}, resource=MCP_RESOURCE, user="alice@example.com"
     )
     elevated_resp = server.call_tool("notes.delete", elevated)
-    print(f"  server response: {elevated_resp}")
+    print(f"  服务器响应: {elevated_resp}")
 
     print("\n" + "=" * 72)
-    print("DONE - issuer-bound enrollment, response iss, audience, and JWKS refresh")
+    print("完成 - 发行方绑定注册、响应 iss、受众和 JWKS 刷新")
     print("=" * 72)
 
 
