@@ -1,4 +1,4 @@
-"""Tests for the verification gate chain and observation ledger."""
+"""验证门禁链与观测账本的测试。"""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from main import (  # noqa: E402
     RecencyGate,
     RegexGate,
     ToolCall,
+    ToolResult,
     WhitelistGate,
     build_default_chain,
     estimate_tokens,
@@ -198,6 +199,38 @@ class ChainShortCircuitTests(unittest.TestCase):
 
 
 class SyntheticLoopTests(unittest.TestCase):
+    def test_localized_display_text_does_not_change_budget_decision(self) -> None:
+        calls = [
+            ToolCall(turn=1, tool="read_file", argv=("a",)),
+            ToolCall(turn=2, tool="read_file", argv=("b",)),
+        ]
+        stable_payload = "x" * 400
+
+        english = run_synthetic_loop(
+            calls,
+            build_default_chain(budget=80),
+            {"read_file": lambda call: stable_payload},
+        )
+        chinese = run_synthetic_loop(
+            calls,
+            build_default_chain(budget=80),
+            {
+                "read_file": lambda call: ToolResult(
+                    text="中文展示文本", budget_text=stable_payload
+                )
+            },
+        )
+
+        self.assertEqual(
+            [decision.allow for decision in chinese.decisions],
+            [decision.allow for decision in english.decisions],
+        )
+        self.assertEqual(
+            [observation.tokens for observation in chinese.observations],
+            [observation.tokens for observation in english.observations],
+        )
+        self.assertEqual(chinese.observations[0].text, "中文展示文本")
+
     def test_loop_trips_budget_on_third_read(self) -> None:
         chain = build_default_chain(budget=80)
 

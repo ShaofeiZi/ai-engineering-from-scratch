@@ -1,11 +1,11 @@
 """
-Verification gates and observation budget for an agent harness.
+智能体运行框架的验证门禁与观察预算。
 
 See: phases/19-capstone-projects/25-verification-gates-observation-budget/docs/en.md
-Concept refs:
-  - Gate-chain pattern (cheapest deny first, allow last).
-  - Observation budget as a deterministic stopping criterion.
-The demo at the bottom runs a synthetic three-turn loop and exits zero.
+概念参考：
+  - 门禁链模式（优先执行开销最低的拒绝检查，最后才放行）。
+  - 将观察预算用作确定性的停止条件。
+文件末尾的演示会运行一个合成的三轮循环，并以状态码 0 退出。
 """
 
 from __future__ import annotations
@@ -14,17 +14,17 @@ import json
 import re
 import sys
 from dataclasses import dataclass, field
-from typing import Callable, Iterable, Protocol
+from typing import Callable, Iterable, Protocol, Union
 
 
 # ---------------------------------------------------------------------------
-# Wire shapes
+# 传输结构
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class ToolCall:
-    """A request from the model to invoke a tool."""
+    """模型发出的工具调用请求。"""
 
     turn: int
     tool: str
@@ -42,7 +42,7 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class Observation:
-    """The text the model is shown after a tool call."""
+    """工具调用后展示给模型的文本。"""
 
     turn: int
     tool: str
@@ -58,8 +58,16 @@ class Observation:
 
 
 @dataclass(frozen=True)
+class ToolResult:
+    """工具的展示文本，以及用于预算核算的稳定语义夹具。"""
+
+    text: str
+    budget_text: str
+
+
+@dataclass(frozen=True)
 class GateDecision:
-    """A single gate's verdict."""
+    """单个门禁的判定结果。"""
 
     allow: bool
     gate: str
@@ -70,15 +78,15 @@ class GateDecision:
 
 
 # ---------------------------------------------------------------------------
-# Token estimator
+# Token 估算器
 # ---------------------------------------------------------------------------
 
 
 def estimate_tokens(text: str) -> int:
-    """A deterministic, conservative stand-in for a real tokenizer.
+    """真实 tokenizer 的确定性保守替代实现。
 
-    Real harnesses plug in tiktoken or the model's own tokenizer.
-    The gate chain only cares that the counter is monotonic and deterministic.
+    真实运行框架会接入 tiktoken 或模型自带的 tokenizer。
+    门禁链只要求计数器具有单调性和确定性。
     """
 
     if not text:
@@ -87,13 +95,13 @@ def estimate_tokens(text: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Observation ledger
+# 观察账本
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class ObservationLedger:
-    """Append-only ledger of every observation the model has been shown."""
+    """记录所有已展示给模型的观察结果，只允许追加。"""
 
     rows: list[Observation] = field(default_factory=list)
 
@@ -117,13 +125,13 @@ class ObservationLedger:
 
 
 # ---------------------------------------------------------------------------
-# Gate protocol
+# 门禁协议
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class GateContext:
-    """Read-only context passed to every gate."""
+    """传给每个门禁的只读上下文。"""
 
     ledger: ObservationLedger
     current_turn: int
@@ -137,13 +145,13 @@ class VerificationGate(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# Concrete gates
+# 具体门禁
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class WhitelistGate:
-    """Refuse any tool not in the explicit allow-set. Cheapest gate."""
+    """拒绝显式允许集合之外的所有工具；这是开销最低的门禁。"""
 
     allowed: frozenset[str]
     name: str = "whitelist"
@@ -160,7 +168,7 @@ class WhitelistGate:
 
 @dataclass
 class RegexGate:
-    """Refuse a call whose argv joins to a string matching any refuse pattern."""
+    """如果 argv 拼接后的字符串匹配任一拒绝模式，则拒绝调用。"""
 
     refuse_patterns: tuple[re.Pattern[str], ...]
     name: str = "regex"
@@ -182,10 +190,10 @@ class RegexGate:
 
 @dataclass
 class RecencyGate:
-    """Refuse a call if the last observation is more than window turns old.
+    """如果上一次观察距今超过 window 轮，则拒绝调用。
 
-    The intent is to force a fresh read instead of relying on stale state.
-    The first call in a session always passes.
+    这样可以强制执行新的读取，而不是依赖过时状态。
+    会话中的第一次调用始终放行。
     """
 
     window: int
@@ -207,12 +215,11 @@ class RecencyGate:
 
 @dataclass
 class BudgetGate:
-    """Refuse a call once the cumulative observation budget is exhausted.
+    """累计观察预算耗尽后拒绝调用。
 
-    A single call cannot in advance know how many tokens its result will be.
-    The gate is therefore evaluated against the ledger as it stands before the
-    call, and the harness re-runs the cumulative check against the new ledger
-    state after recording the observation.
+    单次调用无法提前获知其结果会包含多少 token。因此，门禁会根据调用前的
+    账本状态进行评估；记录观察结果后，运行框架会针对新的账本状态再次执行
+    累计检查。
     """
 
     max_tokens: int
@@ -234,7 +241,7 @@ class BudgetGate:
 
 @dataclass
 class PerToolBudgetGate:
-    """Optional gate: refuse if a single tool has consumed more than its share."""
+    """可选门禁：单个工具消耗超过其配额时拒绝调用。"""
 
     limits: dict[str, int]
     name: str = "per-tool-budget"
@@ -256,13 +263,13 @@ class PerToolBudgetGate:
 
 
 # ---------------------------------------------------------------------------
-# Gate chain
+# 门禁链
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class ChainOutcome:
-    """The full result of a chain evaluation: the per-gate decisions plus a final verdict."""
+    """门禁链评估的完整结果：各门禁的判定及最终结论。"""
 
     decisions: list[GateDecision]
 
@@ -287,7 +294,7 @@ class ChainOutcome:
 
 @dataclass
 class GateChain:
-    """Ordered list of gates evaluated with short-circuit on first deny."""
+    """按顺序评估的门禁列表，遇到首次拒绝时短路。"""
 
     gates: tuple[VerificationGate, ...]
 
@@ -302,16 +309,16 @@ class GateChain:
 
 
 # ---------------------------------------------------------------------------
-# Mini synthetic agent loop for the demo
+# 用于演示的微型合成智能体循环
 # ---------------------------------------------------------------------------
 
 
-ToolFn = Callable[[ToolCall], str]
+ToolFn = Callable[[ToolCall], Union[str, ToolResult]]
 
 
 @dataclass
 class LoopReport:
-    """Audit record of a synthetic loop run."""
+    """合成循环运行的审计记录。"""
 
     turns: int
     allowed: int
@@ -334,10 +341,10 @@ def run_synthetic_loop(
     chain: GateChain,
     tool_fns: dict[str, ToolFn],
 ) -> LoopReport:
-    """Run a fixed sequence of tool calls through the chain.
+    """让固定的工具调用序列依次通过门禁链。
 
-    This is the harness skeleton in miniature. A real harness would consult
-    the model for the next tool call; the gate-chain contract is identical.
+    这是运行框架骨架的微缩版本。真实框架会向模型询问下一次工具调用，
+    但门禁链的契约完全相同。
     """
 
     ledger = ObservationLedger()
@@ -363,11 +370,17 @@ def run_synthetic_loop(
             refused += 1
             continue
         result = fn(call)
+        if isinstance(result, ToolResult):
+            text = result.text
+            budget_text = result.budget_text
+        else:
+            text = result
+            budget_text = result
         obs = Observation(
             turn=call.turn,
             tool=call.tool,
-            text=result,
-            tokens=estimate_tokens(result),
+            text=text,
+            tokens=estimate_tokens(budget_text),
         )
         ledger.record(obs)
         observations.append(obs)
@@ -383,18 +396,25 @@ def run_synthetic_loop(
 
 
 # ---------------------------------------------------------------------------
-# Demo wiring
+# 演示装配
 # ---------------------------------------------------------------------------
 
 
 def _demo_tools() -> dict[str, ToolFn]:
-    """Three synthetic tools. read_file is verbose, list_dir is small, run_tests is structured."""
+    """三个合成工具：read_file 输出较多，list_dir 较短，run_tests 返回结构化结果。"""
 
-    def read_file(call: ToolCall) -> str:
+    def read_file(call: ToolCall) -> ToolResult:
         target = call.argv[0] if call.argv else "<missing>"
-        return (
-            f"# fake contents of {target}\n"
-            + ("line of fake source code that is sixty bytes long " * 12)
+        return ToolResult(
+            text=(
+                f"# {target} 的模拟内容\n"
+                + ("一行长度约为六十字节的模拟源代码 " * 12)
+            ),
+            # 预算代表工具结果的语义载荷，不随展示语言变化。
+            budget_text=(
+                f"# fake contents of {target}\n"
+                + ("line of fake source code that is sixty bytes long " * 12)
+            ),
         )
 
     def list_dir(call: ToolCall) -> str:
@@ -409,7 +429,7 @@ def _demo_tools() -> dict[str, ToolFn]:
 
 
 def build_default_chain(budget: int = 200) -> GateChain:
-    """Wire the canonical four-gate chain in the order documented in en.md."""
+    """按照 en.md 记录的顺序装配标准四门禁链。"""
 
     return GateChain(
         gates=(
@@ -430,7 +450,7 @@ def build_default_chain(budget: int = 200) -> GateChain:
 
 
 def run_demo() -> int:
-    """Self-terminating demo. Prints a JSON trace and exits zero."""
+    """可自行终止的演示：打印 JSON 追踪，并以状态码 0 退出。"""
 
     chain = build_default_chain(budget=200)
     tools = _demo_tools()
@@ -445,20 +465,20 @@ def run_demo() -> int:
 
     report = run_synthetic_loop(calls, chain, tools)
 
-    print("VERIFICATION GATE DEMO")
-    print(f"turns={report.turns} allowed={report.allowed} refused={report.refused}")
+    print("验证门禁演示")
+    print(f"轮数={report.turns} 已放行={report.allowed} 已拒绝={report.refused}")
     print("")
     for idx, (call, outcome) in enumerate(zip(calls, report.decisions)):
         verdict = "ALLOW" if outcome.allow else "DENY"
         print(f"  [{idx}] turn={call.turn} tool={call.tool} -> {verdict}")
         if not outcome.allow:
-            print(f"        reason: {outcome.deny_reason}")
+            print(f"        原因：{outcome.deny_reason}")
     print("")
-    print(f"cumulative tokens observed: {sum(o.tokens for o in report.observations)}")
-    print(f"observations recorded: {len(report.observations)}")
+    print(f"累计观察 token 数：{sum(o.tokens for o in report.observations)}")
+    print(f"已记录观察数：{len(report.observations)}")
 
     if report.refused < 1:
-        print("ERROR: demo expected at least one refusal", file=sys.stderr)
+        print("错误：演示预期至少出现一次拒绝", file=sys.stderr)
         return 1
     return 0
 
