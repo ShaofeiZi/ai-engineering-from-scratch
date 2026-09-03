@@ -1,12 +1,11 @@
-"""Three group-fairness criteria on a toy classifier — stdlib Python.
+"""玩具分类器上的三种群体公平性准则——仅使用 Python 标准库。
 
-Binary classification: sensitive attribute A in {0, 1} with unequal base rates.
-A simple logistic classifier is trained; we report:
-  demographic parity, equalized odds, conditional use accuracy equality.
-Then apply a re-weighting targeted at demographic parity and observe the
-cost on the other two.
+二元分类：敏感属性 A 属于 {0, 1}，且两组基础率不同。
+训练一个简单逻辑分类器，并报告：demographic parity、equalized odds 和
+conditional use accuracy equality。然后应用面向 demographic parity 的
+重新加权，并观察它给另外两项准则带来的代价。
 
-Usage: python3 code/main.py
+用法：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -19,10 +18,10 @@ random.seed(53)
 
 
 def gen(n: int) -> list[tuple[list[float], int, int]]:
-    """Returns list of (features, label, sensitive_attribute).
+    """返回 (features, label, sensitive_attribute) 列表。
 
-    Base rate differs by group: A=0 has P(y=1)=0.3; A=1 has P(y=1)=0.6.
-    Features correlate with y with some noise."""
+    各组基础率不同：A=0 时 P(y=1)=0.3；A=1 时 P(y=1)=0.6。
+    特征与 y 相关，并含有一定噪声。"""
     data = []
     for _ in range(n):
         a = random.choice([0, 1])
@@ -91,16 +90,16 @@ def report(name: str, preds):
     eo = equalized_odds(preds)
     cu = conditional_use(preds)
     print(f"\n{name}")
-    print(f"  demographic parity    : group0={dp[0]:.3f}  group1={dp[1]:.3f}  gap={dp[1]-dp[0]:+.3f}")
-    print(f"  equalized odds (TPR)  : group0={eo[0][0]:.3f}  group1={eo[1][0]:.3f}")
-    print(f"  equalized odds (FPR)  : group0={eo[0][1]:.3f}  group1={eo[1][1]:.3f}")
-    print(f"  conditional use (PPV) : group0={cu[0][0]:.3f}  group1={cu[1][0]:.3f}")
-    print(f"  conditional use (NPV) : group0={cu[0][1]:.3f}  group1={cu[1][1]:.3f}")
+    print(f"  demographic parity：组0={dp[0]:.3f}  组1={dp[1]:.3f}  差距={dp[1]-dp[0]:+.3f}")
+    print(f"  equalized odds (TPR)：组0={eo[0][0]:.3f}  组1={eo[1][0]:.3f}")
+    print(f"  equalized odds (FPR)：组0={eo[0][1]:.3f}  组1={eo[1][1]:.3f}")
+    print(f"  conditional use (PPV)：组0={cu[0][0]:.3f}  组1={cu[1][0]:.3f}")
+    print(f"  conditional use (NPV)：组0={cu[0][1]:.3f}  组1={cu[1][1]:.3f}")
 
 
 def main() -> None:
     print("=" * 70)
-    print("THREE GROUP-FAIRNESS CRITERIA (Phase 18, Lesson 21)")
+    print("三种群体公平性准则（阶段 18，第 21 课）")
     print("=" * 70)
 
     train_data = gen(1000)
@@ -108,9 +107,9 @@ def main() -> None:
 
     baseline = train(train_data)
     preds = predict(baseline, test_data)
-    report("baseline classifier", preds)
+    report("基线分类器", preds)
 
-    # Reweight toward demographic parity: upweight group0 y=1 and downweight group1 y=1.
+    # 面向 demographic parity 重新加权：提高 group0 y=1，降低 group1 y=1。
     weights = []
     for x, y, a in train_data:
         if a == 0 and y == 1:
@@ -121,15 +120,13 @@ def main() -> None:
             weights.append(1.0)
     dp_reweighted = train(train_data, sample_weights=weights)
     preds2 = predict(dp_reweighted, test_data)
-    report("DP-reweighted classifier", preds2)
+    report("经 DP 重新加权的分类器", preds2)
 
     print("\n" + "=" * 70)
-    print("TAKEAWAY: equal base rates are the condition for the three criteria")
-    print("to coincide. with unequal base rates, DP-targeted reweighting")
-    print("reduces the DP gap at the cost of equalized odds and conditional")
-    print("use accuracy. this is Chouldechova / KMR 2017 in miniature. the")
-    print("choice of criterion is a policy decision; no statistical method")
-    print("can satisfy all three under unequal base rates.")
+    print("要点：基础率相等是三种准则同时成立的条件。当基础率不同时，面向 DP 的")
+    print("重新加权会缩小 DP 差距，却以 equalized odds 和 conditional use")
+    print("accuracy 为代价。这是 Chouldechova / KMR 2017 的缩影。准则选择")
+    print("属于政策决策；基础率不等时，没有任何统计方法能同时满足三种准则。")
     print("=" * 70)
 
 
