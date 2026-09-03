@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only, stdlib-only validator for the core identity of a SKILL.md."""
+"""Read-only、stdlib-only 验证器，用于 SKILL.md. 的核心身份"""
 
 from __future__ import annotations
 
@@ -26,11 +26,11 @@ def validate(directory: Path) -> dict[str, object]:
     fields: dict[str, object] = {}
     body = ""
     if not path.is_file() or path.is_symlink():
-        errors.append({"code": "skill-file", "message": "regular SKILL.md is required"})
+        errors.append({"code": "skill-file", "message": "需要常规的 SKILL.md 文件"})
     else:
         lines = path.read_text(encoding="utf-8").splitlines()
         if not lines or lines[0] != "---" or "---" not in lines[1:]:
-            errors.append({"code": "frontmatter", "message": "exact delimiters are required"})
+            errors.append({"code": "frontmatter", "message": "需要精确的 frontmatter 分隔符"})
         else:
             end = lines.index("---", 1)
             index = 1
@@ -43,7 +43,7 @@ def validate(directory: Path) -> dict[str, object]:
                     errors.append(
                         {
                             "code": "frontmatter-syntax",
-                            "message": f"malformed top-level line {index + 1}",
+                            "message": f"第 {index + 1} 行的顶层语法格式错误",
                         }
                     )
                     index += 1
@@ -54,13 +54,13 @@ def validate(directory: Path) -> dict[str, object]:
                     errors.append(
                         {
                             "code": "frontmatter-syntax",
-                            "message": f"invalid field name {key!r}",
+                            "message": f"字段名 {key!r} 无效",
                         }
                     )
                     index += 1
                     continue
                 if key in fields:
-                    errors.append({"code": "duplicate", "message": f"duplicate {key} on line {index + 1}"})
+                    errors.append({"code": "duplicate", "message": f"第 {index + 1} 行重复定义了 {key}"})
                 if value in {">", "|"}:
                     block: list[str] = []
                     index += 1
@@ -81,7 +81,7 @@ def validate(directory: Path) -> dict[str, object]:
                                 errors.append(
                                     {
                                         "code": "metadata-shape",
-                                        "message": f"malformed metadata on line {index + 1}",
+                                        "message": f"第 {index + 1} 行的 metadata 格式错误",
                                     }
                                 )
                             else:
@@ -91,7 +91,7 @@ def validate(directory: Path) -> dict[str, object]:
                                     errors.append(
                                         {
                                             "code": "duplicate",
-                                            "message": f"duplicate metadata field {nested_key!r}",
+                                            "message": f"metadata 字段 {nested_key!r} 重复",
                                         }
                                     )
                                 nested[nested_key] = nested_value.strip().strip("\"'")
@@ -107,29 +107,29 @@ def validate(directory: Path) -> dict[str, object]:
     name = name_value if isinstance(name_value, str) else ""
     description = description_value if isinstance(description_value, str) else ""
     if not name:
-        errors.append({"code": "name-required", "message": "name is required"})
+        errors.append({"code": "name-required", "message": "name 为必填项"})
     elif len(name) > 64 or not NAME_PATTERN.fullmatch(name):
-        errors.append({"code": "name-format", "message": "name must be kebab-case and at most 64 characters"})
+        errors.append({"code": "name-format", "message": "name 必须使用 kebab-case，且最多包含 64 个字符"})
     elif name != directory.name:
-        errors.append({"code": "directory-mismatch", "message": "name must match the directory"})
+        errors.append({"code": "directory-mismatch", "message": "name 必须与目录名一致"})
     if not description:
-        errors.append({"code": "description-required", "message": "description is required"})
+        errors.append({"code": "description-required", "message": "description 为必填项"})
     elif len(description) > 1024:
-        errors.append({"code": "description-length", "message": "description exceeds 1024 characters"})
+        errors.append({"code": "description-length", "message": "description 超过 1024 个字符"})
     if "compatibility" in fields:
         compatibility = fields["compatibility"]
         if not isinstance(compatibility, str) or not 1 <= len(compatibility) <= 500:
             errors.append(
                 {
                     "code": "compatibility-length",
-                    "message": "compatibility must contain 1 to 500 characters",
+                    "message": "compatibility 必须包含 1 到 500 个字符",
                 }
             )
     if "metadata" in fields and not isinstance(fields["metadata"], dict):
         errors.append(
             {
                 "code": "metadata-shape",
-                "message": "metadata must map string keys to string values",
+                "message": "metadata 必须将字符串键映射到字符串值",
             }
         )
     if "allowed-tools" in fields:
@@ -138,18 +138,18 @@ def validate(directory: Path) -> dict[str, object]:
             errors.append(
                 {
                     "code": "allowed-tools-shape",
-                    "message": "allowed-tools must be a non-empty space-separated string",
+                    "message": "allowed-tools 必须是以空格分隔的非空字符串",
                 }
             )
     for unknown in sorted(set(fields) - CORE_FIELDS):
         errors.append(
             {
                 "code": "unsupported-field",
-                "message": f"{unknown!r} is not in the portable core",
+                "message": f"{unknown!r} 不属于可移植核心字段",
             }
         )
     if not body:
-        errors.append({"code": "body-required", "message": "instruction body is required"})
+        errors.append({"code": "body-required", "message": "指令正文为必填项"})
     return {
         "path": str(directory),
         "valid": not errors,
@@ -161,7 +161,7 @@ def validate(directory: Path) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("directory", type=Path, help="bundle directory containing SKILL.md")
+    parser.add_argument("directory", type=Path, help="包含 SKILL.md 的技能包目录")
     args = parser.parse_args()
     result = validate(args.directory.resolve())
     print(json.dumps(result, indent=2, sort_keys=True))

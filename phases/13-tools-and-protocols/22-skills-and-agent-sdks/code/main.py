@@ -42,7 +42,7 @@ class SkillReport:
 
 
 class FrontmatterSyntaxError(ValueError):
-    """Raised when the lesson's deliberately small YAML subset is invalid."""
+    """当课程特意精简的 YAML 子集无效时触发。"""
 
 
 def _decode_scalar(raw: str) -> str:
@@ -67,7 +67,7 @@ def _decode_scalar(raw: str) -> str:
 
 
 def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    """Parse top-level scalars, block scalars, and a one-level metadata map."""
+    """解析 top-level 标量、块标量以及一个 one-level 元数据映射。"""
     lines = text.splitlines()
     if not lines or lines[0] != "---":
         raise FrontmatterSyntaxError("SKILL.md must begin with an exact --- line")
@@ -250,7 +250,7 @@ class TaskShape:
 
 
 def select_primitives(task: TaskShape) -> tuple[str, ...]:
-    """Select composable primitives by responsibility, not by product branding."""
+    """按职责选择可组合的原语，而非按产品品牌选择。"""
     choices: list[str] = []
     if task.repository_default:
         choices.append("AGENTS.md")

@@ -1,4 +1,4 @@
-"""Deterministic tests for the Lesson 22 skill contract lab."""
+"""第 22 课技能契约实验室的确定性测试。"""
 
 from __future__ import annotations
 
