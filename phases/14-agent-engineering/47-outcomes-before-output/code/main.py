@@ -1,8 +1,8 @@
-# Lesson program for framing observable outcomes before choosing outputs.
-# Read: phases/14-agent-engineering/47-outcomes-before-output/docs/en.md
-# Reference: Nuseibeh and Easterbrook, Requirements Engineering: A Roadmap, 2000.
-# Reference: Dardenne, van Lamsweerde, and Fickas, Goal-Directed Requirements Acquisition, 1993.
-# Run this file to generate outputs/outcome-frame.json.
+#本课程序旨在先明确可观察的结果，再选择输出方案。
+#阅读：phases/14-agent-engineering/47-outcomes-before-output/docs/en.md
+#参考文献：Nuseibeh 与 Easterbrook，《需求工程：路线图》，2000 年。
+#参考文献：Dardenne、van Lamsweerde 与 Fickas，《Goal-Directed 需求获取》，1993 年。
+#运行此文件以生成 outputs/outcome-frame.json.
 from __future__ import annotations
 
 import json
