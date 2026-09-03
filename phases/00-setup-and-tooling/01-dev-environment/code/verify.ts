@@ -1,6 +1,6 @@
-// Phase 0 · Lesson 01 — Dev Environment verifier (TypeScript port).
-// Probes node version + presence of git, python3, cargo, deno; mirrors verify.py.
-// Refs: https://nodejs.org/api/process.html  https://nodejs.org/api/child_process.html
+// 阶段 0 · 课程 01 — 开发环境校验器（TypeScript 移植版）。
+// 探测 node 版本以及 git、python3、cargo、deno 是否存在；与 verify.py 行为一致。
+// 参考：https://nodejs.org/api/process.html  https://nodejs.org/api/child_process.html
 
 import { execFileSync } from "node:child_process";
 import process from "node:process";
@@ -14,7 +14,7 @@ type Probe = {
 };
 
 function whichVersion(cmd: string, args: string[] = ["--version"]): ReturnType<ProbeFn> {
-  // execFile (not exec) avoids a shell, so user PATH lookups can't be re-interpreted.
+  // 使用 execFile（而非 exec）以避免启动 shell，从而防止用户 PATH 查找被二次解释。
   try {
     const out = execFileSync(cmd, args, {
       stdio: ["ignore", "pipe", "ignore"],
@@ -37,7 +37,7 @@ const PROBES: Probe[] = [
     },
   },
   {
-    name: "TypeScript runner (tsx)",
+    name: "TypeScript 运行器 (tsx)",
     required: false,
     run: () => whichVersion("npx", ["-y", "tsx", "--version"]),
   },
@@ -52,7 +52,7 @@ const PROBES: Probe[] = [
     run: () => {
       const probe = whichVersion("python3");
       if (!probe.ok || !probe.detail) return probe;
-      // Detail looks like "Python 3.11.7"; pull major.minor.
+      // detail 形如 "Python 3.11.7"；这里提取主版本号与次版本号。
       const match = probe.detail.match(/(\d+)\.(\d+)/);
       if (!match) return { ok: false, detail: probe.detail };
       const [major, minor] = [Number(match[1]), Number(match[2])];
@@ -73,7 +73,7 @@ const PROBES: Probe[] = [
 ];
 
 function run(): number {
-  process.stdout.write("\n=== AI Engineering from Scratch — Environment Check ===\n\n");
+  process.stdout.write("\n=== AI Engineering from Scratch —— 环境检查 ===\n\n");
 
   let requiredPassed = 0;
   let requiredTotal = 0;
@@ -82,7 +82,7 @@ function run(): number {
     const result = probe.run();
     const tag = result.ok ? "PASS" : "FAIL";
     const detail = result.detail ? ` (${result.detail})` : "";
-    const flag = probe.required ? "" : "  [optional]";
+    const flag = probe.required ? "" : "  [可选]";
     process.stdout.write(`  [${tag}] ${probe.name}${detail}${flag}\n`);
     if (probe.required) {
       requiredTotal += 1;
@@ -90,12 +90,12 @@ function run(): number {
     }
   }
 
-  process.stdout.write(`\nResult: ${requiredPassed}/${requiredTotal} required checks passed\n`);
+  process.stdout.write(`\n结果：${requiredPassed}/${requiredTotal} 项必需检查通过\n`);
   if (requiredPassed === requiredTotal) {
-    process.stdout.write("\nYou're ready. Start with Phase 1.\n\n");
+    process.stdout.write("\n环境已就绪。请从阶段 1 开始。\n\n");
     return 0;
   }
-  process.stdout.write("\nFix the failed required checks above, then re-run.\n\n");
+  process.stdout.write("\n请修复上方失败的必需检查项，然后重新运行。\n\n");
   return 1;
 }
 
