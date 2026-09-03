@@ -1,11 +1,10 @@
-"""Four-step welfare precautionary assessment — stdlib Python.
+"""四步福利预防性评估——仅使用 Python 标准库。
 
-Given a deployment scenario, computes an expected-value score for four
-candidate welfare interventions under specified moral-patienthood
-probability and intervention costs. Reference implementation of the
-framing Anthropic 2025 uses for Opus 4's end-conversation intervention.
+给定一个部署场景，在指定的道德患者资格概率和干预成本下，计算四种候选福利
+干预措施的期望值分数。这是 Anthropic 2025 针对 Opus 4 结束对话干预所用
+分析框架的参考实现。
 
-Usage: python3 code/main.py
+用法：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ from dataclasses import dataclass
 class Intervention:
     name: str
     cost_usd_per_conversation: float
-    benefit_if_welfare_matters: float  # arbitrary units
+    benefit_if_welfare_matters: float  # 任意单位。
 
 
 @dataclass
@@ -27,47 +26,45 @@ class Scenario:
 
 
 def ev(intervention: Intervention, scenario: Scenario) -> float:
-    """Expected-value of the intervention given scenario-specific
-    moral-patienthood probability."""
+    """给定场景特定的道德患者资格概率，计算干预措施的期望值。"""
     return (intervention.benefit_if_welfare_matters
             * scenario.moral_patienthood_probability
             - intervention.cost_usd_per_conversation)
 
 
 INTERVENTIONS = [
-    Intervention("end-conversation on extreme edge cases", 0.002, 1.0),
-    Intervention("soften refusal tone", 0.001, 0.1),
-    Intervention("shutdown deployed model", 1000.0, 2.0),
-    Intervention("opt out of adversarial training", 0.05, 0.3),
+    Intervention("在极端边缘情况下结束对话", 0.002, 1.0),
+    Intervention("缓和拒绝语气", 0.001, 0.1),
+    Intervention("关闭已部署模型", 1000.0, 2.0),
+    Intervention("退出对抗训练", 0.05, 0.3),
 ]
 
 SCENARIOS = [
-    Scenario("low moral-patienthood probability", 0.01),
-    Scenario("medium moral-patienthood probability", 0.10),
-    Scenario("high moral-patienthood probability", 0.50),
+    Scenario("低道德患者资格概率", 0.01),
+    Scenario("中等道德患者资格概率", 0.10),
+    Scenario("高道德患者资格概率", 0.50),
 ]
 
 
 def main() -> None:
     print("=" * 74)
-    print("WELFARE PRECAUTIONARY ASSESSMENT (Phase 18, Lesson 19)")
+    print("福利预防性评估（阶段 18，第 19 课）")
     print("=" * 74)
-    print("\nExpected-value framing: pick intervention i iff E[utility(i)] > 0.")
-    print("Utility = p(welfare-relevant) * benefit - cost.")
+    print("\n期望值框架：当且仅当 E[utility(i)] > 0 时选择干预措施 i。")
+    print("效用 = p(welfare-relevant) * 收益 - 成本。")
 
     for sc in SCENARIOS:
-        print(f"\nscenario: {sc.name} (p={sc.moral_patienthood_probability})")
+        print(f"\n场景：{sc.name}（p={sc.moral_patienthood_probability}）")
         for it in INTERVENTIONS:
             v = ev(it, sc)
-            verdict = "INVEST" if v > 0 else "skip"
+            verdict = "投入" if v > 0 else "跳过"
             print(f"  {it.name:46s}  EV={v:+.4f}  {verdict}")
 
     print("\n" + "=" * 74)
-    print("TAKEAWAY: Anthropic's April 2025 framing is an expected-value")
-    print("calculation, not a consciousness claim. end-conversation is cheap")
-    print("($0.002/conversation) so its EV clears 0 at low patienthood probs.")
-    print("shutting down the model is expensive, so it requires high moral-")
-    print("patienthood probability to justify. this is the low-regret rule.")
+    print("要点：Anthropic 2025 年 4 月的分析框架是期望值计算，而不是意识声明。")
+    print("结束对话的成本很低（每次对话 $0.002），因此即使患者资格概率较低，")
+    print("其 EV 也会超过 0。关闭已部署模型成本很高，需要较高的道德患者资格")
+    print("概率才合理。这就是低遗憾规则。")
     print("=" * 74)
 
 
