@@ -1,16 +1,16 @@
-"""AdamW with cosine learning-rate schedule and linear warmup.
+"""AdamW 配合余弦学习率调度与线性预热。
 
-Implements:
-- CosineWithWarmup, a stateless schedule whose lr(step) honors warmup, peak,
-  and decay boundaries exactly.
-- TrainState, which wires an AdamW optimizer to the schedule and runs one
-  training step at a time, logging the learning rate and gradient L2 norm.
-- plot_schedule_ascii and write_schedule_csv, deterministic helpers that
-  produce a text plot and a CSV the rest of the pipeline can read.
+实现：
+- CosineWithWarmup，一个无状态的调度器，其 lr(step) 严格遵循预热、峰值
+  和衰减边界。
+- TrainState，将 AdamW 优化器与调度器连接，逐个训练步骤运行，并记录
+  学习率与梯度的 L2 范数。
+- plot_schedule_ascii 和 write_schedule_csv，确定性辅助函数，分别生成
+  文本图表和 CSV，供流水线其余部分读取。
 
-The demo at the bottom builds a tiny torch.nn.Linear model, trains for 20
-steps on a fixed batch, prints a per-step log, and renders the schedule.
-Run: python3 code/main.py
+底部的演示构建一个微小的 torch.nn.Linear 模型，在固定批次上训练 20
+步，打印逐步日志，并渲染调度曲线。
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ try:
     from torch import nn
 except ImportError as exc:
     raise SystemExit(
-        "torch is required for this lesson. Install with: pip install torch"
+        "本课程需要 torch。请运行以下命令安装：pip install torch"
     ) from exc
 
 
@@ -38,12 +38,11 @@ PLOT_WIDTH = 60
 
 @dataclass
 class CosineWithWarmup:
-    """Stateless cosine-with-warmup learning-rate schedule.
+    """无状态的余弦学习率调度器，包含预热阶段。
 
-    Step indexing convention: step zero is the very first training update. At
-    step zero the rate is exactly zero (the warmup ramp starts there). At
-    step warmup_steps the rate is exactly lr_max. At step total_steps the
-    rate is exactly lr_min. Past total_steps the rate stays at lr_min.
+    步数索引约定：第 0 步是第一次训练更新。此时学习率恰好为零（预热斜坡
+    从这里开始）；在 warmup_steps 步恰好为 lr_max；在 total_steps 步恰好
+    为 lr_min；超过 total_steps 后保持为 lr_min。
     """
 
     warmup_steps: int
@@ -86,7 +85,7 @@ class CosineWithWarmup:
 
 @dataclass
 class StepLog:
-    """One row of the per-step training log."""
+    """逐步训练日志中的一行。"""
 
     step: int
     lr: float
@@ -103,11 +102,10 @@ class StepLog:
 
 
 def gradient_l2_norm(parameters: Iterable[torch.nn.Parameter]) -> float:
-    """Return the L2 norm of the concatenated gradient vector.
+    """返回拼接后梯度向量的 L2 范数。
 
-    Mirrors `torch.nn.utils.get_total_norm` for the gradient case so the lesson
-    does not depend on a particular PyTorch version that may or may not expose
-    that helper.
+    在梯度场景下复现 ``torch.nn.utils.get_total_norm``，使课程无需依赖
+    某个可能提供或不提供该辅助函数的特定 PyTorch 版本。
     """
 
     squared_sum = 0.0
@@ -120,9 +118,9 @@ def gradient_l2_norm(parameters: Iterable[torch.nn.Parameter]) -> float:
 
 
 class TrainState:
-    """Bind a model, an AdamW optimizer, a schedule, and a loss function.
+    """将模型、AdamW 优化器、调度器和损失函数绑定在一起。
 
-    The class owns the step counter so the schedule axis is the durable one.
+    该类自行维护步数计数器，使调度器的步数轴成为持久状态。
     """
 
     def __init__(
@@ -181,7 +179,7 @@ def plot_schedule_ascii(
     width: int = PLOT_WIDTH,
     height: int = PLOT_HEIGHT,
 ) -> str:
-    """Return a text plot of the schedule across [0, total_steps]."""
+    """返回调度器在 ``[0, total_steps]`` 范围内的文本图。"""
 
     if width <= 2 or height <= 2:
         raise ValueError("width and height must be at least 3")
@@ -215,7 +213,7 @@ def plot_schedule_ascii(
 
 
 def write_schedule_csv(schedule: CosineWithWarmup, path: Path) -> None:
-    """Write one row per step to a CSV with columns (step, lr)."""
+    """将每一步写入 CSV，列为 ``(step, lr)``。"""
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -227,7 +225,7 @@ def write_schedule_csv(schedule: CosineWithWarmup, path: Path) -> None:
 
 
 def write_step_log_csv(log: Iterable[StepLog], path: Path) -> None:
-    """Write the training log to a CSV with the canonical schema."""
+    """使用规范 schema 将训练日志写入 CSV。"""
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,11 +238,10 @@ def write_step_log_csv(log: Iterable[StepLog], path: Path) -> None:
 
 @dataclass
 class LinearWarmupConstant:
-    """Alternative schedule: linear warmup followed by a flat lr_max plateau.
+    """替代调度器：线性预热后保持在 lr_max 平台。
 
-    Useful as a baseline for ablations against the cosine variant. The same
-    contract: lr(0) is zero (with non-zero warmup) and the rate stays at
-    lr_max for steps beyond warmup_steps.
+    可作为余弦变体消融实验的基线。契约相同：预热步数非零时 lr(0) 为零，
+    超过 warmup_steps 后学习率保持在 lr_max。
     """
 
     warmup_steps: int
@@ -268,10 +265,10 @@ class LinearWarmupConstant:
 
 @dataclass
 class InverseSqrtWarmup:
-    """Linear warmup followed by an inverse-square-root decay.
+    """线性预热后进行平方根倒数衰减。
 
-    Decays as lr_max * sqrt(warmup_steps / step) for step > warmup_steps. Used
-    historically in transformer training and useful as a comparison baseline.
+    当 step > warmup_steps 时，按 ``lr_max * sqrt(warmup_steps / step)``
+    衰减。该方法过去常用于 Transformer 训练，可作为对比基线。
     """
 
     warmup_steps: int
@@ -293,7 +290,7 @@ class InverseSqrtWarmup:
 
 @dataclass
 class EWMA:
-    """Exponentially weighted moving average of a scalar, useful for grad-norm smoothing."""
+    """标量的指数加权移动平均，可用于平滑梯度范数。"""
 
     beta: float
     value: float = 0.0
@@ -314,7 +311,7 @@ class EWMA:
 
 @dataclass
 class StepLogSummary:
-    """Reduction of a per-step log to the numbers a reviewer scans first."""
+    """将逐步日志归约为审查者优先关注的数值。"""
 
     steps: int
     lr_peak: float
@@ -345,11 +342,10 @@ def split_decay_groups(
     weight_decay: float = 0.01,
     no_decay_names: tuple[str, ...] = ("bias", "LayerNorm.weight", "layer_norm.weight"),
 ) -> list[dict[str, object]]:
-    """Split model parameters into a decay and a no-decay group.
+    """将模型参数分为衰减组与不衰减组。
 
-    The convention for transformer training is to apply weight decay to dense
-    weight matrices but not to biases or LayerNorm gain parameters. This helper
-    returns the two parameter-group dicts AdamW accepts.
+    Transformer 训练的惯例是对稠密权重矩阵应用权重衰减，而不对偏置或
+    LayerNorm 增益参数应用。本辅助函数返回 AdamW 接受的两个参数组 dict。
     """
 
     decay_params: list[nn.Parameter] = []
@@ -374,7 +370,7 @@ def build_toy_model(
     out_dim: int = 4,
     seed: int = 7,
 ) -> tuple[nn.Module, torch.Tensor, torch.Tensor]:
-    """Tiny linear model with a fixed batch for the demo."""
+    """用于演示的微型线性模型和固定批次。"""
 
     torch.manual_seed(seed)
     model = nn.Sequential(nn.Linear(in_dim, 32), nn.GELU(), nn.Linear(32, out_dim))
@@ -384,7 +380,7 @@ def build_toy_model(
 
 
 def run_demo() -> int:
-    """Run 20 training steps on a toy model and render the schedule."""
+    """在玩具模型上运行 20 个训练步骤并渲染调度曲线。"""
 
     model, inputs, targets = build_toy_model()
     schedule = CosineWithWarmup(
@@ -405,12 +401,12 @@ def run_demo() -> int:
             f"grad_l2={record.grad_l2_norm:.6f} loss={record.loss:.6f}"
         )
     print()
-    print("learning rate schedule:")
+    print("学习率调度：")
     print(plot_schedule_ascii(schedule, width=40, height=10))
     summary = summarize_step_log(state.log)
     print()
     print(
-        f"summary: steps={summary.steps} lr_peak={summary.lr_peak:.6f} "
+        f"摘要：steps={summary.steps} lr_peak={summary.lr_peak:.6f} "
         f"grad_l2_peak={summary.grad_l2_peak:.6f} loss_delta={summary.loss_delta:.6f}"
     )
     return 0
