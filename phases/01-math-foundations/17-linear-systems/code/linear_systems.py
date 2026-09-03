@@ -10,7 +10,7 @@ def gaussian_elimination(A, b):
         Ab[[k, max_row]] = Ab[[max_row, k]]
 
         if abs(Ab[k, k]) < 1e-12:
-            raise ValueError(f"Matrix is singular at pivot {k}")
+            raise ValueError(f"矩阵在第 {k} 个主元处奇异")
 
         for i in range(k + 1, n):
             m = Ab[i, k] / Ab[k, k]
@@ -68,7 +68,7 @@ def cholesky(A):
             s = A[i, j] - L[i, :j] @ L[j, :j]
             if i == j:
                 if s <= 0:
-                    raise ValueError("Matrix is not positive definite")
+                    raise ValueError("矩阵非正定")
                 L[i, j] = np.sqrt(s)
             else:
                 L[i, j] = s / L[j, j]
@@ -138,7 +138,7 @@ def conjugate_gradient(A, b, tol=1e-10, max_iter=None):
 
 def demo_gaussian_elimination():
     print("=" * 60)
-    print("Gaussian Elimination with Partial Pivoting")
+    print("带部分主元的高斯消元")
     print("=" * 60)
 
     A = np.array([[2, 1, 1], [4, 3, 3], [2, 3, 1]], dtype=float)
@@ -149,18 +149,18 @@ def demo_gaussian_elimination():
 
     print(f"A =\n{A}")
     print(f"b = {b}")
-    print(f"Solution (ours):  {x_ours}")
-    print(f"Solution (numpy): {x_numpy}")
-    print(f"Max difference: {np.max(np.abs(x_ours - x_numpy)):.2e}")
+    print(f"解（我们的）:     {x_ours}")
+    print(f"解（numpy）:     {x_numpy}")
+    print(f"最大差异: {np.max(np.abs(x_ours - x_numpy)):.2e}")
 
     residual = A @ x_ours - b
-    print(f"Residual ||Ax - b||: {np.linalg.norm(residual):.2e}")
+    print(f"残差 ||Ax - b||: {np.linalg.norm(residual):.2e}")
     print()
 
 
 def demo_lu():
     print("=" * 60)
-    print("LU Decomposition")
+    print("LU 分解")
     print("=" * 60)
 
     A = np.array([[2, 1, 1], [4, 3, 3], [2, 3, 1]], dtype=float)
@@ -173,12 +173,12 @@ def demo_lu():
     print(f"U =\n{U}")
 
     reconstructed = P.T @ L @ U
-    print(f"PA = LU reconstruction error: {np.max(np.abs(A - reconstructed)):.2e}")
+    print(f"PA = LU 重建误差: {np.max(np.abs(A - reconstructed)):.2e}")
 
     x = lu_solve(P, L, U, b)
-    print(f"Solution: {x}")
+    print(f"解: {x}")
 
-    print("\nSolving 3 different right-hand sides with the same LU:")
+    print("\n使用相同的 LU 分解求解 3 个不同的右端项:")
     for b_i in [np.array([1, 0, 0.0]), np.array([0, 1, 0.0]), np.array([0, 0, 1.0])]:
         x_i = lu_solve(P, L, U, b_i)
         print(f"  b = {b_i} -> x = {np.round(x_i, 4)}")
@@ -187,7 +187,7 @@ def demo_lu():
 
 def demo_cholesky():
     print("=" * 60)
-    print("Cholesky Decomposition")
+    print("Cholesky 分解")
     print("=" * 60)
 
     A = np.array([[4, 2, 1], [2, 5, 3], [1, 3, 6]], dtype=float)
@@ -196,19 +196,19 @@ def demo_cholesky():
     print(f"A =\n{A}")
     print(f"L =\n{np.round(L, 4)}")
     print(f"L @ L^T =\n{np.round(L @ L.T, 4)}")
-    print(f"Reconstruction error: {np.max(np.abs(A - L @ L.T)):.2e}")
+    print(f"重建误差: {np.max(np.abs(A - L @ L.T)):.2e}")
 
     L_numpy = np.linalg.cholesky(A)
-    print(f"Max diff from numpy cholesky: {np.max(np.abs(L - L_numpy)):.2e}")
+    print(f"与 numpy cholesky 的最大差异: {np.max(np.abs(L - L_numpy)):.2e}")
 
     b = np.array([7, 10, 10], dtype=float)
     x = cholesky_solve(L, b)
     x_direct = np.linalg.solve(A, b)
-    print(f"\nSolve Ax = b:")
-    print(f"  x (ours):  {np.round(x, 4)}")
-    print(f"  x (numpy): {np.round(x_direct, 4)}")
+    print(f"\n求解 Ax = b:")
+    print(f"  x（我们的）:   {np.round(x, 4)}")
+    print(f"  x（numpy）:   {np.round(x_direct, 4)}")
 
-    print("\nLog determinant via Cholesky:")
+    print("\n通过 Cholesky 计算对数行列式:")
     log_det = 2 * np.sum(np.log(np.diag(L)))
     log_det_np = np.log(np.linalg.det(A))
     print(f"  2 * sum(log(diag(L))) = {log_det:.6f}")
@@ -218,7 +218,7 @@ def demo_cholesky():
 
 def demo_least_squares():
     print("=" * 60)
-    print("Least Squares = Linear Regression")
+    print("最小二乘 = 线性回归")
     print("=" * 60)
 
     np.random.seed(42)
@@ -236,19 +236,19 @@ def demo_least_squares():
     w_ols = least_squares_normal(X, y)
     w_numpy = np.linalg.lstsq(X, y, rcond=None)[0]
 
-    print(f"True weights:          {w_true_with_bias}")
-    print(f"OLS weights (ours):    {np.round(w_ols, 4)}")
-    print(f"OLS weights (numpy):   {np.round(w_numpy, 4)}")
-    print(f"Max difference: {np.max(np.abs(w_ols - w_numpy)):.2e}")
+    print(f"真实权重:          {w_true_with_bias}")
+    print(f"OLS 权重（我们的）:   {np.round(w_ols, 4)}")
+    print(f"OLS 权重（numpy）:   {np.round(w_numpy, 4)}")
+    print(f"最大差异: {np.max(np.abs(w_ols - w_numpy)):.2e}")
 
     residual = X @ w_ols - y
-    print(f"Residual norm: {np.linalg.norm(residual):.4f}")
+    print(f"残差范数: {np.linalg.norm(residual):.4f}")
     print()
 
 
 def demo_ridge():
     print("=" * 60)
-    print("Ridge Regression (Regularized Least Squares)")
+    print("岭回归（正则化最小二乘）")
     print("=" * 60)
 
     np.random.seed(42)
@@ -274,51 +274,51 @@ def demo_ridge():
     try:
         from sklearn.linear_model import Ridge
 
-        print("\nCompare with sklearn Ridge:")
+        print("\n与 sklearn Ridge 对比:")
         for lam in [0.1, 1.0, 10.0]:
             w_ours = ridge_regression(X, y, lam)
             ridge_sk = Ridge(alpha=lam, fit_intercept=False)
             ridge_sk.fit(X, y)
             diff = np.max(np.abs(w_ours - ridge_sk.coef_))
-            print(f"  lambda={lam:>5.1f}  max diff from sklearn: {diff:.2e}")
+            print(f"  lambda={lam:>5.1f}  与 sklearn 的最大差异: {diff:.2e}")
     except ImportError:
-        print("\nInstall scikit-learn for sklearn comparison: pip install scikit-learn")
+        print("\n安装 scikit-learn 以进行 sklearn 对比: pip install scikit-learn")
     print()
 
 
 def demo_condition_number():
     print("=" * 60)
-    print("Condition Number")
+    print("条件数")
     print("=" * 60)
 
     A_good = np.array([[2, 0], [0, 1]], dtype=float)
-    print(f"Well-conditioned: kappa = {condition_number(A_good):.1f}")
+    print(f"良态矩阵: kappa = {condition_number(A_good):.1f}")
 
     A_bad = np.array([[1, 1], [1, 1 + 1e-10]], dtype=float)
-    print(f"Ill-conditioned:  kappa = {condition_number(A_bad):.2e}")
+    print(f"病态矩阵: kappa = {condition_number(A_bad):.2e}")
 
     np.random.seed(42)
     X = np.random.randn(100, 5)
-    print(f"\nRandom 100x5 matrix:")
+    print(f"\n随机 100x5 矩阵:")
     print(f"  kappa(X)     = {condition_number(X):.2f}")
     print(f"  kappa(X^T X) = {condition_number(X.T @ X):.2f}")
 
     X_collinear = X.copy()
     X_collinear[:, 4] = X_collinear[:, 0] + 1e-8 * np.random.randn(100)
-    print(f"\nWith near-collinear feature:")
+    print(f"\n加入近共线特征后:")
     print(f"  kappa(X)     = {condition_number(X_collinear):.2e}")
     print(f"  kappa(X^T X) = {condition_number(X_collinear.T @ X_collinear):.2e}")
 
     lam = 0.01
     XtX_reg = X_collinear.T @ X_collinear + lam * np.eye(5)
-    print(f"\nAfter regularization (lambda={lam}):")
+    print(f"\n正则化后（lambda={lam}）:")
     print(f"  kappa(X^T X + lambda I) = {condition_number(XtX_reg):.2f}")
     print()
 
 
 def demo_conjugate_gradient():
     print("=" * 60)
-    print("Conjugate Gradient")
+    print("共轭梯度法")
     print("=" * 60)
 
     np.random.seed(42)
@@ -330,24 +330,24 @@ def demo_conjugate_gradient():
     x_cg, iters = conjugate_gradient(A, b, tol=1e-10)
     x_direct = np.linalg.solve(A, b)
 
-    print(f"System size: {n}")
-    print(f"CG iterations: {iters} (max possible: {n})")
-    print(f"Max diff from direct solve: {np.max(np.abs(x_cg - x_direct)):.2e}")
-    print(f"Residual norm: {np.linalg.norm(A @ x_cg - b):.2e}")
-    print(f"Condition number: {condition_number(A):.2f}")
+    print(f"系统规模: {n}")
+    print(f"CG 迭代次数: {iters}（最大可能: {n}）")
+    print(f"与直接求解的最大差异: {np.max(np.abs(x_cg - x_direct)):.2e}")
+    print(f"残差范数: {np.linalg.norm(A @ x_cg - b):.2e}")
+    print(f"条件数: {condition_number(A):.2f}")
 
     A_well = np.eye(n) + 0.1 * M.T @ M / n
     b_well = np.random.randn(n)
     x_cg2, iters2 = conjugate_gradient(A_well, b_well, tol=1e-10)
-    print(f"\nBetter-conditioned system:")
+    print(f"\n条件更好的系统:")
     print(f"  kappa = {condition_number(A_well):.2f}")
-    print(f"  CG iterations: {iters2}")
+    print(f"  CG 迭代次数: {iters2}")
     print()
 
 
 def demo_equivalence():
     print("=" * 60)
-    print("All Methods Agree: Gaussian, LU, Cholesky, Normal Eq, NumPy")
+    print("所有方法结果一致: 高斯、LU、Cholesky、正规方程、NumPy")
     print("=" * 60)
 
     np.random.seed(42)
@@ -368,20 +368,20 @@ def demo_equivalence():
 
     x_cg, _ = conjugate_gradient(A, b, tol=1e-12)
 
-    print(f"Gaussian:  {np.round(x_gauss, 6)}")
-    print(f"LU:        {np.round(x_lu, 6)}")
-    print(f"Cholesky:  {np.round(x_chol, 6)}")
-    print(f"NumPy:     {np.round(x_numpy, 6)}")
-    print(f"CG:        {np.round(x_cg, 6)}")
-    print(f"\nAll within tolerance:")
+    print(f"高斯:   {np.round(x_gauss, 6)}")
+    print(f"LU:     {np.round(x_lu, 6)}")
+    print(f"Cholesky: {np.round(x_chol, 6)}")
+    print(f"NumPy:  {np.round(x_numpy, 6)}")
+    print(f"CG:     {np.round(x_cg, 6)}")
+    print(f"\n均在容差范围内:")
     for name, x in [("LU", x_lu), ("Cholesky", x_chol), ("NumPy", x_numpy), ("CG", x_cg)]:
-        print(f"  Gaussian vs {name:>10s}: {np.max(np.abs(x_gauss - x)):.2e}")
+        print(f"  高斯 vs {name:>10s}: {np.max(np.abs(x_gauss - x)):.2e}")
     print()
 
 
 def demo_linear_regression_full():
     print("=" * 60)
-    print("Full Pipeline: Linear Regression from Scratch")
+    print("完整流程: 从零实现线性回归")
     print("=" * 60)
 
     np.random.seed(0)
@@ -393,29 +393,29 @@ def demo_linear_regression_full():
 
     X = np.column_stack([np.ones(n_samples), x1, x2])
 
-    print(f"Data: {n_samples} samples, {X.shape[1]} features (with intercept)")
-    print(f"True weights: [7.0, 3.0, -2.0]")
-    print(f"Condition number of X^T X: {condition_number(X.T @ X):.2f}")
+    print(f"数据: {n_samples} 个样本，{X.shape[1]} 个特征（含截距）")
+    print(f"真实权重: [7.0, 3.0, -2.0]")
+    print(f"X^T X 的条件数: {condition_number(X.T @ X):.2f}")
 
     w_normal = least_squares_normal(X, y)
-    print(f"\nNormal equations:     {np.round(w_normal, 4)}")
+    print(f"\n正规方程:       {np.round(w_normal, 4)}")
 
     AtA = X.T @ X
     Lc = cholesky(AtA)
     w_chol = cholesky_solve(Lc, X.T @ y)
-    print(f"Cholesky:             {np.round(w_chol, 4)}")
+    print(f"Cholesky:       {np.round(w_chol, 4)}")
 
     w_numpy = np.linalg.lstsq(X, y, rcond=None)[0]
-    print(f"NumPy lstsq:          {np.round(w_numpy, 4)}")
+    print(f"NumPy lstsq:    {np.round(w_numpy, 4)}")
 
     try:
         from sklearn.linear_model import LinearRegression
 
         lr = LinearRegression(fit_intercept=False)
         lr.fit(X, y)
-        print(f"sklearn:              {np.round(lr.coef_, 4)}")
+        print(f"sklearn:        {np.round(lr.coef_, 4)}")
     except ImportError:
-        print("sklearn:              (install scikit-learn for comparison)")
+        print("sklearn:        （安装 scikit-learn 以进行对比）")
 
     y_pred = X @ w_normal
     mse = np.mean((y - y_pred) ** 2)
