@@ -132,10 +132,10 @@ def main():
     torch.manual_seed(0)
     device = "cpu"
     data = synthetic_blobs(num=128, size=16)
-    print(f"data shape: {tuple(data.shape)}")
+    print(f"数据形状：{tuple(data.shape)}")
 
     model = TinyDiT(image_size=16, patch_size=2, in_channels=3, dim=96, depth=4, heads=3).to(device)
-    print(f"params: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"参数量：{sum(p.numel() for p in model.parameters()):,}")
 
     opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 
@@ -145,14 +145,14 @@ def main():
         x0 = data[idx]
         loss = rectified_flow_train_step(model, x0, opt, device)
         if step % 50 == 0:
-            print(f"step {step:3d}  rf_mse {loss:.4f}")
+            print(f"步骤 {step:3d}  rf_mse {loss:.4f}")
 
-    print("\n[sample] steps=20")
+    print("\n[采样] 步数=20")
     s20 = rectified_flow_sample(model, (4, 3, 16, 16), steps=20, device=device)
-    print(f"  samples range [{s20.min():.2f}, {s20.max():.2f}]  shape {tuple(s20.shape)}")
-    print("[sample] steps=4 (schnell-like)")
+    print(f"  样本范围 [{s20.min():.2f}, {s20.max():.2f}]  形状 {tuple(s20.shape)}")
+    print("[采样] 步数=4（类似 schnell）")
     s4 = rectified_flow_sample(model, (4, 3, 16, 16), steps=4, device=device)
-    print(f"  samples range [{s4.min():.2f}, {s4.max():.2f}]  shape {tuple(s4.shape)}")
+    print(f"  样本范围 [{s4.min():.2f}, {s4.max():.2f}]  形状 {tuple(s4.shape)}")
 
 
 if __name__ == "__main__":
