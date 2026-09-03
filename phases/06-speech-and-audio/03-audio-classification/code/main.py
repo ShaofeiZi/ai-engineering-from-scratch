@@ -1,9 +1,9 @@
-"""Audio classification baseline: k-NN on mean+var pooled MFCCs.
+"""音频分类基线：对均值+方差池化后的 MFCC 使用 k-NN。
 
-Synthetic 4-class dataset: pure tones at {200, 400, 800, 1600} Hz with
-Gaussian noise. Trains, tests, prints confusion matrix.
+四分类合成数据集：频率为 {200, 400, 800, 1600} Hz 且带高斯噪声的纯音。
+训练并测试模型，然后输出混淆矩阵。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 import math
@@ -133,7 +133,7 @@ def main():
     X_train, y_train = [], []
     X_test, y_test = [], []
 
-    print("=== Build synthetic 4-class dataset (pure tones + noise) ===")
+    print("=== 构建四分类合成数据集（纯音 + 噪声）===")
     for label, freq in classes.items():
         for _ in range(per_class_train):
             sig = add_noise(sine(freq, sr, duration))
@@ -143,11 +143,11 @@ def main():
             sig = add_noise(sine(freq, sr, duration))
             X_test.append(summarize(featurize(sig, sr)))
             y_test.append(label)
-    print(f"  train: {len(X_train)}  test: {len(X_test)}")
-    print(f"  feature dim: {len(X_train[0])}  (mean+var of 13 MFCC)")
+    print(f"  训练集：{len(X_train)}  测试集：{len(X_test)}")
+    print(f"  特征维度：{len(X_train[0])}  （13 个 MFCC 的均值+方差）")
 
     print()
-    print("=== k-NN classify (k=3) ===")
+    print("=== k-NN 分类（k=3）===")
     correct = 0
     confusion = {c: Counter() for c in classes}
     for feat, gold in zip(X_test, y_test):
@@ -156,10 +156,10 @@ def main():
         if pred == gold:
             correct += 1
     acc = correct / len(X_test)
-    print(f"  test accuracy: {acc:.3f} ({correct}/{len(X_test)})")
+    print(f"  测试准确率：{acc:.3f} ({correct}/{len(X_test)})")
 
     print()
-    print("=== Confusion matrix (rows=gold, cols=predicted) ===")
+    print("=== 混淆矩阵（行=标准答案，列=预测结果）===")
     header = "  " + " ".join(f"{c[:8]:>10}" for c in classes)
     print(header)
     for gold in classes:
@@ -169,9 +169,9 @@ def main():
         print(row)
 
     print()
-    print("takeaways:")
-    print("  - k-NN on mean+var MFCC pool is a surprisingly strong baseline")
-    print("  - real pipelines use BEATs / AST fine-tune + SpecAugment + mixup")
+    print("要点：")
+    print("  - 对均值+方差池化 MFCC 使用 k-NN，是一个出人意料的强基线")
+    print("  - 真正的流水线使用 BEATs / AST 微调 + SpecAugment + mixup")
 
 
 if __name__ == "__main__":
