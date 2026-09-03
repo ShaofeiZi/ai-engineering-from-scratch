@@ -1,17 +1,17 @@
-// Inference optimization: KV cache + speculative decoding sketch. Stdlib only.
-// Topic: prefill vs decode, KV cache memory layout, prefix cache trie, draft-verify loop.
-// References (cited in spirit, not as deps):
-//   - vLLM PagedAttention (Kwon 2023):    https://arxiv.org/abs/2309.06180
-//   - Speculative decoding (Leviathan):   https://arxiv.org/abs/2211.17192
-//   - candle KV cache:                    https://github.com/huggingface/candle/blob/main/candle-transformers/src/models/llama.rs
-//   - llm.c inference notes:              https://github.com/karpathy/llm.c
+// 推理优化：KV cache 与投机解码示例，仅使用 Rust 标准库。
+// 主题：prefill 与 decode、KV cache 内存布局、前缀缓存 trie、draft-verify 循环。
+// 参考资料（仅引用思路，不作为依赖）：
+//   - vLLM PagedAttention（Kwon 2023）：https://arxiv.org/abs/2309.06180
+//   - 投机解码（Leviathan）：https://arxiv.org/abs/2211.17192
+//   - candle KV cache：https://github.com/huggingface/candle/blob/main/candle-transformers/src/models/llama.rs
+//   - llm.c 推理说明：https://github.com/karpathy/llm.c
 //
-// Compile + run:  rustc --edition 2021 main.rs -o /tmp/inf && /tmp/inf
+// 编译并运行：rustc --edition 2021 main.rs -o /tmp/inf && /tmp/inf
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
-// ---------- xorshift64 RNG (deterministic, good distribution in low bits) ----------
+// ---------- xorshift64 RNG（确定性，低位分布良好）----------
 struct Rng { state: u64 }
 impl Rng {
     fn new(seed: u64) -> Self {
@@ -46,7 +46,7 @@ impl Rng {
     }
 }
 
-// ---------- KVCache: layered [num_layers, num_heads, max_seq, head_dim] ----------
+// ---------- KVCache：按 [num_layers, num_heads, max_seq, head_dim] 分层 ----------
 struct KVCache {
     num_layers: usize,
     num_heads: usize,
@@ -63,7 +63,7 @@ impl KVCache {
         let total = num_layers * num_heads * max_seq_len * head_dim;
         KVCache {
             num_layers, num_heads, head_dim, max_seq_len,
-            bytes_per_element: 2, // simulate fp16
+            bytes_per_element: 2, // 模拟 fp16
             k: vec![0.0; total],
             v: vec![0.0; total],
             seq_len: 0,
@@ -74,13 +74,13 @@ impl KVCache {
         ((layer * self.num_heads + head) * self.max_seq_len + pos) * self.head_dim + dim
     }
 
-    // Write new K/V slices of shape [n_new, num_heads, head_dim] for one layer.
+    // 为一层写入形状为 [n_new, num_heads, head_dim] 的新 K/V 切片。
     fn update(&mut self, layer: usize, new_k: &[f32], new_v: &[f32], n_new: usize) {
         assert_eq!(new_k.len(), n_new * self.num_heads * self.head_dim);
         assert_eq!(new_v.len(), n_new * self.num_heads * self.head_dim);
-        assert!(layer < self.num_layers, "layer index out of range");
+        assert!(layer < self.num_layers, "层索引超出范围");
         let start = self.seq_len;
-        assert!(start + n_new <= self.max_seq_len, "KV cache capacity exceeded");
+        assert!(start + n_new <= self.max_seq_len, "超出 KV cache 容量");
         for t in 0..n_new {
             for h in 0..self.num_heads {
                 for d in 0..self.head_dim {
@@ -104,9 +104,9 @@ impl KVCache {
     }
 }
 
-// ---------- Prefix cache trie (PagedAttention-style prefix sharing) ----------
+// ---------- 前缀缓存 trie（PagedAttention 风格的前缀共享）----------
 struct TrieNode {
-    children: HashMap<usize, usize>, // token -> node idx
+    children: HashMap<usize, usize>, // token -> 节点索引
     hit_count: usize,
 }
 
@@ -174,7 +174,7 @@ impl PrefixCache {
     }
 }
 
-// ---------- Batching simulators ----------
+// ---------- 批处理模拟器 ----------
 #[derive(Clone)]
 struct Request {
     arrival: usize,
@@ -277,7 +277,7 @@ fn batch_stats(completed: &[Request]) -> BatchStats {
     BatchStats { avg_latency: avg, p50, p99, total_time: total, throughput: thr }
 }
 
-// ---------- Speculative decoding sketch ----------
+// ---------- 投机解码示例 ----------
 struct DraftModel { vocab: usize, acceptance_rate: f32 }
 struct TargetModel { vocab: usize }
 
@@ -288,7 +288,7 @@ impl DraftModel {
 }
 
 impl TargetModel {
-    // Returns a (uniform) probability vector. A real target would sample its true distribution.
+    // 返回均匀概率向量；真实的目标模型会从自身的实际分布中采样。
     fn uniform_probs(&self) -> Vec<f32> { vec![1.0 / self.vocab as f32; self.vocab] }
 }
 
@@ -317,7 +317,7 @@ fn speculative_decode(
         let draft_tokens = draft.generate(num_spec, rng);
         total_cost += draft_cost * num_spec as f32;
 
-        // One verify pass scores all k tokens.
+        // 一次验证前向传播同时为全部 k 个 token 打分。
         total_cost += verify_cost;
 
         let mut accepted = 0usize;
@@ -339,7 +339,7 @@ fn speculative_decode(
         accepted_counts.push(accepted);
 
         if accepted == num_spec && total_tokens < max_tokens {
-            // Bonus token from target's free-standing prediction.
+            // 使用目标模型的独立预测补充一个 token。
             let probs = target.uniform_probs();
             let bonus = rng.choice(&probs);
             ctx.push(bonus);
@@ -357,7 +357,7 @@ fn speculative_decode(
     }
 }
 
-// ---------- KV cache memory analysis ----------
+// ---------- KV cache 内存分析 ----------
 #[allow(dead_code)]
 struct ModelCfg {
     name: &'static str,
@@ -376,9 +376,9 @@ fn kv_cache_mem(cfg: &ModelCfg, seq_len: usize, bytes: usize) -> (usize, f64) {
 fn main() {
     let mut rng = Rng::new(42);
 
-    // --- Step 1: KV cache memory analysis ---
+    // 第 1 步：KV cache 内存分析
     println!("{}", "=".repeat(70));
-    println!("STEP 1: KV cache memory per model");
+    println!("步骤 1：各模型的 KV cache 内存");
     println!("{}", "=".repeat(70));
     let configs: [ModelCfg; 5] = [
         ModelCfg { name: "Llama-3-8B",   num_layers: 32, num_kv_heads: 8, head_dim: 128, params_b: 8.0 },
@@ -387,50 +387,50 @@ fn main() {
         ModelCfg { name: "Mistral-7B",   num_layers: 32, num_kv_heads: 8, head_dim: 128, params_b: 7.0 },
         ModelCfg { name: "GPT-4-est",    num_layers: 120, num_kv_heads: 96, head_dim: 128, params_b: 1800.0 },
     ];
-    println!("  {:<20} {:>12} {:>12} {:>12} {:>12}", "Model", "Per Token", "@ 4K ctx", "@ 32K ctx", "@ 128K ctx");
+    println!("  {:<20} {:>12} {:>12} {:>12} {:>12}", "模型", "每个 token", "@ 4K 上下文", "@ 32K 上下文", "@ 128K 上下文");
     println!("  {}", "-".repeat(70));
     for c in &configs {
         let (pt, _) = kv_cache_mem(c, 1, 2);
         let (_, g4) = kv_cache_mem(c, 4096, 2);
         let (_, g32) = kv_cache_mem(c, 32768, 2);
         let (_, g128) = kv_cache_mem(c, 131072, 2);
-        println!("  {:<20} {:>10}KB {:>10.2}GB {:>10.2}GB {:>10.2}GB",
+        println!("{:<20} {:>10}KB {:>10.2}GB {:>10.2}GB {:>10.2}GB",
             c.name, pt / 1024, g4, g32, g128);
     }
 
-    // --- Step 2: KV cache with simulated attention writes ---
+    // 第 2 步：模拟 Attention 写入 KV cache
     println!("\n{}", "=".repeat(70));
-    println!("STEP 2: KV cache prefill + decode");
+    println!("步骤 2：KV cache 的 prefill 与 decode");
     println!("{}", "=".repeat(70));
     let num_heads = 4usize;
     let head_dim = 16usize;
     let seq_len = 8usize;
     let mut cache = KVCache::new(1, num_heads, head_dim, 128);
 
-    // Fake K/V tensors for prefill.
+    // 构造用于 prefill 的模拟 K/V 张量。
     let n_prefill = seq_len;
     let kv_size = n_prefill * num_heads * head_dim;
     let k: Vec<f32> = (0..kv_size).map(|_| rng.gauss()).collect();
     let v: Vec<f32> = (0..kv_size).map(|_| rng.gauss()).collect();
     cache.update(0, &k, &v, n_prefill);
     cache.advance(n_prefill);
-    println!("  prefill: {} tokens cached, used={} bytes (cap={} bytes)",
+    println!("预填充：缓存 {} 个 token，已用 {} 字节（容量 {} 字节）",
         cache.seq_len, cache.used_bytes(), cache.capacity_bytes());
 
-    // Decode: 4 steps, each appending 1 token's K/V.
+    // 解码 4 步，每步附加 1 个 token 的 K/V。
     for step in 0..4 {
         let kv_size = num_heads * head_dim;
         let k_new: Vec<f32> = (0..kv_size).map(|_| rng.gauss()).collect();
         let v_new: Vec<f32> = (0..kv_size).map(|_| rng.gauss()).collect();
         cache.update(0, &k_new, &v_new, 1);
         cache.advance(1);
-        println!("  decode step {}: cache={} tokens, used={} bytes",
+        println!("解码步骤 {}：缓存 {} 个 token，已用 {} 字节",
             step + 1, cache.seq_len, cache.used_bytes());
     }
 
-    // --- Step 3: static vs continuous batching ---
+    // 第 3 步：静态批处理与连续批处理
     println!("\n{}", "=".repeat(70));
-    println!("STEP 3: static vs continuous batching");
+    println!("步骤 3：静态批处理与连续批处理");
     println!("{}", "=".repeat(70));
 
     let make_reqs = |seed: u64, n: usize| -> Vec<Request> {
@@ -438,7 +438,7 @@ fn main() {
         let mut out = Vec::with_capacity(n);
         for _ in 0..n {
             let arrival = r.range(20);
-            // Pareto-ish: heavy tail via inverse uniform.
+            // 通过逆变换采样构造 Pareto 式长尾输出长度。
             let u = r.uniform().max(1e-3);
             let out_len = ((1.0 / u.powf(1.0 / 1.5)) * 15.0) as usize + 5;
             let out_len = out_len.min(200);
@@ -451,8 +451,8 @@ fn main() {
     let c = simulate_continuous_batching(make_reqs(42, 30), batch_size);
     let ss = batch_stats(&s);
     let cs = batch_stats(&c);
-    println!("  30 requests, batch_size={}", batch_size);
-    println!("  {:<14} {:>12} {:>12} {:>12}", "Metric", "Static", "Continuous", "Delta");
+    println!("30 个请求，batch_size={}", batch_size);
+    println!("  {:<14} {:>12} {:>12} {:>12}", "指标", "静态", "连续", "变化");
     println!("  {}", "-".repeat(54));
     let print_delta = |name: &str, sv: f32, cv: f32, smaller_better: bool| {
         let delta = if smaller_better {
@@ -468,9 +468,9 @@ fn main() {
     print_delta("total_time",  ss.total_time, cs.total_time, true);
     print_delta("throughput",  ss.throughput, cs.throughput, false);
 
-    // --- Step 4: prefix cache ---
+    // 第 4 步：前缀缓存
     println!("\n{}", "=".repeat(70));
-    println!("STEP 4: prefix caching for shared system prompts");
+    println!("步骤 4：共享系统提示的前缀缓存");
     println!("{}", "=".repeat(70));
     let mut pc = PrefixCache::new(5000);
     let prompts: Vec<Vec<usize>> = vec![
@@ -480,7 +480,7 @@ fn main() {
     ];
     for (i, p) in prompts.iter().enumerate() {
         let inserted = pc.insert(p);
-        println!("  cached system prompt {}: {} tokens, {} new nodes inserted", i + 1, p.len(), inserted);
+        println!("已缓存系统提示 {}：{} 个 token，插入 {} 个新节点", i + 1, p.len(), inserted);
     }
 
     let mut hit_count = 0usize;
@@ -494,22 +494,22 @@ fn main() {
         let depth = pc.lookup(&full);
         if depth > 0 { hit_count += 1; tokens_saved += depth; }
     }
-    println!("  hit rate: {:.1}%", pc.hit_rate() * 100.0);
-    println!("  tokens saved (prefix reuse): {}", tokens_saved);
-    println!("  avg saved per hit: {:.1}", tokens_saved as f32 / hit_count.max(1) as f32);
+    println!("  命中率：{:.1}%", pc.hit_rate() * 100.0);
+    println!("节省的 token 数（复用前缀）：{}", tokens_saved);
+    println!("每次命中平均节省的 token 数：{:.1}", tokens_saved as f32 / hit_count.max(1) as f32);
 
-    // --- Step 5: speculative decoding ---
+    // 第 5 步：投机解码
     println!("\n{}", "=".repeat(70));
-    println!("STEP 5: speculative decoding speedup (sketch)");
+    println!("步骤 5：投机解码速度（简化模型）");
     println!("{}", "=".repeat(70));
     let vocab = 500usize;
     let trials = 10usize;
     let strategies: [(&str, f32, usize); 3] = [
         ("draft-target (8B->70B)", 0.78, 5),
         ("EAGLE",                  0.85, 6),
-        ("n-gram lookup",          0.50, 4),
+        ("n-gram 查找",            0.50, 4),
     ];
-    println!("  {:<24} {:>14} {:>12} {:>10}", "Strategy", "AcceptRate", "AvgAccept", "Speedup");
+    println!("  {:<24} {:>14} {:>12} {:>10}", "策略", "接受率", "平均接受数", "加速比");
     println!("  {}", "-".repeat(64));
     for (name, acc, k) in strategies {
         let mut speedups = 0.0f32;
@@ -532,38 +532,39 @@ fn main() {
         );
     }
 
-    // --- Step 6: ops:byte ---
+    // 第 6 步：Ops:Byte 分析
     println!("\n{}", "=".repeat(70));
-    println!("STEP 6: ops:byte and memory vs compute bound");
+    println!("步骤 6：Ops:Byte 与内存/计算瓶颈");
     println!("{}", "=".repeat(70));
     let a100_tflops = 312.0f32;
     let a100_bandwidth_tbs = 2.0f32;
     let crossover = a100_tflops / a100_bandwidth_tbs;
-    println!("  A100 specs: {} TFLOPS, {} TB/s bandwidth, crossover ops:byte = {:.0}",
+    println!("A100 规格：{} TFLOPS，{} TB/s 带宽，Ops:Byte 交叉点={:.0}",
         a100_tflops, a100_bandwidth_tbs, crossover);
     let scenarios: [(&str, usize); 7] = [
-        ("Prefill, batch=1, seq=4096", 4096),
-        ("Decode, batch=1",   1),
-        ("Decode, batch=8",   8),
-        ("Decode, batch=32",  32),
-        ("Decode, batch=128", 128),
-        ("Decode, batch=256", 256),
-        ("Decode, batch=512", 512),
+        ("Prefill，batch=1，seq=4096", 4096),
+        ("解码，batch=1",   1),
+        ("解码，batch=8",   8),
+        ("解码，batch=32",  32),
+        ("解码，batch=128", 128),
+        ("解码，batch=256", 256),
+        ("解码，batch=512", 512),
     ];
-    println!("  {:<32} {:>10} {:>12} {:>12}", "Scenario", "Ops:Byte", "Bound", "Utilization");
+    println!("  {:<32} {:>10} {:>12} {:>12}", "场景", "Ops:Byte", "瓶颈", "利用率");
     println!("  {}", "-".repeat(70));
     for (name, opb) in scenarios {
         let bound = if opb as f32 >= crossover { "Compute" } else { "Memory" };
         let util = if bound == "Memory" { opb as f32 / crossover * 100.0 } else { 100.0 };
-        println!("  {:<32} {:>10} {:>12} {:>11.1}%", name, opb, bound, util);
+        let bound_label = if bound == "Compute" { "计算" } else { "内存" };
+        println!("  {:<32} {:>10} {:>12} {:>11.1}%", name, opb, bound_label, util);
     }
 
     println!("\n{}", "=".repeat(70));
-    println!("SUMMARY");
+    println!("总结");
     println!("{}", "=".repeat(70));
-    println!("  1. KV cache trades memory for compute; per-token cost scales with layers x kv_heads x head_dim.");
-    println!("  2. Continuous batching keeps the GPU busy as requests retire mid-batch.");
-    println!("  3. Prefix caching shares KV entries across shared system prompts.");
-    println!("  4. Speculative decoding amortizes verification across k draft tokens.");
-    println!("  5. Decode is memory bound at small batch; raise batch until ops:byte clears crossover.");
+    println!("  1. KV cache 以空间换计算；每个 token 的成本随 layers × kv_heads × head_dim 增长。");
+    println!("  2. 请求在批次中途完成后，连续批处理仍能让 GPU 保持忙碌。");
+    println!("  3. 前缀缓存可在共享系统提示之间复用 KV 条目。");
+    println!("  4. 投机解码把验证成本摊到 k 个 draft token 上。");
+    println!("  5. 小批次解码受内存带宽限制；应扩大批次，直到 Ops:Byte 超过交叉点。");
 }
