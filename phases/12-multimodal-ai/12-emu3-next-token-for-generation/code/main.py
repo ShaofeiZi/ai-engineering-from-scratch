@@ -1,8 +1,8 @@
-"""Emu3 token-count + CFG-sampling toys — stdlib.
+"""Emu3 token 计数 + CFG 采样玩具示例——标准库实现。
 
-Two mini-tools:
-  1. Token-count calculator for images + video at various resolutions and FPS.
-  2. Autoregressive sampler with classifier-free guidance (CFG).
+两个小工具：
+  1. 面向不同分辨率图像和视频的 token 数与 FPS 计算器。
+  2. 带 classifier-free 引导的自回归采样器（CFG）。
 """
 
 from __future__ import annotations
@@ -33,18 +33,18 @@ class TokCost:
 
 
 def token_table() -> None:
-    print("\nEMU3 TOKEN COUNTS (at recommended tokenizer reductions)")
+    print("\nEMU3 TOKEN COUNTS（按推荐的 tokenizer 精简设置）")
     print("-" * 60)
     configs = [
-        TokCost("image 256x256",  256, 8),
-        TokCost("image 512x512",  512, 8),
-        TokCost("image 1024x1024", 1024, 8),
-        TokCost("image 2048x2048", 2048, 8),
-        TokCost("video 4s @8fps 256x256", 256, 4, 4.0, 8, 4),
-        TokCost("video 10s @8fps 256x256", 256, 4, 10.0, 8, 4),
-        TokCost("video 4s @8fps 512x512", 512, 4, 4.0, 8, 4),
+        TokCost("图像 256x256",  256, 8),
+        TokCost("图像 512x512",  512, 8),
+        TokCost("图像 1024x1024", 1024, 8),
+        TokCost("图像 2048x2048", 2048, 8),
+        TokCost("视频 4 秒 @8fps 256x256", 256, 4, 4.0, 8, 4),
+        TokCost("视频 10 秒 @8fps 256x256", 256, 4, 10.0, 8, 4),
+        TokCost("视频 4 秒 @8fps 512x512", 512, 4, 4.0, 8, 4),
     ]
-    print(f"{'config':<32}{'tokens':>12}{'seconds @30tps':>18}")
+    print(f"{'配置':<32}{'token 数':>12}{'耗时（30 tps）':>18}")
     for c in configs:
         t = c.tokens()
         latency = t / 30.0
@@ -60,7 +60,7 @@ def softmax(xs: list[float], temperature: float = 1.0) -> list[float]:
 
 def cfg_mix(cond_logits: list[float], uncond_logits: list[float],
             gamma: float) -> list[float]:
-    """Classifier-free guidance: mixed = uncond + gamma * (cond - uncond)."""
+    """Classifier-free 引导：混合 = 无条件 + gamma *（条件 - 无条件）。"""
     return [u + gamma * (c - u) for c, u in zip(cond_logits, uncond_logits)]
 
 
@@ -75,7 +75,7 @@ def sample(probs: list[float]) -> int:
 
 
 def demo_cfg() -> None:
-    print("\nCLASSIFIER-FREE GUIDANCE — effect on logit shape")
+    print("\nCLASSIFIER-FREE GUIDANCE——对 logit 形状的影响")
     print("-" * 60)
     cond = [2.0, 4.0, 1.0, 3.5, 0.5]
     uncond = [1.0, 2.0, 1.5, 1.8, 1.2]
@@ -83,15 +83,15 @@ def demo_cfg() -> None:
         mixed = cfg_mix(cond, uncond, gamma)
         probs = softmax(mixed)
         top = probs.index(max(probs))
-        print(f"  gamma={gamma:>4.1f}  logits={[round(x,2) for x in mixed]}")
-        print(f"            probs ={[round(p,3) for p in probs]}  top={top}")
-    print("\n  higher gamma -> sharper distribution -> higher-fidelity gen")
-    print("  Emu3 recommends gamma = 3.0 for image gen, 7.0 for strong adherence")
+        print(f"  gamma={gamma:>4.1f}  logit={[round(x,2) for x in mixed]}")
+        print(f"            概率={[round(p,3) for p in probs]}  最高项={top}")
+    print("\n  gamma 越大 -> 分布越尖锐 -> 生成保真度越高")
+    print("  Emu3 建议图像生成 gamma = 3.0，强一致性 gamma = 7.0")
 
 
 def sample_tokens(cond: list[list[float]], uncond: list[list[float]],
                   gamma: float = 3.0, temp: float = 0.8) -> list[int]:
-    """Sample a sequence of length len(cond) with CFG + temperature."""
+    """用 CFG + 温度采样长度为 len(cond) 的序列。"""
     out = []
     for c, u in zip(cond, uncond):
         mixed = cfg_mix(c, u, gamma)
@@ -101,7 +101,7 @@ def sample_tokens(cond: list[list[float]], uncond: list[list[float]],
 
 
 def demo_sampling() -> None:
-    print("\nAUTOREGRESSIVE IMAGE-TOKEN SAMPLING (toy, K=16 codebook)")
+    print("\n自回归图像 TOKEN 采样（玩具级，K=16 码本）")
     print("-" * 60)
     K = 16
     steps = 8
@@ -110,16 +110,15 @@ def demo_sampling() -> None:
     tokens_no_cfg = sample_tokens(cond, uncond, gamma=1.0, temp=1.0)
     tokens_cfg3 = sample_tokens(cond, uncond, gamma=3.0, temp=0.8)
     tokens_cfg7 = sample_tokens(cond, uncond, gamma=7.0, temp=0.8)
-    print(f"  no CFG      : {tokens_no_cfg}")
-    print(f"  CFG gamma=3 : {tokens_cfg3}")
-    print(f"  CFG gamma=7 : {tokens_cfg7}")
-    print("  higher gamma converges on the conditional modes;"
-          " same pattern at scale.")
+    print(f"  无 CFG      ：{tokens_no_cfg}")
+    print(f"  CFG gamma=3 ：{tokens_cfg3}")
+    print(f"  CFG gamma=7 ：{tokens_cfg7}")
+    print("  gamma 越高，越会收敛到条件分布的模态；规模化后规律相同。")
 
 
 def main() -> None:
     print("=" * 60)
-    print("EMU3 — NEXT-TOKEN PREDICTION FOR IMAGE + VIDEO (Phase 12, Lesson 12)")
+    print("EMU3——图像与视频的下一 TOKEN 预测（第 12 阶段，第 12 课）")
     print("=" * 60)
 
     token_table()
@@ -127,13 +126,13 @@ def main() -> None:
     demo_sampling()
 
     print("\n" + "=" * 60)
-    print("EMU3 vs SDXL — high-level compute picture")
+    print("EMU3 与 SDXL——高层计算开销对比")
     print("-" * 60)
-    print("  training    : comparable (~300B tokens / ~300M image-steps)")
-    print("  inference   : Emu3 slow (~2min per 512x512 at 30 tps)")
-    print("                SDXL fast (~2-5s per 512x512)")
-    print("  quality     : Emu3 matches or beats on FID/GenEval")
-    print("  flexibility : Emu3 also does perception + video; SDXL cannot")
+    print("  训练      ：相当（约 300B token / 约 300M 图像步）")
+    print("  推理      ：Emu3 慢（30 tps 时每张 512x512 约 2 分钟）")
+    print("                SDXL 快（每张 512x512 约 2-5 秒）")
+    print("  质量      ：Emu3 在 FID/GenEval 上持平或更优")
+    print("  灵活性    ：Emu3 还能做感知 + 视频；SDXL 不行")
 
 
 if __name__ == "__main__":
