@@ -1,23 +1,22 @@
-"""Minimal LangGraph ReAct agent with a checkpointer, an interrupt, and time-travel.
+"""带检查点、中断和时间旅行的最小 LangGraph ReAct 代理。
 
-Runs with an Anthropic API key (`ANTHROPIC_API_KEY`). The agent has two toy
-tools (calculator, web_lookup). It:
+使用 Anthropic API 密钥（`ANTHROPIC_API_KEY`）运行。该代理配有两个
+示例工具，并会：
 
-1. Builds a four-node StateGraph (agent -> tools -> agent) with `add_messages`
-   as the reducer for the message list.
-2. Compiles with a `MemorySaver` checkpointer and an `interrupt_before` on the
-   `tools` node so we pause before any side effect.
-3. Runs a two-turn conversation, streaming update events.
-4. Pauses before the first tool call, inspects the pending tool_calls, then
-   resumes with `Command(resume=True)`.
-5. Prints the checkpoint history and demonstrates time-travel by forking from
-   an earlier checkpoint.
+1. 构建一个使用 `add_messages` 作为消息列表 reducer 的四节点状态图
+   （agent -> tools -> agent）。
+2. 使用内存检查点编译图，并在 `tools` 节点前设置中断，以便在产生
+   任何副作用之前暂停。
+3. 运行两轮对话并流式输出更新事件。
+4. 在第一次工具调用前暂停，检查待执行的工具调用，再使用
+   `Command(resume=True)` 恢复。
+5. 打印检查点历史，并演示从较早检查点分叉的时间旅行。
 
-Install:
-    pip install "langgraph>=0.2.50" "langchain-anthropic>=0.3.0"
+安装：
+pip install "langgraph>=0.2.50" "langchain-anthropic>=0.3.0"
 
-Run:
-    python main.py
+运行：
+python main.py
 """
 
 from __future__ import annotations
@@ -35,20 +34,20 @@ from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
 
 
-# State ----------------------------------------------------------------------
+# 状态
 
 
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 
-# Tools ----------------------------------------------------------------------
+# 工具
 
 
 @tool
 def calculator(expression: str) -> str:
-    """Evaluate a Python arithmetic expression like '2 + 2 * 3'. Returns the
-    result as a string."""
+    """评估一个Python 算术表达式, 如“ 2 + 2 * 3” 。 返回
+由于字符串。"""
     allowed = set("0123456789+-*/(). ")
     if not set(expression) <= allowed:
         return "ERROR: only digits and + - * / ( ) are allowed"
@@ -60,8 +59,8 @@ def calculator(expression: str) -> str:
 
 @tool
 def web_lookup(query: str) -> str:
-    """Fake web search. Returns canned facts for known queries and 'unknown'
-    otherwise. Stand-in for a real retrieval tool."""
+    """假网络搜索. 返回已知查询和“未知”的罐装事实
+否则 准备一个真正的检索工具 。"""
     facts = {
         "anthropic headquarters": "Anthropic is headquartered in San Francisco, California.",
         "python release year": "Python was first released in 1991.",
@@ -72,11 +71,11 @@ def web_lookup(query: str) -> str:
 TOOLS = [calculator, web_lookup]
 
 
-# Graph ----------------------------------------------------------------------
+# 图
 
 
 def build_app() -> tuple:
-    """Wire the four-node ReAct graph and return (compiled_app, llm_with_tools)."""
+    """连接四节点 ReAct 图并返回编译后的 app 和已绑定工具的 LLM。"""
     llm = ChatAnthropic(model=os.environ.get("LLM_MODEL", "claude-sonnet-4-5"), temperature=0).bind_tools(TOOLS)
 
     def agent_node(state: State) -> dict:
@@ -103,7 +102,7 @@ def build_app() -> tuple:
     return app, llm
 
 
-# Driver ---------------------------------------------------------------------
+# 驱动程序
 
 
 def pretty(msg: AnyMessage) -> str:
@@ -118,7 +117,7 @@ def run() -> None:
     app, _llm = build_app()
     config = {"configurable": {"thread_id": "demo-42"}}
 
-    # Turn 1: ask a question that should hit web_lookup.
+    # 第一轮：提出一个需要调用 web_lookup 的问题。
     user = HumanMessage("Where is Anthropic headquartered?")
     for event in app.stream({"messages": [user]}, config, stream_mode="updates"):
         for node, update in event.items():
@@ -126,39 +125,39 @@ def run() -> None:
             for m in update.get("messages", []):
                 print("   ", pretty(m))
 
-    # We are now paused at interrupt_before=['tools'].
+    # 我们现在暂停在中断前。
     pending = app.get_state(config)
-    print("\nPAUSED. Pending tool calls:")
+    print("\n已中断，待执行的工具调用：")
     for m in pending.values["messages"][-1:]:
         for tc in getattr(m, "tool_calls", []) or []:
             print(f"  - {tc['name']}({tc['args']})")
 
-    # Approve and resume.
+    # 批准并恢复执行。
     for event in app.stream(Command(resume=True), config, stream_mode="updates"):
         for node, update in event.items():
             print(f"<<{node}>>")
             for m in update.get("messages", []):
                 print("   ", pretty(m))
 
-    # Checkpoint history.
+    # 检查点历史。
     history = list(app.get_state_history(config))
-    print(f"\nCheckpoint history: {len(history)} snapshots")
+    print(f"\n检查点历史：{len(history)} 个快照")
     for i, snap in enumerate(history):
         last = snap.values["messages"][-1] if snap.values.get("messages") else None
         tag = last.__class__.__name__ if last else "?"
         print(f"  {i:>2}  {tag:<15}  next={snap.next}")
 
-    # Time-travel: fork from the earliest snapshot and ask a different question.
+    # 时间旅行：从最早的快照分叉，然后提出另一个问题。
     if len(history) >= 3:
         earliest = history[-1].config
-        print("\nTime-travel: forking from earliest checkpoint and asking a math question.")
+        print("\n时间旅行：从最早的检查点分叉并询问数学问题。")
         fork = {"messages": [HumanMessage("What is 17 * 23?")]}
         for event in app.stream(fork, earliest, stream_mode="updates"):
             for node, update in event.items():
                 print(f"<<{node}>>")
                 for m in update.get("messages", []):
                     print("   ", pretty(m))
-        # Resume past the interrupt for the math tool.
+        # 越过数学工具调用前的中断并继续执行。
         for event in app.stream(Command(resume=True), earliest, stream_mode="updates"):
             for node, update in event.items():
                 print(f"<<{node}>>")
