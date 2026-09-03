@@ -1,0 +1,92 @@
+{
+  "phases/02-ml-fundamentals/01-what-is-machine-learning/docs/en.md": {
+    "source_sha256": "4498f3c98310b7223b99444df4289f355c201b07f7adddfc06857d84d4e99da5",
+    "output_sha256": "dc05a686ed5888b446a8c848ce9898561f1307a4ca3f77a4387216954389c5d4",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/02-linear-regression/docs/en.md": {
+    "source_sha256": "893df66ce1cf29d175e9a63cdd73b1af0c67e934f4a134b7a84d53f2170954af",
+    "output_sha256": "b6095b106ab39fc1404e552aa2a3347d72017af1683cc98399bc77a27dc0425f",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/03-logistic-regression/docs/en.md": {
+    "source_sha256": "28c89a0c75029f41edaaa3aae7428a8a5b30479765ec4c1afdf4853917c25954",
+    "output_sha256": "604b9e5dfb3b3a51cd599b588567e3777e896f70b273fb29894e462fa8104a90",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/04-decision-trees/docs/en.md": {
+    "source_sha256": "012e6e8f09a1eda4f03ca395221e5aa30287a782b885a197d563ff79b5ca750c",
+    "output_sha256": "3e2edabfc32bded9d04712db5eb378166eb71c66f8668f60bc20743672c02901",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/05-support-vector-machines/docs/en.md": {
+    "source_sha256": "4032f704f9675d31f9c0a1dfbf768283b9c50b5699ccebc90fa5813819136ddd",
+    "output_sha256": "62a73e80f1d13310ff21dd218e5e5c378f187079e0c222f64663715478afb7f8",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/06-knn-and-distances/docs/en.md": {
+    "source_sha256": "f18a8624854931bd3757829e4d4626d4dc3b6f10f0ad2cf3c2011e983172f1d4",
+    "output_sha256": "14790af87d2a22cb85617d6d9465c7a2aefb73829ed8075a89fc0e78b3354e89",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/07-unsupervised-learning/docs/en.md": {
+    "source_sha256": "5e26db25c8145c483fe715d119cb472956305f42597061fc5841a1838999af38",
+    "output_sha256": "13f4f096cfb88972880be0217710d0699df51b6dd1842ce1a251b36eb1a681b0",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/08-feature-engineering/docs/en.md": {
+    "source_sha256": "964a9b0cd007a7d7e78196fb390fbc8bd84d227bdfcadf3c7db9e7749e70ca9c",
+    "output_sha256": "d611d1bc29c9f9a49c4cd242649e7171a40baf35acf44f740795ee5c973df0f7",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/09-model-evaluation/docs/en.md": {
+    "source_sha256": "4c0ac1f4722a3525dd3dbc7290238a75ac414b195c7715129db05ec36a99619e",
+    "output_sha256": "29c51615c995fa557badf1e96a534f68050ed8fcf736020061c00ddff6324698",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/10-bias-variance/docs/en.md": {
+    "source_sha256": "0a85c46801a4aebab2816e45dafaa49a60d12a89da2d1fc5f5f8fb63e15830c9",
+    "output_sha256": "b5cadf5167b44c3364b9acc9c56e5d04e8ad0679e3670217636e628f60fb5648",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/11-ensemble-methods/docs/en.md": {
+    "source_sha256": "764d6a19ed0c253debea7014287f36e771a7d92815c10174bf8005a3acd63014",
+    "output_sha256": "ee7188039b290abd84505005612c6e686c14745530da6ce54b7d9cb746931eb1",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/12-hyperparameter-tuning/docs/en.md": {
+    "source_sha256": "ec61d03f29614e7a330e9fbee1c08deb4da99e42efc6984dc83d55142615ee85",
+    "output_sha256": "08d6e103c64a0597d0ff13e8f484821117db576043a7cbc64fcd89e96131b75c",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/13-ml-pipelines/docs/en.md": {
+    "source_sha256": "058d092b6ad38b5a9eaf4a3fc296aac5867d0e99e60ba40ce0cc20b7326820d9",
+    "output_sha256": "d6aa6b2a858e4445f1afa84cb21cc38c8e784659d72c8b9e284dd47e18b0f040",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/14-naive-bayes/docs/en.md": {
+    "source_sha256": "cda8fef9420715c6fd52a94ea81e2d3a93ae60d32e08a4170ddf8e56696b5a63",
+    "output_sha256": "dc006c8addd304a6b14302c1de26f58ffcf97149216ab76d4677a8d747cd4b80",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/15-time-series/docs/en.md": {
+    "source_sha256": "48ffca9e2410801a507c35ebc6769ba0ecf075a51bb943684c219198a75b9d81",
+    "output_sha256": "c52d83dd34b6043a9344c2308c3a5a06804320034a79bd77e3969db2867b3ba3",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/16-anomaly-detection/docs/en.md": {
+    "source_sha256": "fd2418cd6ece3eb747a71ab926fe1b05f2c1c0e4fb07fafd8506081354a99106",
+    "output_sha256": "86c1bfeb437da9e24bfd3b44d69ed3e536e61f09ed986316ed6ab3713d93a3c4",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/17-imbalanced-data/docs/en.md": {
+    "source_sha256": "1c1f6a2ec1c61310c203298b1eed4eae0923c41764e4f5ced9d86d752b223f40",
+    "output_sha256": "0d2fc9534cba15be8cbf03c3395cca8172caf37670bd1b01029be8fa4a0690a6",
+    "provider": "manual"
+  },
+  "phases/02-ml-fundamentals/18-feature-selection/docs/en.md": {
+    "source_sha256": "b4f79a2e5880be45c0b77713c11805a39b853b2852e15eda314ee1997a107161",
+    "output_sha256": "97e635f1b6cd374185a88aed5af3c4f5bb5f7029fb0b1d79b35aa3ee5a2f4c8f",
+    "provider": "manual"
+  }
+}

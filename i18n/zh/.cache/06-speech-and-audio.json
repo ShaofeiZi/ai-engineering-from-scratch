@@ -1,0 +1,87 @@
+{
+  "phases/06-speech-and-audio/01-audio-fundamentals/docs/en.md": {
+    "source_sha256": "b50c405e879b2f560036ced3d62fdaccd8c1d5fa47604f823a8d99b2391095a6",
+    "output_sha256": "df6341079a4d7c2560dac1ad8dbc0810204ea3bf628efa6e7f9092f5a21ce7e5",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/02-spectrograms-mel-features/docs/en.md": {
+    "source_sha256": "f59fdf24432cbb8cb256aac7d9dd723115935021614a42581160d74845c86568",
+    "output_sha256": "f5053f7fe2c32b798bd9d6ecc82446f66eb1e4d7b1798f34e50f7bb50185812f",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/03-audio-classification/docs/en.md": {
+    "source_sha256": "3764a4ecf6c369d918f1122bd3d8496afc4d01c62caf6ace237f06c94a9a8241",
+    "output_sha256": "02d24042848761c18d3eb698828e0fd9b6e13604fd20f90b8f9669bfa67eee9a",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/04-speech-recognition-asr/docs/en.md": {
+    "source_sha256": "8636c6f5f698e085af96b807aff2733d606e41728a174fe1b80e31508c02f721",
+    "output_sha256": "35cd36e975108cb773469669b2419cd796f25eb7e2976436f596f68a8e01b9ba",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/05-whisper-architecture-finetuning/docs/en.md": {
+    "source_sha256": "90a39b539e0065af945955829839edeaaa63883fa9b5e21bf15c9b8c7db0efb5",
+    "output_sha256": "6fce883300a8112b770db0f054df841c59590c747927a26f21832b09a1edb354",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/06-speaker-recognition-verification/docs/en.md": {
+    "source_sha256": "63ddce2e943e59e1b2aa18bb698df67409fd0011f0d8421139ec7c46cba2f217",
+    "output_sha256": "ef1acf9e470e1fc9c868912d433fca6766863933cc625be882c8519af04be193",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/07-text-to-speech/docs/en.md": {
+    "source_sha256": "d974cde93a3a8e692caf62fd9e48e18ebd8b889043bef6cf2367b4d89049a561",
+    "output_sha256": "f867e9487863b5079cd79db02b830cdca5b0098292d85f5909a98027ff399986",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/08-voice-cloning-conversion/docs/en.md": {
+    "source_sha256": "dc41114b9bfa5d8fdc151f0efebe947230683806c1d2f888031a457c9bb8a480",
+    "output_sha256": "d885f93a10dfbdb8765b8ac7e721dca463c0169aa586083bdfe814b1f43f06f6",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/09-music-generation/docs/en.md": {
+    "source_sha256": "4e0e66aee4ae937574ff9dfe0fc0369ed311a93683af1f3b0f7c66c3b6d49eaa",
+    "output_sha256": "660685fb6c0cf977c1be2c6d4a94c2e5fd756f3029c93568d09717efb648a542",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/10-audio-language-models/docs/en.md": {
+    "source_sha256": "ed7987f01dba1440b53561d85648b63bae2396f6b4b0494151e272dfa071e046",
+    "output_sha256": "46ecab9ee7e69de8597be02c6e789385545e09b31ca9618e6ac3a910ed28d0d0",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/11-real-time-audio-processing/docs/en.md": {
+    "source_sha256": "38770fe883e05dd7bc541c3d3dbca612686e46d48c7d9a2f4ab2b8b9bb9735db",
+    "output_sha256": "964c9506f5701e7c733c9d8fd685b64ebb26f9bc6df3d6ca49343f7a0f91486d",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/12-voice-assistant-pipeline/docs/en.md": {
+    "source_sha256": "42adee0778ecf907bc8312c65cde0d75a8cc6db9ee3780bcc441cbc768a884ee",
+    "output_sha256": "2a6abf2adfccc18836340cbc9715a83e6f53a3fda2bbee626cf9f99d20ce065e",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/13-neural-audio-codecs/docs/en.md": {
+    "source_sha256": "4fc76820d2dc2bafeda60c77018b05b52b4ee1febbdbe2a32b2ac76bcd4f3feb",
+    "output_sha256": "f33c3fa32a464395094b2e4748730692978b9785b56ec586e428fdf030ab05cc",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/14-voice-activity-detection-turn-taking/docs/en.md": {
+    "source_sha256": "2e733e0d8a70489cf07220f0a6a420169c956164df7761872980207436592223",
+    "output_sha256": "ebf4c9f99e620475a6350540546557be0ebc6a32de42a03d8c35049c94397b49",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/15-streaming-speech-to-speech-moshi-hibiki/docs/en.md": {
+    "source_sha256": "e21cb5cde8e5c2f46a027328b5d1eee69ad8231661d78f8b6509803a6dde3802",
+    "output_sha256": "4f448e7fb573bf36f0c98f396e93d3798b5969a27d5b2434206b9821143b2405",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/16-anti-spoofing-audio-watermarking/docs/en.md": {
+    "source_sha256": "e10d33a6c2f542fa1a2a08bd484f7b78b04b6511bd4a5a9dc4720eca850ce504",
+    "output_sha256": "5ac95a942178d11a5d4256504a45b2fd28c786e57100a3b96cf9eeb250dbc1f0",
+    "provider": "manual"
+  },
+  "phases/06-speech-and-audio/17-audio-evaluation-metrics/docs/en.md": {
+    "source_sha256": "ac206830044a3d8baf1d99de9a7d56080d08662b3607a329f1164ea7a768a6b7",
+    "output_sha256": "945d2827478397bb2b3a5744aebeb87812f26dde8ed9fbf5e76b178cfe4046dc",
+    "provider": "manual"
+  }
+}

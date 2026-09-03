@@ -1,0 +1,62 @@
+{
+  "phases/00-setup-and-tooling/01-dev-environment/docs/en.md": {
+    "source_sha256": "3efbd374a2a60e29a60a5f6ed382dd6ff6e38442a5cced9626c0b2c810a9877f",
+    "output_sha256": "f473d73b756d56e9f9c5a4534b25dc4caa0f1b77da5799eb72b6d8a8865e291a",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/02-git-and-collaboration/docs/en.md": {
+    "source_sha256": "1b219057e92a910cb897b792b14d05bbe2dc7c3fcac5b57cb390071caefb8c96",
+    "output_sha256": "9f87d3561ba864262d4b881aed5e29d669849d1fcda3921680ad1612df24aff4",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/03-gpu-setup-and-cloud/docs/en.md": {
+    "source_sha256": "d7420f66a80b101850985748bc768744956b0ba042fe92a406fe6b8becb33ba2",
+    "output_sha256": "846ffeb0707ec324057ff958a3fe91c8093da264c9070f4d849cd04ffc2308bb",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/04-apis-and-keys/docs/en.md": {
+    "source_sha256": "41284f112ad4da828709d3c5f1b3094876c5b10aa1a64a082d316dcf372a6b8f",
+    "output_sha256": "5be736897eb40884d39cafb1ac30de51f9f5b9eb57b35426e07a36b471388db7",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/05-jupyter-notebooks/docs/en.md": {
+    "source_sha256": "6f0e391d6e853320124a3a8954e8b8ce8e28163d6cb0749b5e831fb05449acff",
+    "output_sha256": "8902664dcd18f9e8a9bc1868671a2d8065cad6932b747cb5d94781f3cb7d15e1",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/06-python-environments/docs/en.md": {
+    "source_sha256": "eafe05c7f0cc6d66440c773d6e4e38b39c5fb099be6e031512c144a59e0c2ed9",
+    "output_sha256": "dc5d57c215e953c726f2e2746b6f5259c316f23fe6d59fa66b23475a2417a948",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/07-docker-for-ai/docs/en.md": {
+    "source_sha256": "e5a04b16fced01699bf458efad8b33993787192f5373e64ec7856fdb0b90c6f2",
+    "output_sha256": "1e8ab3bba1b3b8d7a060236d863922341859fa0c431c2fd0087e40b0161f4d41",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/08-editor-setup/docs/en.md": {
+    "source_sha256": "b5c36f56fa153fb13620cceac0df13914373d466d229efe3e28915399b96fc84",
+    "output_sha256": "dc07526bc602c9b8b05afc5d95b2db80030219c8aad733c1c9e931ce3c6455a7",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/09-data-management/docs/en.md": {
+    "source_sha256": "8751cb2ba46001a796bf98de9a8887652aa6c52f6543183f135c9c4bf4ae8e27",
+    "output_sha256": "ab50b4e3a5a92aa3bea5369a55b3b7d7fd2b70899d32f8fd0d38bbc5689c5b77",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/10-terminal-and-shell/docs/en.md": {
+    "source_sha256": "fac7d401a57bbbedba9b980e33524364562d8ef8dcd4ee716be50d7d8aa1e2ea",
+    "output_sha256": "05ca4efd75892c54aa797b27e697a00117337b703535f2c4e10b5976aba84c1e",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/11-linux-for-ai/docs/en.md": {
+    "source_sha256": "63127b9a8a6a3c35c4893b7d423e0e220326cbf3fed579c4a59aaabd3fa66f64",
+    "output_sha256": "4881f5509a2107aab5a1d81bbafa3c07855dcd3c1928e67be123f76cc6afe617",
+    "provider": "manual"
+  },
+  "phases/00-setup-and-tooling/12-debugging-and-profiling/docs/en.md": {
+    "source_sha256": "5257eaa5d4a138f143ba3169ba7e469b43f1aba819a769ea64da4eb9505fc550",
+    "output_sha256": "d5f21ca92d115eec992030ff63b22f059f5ed9fbfc347460e64609d89824c29e",
+    "provider": "manual"
+  }
+}

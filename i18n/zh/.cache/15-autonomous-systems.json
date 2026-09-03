@@ -1,0 +1,112 @@
+{
+  "phases/15-autonomous-systems/01-long-horizon-agents/docs/en.md": {
+    "source_sha256": "7501b37f5bcb44996567ca9c304a2505f654fdd31d24274308d3107f035d85fc",
+    "output_sha256": "4d681537c5919f61e22523b49e339fe83e567c3670aa09a95b229c513c11cc79",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/02-star-family-reasoning/docs/en.md": {
+    "source_sha256": "dc3da02402c7cd3fdcb173eb7eb9a04b44041d5fb8b45ac804a7052a22628737",
+    "output_sha256": "f0bc3b49afd2687ca020f1305fed279ecb3e5ff504c7073bac4d597d9237de3f",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/03-alphaevolve-evolutionary-coding/docs/en.md": {
+    "source_sha256": "b1e9291727c98bddb07080e724b95cd1b89b78f70fd94f46eb64aff47f1248f8",
+    "output_sha256": "3844fb9ad0db52febde3e8644ee0137f917d11b711103bf6d62316180247dd2f",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/04-darwin-godel-machine/docs/en.md": {
+    "source_sha256": "43d3cef80a1eb777b641b9ae7a727eb66144d4f63dd750551ee0bc8b715da351",
+    "output_sha256": "6da56fff5a7c0985e604af80d3804514d74bc7d405ae713b6b06c17168ea0408",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/05-ai-scientist-v2/docs/en.md": {
+    "source_sha256": "39e95cca329be5f1fe6e090969854635a2db3bda2f4fb2771cf41a8d6f2248ba",
+    "output_sha256": "7ad15072ff0a060c1a1a3856d2c2f0a7b5f512910e3cb13495dd5cd9511a5cd7",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/06-automated-alignment-research/docs/en.md": {
+    "source_sha256": "b9baea7e1c628eff4a700a67ed30eb3952574c159beb63e8e1def6acce623307",
+    "output_sha256": "d01731945b0c9babe9a07f6a281e066b3766178d6598dd52495dce1be1302252",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/07-recursive-self-improvement/docs/en.md": {
+    "source_sha256": "203b879ffa5b1a34afc51caf2fdedcde5553bb08e1873039b036bd1add6f38b0",
+    "output_sha256": "306a4b4f0648b47b991f9bf34bde1a7a8b9b4eee8923fd5e17d734d4aaae0e49",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/08-bounded-self-improvement/docs/en.md": {
+    "source_sha256": "ed3e03bb1c0431173c30bf272e4a484a8264ab6823f305f10850a8e245b207d0",
+    "output_sha256": "6f702d2bf83b05a52baf4a07c9856aa812adf0b873fe8f8f3ea9f55e9af2fb40",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/09-coding-agent-landscape/docs/en.md": {
+    "source_sha256": "62d80c824129f6f23833be3473421afaa99330f4dfa617f49108013fe76bfeb3",
+    "output_sha256": "3762cbf5ca81af27bf3959a778b057e21403981f27ae0534dad3de7069a335e9",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/10-claude-code-permission-modes/docs/en.md": {
+    "source_sha256": "89c7658a26b24a863992b5284936730885ea25c254e3a4b1c1949126da9d683c",
+    "output_sha256": "ac0c3601eb82f6fe27559a2efb0821cc0665ad06c98881a445c0b909d42e937f",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/11-browser-agents/docs/en.md": {
+    "source_sha256": "fc1ad4d5c053b9effc8840efa4d993faabe6639a80b00a6485529331ddc0d493",
+    "output_sha256": "fed6e092de0584a211396faf8244e76e3cb512518000eb94551823f026e9e178",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/12-durable-execution/docs/en.md": {
+    "source_sha256": "adc5aa6f20ee09b6920ab01aec2e062234e9e6620ca58f4e43fc59f073c15bba",
+    "output_sha256": "51de7b043b9f1549c64dfca8d008a27657b97b75e3ad83b95f09b7f0f80c13a3",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/13-cost-governors/docs/en.md": {
+    "source_sha256": "4bbc8166514794ae938da3981b90bf55549cde613ad6b5440da67115dbb7fd83",
+    "output_sha256": "f24dcacc1be2d95164a86e3c1193a481649a0d983cbe4caf27b49452e01623ef",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/14-kill-switches-canaries/docs/en.md": {
+    "source_sha256": "75ace984dda6cc34bc2dabf0da98bed969cb849bba80530b34e2b65413e4b64d",
+    "output_sha256": "7b35e69d55f5881d738b79fbeef9831e87fdd85ea759716953184c3e4a990d35",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/15-propose-then-commit/docs/en.md": {
+    "source_sha256": "066d62177805838d9d0678e12e73824d860440642edd386b738307c20ee579c4",
+    "output_sha256": "fb5df7ce4fe478649c6ec741fd54c29f142555fbe3e02fcee6141ccef98247c5",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/16-checkpoints-rollback/docs/en.md": {
+    "source_sha256": "a530818bb301abf263f3ca3b331287160ae5f94b4557b5a0cb5e01133f611d62",
+    "output_sha256": "1cff107a867f567c4e2c0e45c883e0d2e2716ab77d03c929cf1b324a1d12218c",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/17-constitutional-ai/docs/en.md": {
+    "source_sha256": "05b75703c17dfa8e118833fd0443e7b95e26216aab1ef97aa9fed34bc6bbadcc",
+    "output_sha256": "6a65dc16cd018ff8c103a5613621e555658c20b8c815c0d97c11ed47476af725",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/18-llama-guard/docs/en.md": {
+    "source_sha256": "d2e6f91903b8358ead955c4db18c9ba986e51b359d62366e2fc8e4cb23f02d08",
+    "output_sha256": "80fac7d79692ef5934c63c3ac03e5752c3ff55d4aae1e445dd74ae53dd006d14",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/19-anthropic-rsp/docs/en.md": {
+    "source_sha256": "239697bb9af9a03e89c8272cab896bbe338000655fb809de8628a40ddeba0d12",
+    "output_sha256": "b941404e87c8c66b43bb132b97f4bb469bb953b7c4f578c1c8eaf3deb2a49a32",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/20-openai-preparedness-deepmind-fsf/docs/en.md": {
+    "source_sha256": "3a74fd7227a18efce31a8c6da82f774f2c2ad69f196cb48c87d1feb06edbebcc",
+    "output_sha256": "bd588b8dcec490050f264b31e04b6df6f9e76f2a1366f55901ac223d0f23f7c7",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/21-metr-external-evaluation/docs/en.md": {
+    "source_sha256": "21805b2aa6c8fedab76f6f0e4ab35455a73e1020c60544d83357a1f960068468",
+    "output_sha256": "38009ac84b0e70bfb05786997bfd9b57a2d536c2a9727b32477380775b5dedb7",
+    "provider": "manual"
+  },
+  "phases/15-autonomous-systems/22-cais-caisi-societal-risk/docs/en.md": {
+    "source_sha256": "1529015064248f4681d5f98f3889c3d938cb29bf7c6b2f82de650573ae2d45a7",
+    "output_sha256": "4cba1ffc73c153cb6995946ffa813e66e85d0ab6bb753975b2b5989e4bd556ff",
+    "provider": "manual"
+  }
+}

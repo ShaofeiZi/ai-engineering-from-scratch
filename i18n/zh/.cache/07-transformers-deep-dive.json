@@ -1,0 +1,82 @@
+{
+  "phases/07-transformers-deep-dive/01-why-transformers/docs/en.md": {
+    "source_sha256": "a1112a1e30e5eb677b718e7e663972f6a487641feaf023c701c1a87c8b18db39",
+    "output_sha256": "32884ddb145d4813eeaab1355e3a590b244e105ffb92ce99cefbed6f9564daa1",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/02-self-attention-from-scratch/docs/en.md": {
+    "source_sha256": "54a8d6da2e4f1ea0b0b43a1bf09be1b3c41e2d5b974cef459b0ab8ea0af18177",
+    "output_sha256": "41fc55a8c3283482ca808d8145c736bc17b5b30ba408ecab267cabc8d676d055",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/03-multi-head-attention/docs/en.md": {
+    "source_sha256": "143eb42fb1de2307cda1f2231b8d5cbb2144deced1dfd717a2c789edbf667f81",
+    "output_sha256": "47fd9b1c76566ffd04114a08cb4dad65d72ab07c81dcf48f67edd5e1d58546b1",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/04-positional-encoding/docs/en.md": {
+    "source_sha256": "c7e45e8178d68f5a75b790a84c81a6749b2f2f54c88e30c3f36fabc705a0a511",
+    "output_sha256": "6bbf6eb7c39e25bf5fe15d7395808e275dc1aee650994317f965f8d4017ed702",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/05-full-transformer/docs/en.md": {
+    "source_sha256": "cb33225ca1b2bbaf32a06d637343c22fbaaf3083081bcf04479409c53070a662",
+    "output_sha256": "65bc5107e256eac1fb05375d6d9a1dedbc8eedb12a2224c4136566b8c130e9c3",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/06-bert-masked-language-modeling/docs/en.md": {
+    "source_sha256": "10d1685c0fc344868e948575ae3bf51cb0058e6b0f07a247c20eafcc858f7b70",
+    "output_sha256": "015059a7aac8497c786d2ec32daa41493aa5a276e78c34fa5c88a662a455d97c",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/07-gpt-causal-language-modeling/docs/en.md": {
+    "source_sha256": "631bdec6da1f43937a98f0e137a8d0e41cecab977e152b921fc140ebec3afd57",
+    "output_sha256": "ed2c0a8bfea08b74c716c572c0fb706dc9320865604fd8f8aea83d2adf50c7a0",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/08-t5-bart-encoder-decoder/docs/en.md": {
+    "source_sha256": "26b9204335f4793b7910e02a3a03820cd0ea0c7d47a2aa9c37580dcac67baeb1",
+    "output_sha256": "0f63ef5b8b8e62a2a0f942c4d5117c63c472549ec9a141f15f3fe030d7094031",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/09-vision-transformers/docs/en.md": {
+    "source_sha256": "6ac276b0bbfd15180e9e8850a8a7577f0ff18fa090f4ab545b8a3ad6906b2288",
+    "output_sha256": "01fa61045c61130fcccef9e84f4b330cc120bf61e1bfbe6d08dc88dd90970fd3",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/10-audio-transformers-whisper/docs/en.md": {
+    "source_sha256": "f996b553ee4abba0d68ac4368a41ffecdffc5c91639060ffe99fa83fd84d80eb",
+    "output_sha256": "0883464176a8f24182e5b9f4dfe78d97cf0246ba26fb3527cbf42492e1f027a4",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/11-mixture-of-experts/docs/en.md": {
+    "source_sha256": "9cad0d164da113440d4ed64d0ac4c32d79af89a2a6ffd5126fe28a24f538700c",
+    "output_sha256": "bbc50305056434c7d3c66ee3c0511015d7f0041c80c29f70aa8957993a9cd3d2",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/12-kv-cache-flash-attention/docs/en.md": {
+    "source_sha256": "b93352bcfa28b0ae8b1a60fe52a6078d37066e2df8b291c428fa3422a4ab79dc",
+    "output_sha256": "b119101767afc6f204684eed370886ae4b38d3a40348c50e8e56ef2887309021",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/13-scaling-laws/docs/en.md": {
+    "source_sha256": "aac8b47ac5c315771ce177f36d9cf99a6cbc6a23f9208bf77b23dfe4a3b0dc39",
+    "output_sha256": "a628a7ca074e7fa07a9d2bf7732bc959ce7018490ae557abac20c057366e3a21",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/14-build-a-transformer-capstone/docs/en.md": {
+    "source_sha256": "1f8468652dd27eb7b8005038ce04c75fd536e18d887f7a8bc507d2c8fd42ced9",
+    "output_sha256": "c0eacc5480edc83e14d9a40729733aaaa46e920d58fce01e468fbf1b3badad06",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/15-attention-variants/docs/en.md": {
+    "source_sha256": "cd5ba2d28dd24fc6eb57f4477148156d5d5be31a8e157efcdcf00b914a9dfb48",
+    "output_sha256": "7cf1061861abc6663e0a3b492121b71bb106e138a3c69bd341b08b158aeac183",
+    "provider": "manual"
+  },
+  "phases/07-transformers-deep-dive/16-speculative-decoding/docs/en.md": {
+    "source_sha256": "c69bf699512dd6d2b501316e7c32395ffac44b58d522a694f335964be3903eda",
+    "output_sha256": "e3cb0d70e59edf9cdb1fdad5c77ea76fcbcf7623c687aed16e5c6758b8bdef02",
+    "provider": "manual"
+  }
+}

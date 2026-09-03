@@ -1,0 +1,62 @@
+{
+  "phases/09-reinforcement-learning/01-mdps-states-actions-rewards/docs/en.md": {
+    "source_sha256": "f76f951e47c846acfca9192d910a9e72a28944d109a90b76e403131ffd07af9b",
+    "output_sha256": "d641b25c302c66fd18026e720206a949a1b74cf71b052426d970637379b9ed04",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/02-dynamic-programming/docs/en.md": {
+    "source_sha256": "131aab723d6114b139761208cdc5fb9ae0363262c57d31e66903650a2fbd81a5",
+    "output_sha256": "c48aba8e9428ba4bb2accc1aa3f1e4a03046f055d28f149433b3dbbfaf2311ff",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/03-monte-carlo-methods/docs/en.md": {
+    "source_sha256": "59ed85c22bceb45e65a953b3cc10cc54fec517a3ef5a35a901f69d433b947991",
+    "output_sha256": "2e88a0b88622e375e649e556748a0b8431c59f027b24d6ff70eb4ba86d5164e8",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/04-q-learning-sarsa/docs/en.md": {
+    "source_sha256": "05b289d714aec7c06d0f1c9d5e048fb35dd020a71607f3c27c4983f3675563da",
+    "output_sha256": "074b772069fe827230d619fe67b77dce1f8addf605636c194947625240f76f33",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/05-dqn/docs/en.md": {
+    "source_sha256": "002242aabbe794433e55c2e708831e30ac786362b9de326ccea60b0c0c1de1c9",
+    "output_sha256": "1b58c99a776b3fdb711804ef14c83bc676bddd58e8eb72149aec542b3ac0d051",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/06-policy-gradients-reinforce/docs/en.md": {
+    "source_sha256": "2f358ef609291528bc89714ac09804eca44030072138f39224f60dc138096a7a",
+    "output_sha256": "ef3df18bb7f1fc3d8324652b8bfd2b6bbe013bc7c4045a80b7d66d91833b5fb3",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/07-actor-critic-a2c-a3c/docs/en.md": {
+    "source_sha256": "d57df3347b10a07e55f83e04d3a9b405d9d4a74cb45410a1b7aa89f18a1aa7a3",
+    "output_sha256": "63ee0d17d79ecb9b086f0f836d68ae089d63d6e0228850fafc4c1af6919f49e0",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/08-ppo/docs/en.md": {
+    "source_sha256": "73a716e026da377584800f445b20d711310c81d4513df6f8f161b4afc62083e1",
+    "output_sha256": "c02d1e7c0d3a28b14f17558c6a620ade467508e048938ef77d6524aa2ead00ae",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/09-reward-modeling-rlhf/docs/en.md": {
+    "source_sha256": "52938057ecc955bf7b5bb45f449a469de2edde2f8390cf64e207f5625d4fc126",
+    "output_sha256": "67f7112f28a3b059c62ab4b64e4b39221b9212e2693dc4fee91fdc5bb17ec1bb",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/10-multi-agent-rl/docs/en.md": {
+    "source_sha256": "431299b046633654b4ca57b5dab3a4a916fa7ec866382caab0cfc4c18d193431",
+    "output_sha256": "bad6f25cb56d07e0cbb0ee8947b6eb80bd0d43a9d6c29dd6e53026b407492101",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/11-sim-to-real-transfer/docs/en.md": {
+    "source_sha256": "6588758487ca47b17df37c89845e4e6e23d9770205a992c0285ebe9ebfd5a165",
+    "output_sha256": "50a26b51c0fa64b09aa836e8bdc7c3d72776f73d4f358d103fd4bed734b96c7a",
+    "provider": "manual"
+  },
+  "phases/09-reinforcement-learning/12-rl-for-games/docs/en.md": {
+    "source_sha256": "fbd5ca23db373b9902bdde62d877b231a4096787a4485183971891812fcf1f35",
+    "output_sha256": "210939f4083dd96ec42cbc67960c7c4d5a6f8d73ec20dff5e74c39228914cd34",
+    "provider": "manual"
+  }
+}

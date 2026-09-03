@@ -1,0 +1,147 @@
+{
+  "phases/05-nlp-foundations-to-advanced/01-text-processing/docs/en.md": {
+    "source_sha256": "d7070af33a9656a02ce6dcf42966d6c8c401035df0f8fa244ec37c12ca4d210b",
+    "output_sha256": "3e5ee9ba512d9d89579e2f504a3791fdf7dd9a88b26a04d861ccaf352fb4ed43",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/02-bag-of-words-tfidf/docs/en.md": {
+    "source_sha256": "12f1e26f69e32a9e97f45a82965c3647563f7e135a6010534a843ea7da2273e9",
+    "output_sha256": "a5d0c5a7b754deeb10ae335e0d6d8135be083f8c3eabee26dcf425d0fd2dfdf3",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/03-word-embeddings-word2vec/docs/en.md": {
+    "source_sha256": "566500e6c43ebc3624a117e76843be1100be7951ac7780c37f15241299846b27",
+    "output_sha256": "b4251b11743d7f4039d1a5f42a0b48c2e6d253ce883701d9300e34c00959b05f",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/04-glove-fasttext-subword/docs/en.md": {
+    "source_sha256": "b92cf9d14b8729b4a378b0b4f468f4d957f6600c15d876b091d8dec54d8d3e47",
+    "output_sha256": "b39a5ad3d64671da939ea91670dc39cce3ab2a3272d56df4635c6d72529aee7a",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/05-sentiment-analysis/docs/en.md": {
+    "source_sha256": "6c0d5587fd261631bbf70042e355315dd840b25ea237f8525e5970dd10f87534",
+    "output_sha256": "2559bf832e3d09aed9548be2d66502cf121f9707646a5ed1b9cc4eb92f94112c",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/06-named-entity-recognition/docs/en.md": {
+    "source_sha256": "1234e5808229ac25f3c65b1fe1baab736e525591c4cf847cc28690af25d46e71",
+    "output_sha256": "885117cbfb7a93a7a7d6a7ea0c101b59849028e50482da1637895bd59d52404d",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/07-pos-tagging-parsing/docs/en.md": {
+    "source_sha256": "05fb67fdbec5afafc9e35f4d96de29663c1a37022ad70bbe3f97e804366c8a6e",
+    "output_sha256": "b2f86a9a45e7921285b63d5a44481a6d203648eb0406f9f3657e73bdebdd5274",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/08-cnns-rnns-for-text/docs/en.md": {
+    "source_sha256": "de300997238be53f17d753a27aa36e25db7a9954981e6d15db2ecaa9626ccd58",
+    "output_sha256": "7fe7df552ad5db8f8fabc38bf2513e9f7dbcdcd5b51e004dd94fd10f184411ed",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/09-sequence-to-sequence/docs/en.md": {
+    "source_sha256": "83d570d30ef505439edbbe90a16c984e6c5e552468ed53a54919b36d2dd43d49",
+    "output_sha256": "4f63367adc14695d617d30a8fa47dfbf283261123adc189e74ba9f4547c1d8ff",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/10-attention-mechanism/docs/en.md": {
+    "source_sha256": "f31dde76b3cd616e1c7d242a9d36fc4f5dd2c4a8514bd026da2d4b9e652ae49b",
+    "output_sha256": "ad92f4c362a8a7e13c54050f860fdb77ad1bfef6ecdaaa5a0d4928a24f8f1664",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/11-machine-translation/docs/en.md": {
+    "source_sha256": "956eeb576fdea61cef4a66b8f4c6b1b1caa47eea8e7488aace436c9c177b09ca",
+    "output_sha256": "7a0a88db8a87d07065073e47f9588e6eb2bea65dd85933049ce98018836857cb",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/12-text-summarization/docs/en.md": {
+    "source_sha256": "d856ec071b1b46533679495c2c23bf7bfb8796e664589771f1dad37a30bf4623",
+    "output_sha256": "77dd9217ab1f33f0b1390229a4d2039b17160f07c7eb1162b4ecf65c4e54aa4a",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/13-question-answering/docs/en.md": {
+    "source_sha256": "0fcd3cb8c48f9b9f0a1597958ed41da266022394329bd44bf1c29eae8453d7f9",
+    "output_sha256": "dd14b7c3cdb754cc5f2d0578c99c2cd72975d47c06048ccc569583a9e4b3ba49",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/14-information-retrieval-search/docs/en.md": {
+    "source_sha256": "98979446e6bd498737c8ef8d4ce000e04f9345b82a5a860145bc5411cb71a2a3",
+    "output_sha256": "756f9b40453105c7f0f6945f7f27e5025624bae39d3bdd476ed5d12c36280634",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/15-topic-modeling/docs/en.md": {
+    "source_sha256": "0b8bfca1c418447199c2d11972a26da45b772de059db589c56f2e1127d38499b",
+    "output_sha256": "c2fcf5582e91b91a98ee5704b1e2321d76a7bdaee9dc3284e227377d685f2cf3",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/16-text-generation-pre-transformer/docs/en.md": {
+    "source_sha256": "92d3b5e90a0730efd6819090e514a562e02185a3a1b65f78b60331692adbb9ee",
+    "output_sha256": "23811b382994996bff32010eec9d33d64e8ede9713262b6b24ff7766ee3536c7",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/17-chatbots-rule-to-neural/docs/en.md": {
+    "source_sha256": "ff1c688b55de860d75169540e8d98bc61d497c2dcf46b54f5b2cb6736cacd504",
+    "output_sha256": "a62a27f98e3b90eb5e6534825a9e20f9ff4364d0d53eb9ff7cc2e5054b5eb1b2",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/18-multilingual-nlp/docs/en.md": {
+    "source_sha256": "343fc51cb223c67fcf46906beb0ade26c859c437a03196285d44a74e088e720a",
+    "output_sha256": "51f0956cbb32f6333a7cf6505982fc98a0864080b5aeac77c5ee2899a0d3b8a2",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/19-subword-tokenization/docs/en.md": {
+    "source_sha256": "6d67e864430ef41e47f3c0e115faead61da03cad377dca5a69f77513afc8f3eb",
+    "output_sha256": "184fc9958a84222cde900dd6303adf88764a7d70faff95dcfe4cc7692ed88175",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/20-structured-outputs-constrained-decoding/docs/en.md": {
+    "source_sha256": "be2656f8a0ad2ca753a9ec60fd3b43bb1aa6a7fc0623f179c4a124cb93160ee3",
+    "output_sha256": "ec206d13b7abda91511bc3b1cbba35b5ded6f496154dad9f77807c7535e3c408",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/docs/en.md": {
+    "source_sha256": "1e03d17a955ebb8a52c0f4a19079ae7dadac146e35edc98cd1488ffdaebc7450",
+    "output_sha256": "d946f76acf20dd4f5a37b77072278d1721dacbee53734b8f5a5fdadaac42e064",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/22-embedding-models-deep-dive/docs/en.md": {
+    "source_sha256": "bfb5483ccac7e580a5256434b2a7e4ea749c30999fabc4aead4a95189e8c96b0",
+    "output_sha256": "5bf744db220a001d1f4c9a5eda6a389ab4c7c76aa8343fa2e08e56ccdca1d67e",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/23-chunking-strategies-rag/docs/en.md": {
+    "source_sha256": "b8b7d9323c9387e7f6b96b5590b767631de766b169b081a128bc70c9648b7372",
+    "output_sha256": "801205e23328304a5cd29972574c784f131761cd5a3eae61d7a9577021dea144",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/24-coreference-resolution/docs/en.md": {
+    "source_sha256": "5737352d097d9de94f3107cee673829c3dd42daf2b0229f0771e0f78489ccabe",
+    "output_sha256": "fce6dcc5db22811568966c2e8fc7e581769fe475f472c6c96aea0eca75f23424",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/25-entity-linking/docs/en.md": {
+    "source_sha256": "45ca4b148495f0bb3c2dcdacabc79dc96e1e5509538cfbf000a77f7dc4405307",
+    "output_sha256": "223749552417fb7c2c2aba3eb1cb23cc5ca424df991bfcf79e84d334288ad76f",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/26-relation-extraction-kg/docs/en.md": {
+    "source_sha256": "ef4e0adc778d183654f229858959b646052a784980c3aaff2e323634b2ca067e",
+    "output_sha256": "da33cc7a577173c22237f5d9639d15631d5dc33eccb20bb265f03f56504d2e5a",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/27-llm-evaluation-frameworks/docs/en.md": {
+    "source_sha256": "61d6c8816e3e613a80375b344ac33445b0452b793c31f1d751ac6151e0bf3a14",
+    "output_sha256": "96df51a1a3fedfedd9c077b98b566432ce1e6ef1039aa467801fe7dc5d730301",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/28-long-context-evaluation/docs/en.md": {
+    "source_sha256": "32ab66f48dc4dc4adac19a41e368276ba4e7c16ccef8947f2a9ed108d925b289",
+    "output_sha256": "e1ab3bf5b27c2fef1716f53e38d5b37ed6b55c6a9577eefb96fe7b63adf4d3e1",
+    "provider": "manual"
+  },
+  "phases/05-nlp-foundations-to-advanced/29-dialogue-state-tracking/docs/en.md": {
+    "source_sha256": "1ae7441f02d6855b0de76775570e7d81879c5798dda2483fd44ec97dbd63d6b3",
+    "output_sha256": "f9f8ecfcc8f42eb4a4128d3992469c3e69ce0cbf656c78b62a4a02376ed525cb",
+    "provider": "manual"
+  }
+}

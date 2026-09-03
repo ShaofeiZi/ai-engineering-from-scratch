@@ -1,0 +1,122 @@
+{
+  "phases/10-llms-from-scratch/01-tokenizers/docs/en.md": {
+    "source_sha256": "a610edfbc9557f582cfcc1fddeefe3e3f34b3dd62da00341836af00579156669",
+    "output_sha256": "c502e0f9c644c84b30eff4827a6a74035ae6820445cd8e347417b47d0ea81639",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/02-building-a-tokenizer/docs/en.md": {
+    "source_sha256": "3e2af805d324028b1c673be3bebad6f17dc74ca2ffa0f1f050aa2d5d56d61da1",
+    "output_sha256": "6b49a131951fbe5932d75d5b6dd33a6fa0e4f2f375ab0791e264c834fea186ef",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/03-data-pipelines/docs/en.md": {
+    "source_sha256": "75ed5890977f72a36387b7cbea1db9b67a90ca4ba784223ec2f69e4b8cd37a44",
+    "output_sha256": "06a5ee63894c37b828af94993daf02612cbbf4552e51bed52377cf3db8607344",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/04-pre-training-mini-gpt/docs/en.md": {
+    "source_sha256": "5c3f2214d795c44638f037e6b2493e3190516a5bf89202060467298dc2f39dbb",
+    "output_sha256": "6c0f53d8f59b80f7821f18d24aabb633950939138f6934d1a9bf952051ccd877",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/05-scaling-distributed/docs/en.md": {
+    "source_sha256": "b9ae0ccea1f097aa7d3715f6578a007b167d065be32530ebb83dec516b2ca406",
+    "output_sha256": "c4f39fe95a643a168bdef6a148385815a716c770261b6b41ba759e19e32e1c15",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/06-instruction-tuning-sft/docs/en.md": {
+    "source_sha256": "a0413c8311b56776f7368253cda3e0a3d8183a6acc4d8e612df8809ecf995e4b",
+    "output_sha256": "43b0aed4f4b0b1d1cd3e9b110b56f687bfb86435a2cbd8e7d72bd66307ca743f",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/07-rlhf/docs/en.md": {
+    "source_sha256": "0e599cb378e8f0291f17d037d75f07cde24451c27ac335a1dbfa49f026524090",
+    "output_sha256": "b9092e4b30eb0d38ffc710e746af40c92f1651e95bb6e8c96f35dd08e45076eb",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/08-dpo/docs/en.md": {
+    "source_sha256": "a295d8092c3cba3c2595bbddb731802cc062d9e9cb686b6a5e7196e2eba4d4ed",
+    "output_sha256": "699bd13d251b38aa3301177c6bf2edfd88bfafd4a3d21bb290efe928ec9a8fba",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/09-constitutional-ai-self-improvement/docs/en.md": {
+    "source_sha256": "df41ca148d4abf46b736a89e1bd5391248dcccd7267acb8e0fafc3b3213b18d4",
+    "output_sha256": "e5daf369a4d4d8672d00438608bba6e555960d66f0f02116a4f2e9b7a432c3bc",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/10-evaluation/docs/en.md": {
+    "source_sha256": "1fe848a214fc3517fb8de9a979096f340d3dafcca3f1520f98ac9a89dfe4609a",
+    "output_sha256": "b6102216ee7b4895ca591ead4914b6e9778d5d81c61810f23b8c53c3d1f91cd6",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/11-quantization/docs/en.md": {
+    "source_sha256": "dd41adfca95d7337c3d50d446ba0e5ff83f53654dc776a8a48fd171b425a5bbf",
+    "output_sha256": "9c3fbc68e16bb285e2cbb457492f4ae9ed5c01319547758452b9f91600f57d3d",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/12-inference-optimization/docs/en.md": {
+    "source_sha256": "c59214310eb0f9d399c723912c29138426ad1b33c7d5b8ae29986125279dc072",
+    "output_sha256": "cb04b7f7543809fc6401f66245a9d50794b571fdbb2cc9d67357a7802aa458ea",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/13-building-complete-llm-pipeline/docs/en.md": {
+    "source_sha256": "920dc5da6f447e4b4c41e45f6c967a4a05622cd0e60b8f827e6aeaee5e114463",
+    "output_sha256": "78b9a4d9f811cb9882b739f820d1e4b161c6ecc308f20948a918b39e693ed7ef",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/14-open-models-architecture-walkthroughs/docs/en.md": {
+    "source_sha256": "3786ce2336c30cb590bc56bb9d3b04b6ba937121d3de4a4fe20cefad9c6d286c",
+    "output_sha256": "3608ce4ac601e7827fb776014b8c5eaaf5701fa7df1e6aa5c6eb0746f7053962",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/15-speculative-decoding-eagle3/docs/en.md": {
+    "source_sha256": "e7ccc1f2140d91351e1990b1556e97a2f6375b05ad1d7b36d5c852e1cec66ef5",
+    "output_sha256": "5ed3c8e4e7b1a3ad1e218c475f097bf8c08be0026935deef07a2748c8e0f102a",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/16-differential-attention-v2/docs/en.md": {
+    "source_sha256": "89705e3112b66cdf2bb5444d632cafb5c4b168fe4693e534c92fb0d1051ae5df",
+    "output_sha256": "9a2424786e1d4bff74104fe7668cb6341ce39bf79d66c4893efe406e157ed7d1",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/17-native-sparse-attention/docs/en.md": {
+    "source_sha256": "ad7929f9d22e8abedc598a0c9779ac28461ac789d853787ac047a172a04d0755",
+    "output_sha256": "54d5a7e8226e04d0b66bc5bacfa34b51a52754edfb84eafbc83bd0349b880bb5",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/18-multi-token-prediction/docs/en.md": {
+    "source_sha256": "5147945b9cea6351169e38c9bea631ed9769807fa4858f257b4e0f789139472d",
+    "output_sha256": "5f274e9f239a20a838c42df06579e4f8aeef4d57b4acec7c0c01f2baa2921381",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/19-dualpipe-parallelism/docs/en.md": {
+    "source_sha256": "281c6d6c76b8c64f6b80f61accd664241985e31d2ff36795c016d8746b1ccd99",
+    "output_sha256": "aae407587673ccd6b34f3fc108dcfb442d17c1755b06f2fd7fea888f8f0f59ce",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/20-deepseek-v3-walkthrough/docs/en.md": {
+    "source_sha256": "04d8e96b26fd1cbfe18298e60320deff1339f9b052572b7144379ee59717d2e3",
+    "output_sha256": "45cf7e53196f1c997492fd36096c8220e140376adee98e00254276e1f1ab9e4d",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/21-jamba-hybrid-ssm-transformer/docs/en.md": {
+    "source_sha256": "cc5b0d19b7cb44011c94c603517e7a8eb659df2e2b58043e5d89cd1299191ab8",
+    "output_sha256": "84812243f48f5393cd3f9b2b4bd01d74873c409f6e6ee53249f9aec05d7d9e1c",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/22-async-hogwild-inference/docs/en.md": {
+    "source_sha256": "2ae5527935376bc320f68a0dc4563963b7887da9376394152477e8bfc2e31f23",
+    "output_sha256": "fa98b962b29ed4f966bc83827958d074e9aeaf0ab69d6e5fef4a09204391e3cb",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/25-speculative-decoding/docs/en.md": {
+    "source_sha256": "a5ba5282949594418b8cbd2a5755aaf9c31ba95b1af75f077303e54fadd208f4",
+    "output_sha256": "06a1d5426a123b96806129936921d3b5e20884c4f8c9fe5427ee92832697657c",
+    "provider": "manual"
+  },
+  "phases/10-llms-from-scratch/34-gradient-checkpointing/docs/en.md": {
+    "source_sha256": "a6cf7b553b333518445fa61a7588527a69eb1b73bb2106b3438dc22e236c5e78",
+    "output_sha256": "f3e42acea4921bb27f7719e45b13f38f046109d13ef710f3a1fc0619f43cb219",
+    "provider": "manual"
+  }
+}
