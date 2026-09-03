@@ -1,9 +1,9 @@
-"""FIPA-ACL translator and mini contract-net demo, stdlib only.
+"""FIPA-ACL 转换器和迷你 Contract Net 演示，仅使用 stdlib。
 
-Shows that every 2026 agent-protocol message (MCP tools/call, MCP
-resources/read, A2A task creation) reduces to a FIPA-ACL envelope with a
-different syntax. Then runs a 3-bidder contract-net negotiation using the
-canonical cfp / propose / accept-proposal / reject-proposal performatives.
+演示每一条 2026 年 Agent 协议消息（MCP tools/call、MCP resources/read、
+A2A 任务创建）都能归约为一种语法不同的 FIPA-ACL 信封。然后使用规范的
+cfp / propose / accept-proposal / reject-proposal 施为词，运行一轮包含
+3 个竞标者的 Contract Net 协商。
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ class ACLMessage:
 
     def __post_init__(self) -> None:
         if self.performative not in PERFORMATIVES:
-            raise ValueError(f"unknown performative: {self.performative}")
+            raise ValueError(f"未知施为词：{self.performative}")
 
     def render(self) -> str:
         fields = [
@@ -54,7 +54,7 @@ class ACLMessage:
 
 
 def mcp_tools_call_to_acl(req: dict) -> ACLMessage:
-    """MCP tools/call JSON-RPC message -> FIPA-ACL request."""
+    """将 MCP tools/call JSON-RPC 消息转换为 FIPA-ACL request。"""
     return ACLMessage(
         performative="request",
         sender="host",
@@ -69,7 +69,7 @@ def mcp_tools_call_to_acl(req: dict) -> ACLMessage:
 
 
 def mcp_resources_read_to_acl(req: dict) -> ACLMessage:
-    """MCP resources/read JSON-RPC message -> FIPA-ACL query-ref."""
+    """将 MCP resources/read JSON-RPC 消息转换为 FIPA-ACL query-ref。"""
     return ACLMessage(
         performative="query-ref",
         sender="host",
@@ -84,7 +84,7 @@ def mcp_resources_read_to_acl(req: dict) -> ACLMessage:
 
 
 def a2a_task_create_to_acl(task: dict) -> ACLMessage:
-    """A2A POST /tasks body -> FIPA-ACL request inside a contract-net-like flow."""
+    """将 A2A POST /tasks 请求体转换为类 Contract Net 流程中的 FIPA-ACL request。"""
     return ACLMessage(
         performative="request",
         sender=task.get("client", "client"),
@@ -99,7 +99,7 @@ def a2a_task_create_to_acl(task: dict) -> ACLMessage:
 
 
 def a2a_subscribe_to_acl(task_id: str, client: str, agent: str) -> ACLMessage:
-    """A2A SSE subscription -> FIPA-ACL subscribe."""
+    """将 A2A SSE 订阅转换为 FIPA-ACL subscribe。"""
     return ACLMessage(
         performative="subscribe",
         sender=client,
@@ -155,7 +155,7 @@ class ContractNet:
             performative="accept-proposal",
             sender=self.manager,
             receiver=winner,
-            content="awarded",
+            content="已授予",
             ontology="contract-net",
             protocol="fipa-contract-net",
             conversation_id=conv,
@@ -165,7 +165,7 @@ class ContractNet:
                 performative="reject-proposal",
                 sender=self.manager,
                 receiver=L,
-                content="not awarded",
+                content="未授予",
                 ontology="contract-net",
                 protocol="fipa-contract-net",
                 conversation_id=conv,
@@ -174,7 +174,7 @@ class ContractNet:
 
 def demo_round_trip() -> None:
     print("=" * 72)
-    print("Round-trip: 2026 JSON-RPC / REST <-> FIPA-ACL envelope")
+    print("往返转换：2026 JSON-RPC / REST <-> FIPA-ACL 信封")
     print("=" * 72)
 
     mcp_call = {
@@ -185,7 +185,7 @@ def demo_round_trip() -> None:
     }
     print("\n-- MCP tools/call --")
     print(mcp_call)
-    print("as ACL:")
+    print("转换为 ACL：")
     print(mcp_tools_call_to_acl(mcp_call).render())
 
     mcp_read = {
@@ -196,7 +196,7 @@ def demo_round_trip() -> None:
     }
     print("\n-- MCP resources/read --")
     print(mcp_read)
-    print("as ACL:")
+    print("转换为 ACL：")
     print(mcp_resources_read_to_acl(mcp_read).render())
 
     a2a_task = {
@@ -208,7 +208,7 @@ def demo_round_trip() -> None:
     }
     print("\n-- A2A POST /tasks --")
     print(a2a_task)
-    print("as ACL:")
+    print("转换为 ACL：")
     print(a2a_task_create_to_acl(a2a_task).render())
 
     print("\n-- A2A SSE subscribe --")
@@ -217,13 +217,13 @@ def demo_round_trip() -> None:
 
 def demo_contract_net() -> None:
     print("\n" + "=" * 72)
-    print("Contract Net Protocol — manager broadcasts cfp, bidders propose")
+    print("Contract Net Protocol — manager 广播 cfp，竞标者发送 propose")
     print("=" * 72)
 
     cn = ContractNet(manager="scheduler", bidders=["worker-a", "worker-b", "worker-c"])
     conv = "cn-1"
 
-    cn.cfp(task="compress 10GB log bundle", conv=conv)
+    cn.cfp(task="压缩 10GB 日志包", conv=conv)
     cn.propose("worker-a", Bid("worker-a", price=3, eta_minutes=18), conv)
     cn.propose("worker-b", Bid("worker-b", price=2, eta_minutes=25), conv)
     cn.propose("worker-c", Bid("worker-c", price=4, eta_minutes=10), conv)
@@ -237,14 +237,14 @@ def demo_contract_net() -> None:
         print()
         print(msg.render())
 
-    print(f"\nWinner: {winner.sender} (price {winner.content['price']}, eta {winner.content['eta_minutes']}m)")
+    print(f"\n胜者：{winner.sender}（价格 {winner.content['price']}，预计用时 {winner.content['eta_minutes']} 分钟）")
 
 
 def main() -> None:
     demo_round_trip()
     demo_contract_net()
-    print("\nTakeaway: MCP/A2A messages are FIPA-ACL envelopes with JSON syntax.")
-    print("The structural primitives survive; the ontology and formal semantics do not.")
+    print("\n要点：MCP/A2A 消息就是采用 JSON 语法的 FIPA-ACL 信封。")
+    print("结构原语保留了下来，但 ontology 和形式语义没有保留。")
 
 
 if __name__ == "__main__":
