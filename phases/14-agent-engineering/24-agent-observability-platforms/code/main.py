@@ -1,7 +1,7 @@
-"""Stdlib trace collector + LLM-judge evaluator.
+"""标准库追踪采集器 + LLM-judge 评估器。
 
-Mirrors what Langfuse / Phoenix / Opik do with richer UIs: ingest spans,
-group by session, score with an LLM judge, surface failure categories.
+类似于 Langfuse / Phoenix / Opik 在更丰富的 UIs 下所做的工作：接收 span、
+按会话分组、用 LLM 评判器评分、展示失败类别。
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ def summarize(collector: TraceCollector) -> list[SessionSummary]:
 
 def main() -> None:
     print("=" * 70)
-    print("AGENT OBSERVABILITY PLATFORMS — Phase 14, Lesson 24")
+    print("智能体可观测性平台 — 第 14 阶段，第 24 课")
     print("=" * 70)
 
     collector = TraceCollector()
@@ -130,22 +130,22 @@ def main() -> None:
     for span in ok_spans + err_spans + slow_spans:
         collector.ingest(span)
 
-    print("\nsummary per session (what Langfuse/Phoenix/Opik show)")
+    print("\n按会话汇总（Langfuse/Phoenix/Opik 所展示的内容）")
     for summary in summarize(collector):
         score, verdict = scripted_llm_judge(collector.by_session()[summary.session_id])
         print(f"  {summary.session_id}  verdict={verdict}  score={score:.2f}  "
               f"spans={summary.trace_count}  errors={summary.error_count}")
         if summary.failure_reasons:
             for reason, count in summary.failure_reasons.most_common():
-                print(f"    failure: {reason} x{count}")
+                print(f"    失败：{reason} x{count}")
 
     total_errors = sum(s.error_count for s in summarize(collector))
     total_sessions = len(collector.by_session())
-    print(f"\naggregate: {total_errors} errors across {total_sessions} sessions")
+    print(f"\n汇总：{total_errors} 个错误，分布于 {total_sessions} 个会话")
     print()
-    print("Langfuse: prompt versions tied to traces.")
-    print("Phoenix: RAG relevancy + drift/clustering.")
-    print("Opik: optimization + guardrail enforcement.")
+    print("Langfuse：与追踪关联的提示词版本。")
+    print("Phoenix：RAG 相关性 + drift/clustering.")
+    print("Opik：优化 + 护栏执行。")
 
 
 if __name__ == "__main__":
