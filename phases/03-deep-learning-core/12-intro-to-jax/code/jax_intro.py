@@ -100,14 +100,14 @@ def train():
 
         train_acc = accuracy(params, X_train[:5000], y_train[:5000])
         test_acc = accuracy(params, X_test, y_test)
-        print(f"Epoch {epoch + 1:2d} | Loss: {epoch_loss / n_batches:.4f} | "
-              f"Train Acc: {train_acc:.4f} | Test Acc: {test_acc:.4f}")
+        print(f"轮次 {epoch + 1:2d} | 损失: {epoch_loss / n_batches:.4f} | "
+              f"训练准确率: {train_acc:.4f} | 测试准确率: {test_acc:.4f}")
 
     return params
 
 
 def demo_grad():
-    print("=== jax.grad demo ===")
+    print("=== jax.grad 演示 ===")
 
     def f(x):
         return x ** 3
@@ -121,7 +121,7 @@ def demo_grad():
 
 
 def demo_vmap():
-    print("=== jax.vmap demo ===")
+    print("=== jax.vmap 演示 ===")
     key = random.PRNGKey(42)
     k1, k2 = random.split(key)
 
@@ -133,14 +133,14 @@ def demo_vmap():
     batch_x = random.normal(k2, (5, 3))
     batch_predict = jax.vmap(predict_single, in_axes=(None, 0))
     results = batch_predict(params, batch_x)
-    print(f"Input shape:  {batch_x.shape}")
-    print(f"Output shape: {results.shape}")
-    print(f"Predictions:  {results}")
+    print(f"输入形状:  {batch_x.shape}")
+    print(f"输出形状: {results.shape}")
+    print(f"预测结果:  {results}")
     print()
 
 
 def demo_jit():
-    print("=== jax.jit demo ===")
+    print("=== jax.jit 演示 ===")
     import time
 
     key = random.PRNGKey(0)
@@ -165,9 +165,9 @@ def demo_jit():
         _ = fast_fn(x).block_until_ready()
     jit_time = time.perf_counter() - start
 
-    print(f"Eager: {eager_time:.4f}s")
+    print(f"即时执行(Eager): {eager_time:.4f}s")
     print(f"JIT:   {jit_time:.4f}s")
-    print(f"Speedup: {eager_time / jit_time:.1f}x")
+    print(f"加速比: {eager_time / jit_time:.1f}x")
     print()
 
 
@@ -175,5 +175,5 @@ if __name__ == '__main__':
     demo_grad()
     demo_vmap()
     demo_jit()
-    print("=== MNIST Training ===")
+    print("=== MNIST 训练 ===")
     train()
