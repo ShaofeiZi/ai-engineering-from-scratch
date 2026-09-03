@@ -71,12 +71,12 @@ def display_format_comparison(value):
     fp8 = simulate_fp8_e4m3(value)
 
     print(f"\n  Value: {value}")
-    print(f"  {'Format':<8} {'Stored Value':>14} {'Error':>12} {'Sign':>5} {'Exp Bits':>10} {'Man Bits':>25}")
+    print(f"  {'格式':<8} {'存储值':>14} {'误差':>12} {'符号':>5} {'指数位':>10} {'尾数位':>25}")
     print(f"  {'-'*76}")
     print(f"  {'FP32':<8} {fp32['value']:>14.6f} {abs(fp32['value'] - value):>12.8f} {fp32['sign']:>5} {fp32['exponent_bits']:>10} {fp32['mantissa_bits']:>25}")
     print(f"  {'FP16':<8} {fp16['value']:>14.6f} {abs(fp16['value'] - value):>12.8f} {fp16['sign']:>5} {fp16['exponent_bits']:>10} {fp16['mantissa_bits']:>25}")
     print(f"  {'BF16':<8} {bf16['value']:>14.6f} {abs(bf16['value'] - value):>12.8f} {bf16['sign']:>5} {bf16['exponent_bits']:>10} {bf16['mantissa_bits']:>25}")
-    print(f"  {'FP8e4m3':<8} {fp8['value']:>14.6f} {abs(fp8['value'] - value):>12.8f} {fp8['sign']:>5} {fp8['exponent_bits']:>10} {fp8['mantissa_bits']:>25}")
+    print(f"  {'FP8 E4M3':<8} {fp8['value']:>14.6f} {abs(fp8['value'] - value):>12.8f} {fp8['sign']:>5} {fp8['exponent_bits']:>10} {fp8['mantissa_bits']:>25}")
 
 
 def quantize_symmetric(tensor, num_bits=8):
@@ -168,19 +168,19 @@ def compare_quantization_methods(tensor, num_bits=8):
     recon_asym = dequantize_asymmetric(q_asym, s_asym, zp)
     err_asym = quantization_error(tensor, recon_asym)
 
-    print(f"\n  Quantization Comparison ({num_bits}-bit, tensor shape {tensor.shape}):")
-    print(f"  {'Method':<20} {'MSE':>12} {'SNR (dB)':>10} {'Cosine Sim':>12} {'Max Error':>12}")
+    print(f"\n  量化方法对比（{num_bits} bit，张量形状 {tensor.shape}）：")
+    print(f"  {'方法':<20} {'MSE':>12} {'SNR (dB)':>10} {'余弦相似度':>12} {'最大误差':>12}")
     print(f"  {'-'*68}")
-    print(f"  {'Per-tensor sym':<20} {err_pt['mse']:>12.8f} {err_pt['snr_db']:>10.2f} {err_pt['cosine_similarity']:>12.8f} {err_pt['max_error']:>12.8f}")
-    print(f"  {'Per-channel sym':<20} {err_pc['mse']:>12.8f} {err_pc['snr_db']:>10.2f} {err_pc['cosine_similarity']:>12.8f} {err_pc['max_error']:>12.8f}")
-    print(f"  {'Asymmetric':<20} {err_asym['mse']:>12.8f} {err_asym['snr_db']:>10.2f} {err_asym['cosine_similarity']:>12.8f} {err_asym['max_error']:>12.8f}")
+    print(f"  {'逐张量对称量化':<20} {err_pt['mse']:>12.8f} {err_pt['snr_db']:>10.2f} {err_pt['cosine_similarity']:>12.8f} {err_pt['max_error']:>12.8f}")
+    print(f"  {'逐通道对称量化':<20} {err_pc['mse']:>12.8f} {err_pc['snr_db']:>10.2f} {err_pc['cosine_similarity']:>12.8f} {err_pc['max_error']:>12.8f}")
+    print(f"  {'不对称':<20} {err_asym['mse']:>12.8f} {err_asym['snr_db']:>10.2f} {err_asym['cosine_similarity']:>12.8f} {err_asym['max_error']:>12.8f}")
 
     return {"per_tensor": err_pt, "per_channel": err_pc, "asymmetric": err_asym}
 
 
 def bit_width_sweep(tensor):
-    print(f"\n  Bit-Width Sweep (tensor shape {tensor.shape}):")
-    print(f"  {'Bits':>6} {'Levels':>8} {'MSE':>14} {'SNR (dB)':>10} {'Cosine Sim':>12} {'Compression':>12}")
+    print(f"\n  位宽扫描（张量形状 {tensor.shape}）：")
+    print(f"  {'位数':>6} {'量化级数':>8} {'MSE':>14} {'SNR (dB)':>10} {'余弦相似度':>12} {'压缩比':>12}")
     print(f"  {'-'*64}")
 
     results = []
@@ -234,7 +234,7 @@ def sensitivity_experiment(batch_size=2, seq_len=16, d_model=64, num_bits=8):
         "out": dequantize_per_channel(q_out, s_out, axis=0),
     }
     weight_quant_output, _ = simulate_transformer_layer(input_data, quantized_weights)
-    experiments["Weights only"] = quantization_error(baseline_output, weight_quant_output)
+    experiments["仅权重"] = quantization_error(baseline_output, weight_quant_output)
 
     _, fresh_internals = simulate_transformer_layer(input_data, weights)
     q_act, s_act = quantize_per_channel(
@@ -242,7 +242,7 @@ def sensitivity_experiment(batch_size=2, seq_len=16, d_model=64, num_bits=8):
     )
     quant_attn_out = dequantize_per_channel(q_act, s_act, axis=0).reshape(batch_size, seq_len, d_model)
     act_quant_output = quant_attn_out @ weights["out"]
-    experiments["Activations only"] = quantization_error(baseline_output, act_quant_output)
+    experiments["仅激活值"] = quantization_error(baseline_output, act_quant_output)
 
     q_k, s_k = quantize_per_channel(fresh_internals["k"].reshape(-1, d_model), num_bits, axis=0)
     q_v, s_v = quantize_per_channel(fresh_internals["v"].reshape(-1, d_model), num_bits, axis=0)
@@ -253,7 +253,7 @@ def sensitivity_experiment(batch_size=2, seq_len=16, d_model=64, num_bits=8):
     attn_exp_kv = np.exp(attn_scores_kv - attn_max_kv)
     attn_weights_kv = attn_exp_kv / np.sum(attn_exp_kv, axis=-1, keepdims=True)
     kv_quant_output = (attn_weights_kv @ quant_v) @ weights["out"]
-    experiments["KV cache only"] = quantization_error(baseline_output, kv_quant_output)
+    experiments["仅 KV cache"] = quantization_error(baseline_output, kv_quant_output)
 
     noise_scale = np.std(fresh_internals["attn_scores"]) * 0.05
     noisy_scores = fresh_internals["attn_scores"] + np.random.randn(*fresh_internals["attn_scores"].shape) * noise_scale
@@ -261,10 +261,10 @@ def sensitivity_experiment(batch_size=2, seq_len=16, d_model=64, num_bits=8):
     noisy_exp = np.exp(noisy_scores - noisy_max)
     noisy_weights = noisy_exp / np.sum(noisy_exp, axis=-1, keepdims=True)
     attn_quant_output = (noisy_weights @ fresh_internals["v"]) @ weights["out"]
-    experiments["Attention logits (5% noise)"] = quantization_error(baseline_output, attn_quant_output)
+    experiments["Attention logits（5% 噪声）"] = quantization_error(baseline_output, attn_quant_output)
 
-    print(f"\n  Sensitivity Experiment ({num_bits}-bit quantization):")
-    print(f"  {'Component':<30} {'MSE':>14} {'SNR (dB)':>10} {'Cosine Sim':>12}")
+    print(f"\n  敏感性实验（{num_bits} bit 量化）：")
+    print(f"  {'组件':<30} {'MSE':>14} {'SNR (dB)':>10} {'余弦相似度':>12}")
     print(f"  {'-'*68}")
     for name, err in sorted(experiments.items(), key=lambda x: x[1]["mse"]):
         print(f"  {name:<30} {err['mse']:>14.8f} {err['snr_db']:>10.2f} {err['cosine_similarity']:>12.8f}")
@@ -388,15 +388,15 @@ def full_quantization_comparison(d_in=256, d_out=512, num_bits=4, n_calibration=
     recon_awq, awq_info = simulated_awq(weight, calibration, num_bits)
     err_awq = awq_info["error"]
 
-    print(f"\n  Full Quantization Comparison ({num_bits}-bit, {d_in}x{d_out} matrix)")
-    print(f"  Matrix has {len(outlier_rows)} outlier rows (10x scale)")
+    print(f"\n  完整量化对比（{num_bits} bit，{d_in}x{d_out} 矩阵）")
+    print(f"  矩阵包含 {len(outlier_rows)} 个离群行（放大 10 倍）")
     print()
-    print(f"  {'Method':<20} {'MSE':>14} {'SNR (dB)':>10} {'Cosine Sim':>12}")
+    print(f"  {'方法':<20} {'MSE':>14} {'SNR (dB)':>10} {'余弦相似度':>12}")
     print(f"  {'-'*58}")
-    print(f"  {'Naive per-tensor':<20} {err_naive['mse']:>14.8f} {err_naive['snr_db']:>10.2f} {err_naive['cosine_similarity']:>12.8f}")
-    print(f"  {'Per-channel':<20} {err_pc['mse']:>14.8f} {err_pc['snr_db']:>10.2f} {err_pc['cosine_similarity']:>12.8f}")
-    print(f"  {'Simulated GPTQ':<20} {err_gptq['mse']:>14.8f} {err_gptq['snr_db']:>10.2f} {err_gptq['cosine_similarity']:>12.8f}")
-    print(f"  {'Simulated AWQ':<20} {err_awq['mse']:>14.8f} {err_awq['snr_db']:>10.2f} {err_awq['cosine_similarity']:>12.8f}")
+    print(f"  {'朴素逐张量量化':<20} {err_naive['mse']:>14.8f} {err_naive['snr_db']:>10.2f} {err_naive['cosine_similarity']:>12.8f}")
+    print(f"  {'逐通道量化':<20} {err_pc['mse']:>14.8f} {err_pc['snr_db']:>10.2f} {err_pc['cosine_similarity']:>12.8f}")
+    print(f"  {'模拟 GPTQ':<20} {err_gptq['mse']:>14.8f} {err_gptq['snr_db']:>10.2f} {err_gptq['cosine_similarity']:>12.8f}")
+    print(f"  {'模拟 AWQ':<20} {err_awq['mse']:>14.8f} {err_awq['snr_db']:>10.2f} {err_awq['cosine_similarity']:>12.8f}")
 
     test_input = np.random.randn(4, d_in) * 0.1
     baseline = test_input @ weight
@@ -405,8 +405,8 @@ def full_quantization_comparison(d_in=256, d_out=512, num_bits=4, n_calibration=
     output_gptq = test_input @ recon_gptq
     output_awq = test_input @ recon_awq
 
-    print(f"\n  End-to-End Output Error (matmul with test input):")
-    print(f"  {'Method':<20} {'Output MSE':>14} {'Output Cosine':>14}")
+    print("\n  端到端输出误差（测试输入的矩阵乘法）：")
+    print(f"  {'方法':<20} {'输出 MSE':>14} {'输出余弦':>14}")
     print(f"  {'-'*50}")
     for name, output in [("Naive", output_naive), ("Per-channel", output_pc),
                           ("GPTQ", output_gptq), ("AWQ", output_awq)]:
@@ -424,8 +424,8 @@ def memory_calculator(num_params_billions, bits_per_param):
 
 
 def print_memory_table():
-    print("\n  Memory Requirements by Model and Precision:")
-    print(f"  {'Model':<15} {'FP32':>8} {'FP16':>8} {'FP8':>8} {'INT8':>8} {'INT4':>8} {'INT2':>8}")
+    print("\n 按模型和精度统计的内存需求：")
+    print(f"  {'模型':<15} {'FP32':>8} {'FP16':>8} {'FP8':>8} {'INT8':>8} {'INT4':>8} {'INT2':>8}")
     print(f"  {'-'*64}")
     for name, params in [("7B", 7), ("13B", 13), ("34B", 34), ("70B", 70), ("405B", 405)]:
         fp32 = memory_calculator(params, 32)
@@ -441,19 +441,19 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     print("=" * 70)
-    print("QUANTIZATION: MAKING MODELS FIT")
+    print("量化：让模型更小")
     print("=" * 70)
 
-    print("\nSTEP 1: Number Format Comparison")
+    print("\n步骤 1：数值格式对比")
     print("-" * 50)
     for val in [0.1, 3.14159, -0.00073, 42.5, 0.0000012]:
         display_format_comparison(val)
 
-    print("\n\nSTEP 2: Memory Requirements")
+    print("\n步骤 2：内存需求")
     print("-" * 50)
     print_memory_table()
 
-    print("\n\nSTEP 3: Quantization Methods Comparison")
+    print("\n步骤 3：量化方法对比")
     print("-" * 50)
     weight_matrix = np.random.randn(128, 256) * 0.02
     weight_matrix[0] *= 15
@@ -461,37 +461,37 @@ if __name__ == "__main__":
     compare_quantization_methods(weight_matrix, num_bits=8)
     compare_quantization_methods(weight_matrix, num_bits=4)
 
-    print("\n\nSTEP 4: Bit-Width Sweep")
+    print("\n步骤 4：位宽扫描")
     print("-" * 50)
     sweep_tensor = np.random.randn(64, 128) * 0.05
     bit_width_sweep(sweep_tensor)
 
-    print("\n\nSTEP 5: Sensitivity Experiment")
+    print("\n\n步骤 5：敏感性实验")
     print("-" * 50)
-    print("\n  INT8:")
+    print("\n INT8:")
     sensitivity_experiment(num_bits=8)
-    print("\n  INT4:")
+    print("\n INT4:")
     sensitivity_experiment(num_bits=4)
 
-    print("\n\nSTEP 6: GPTQ vs AWQ vs Naive (INT4)")
+    print("\n步骤 6：GPTQ、AWQ 与朴素量化对比（INT4）")
     print("-" * 50)
     full_quantization_comparison(d_in=256, d_out=512, num_bits=4)
 
-    print("\n\nSTEP 7: Distribution Analysis")
+    print("\n步骤 7：分布分析")
     print("-" * 50)
     np.random.seed(0)
     simulated_weights = np.random.randn(1000) * 0.02
     abs_vals = np.abs(simulated_weights)
     pct_in_range = np.mean(abs_vals < 0.1) * 100
-    print(f"\n  Simulated weight distribution (1000 params, std=0.02):")
-    print(f"  Weights in [-0.1, 0.1]: {pct_in_range:.1f}%")
-    print(f"  Weights in [-0.05, 0.05]: {np.mean(abs_vals < 0.05) * 100:.1f}%")
-    print(f"  Weights in [-0.01, 0.01]: {np.mean(abs_vals < 0.01) * 100:.1f}%")
-    print(f"  Max absolute value: {np.max(abs_vals):.6f}")
-    print(f"  Mean absolute value: {np.mean(abs_vals):.6f}")
+    print("\n  模拟权重分布（1000 个参数，std=0.02）：")
+    print(f"  [-0.1, 0.1] 内的权重：{pct_in_range:.1f}%")
+    print(f"  [-0.05, 0.05] 内的权重：{np.mean(abs_vals < 0.05) * 100:.1f}%")
+    print(f"  [-0.01, 0.01] 内的权重：{np.mean(abs_vals < 0.01) * 100:.1f}%")
+    print(f"  最大绝对值：{np.max(abs_vals):.6f}")
+    print(f"  平均绝对值：{np.mean(abs_vals):.6f}")
 
     histogram = np.histogram(simulated_weights, bins=20)
-    print(f"\n  Weight histogram:")
+    print("\n  权重直方图：")
     max_count = max(histogram[0])
     for i in range(len(histogram[0])):
         bar_len = int(histogram[0][i] / max_count * 40)
@@ -500,5 +500,5 @@ if __name__ == "__main__":
         print(f"  [{lo:>7.4f}, {hi:>7.4f}] {'#' * bar_len} ({histogram[0][i]})")
 
     print("\n\n" + "=" * 70)
-    print("DONE")
+    print("完成")
     print("=" * 70)

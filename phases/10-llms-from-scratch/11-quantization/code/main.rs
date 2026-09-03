@@ -1,13 +1,11 @@
-// Lesson: Quantization — INT8 / GPTQ / AWQ / GGUF (phase 10 / lesson 11)
-// Topic: symmetric INT8 quantization of an FP32 weight vector. Computes scale
-// from abs-max, rounds + clips to [-127, 127], dequantizes, reports MSE,
-// max abs error, SNR, cosine similarity, and a bit-width sweep (8 / 4 / 2 bit).
-// Refs:
-//   https://pytorch.org/docs/stable/quantization.html
-//   https://leimao.github.io/article/Neural-Networks-Quantization/
-//   https://arxiv.org/abs/2210.17323  (GPTQ)
-//   https://arxiv.org/abs/2306.00978  (AWQ)
-// Build: rustc --edition 2021 -O code/main.rs -o /tmp/lesson_quant && /tmp/lesson_quant
+// 课程：量化——INT8、GPTQ、AWQ 与 GGUF（第 10 阶段，第 11 课）。
+// 主题：将 FP32 权重向量逐张量对称量化为 INT8。
+// 根据 abs-max 计算 scale，将数值舍入并裁剪到 [-127, 127]，再反量化，
+// 报告 MSE、最大绝对误差、SNR、余弦相似度与位宽扫描结果。
+// 参考资料：https://pytorch.org/docs/stable/quantization.html、
+// https://leimao.github.io/article/Neural-Networks-Quantization/、
+// https://arxiv.org/abs/2210.17323（GPTQ）、https://arxiv.org/abs/2306.00978（AWQ）。
+// 构建：rustc --edition 2021 -O code/main.rs -o /tmp/lesson_quant && /tmp/lesson_quant
 
 use std::f64;
 
@@ -18,7 +16,7 @@ fn lcg(seed: &mut u64) -> f64 {
     unit * 2.0 - 1.0
 }
 
-// Box-Muller via the LCG, so we generate normal-ish floats without external crates.
+// 通过 LCG 生成近似正态分布的浮点数，不依赖外部 crate。
 fn randn(seed: &mut u64) -> f64 {
     let u1 = (lcg(seed) + 1.0) / 2.0;
     let u2 = (lcg(seed) + 1.0) / 2.0;
@@ -99,19 +97,19 @@ fn error_report(original: &[f64], reconstructed: &[f64]) -> ErrorReport {
 
 fn print_quant_summary(label: &str, weights: &[f64], r: &QuantResult, err: &ErrorReport) {
     println!("[{}]", label);
-    println!("  range [qmin, qmax]    {} .. {}", r.qmin, r.qmax);
-    println!("  scale (FP32 step)     {:.8}", r.scale);
-    println!("  sample weights (10)   {:?}", &weights[..10.min(weights.len())]
+    println!("范围 [qmin, qmax] {}. {}", r.qmin, r.qmax);
+    println!("缩放 (FP32 步) {:.8}", r.scale);
+    println!("样品重量(10){:?}", &weights[..10.min(weights.len())]
         .iter().map(|w| format!("{:+.4}", w)).collect::<Vec<_>>());
-    println!("  quantized codes (10)  {:?}", &r.quantized[..10.min(r.quantized.len())]);
-    println!("  dequantized (10)      {:?}", &r.reconstructed[..10.min(r.reconstructed.len())]
+    println!("量化代码(10){:?}", &r.quantized[..10.min(r.quantized.len())]);
+    println!("已取消(10){:?}", &r.reconstructed[..10.min(r.reconstructed.len())]
         .iter().map(|w| format!("{:+.4}", w)).collect::<Vec<_>>());
     println!();
-    println!("  mse                   {:.10}", err.mse);
-    println!("  rmse                  {:.10}", err.rmse);
-    println!("  max |error|           {:.10}", err.max_abs_error);
-    println!("  snr                   {:.2} dB", err.snr_db);
-    println!("  cosine similarity     {:.10}", err.cosine);
+    println!("mse {:.10} (中文(简体) ).", err.mse);
+    println!("rmse {:.10}", err.rmse);
+    println!("最大绝对误差 {:.10}", err.max_abs_error);
+    println!("snr {:.2} dB 单倍", err.snr_db);
+    println!("余弦相似性 {:.10}", err.cosine);
     println!();
 }
 
@@ -139,22 +137,22 @@ fn main() {
     };
 
     println!();
-    println!("=== INT8 quantization (Rust, stdlib only) ===");
+    println!("QQ INT8 定量( Rust,仅限 stdlib) QQ");
     println!();
-    println!("Tensor       : 1D weight vector, n = {}", n);
-    println!("Distribution : Normal(0, 0.02) with 3 outlier weights");
-    println!("  max |w|      {:.6}", stats.0);
-    println!("  mean |w|     {:.6}", stats.1);
-    println!("  std |w|      {:.6}", stats.2);
+    println!("tensor: 1D 重量矢量, n = {}", n);
+    println!("分布: 正常(0, 0.02) , 3 外重");
+    println!("最大 & >w > {:.6}", stats.0);
+    println!("  |w| 均值     {:.6}", stats.1);
+    println!("std |w| {:.6}", stats.2);
     println!();
 
     let r8 = quantize_symmetric(&weights, 8);
     let err8 = error_report(&weights, &r8.reconstructed);
     print_quant_summary("INT8 symmetric per-tensor", &weights, &r8, &err8);
 
-    println!("--- Bit-width sweep (symmetric per-tensor) ---");
+    println!("-- -- -- 位宽扫描( 对称每升) -- --");
     println!("  {:>5}  {:>10}  {:>14}  {:>10}  {:>12}  {:>10}",
-             "bits", "levels", "mse", "snr_db", "max |err|", "ratio_vs_fp32");
+             "位数", "量化级数", "mse", "snr dB", "最大误差", "相对 fp32");
     for bits in [16u32, 8, 4, 2] {
         let r = quantize_symmetric(&weights, bits);
         let er = error_report(&weights, &r.reconstructed);
@@ -168,15 +166,15 @@ fn main() {
     let fp32_bytes = (n * 4) as u64;
     let int8_bytes = (n * 1) as u64 + 8;
     let int4_bytes = ((n + 1) / 2) as u64 + 8;
-    println!("--- Memory footprint ---");
-    println!("  FP32 weights     {}", fmt_bytes(fp32_bytes));
-    println!("  INT8 + scale     {}   ({:.1}x smaller)", fmt_bytes(int8_bytes), fp32_bytes as f64 / int8_bytes as f64);
-    println!("  INT4 + scale     {}   ({:.1}x smaller)", fmt_bytes(int4_bytes), fp32_bytes as f64 / int4_bytes as f64);
+    println!("-- -- 记忆足迹 -- --");
+    println!("FP32 重量 {}", fmt_bytes(fp32_bytes));
+    println!("INT8 + 比例 {} ({:.1} x 较小)", fmt_bytes(int8_bytes), fp32_bytes as f64 / int8_bytes as f64);
+    println!("INT4 + 比例 {} ({:.1} x 较小)", fmt_bytes(int4_bytes), fp32_bytes as f64 / int4_bytes as f64);
     println!();
 
-    println!("Takeaway:");
-    println!("  - INT8 keeps SNR well above 30 dB for normal weight distributions.");
-    println!("  - Outliers dominate scale: 3 outliers in {} weights inflate scale and ", n);
-    println!("    waste precision on the rest. Per-channel (or GPTQ/AWQ) helps.");
+    println!("外卖:");
+    println!("-INT8 使SNR在正常重量分配上远远高于30 dB。");
+    println!("- 高度表:在{}重量的高度表和", n);
+    println!("其余的都是浪费精度 每道(或GPTQ/AWQ)帮助.");
     println!();
 }
