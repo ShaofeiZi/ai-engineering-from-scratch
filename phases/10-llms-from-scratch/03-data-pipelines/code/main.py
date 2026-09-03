@@ -332,51 +332,51 @@ def generate_sample_corpus():
 
 def run_pipeline():
     print("=" * 60)
-    print("Data Pipeline for Pre-Training")
+    print("预训的数据管道")
     print("=" * 60)
 
     raw_docs = generate_sample_corpus()
-    print(f"\nRaw documents: {len(raw_docs)}")
+    print(f"\n原始文档数：{len(raw_docs)}")
 
-    print("\n--- Stage 1: Cleaning ---")
+    print("\n - - - 阶段1:清理 - -")
     cleaned_docs = [clean_text(doc) for doc in raw_docs]
-    print(f"After HTML stripping: {len(cleaned_docs)} documents")
+    print(f"移除 HTML 后：{len(cleaned_docs)} 篇文档")
 
-    print("\n--- Stage 2: Quality Filtering ---")
+    print("\n - - - 阶段2: 质量过滤 - -")
     filtered_docs = [doc for doc in cleaned_docs if quality_filter(doc)]
     removed_quality = len(cleaned_docs) - len(filtered_docs)
-    print(f"Removed {removed_quality} low-quality documents")
-    print(f"Remaining: {len(filtered_docs)} documents")
+    print(f"已移除 {removed_quality} 篇低质量文档")
+    print(f"剩余：{len(filtered_docs)} 篇文档")
 
-    print("\n--- Stage 3: Deduplication (MinHash + LSH) ---")
+    print("\n-- 第3阶段:重复(MinHash+LSH) ---")
     start = time.time()
     deduped_docs, num_removed = deduplicate(filtered_docs, threshold=0.8)
     dedup_time = time.time() - start
-    print(f"Removed {num_removed} near-duplicates in {dedup_time:.2f}s")
-    print(f"Remaining: {len(deduped_docs)} documents")
+    print(f"在 {dedup_time:.2f} 秒内移除 {num_removed} 篇近重复文档")
+    print(f"剩余：{len(deduped_docs)} 篇文档")
 
-    print("\n--- Stage 4: Tokenization ---")
+    print("\n - - - 阶段4:切换 - -")
     all_text = " ".join(deduped_docs)
     tokenizer = SimpleTokenizer()
     start = time.time()
     tokenizer.train_bpe(all_text, num_merges=100)
     train_time = time.time() - start
-    print(f"Trained tokenizer with {tokenizer.vocab_size()} tokens in {train_time:.2f}s")
+    print(f"在 {train_time:.2f} 秒内训练出包含 {tokenizer.vocab_size()} 个 token 的 tokenizer")
 
     start = time.time()
     token_ids = tokenize_corpus(deduped_docs, tokenizer)
     tok_time = time.time() - start
-    print(f"Tokenized {len(token_ids):,} tokens in {tok_time:.2f}s ({len(token_ids)/max(tok_time, 0.001):,.0f} tokens/sec)")
+    print(f"在 {tok_time:.2f} 秒内完成 {len(token_ids):,} 个 token 的分词（{len(token_ids)/max(tok_time, 0.001):,.0f} token/秒）")
 
-    print("\n--- Stage 5: Sequence Packing ---")
+    print("\n -- -- 第5阶段:顺序包装 -- --")
     seq_length = 128
     sequences, masks = pack_sequences(token_ids, seq_length, pad_id=0)
-    print(f"Packed into {len(sequences)} sequences of length {seq_length}")
+    print(f"已打包为 {len(sequences)} 个长度为 {seq_length} 的序列")
 
-    print("\n--- Stage 6: DataLoader ---")
+    print("\n-- 第6阶段: DataLoader-")
     batch_size = 4
     loader = PreTrainingDataLoader(sequences, masks, batch_size)
-    print(f"DataLoader: {len(loader)} batches of size {batch_size}")
+    print(f"DataLoader：{len(loader)} 个批次，batch size 为 {batch_size}")
 
     batch_count = 0
     total_tokens_served = 0
@@ -384,33 +384,33 @@ def run_pipeline():
         batch_count += 1
         total_tokens_served += sum(sum(m) for m in batch_masks)
         if batch_count <= 2:
-            print(f"\n  Batch {batch_count}:")
-            print(f"    Sequences: {len(batch_seqs)}")
-            print(f"    First seq (first 20 tokens): {batch_seqs[0][:20]}...")
-            print(f"    First mask (first 20): {batch_masks[0][:20]}...")
-    print(f"\n  Total batches served: {batch_count}")
-    print(f"  Total non-padding tokens served: {total_tokens_served:,}")
+            print(f"\n  批次 {batch_count}：")
+            print(f"    序列数：{len(batch_seqs)}")
+            print(f"    第一个序列（前 20 个 token）：{batch_seqs[0][:20]}...")
+            print(f"    第一个 mask（前 20 项）：{batch_masks[0][:20]}...")
+    print(f"\n  已提供的批次总数：{batch_count}")
+    print(f"  已提供的非 padding token 总数：{total_tokens_served:,}")
 
-    print("\n--- Dataset Statistics ---")
+    print("\n -- -- 数据集统计 -- --")
     stats = compute_statistics(deduped_docs, token_ids, sequences, tokenizer.vocab_size())
-    print(f"  Documents:          {stats['total_documents']}")
-    print(f"  Total characters:   {stats['total_characters']:,}")
-    print(f"  Total tokens:       {stats['total_tokens']:,}")
-    print(f"  Unique tokens:      {stats['unique_tokens']}")
-    print(f"  Vocab utilization:  {stats['vocab_utilization']:.1%}")
-    print(f"  Compression ratio:  {stats['compression_ratio']:.2f} chars/token")
-    print(f"  Avg doc length:     {stats['avg_doc_length_words']:.0f} words")
-    print(f"  Num sequences:      {stats['num_sequences']}")
-    print(f"  Seq utilization:    {stats['sequence_utilization']:.1%}")
+    print(f"  文档数：      {stats['total_documents']}")
+    print(f"  字符总数：    {stats['total_characters']:,}")
+    print(f"  token 总数：  {stats['total_tokens']:,}")
+    print(f"  唯一 token 数：{stats['unique_tokens']}")
+    print(f"  词表利用率：  {stats['vocab_utilization']:.1%}")
+    print(f"  压缩比：      {stats['compression_ratio']:.2f} 字符/token")
+    print(f"  平均文档长度：{stats['avg_doc_length_words']:.0f} 个单词")
+    print(f"  序列数：      {stats['num_sequences']}")
+    print(f"  序列利用率：  {stats['sequence_utilization']:.1%}")
 
-    print("\n--- Pipeline Summary ---")
-    print(f"  Raw documents:       {len(raw_docs)}")
-    print(f"  After cleaning:      {len(cleaned_docs)}")
-    print(f"  After quality filter: {len(filtered_docs)} (-{removed_quality})")
-    print(f"  After dedup:         {len(deduped_docs)} (-{num_removed})")
-    print(f"  Final tokens:        {len(token_ids):,}")
-    print(f"  Training sequences:  {len(sequences)}")
-    print(f"  Training batches:    {len(loader)}")
+    print("\n -- -- 管道摘要 -- --")
+    print(f"  原始文档：   {len(raw_docs)}")
+    print(f"  清洗后：     {len(cleaned_docs)}")
+    print(f"  质量过滤后： {len(filtered_docs)}（-{removed_quality}）")
+    print(f"  去重后：     {len(deduped_docs)}（-{num_removed}）")
+    print(f"  最终 token： {len(token_ids):,}")
+    print(f"  训练序列：   {len(sequences)}")
+    print(f"  训练批次：   {len(loader)}")
 
 
 if __name__ == "__main__":
