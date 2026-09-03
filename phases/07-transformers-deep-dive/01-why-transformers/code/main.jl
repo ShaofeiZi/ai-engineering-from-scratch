@@ -1,6 +1,6 @@
-# Why transformers in Julia. Contrasts RNN-style serial recurrence with
-# attention-style parallel reduction, and verifies that Hillis-Steele
-# parallel prefix scan matches the serial scan. Stdlib only. Sources:
+# 用 Julia 说明为何使用 transformer。对比 RNN 风格的串行递归与注意力风格的
+# 并行归约，并验证 Hillis-Steele 并行前缀扫描与串行扫描结果一致。
+# 仅使用标准库。资料来源：
 #   https://docs.julialang.org/en/v1/manual/control-flow/
 #   https://docs.julialang.org/en/v1/stdlib/Base/
 #   https://en.wikipedia.org/wiki/Prefix_sum
@@ -18,7 +18,7 @@ end
 
 
 function attention_style(xs::Vector{Float64})::Float64
-    isempty(xs) && throw(ArgumentError("xs must be non-empty"))
+    isempty(xs) && throw(ArgumentError("xs 不能为空"))
     return sum(xs) / length(xs)
 end
 
@@ -51,7 +51,7 @@ end
 
 
 function benchmark_pair(n::Int; reps::Int=3)
-    n > 0 || throw(ArgumentError("n must be > 0"))
+    n > 0 || throw(ArgumentError("n 必须大于 0"))
     xs = [0.001 * mod(i, 17) for i in 0:(n - 1)]
     best_rnn = Inf
     for _ in 1:reps
@@ -70,7 +70,7 @@ end
 
 
 function depth_counts(n::Int)
-    n > 0 || throw(ArgumentError("n must be > 0"))
+    n > 0 || throw(ArgumentError("n 必须大于 0"))
     rnn_depth = n
     attn_depth = max(1, Int(ceil(log2(n))))
     return rnn_depth, attn_depth
@@ -78,8 +78,8 @@ end
 
 
 function demo_depth_table()
-    println("=== serial-depth comparison ===")
-    @printf("%8s  %12s  %12s  %16s\n", "N", "rnn depth", "attn depth", "speedup (ops)")
+    println("=== 串行深度对比 ===")
+    @printf("%8s  %12s  %12s  %16s\n", "N", "RNN 深度", "注意力深度", "加速比（操作数）")
     for n in (64, 512, 4096, 32768, 262144)
         rd, ad = depth_counts(n)
         @printf("%8d  %12d  %12d  %15.0fx\n", n, rd, ad, rd / ad)
@@ -89,8 +89,8 @@ end
 
 
 function demo_wallclock()
-    println("=== wall-clock on this machine (pure Julia) ===")
-    @printf("%8s  %10s  %10s  %8s\n", "N", "rnn (ms)", "attn (ms)", "ratio")
+    println("=== 本机实际耗时（纯 Julia）===")
+    @printf("%8s  %10s  %10s  %8s\n", "N", "RNN（ms）", "注意力（ms）", "比率")
     for n in (1_000, 10_000, 100_000, 1_000_000)
         rnn_t, attn_t = benchmark_pair(n)
         ratio = attn_t > 0 ? rnn_t / attn_t : Inf
@@ -102,15 +102,15 @@ end
 
 
 function demo_scan_equivalence()
-    println("=== prefix-sum equivalence check ===")
+    println("=== 前缀和等价性检查 ===")
     xs = Float64.(0:15)
     ser = serial_scan(xs)
     par = parallel_scan(xs)
     mismatches = sum(1 for i in 1:length(xs) if abs(ser[i] - par[i]) > 1e-9)
-    @printf("length: %d  mismatches between serial and parallel scan: %d\n",
+    @printf("长度：%d  串行与并行扫描间的不匹配数：%d\n",
             length(xs), mismatches)
-    @printf("last value (serial):   %.4f\n", ser[end])
-    @printf("last value (parallel): %.4f\n", par[end])
+    @printf("最后一个值（串行）：%.4f\n", ser[end])
+    @printf("最后一个值（并行）：%.4f\n", par[end])
     println()
 end
 
@@ -119,9 +119,9 @@ function main()
     demo_depth_table()
     demo_wallclock()
     demo_scan_equivalence()
-    println("takeaway: attention parallelizes the reduction; depth O(log N) on a")
-    println("real GPU kernel. Memory cost is O(N^2) for full attention; that")
-    println("trade-off is what later lessons unpack.")
+    println("要点：注意力将归约并行化；在")
+    println("真正的 GPU 内核上深度为 O(log N)。完整注意力的内存成本为 O(N^2)；")
+    println("后续课程将解析这一权衡。")
 end
 
 
