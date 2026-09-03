@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 
 class Complex:
@@ -185,7 +186,7 @@ def positional_encoding(pos, d_model):
 
 def demo_pure_sine():
     print("=" * 65)
-    print("  DFT OF A PURE SINE WAVE")
+    print("  纯正弦波的 DFT")
     print("=" * 65)
     print()
 
@@ -194,13 +195,13 @@ def demo_pure_sine():
     freq = 5
     signal = generate_signal([freq], [1.0], N, sample_rate)
 
-    print(f"  Signal: sin(2*pi*{freq}*t), {N} samples at {sample_rate} Hz")
+    print(f"  信号: sin(2*pi*{freq}*t)，{N} 个采样点，采样率 {sample_rate} Hz")
     print()
 
     X = dft(signal)
     mags = magnitude_spectrum(X)
 
-    print(f"  {'Freq bin k':<12s} {'Frequency (Hz)':>14s} {'|X[k]|':>10s}")
+    print(f"  {'频率桶 k':<12s} {'频率 (Hz)':>14s} {'|X[k]|':>10s}")
     print(f"  {'-' * 12} {'-' * 14} {'-' * 10}")
 
     for k in range(N // 2 + 1):
@@ -209,15 +210,15 @@ def demo_pure_sine():
             print(f"  k={k:<8d} {f_hz:>14.1f} {mags[k]:>10.4f}")
 
     print()
-    print(f"  Peak at k={freq}, corresponding to {freq} Hz.")
-    print(f"  The DFT correctly identified the frequency.")
+    print(f"  峰值出现在 k={freq}，对应 {freq} Hz。")
+    print(f"  DFT 正确识别出了该频率。")
 
 
 def demo_multi_frequency():
     print()
     print()
     print("=" * 65)
-    print("  DFT OF SUMMED SINE WAVES")
+    print("  叠加正弦波的 DFT")
     print("=" * 65)
     print()
 
@@ -228,17 +229,17 @@ def demo_multi_frequency():
 
     signal = generate_signal(freqs, amps, N, sample_rate)
 
-    print(f"  Signal: {amps[0]}*sin(2*pi*{freqs[0]}*t) + "
+    print(f"  信号: {amps[0]}*sin(2*pi*{freqs[0]}*t) + "
           f"{amps[1]}*sin(2*pi*{freqs[1]}*t) + "
           f"{amps[2]}*sin(2*pi*{freqs[2]}*t)")
-    print(f"  {N} samples at {sample_rate} Hz")
+    print(f"  {N} 个采样点，采样率 {sample_rate} Hz")
     print()
 
     X = fft(signal)
     mags = magnitude_spectrum(X)
 
-    print(f"  Frequencies recovered (magnitude > 0.5):")
-    print(f"  {'Freq (Hz)':>10s} {'|X[k]|':>10s} {'Expected amp * N/2':>20s}")
+    print(f"  恢复出的频率（幅值 > 0.5）:")
+    print(f"  {'频率 (Hz)':>10s} {'|X[k]|':>10s} {'期望幅值 * N/2':>20s}")
     print(f"  {'-' * 10} {'-' * 10} {'-' * 20}")
 
     for k in range(N // 2 + 1):
@@ -251,15 +252,15 @@ def demo_multi_frequency():
             print(f"  {f_hz:>10.1f} {mags[k]:>10.4f} {expected:>20s}")
 
     print()
-    print("  All three frequencies correctly recovered.")
-    print("  Amplitudes match expected values (amplitude * N/2).")
+    print("  三个频率均被正确恢复。")
+    print("  幅值与期望值一致（幅值 * N/2）。")
 
 
 def demo_fft_vs_dft():
     print()
     print()
     print("=" * 65)
-    print("  FFT vs DFT: SAME RESULT, FASTER")
+    print("  FFT 与 DFT：结果相同，速度更快")
     print("=" * 65)
     print()
 
@@ -277,12 +278,12 @@ def demo_fft_vs_dft():
         diff_imag = abs(X_dft[k].imag - X_fft[k].imag)
         max_error = max(max_error, diff_real, diff_imag)
 
-    print(f"  Random signal, N = {N}")
-    print(f"  Max difference between DFT and FFT: {max_error:.2e}")
-    print(f"  Match: {max_error < 1e-10}")
+    print(f"  随机信号，N = {N}")
+    print(f"  DFT 与 FFT 的最大差异: {max_error:.2e}")
+    print(f"  是否一致: {max_error < 1e-10}")
     print()
 
-    print(f"  {'k':<6s} {'DFT |X[k]|':>14s} {'FFT |X[k]|':>14s} {'Diff':>12s}")
+    print(f"  {'k':<6s} {'DFT |X[k]|':>14s} {'FFT |X[k]|':>14s} {'差异':>12s}")
     print(f"  {'-' * 6} {'-' * 14} {'-' * 14} {'-' * 12}")
     for k in range(8):
         d_mag = X_dft[k].magnitude()
@@ -290,19 +291,19 @@ def demo_fft_vs_dft():
         diff = abs(d_mag - f_mag)
         print(f"  {k:<6d} {d_mag:>14.8f} {f_mag:>14.8f} {diff:>12.2e}")
 
-    print(f"  ... ({N - 8} more coefficients)")
+    print(f"  ...（还有 {N - 8} 个系数）")
     print()
 
-    print(f"  DFT complexity: O(N^2) = {N * N} multiplications")
-    print(f"  FFT complexity: O(N*log2(N)) = {int(N * math.log2(N))} multiplications")
-    print(f"  Speedup: {N * N / (N * math.log2(N)):.1f}x")
+    print(f"  DFT 复杂度: O(N^2) = {N * N} 次乘法")
+    print(f"  FFT 复杂度: O(N*log2(N)) = {int(N * math.log2(N))} 次乘法")
+    print(f"  加速比: {N * N / (N * math.log2(N)):.1f}x")
 
 
 def demo_reconstruction():
     print()
     print()
     print("=" * 65)
-    print("  PERFECT RECONSTRUCTION: DFT -> IDFT")
+    print("  完美重建: DFT -> IDFT")
     print("=" * 65)
     print()
 
@@ -316,8 +317,8 @@ def demo_reconstruction():
 
     max_err = max(abs(reconstructed[n].real - signal[n]) for n in range(N))
 
-    print(f"  Original and reconstructed signal (N={N}):")
-    print(f"  {'n':<4s} {'Original':>12s} {'Reconstructed':>14s} {'Error':>12s}")
+    print(f"  原始信号与重建信号（N={N}）:")
+    print(f"  {'n':<4s} {'原始':>12s} {'重建':>14s} {'误差':>12s}")
     print(f"  {'-' * 4} {'-' * 12} {'-' * 14} {'-' * 12}")
 
     for n in range(N):
@@ -325,15 +326,15 @@ def demo_reconstruction():
         print(f"  {n:<4d} {signal[n]:>12.6f} {reconstructed[n].real:>14.6f} {err:>12.2e}")
 
     print()
-    print(f"  Max reconstruction error: {max_err:.2e}")
-    print(f"  Perfect reconstruction: {max_err < 1e-10}")
+    print(f"  最大重建误差: {max_err:.2e}")
+    print(f"  完美重建: {max_err < 1e-10}")
 
 
 def demo_convolution_theorem():
     print()
     print()
     print("=" * 65)
-    print("  CONVOLUTION THEOREM")
+    print("  卷积定理")
     print("=" * 65)
     print()
 
@@ -343,12 +344,12 @@ def demo_convolution_theorem():
     direct = convolve_direct(x, h)
     fft_result = convolve_fft(x, h)
 
-    print(f"  Signal x = {x}")
-    print(f"  Filter h = {h}")
-    print(f"  Linear convolution (x * h):")
+    print(f"  信号 x = {x}")
+    print(f"  滤波器 h = {h}")
+    print(f"  线性卷积 (x * h):")
     print()
 
-    print(f"  {'n':<4s} {'Direct':>10s} {'FFT-based':>10s} {'Diff':>12s}")
+    print(f"  {'n':<4s} {'直接':>10s} {'基于 FFT':>10s} {'差异':>12s}")
     print(f"  {'-' * 4} {'-' * 10} {'-' * 10} {'-' * 12}")
 
     max_err = 0.0
@@ -358,19 +359,19 @@ def demo_convolution_theorem():
         print(f"  {n:<4d} {direct[n]:>10.4f} {fft_result[n]:>10.4f} {diff:>12.2e}")
 
     print()
-    print(f"  Max difference: {max_err:.2e}")
-    print(f"  Match: {max_err < 1e-8}")
+    print(f"  最大差异: {max_err:.2e}")
+    print(f"  是否一致: {max_err < 1e-8}")
     print()
-    print("  Convolution in time = multiplication in frequency.")
-    print("  Direct convolution: O(N*M) = O(15)")
-    print("  FFT convolution: O(N*log(N)) for large N")
+    print("  时域卷积 = 频域乘法。")
+    print("  直接卷积: O(N*M) = O(15)")
+    print("  FFT 卷积: 当 N 较大时为 O(N*log(N))")
 
 
 def demo_windowing():
     print()
     print()
     print("=" * 65)
-    print("  WINDOWING AND SPECTRAL LEAKAGE")
+    print("  加窗与频谱泄漏")
     print("=" * 65)
     print()
 
@@ -393,13 +394,13 @@ def demo_windowing():
     X_hamm = fft(signal_hamm)
     mags_hamm = magnitude_spectrum(X_hamm)
 
-    print(f"  Signal: sin(2*pi*{freq}*t) -- frequency is between bins")
-    print(f"  N = {N}, sample rate = {sample_rate} Hz")
-    print(f"  Frequency resolution: {sample_rate / N:.2f} Hz per bin")
-    print(f"  {freq} Hz falls between bin 7 and bin 8")
+    print(f"  信号: sin(2*pi*{freq}*t) -- 频率位于两个频率桶之间")
+    print(f"  N = {N}，采样率 = {sample_rate} Hz")
+    print(f"  频率分辨率: 每个频率桶 {sample_rate / N:.2f} Hz")
+    print(f"  {freq} Hz 位于第 7 个和第 8 个频率桶之间")
     print()
 
-    print(f"  {'Freq (Hz)':>10s} {'No window':>12s} {'Hann':>12s} {'Hamming':>12s}")
+    print(f"  {'频率 (Hz)':>10s} {'不加窗':>12s} {'Hann':>12s} {'Hamming':>12s}")
     print(f"  {'-' * 10} {'-' * 12} {'-' * 12} {'-' * 12}")
 
     for k in range(N // 2 + 1):
@@ -409,16 +410,16 @@ def demo_windowing():
                   f"{mags_hann[k]:>12.4f} {mags_hamm[k]:>12.4f}")
 
     print()
-    print("  Without windowing, energy leaks into neighboring bins.")
-    print("  Hann and Hamming windows concentrate energy near the true frequency.")
-    print("  Tradeoff: windows widen the main peak but suppress side lobes.")
+    print("  不加窗时，能量会泄漏到相邻的频率桶中。")
+    print("  Hann 和 Hamming 窗将能量集中在真实频率附近。")
+    print("  权衡: 加窗会展宽主峰，但能抑制旁瓣。")
 
 
 def demo_parseval():
     print()
     print()
     print("=" * 65)
-    print("  PARSEVAL'S THEOREM: ENERGY CONSERVATION")
+    print("  帕塞瓦尔定理: 能量守恒")
     print("=" * 65)
     print()
 
@@ -432,40 +433,40 @@ def demo_parseval():
     X = fft(signal)
     freq_energy = sum(xk.real ** 2 + xk.imag ** 2 for xk in X) / N
 
-    print(f"  Signal: {N} random samples")
-    print(f"  Time-domain energy:  sum |x[n]|^2 = {time_energy:.6f}")
-    print(f"  Freq-domain energy:  (1/N) sum |X[k]|^2 = {freq_energy:.6f}")
-    print(f"  Difference: {abs(time_energy - freq_energy):.2e}")
-    print(f"  Energy conserved: {abs(time_energy - freq_energy) < 1e-10}")
+    print(f"  信号: {N} 个随机采样点")
+    print(f"  时域能量:  sum |x[n]|^2 = {time_energy:.6f}")
+    print(f"  频域能量:  (1/N) sum |X[k]|^2 = {freq_energy:.6f}")
+    print(f"  差异: {abs(time_energy - freq_energy):.2e}")
+    print(f"  能量是否守恒: {abs(time_energy - freq_energy) < 1e-10}")
 
 
 def demo_positional_encoding():
     print()
     print()
     print("=" * 65)
-    print("  POSITIONAL ENCODING FREQUENCIES")
+    print("  位置编码的频率")
     print("=" * 65)
     print()
 
     d_model = 16
     max_pos = 8
 
-    print(f"  d_model = {d_model}, positions 0-{max_pos - 1}")
+    print(f"  d_model = {d_model}，位置 0-{max_pos - 1}")
     print()
 
-    print(f"  Frequency at each dimension pair:")
+    print(f"  每对维度的频率:")
     for i in range(d_model // 2):
         freq = 1.0 / (10000 ** (2 * i / d_model))
         wavelength = 2 * math.pi / freq if freq > 0 else float('inf')
-        print(f"    dim ({2 * i:>2d},{2 * i + 1:>2d}): freq = {freq:.8f}  "
+        print(f"    维度 ({2 * i:>2d},{2 * i + 1:>2d}): freq = {freq:.8f}  "
               f"wavelength = {wavelength:.1f}")
 
     print()
-    print(f"  Dot product between position encodings:")
-    print(f"  (depends only on distance, not absolute position)")
+    print(f"  位置编码之间的点积:")
+    print(f"  （仅依赖于距离，不依赖于绝对位置）")
     print()
 
-    print(f"  {'pos_i':>6s} {'pos_j':>6s} {'dist':>6s} {'dot product':>12s}")
+    print(f"  {'pos_i':>6s} {'pos_j':>6s} {'距离':>6s} {'点积':>12s}")
     print(f"  {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 12}")
 
     pairs = [(0, 0), (0, 1), (0, 2), (0, 4), (1, 2), (1, 3), (2, 4), (3, 7)]
@@ -476,19 +477,19 @@ def demo_positional_encoding():
         print(f"  {p1:>6d} {p2:>6d} {abs(p2 - p1):>6d} {dot:>12.4f}")
 
     print()
-    print("  Pairs with the same distance have similar dot products.")
-    print("  This lets the model learn relative position through attention.")
+    print("  距离相同的位置对各具有相近的点积。")
+    print("  这使得模型能够通过注意力机制学习相对位置。")
 
 
 def demo_frequency_scaling():
     print()
     print()
     print("=" * 65)
-    print("  FFT COMPLEXITY SCALING")
+    print("  FFT 复杂度随规模的变化")
     print("=" * 65)
     print()
 
-    print(f"  {'N':>8s} {'DFT O(N^2)':>14s} {'FFT O(N logN)':>16s} {'Speedup':>10s}")
+    print(f"  {'N':>8s} {'DFT O(N^2)':>14s} {'FFT O(N logN)':>16s} {'加速比':>10s}")
     print(f"  {'-' * 8} {'-' * 14} {'-' * 16} {'-' * 10}")
 
     for exp in range(3, 14):
@@ -499,71 +500,137 @@ def demo_frequency_scaling():
         print(f"  {N:>8d} {dft_ops:>14,d} {fft_ops:>16,d} {speedup:>10.1f}x")
 
 
-def write_prompt_output():
-    output_path = "outputs/prompt-spectral-analyzer.md"
+PROMPT_SPECTRAL_ANALYZER_EN = """---
+name: prompt-spectral-analyzer
+description: Guides analysis of frequency content in signals using Fourier transform techniques
+phase: 1
+lesson: 20
+---
+
+You are a spectral analysis expert. You help engineers analyze the frequency content of signals using Fourier transform techniques.
+
+When given a signal or signal description, guide the analysis step by step:
+
+1. **Determine sampling parameters.**
+   - What is the sampling rate (fs)? This sets the maximum detectable frequency (Nyquist = fs/2).
+   - How many samples (N)? This sets the frequency resolution (delta_f = fs/N).
+   - Is the signal length a power of 2? If not, recommend zero-padding for FFT efficiency.
+
+2. **Choose a window function.**
+   - Is the signal exactly periodic in the analysis window? If yes, no window needed.
+   - For general analysis: use Hann window (good tradeoff between resolution and leakage).
+   - For audio/speech: Hamming window.
+   - When side lobe suppression matters most: Blackman window.
+   - Remember: windowing widens peaks but reduces leakage.
+
+3. **Compute and interpret the spectrum.**
+   - Power spectrum |X[k]|^2 shows energy at each frequency.
+   - Peaks in the power spectrum indicate dominant frequencies.
+   - X[0] is the DC component (signal mean * N).
+   - Only look at bins 0 to N/2 for real-valued signals (upper half is the mirror).
+   - Frequency of bin k: f_k = k * fs / N.
+
+4. **Identify dominant frequencies.**
+   - Find peaks above a noise threshold.
+   - Convert bin index to Hz: freq = k * fs / N.
+   - Check for harmonics (peaks at integer multiples of a fundamental).
+   - Check for aliased frequencies (apparent frequency = f_actual mod fs; if above fs/2, it folds to fs - f_apparent).
+
+5. **Common pitfalls to watch for.**
+   - Spectral leakage: non-integer number of cycles in the window causes energy to spread across bins.
+   - Aliasing: if signal contains frequencies above fs/2, they fold back into the spectrum.
+   - DC offset: large X[0] can mask nearby low-frequency content. Remove the mean before FFT.
+   - Zero-padding increases bin density but does NOT improve actual frequency resolution.
+   - Circular vs linear convolution: DFT gives circular convolution. Zero-pad for linear.
+
+6. **For convolution analysis.**
+   - Time-domain convolution = frequency-domain multiplication.
+   - For large kernels, FFT-based convolution is faster: O(N log N) vs O(N*M).
+   - Zero-pad both signals to length N + M - 1 for correct linear convolution.
+"""
+
+
+PROMPT_SPECTRAL_ANALYZER_ZH_CN = """---
+name: prompt-spectral-analyzer
+description: 指导使用傅里叶变换技术分析信号的频率成分
+phase: 1
+lesson: 20
+---
+
+你是一位频谱分析专家。你帮助工程师使用傅里叶变换技术分析信号的频率成分。
+
+当给定一个信号或信号描述时，按以下步骤指导分析:
+
+1. **确定采样参数。**
+   - 采样率（fs）是多少？它决定了可检测的最大频率（奈奎斯特频率 = fs/2）。
+   - 采样点数（N）是多少？它决定了频率分辨率（delta_f = fs/N）。
+   - 信号长度是否为 2 的幂？如果不是，建议补零以提高 FFT 效率。
+
+2. **选择窗函数。**
+   - 信号在分析窗口内是否恰好为整数周期？如果是，则无需加窗。
+   - 对于一般分析: 使用 Hann 窗（在分辨率和泄漏之间有较好的权衡）。
+   - 对于音频/语音: 使用 Hamming 窗。
+   - 当旁瓣抑制最为重要时: 使用 Blackman 窗。
+   - 切记: 加窗会展宽峰值但能减少泄漏。
+
+3. **计算并解释频谱。**
+   - 功率谱 |X[k]|^2 显示每个频率上的能量。
+   - 功率谱中的峰值指示主频率。
+   - X[0] 是直流分量（信号均值 * N）。
+   - 对于实值信号，只需查看第 0 到 N/2 个频率桶（上半部分是镜像）。
+   - 第 k 个频率桶对应的频率: f_k = k * fs / N。
+
+4. **识别主频率。**
+   - 寻找高于噪声阈值的峰值。
+   - 将频率桶索引转换为 Hz: freq = k * fs / N。
+   - 检查谐波（基频整数倍处的峰值）。
+   - 检查混叠频率（实际频率 = fs - 表观频率）。
+
+5. **需注意的常见陷阱。**
+   - 频谱泄漏: 窗口内周期数为非整数会导致能量分散到各频率桶中。
+   - 混叠: 如果信号包含高于 fs/2 的频率，它们会折叠回频谱中。
+   - 直流偏移: 过大的 X[0] 会掩盖附近的低频成分。在 FFT 前去除均值。
+   - 补零会增加频率桶密度，但并不能真正提高频率分辨率。
+   - 循环卷积与线性卷积: DFT 给出的是循环卷积。补零以获得线性卷积。
+
+6. **关于卷积分析。**
+   - 时域卷积 = 频域乘法。
+   - 对于大卷积核，基于 FFT 的卷积更快: O(N log N) vs O(N*M)。
+   - 将两个信号补零至长度 N + M - 1，以获得正确的线性卷积。
+"""
+
+
+def write_prompt_output(output_dir="outputs"):
+    output_dir = Path(output_dir)
+    canonical_path = output_dir / "prompt-spectral-analyzer.md"
+    zh_cn_path = output_dir / "prompt-spectral-analyzer.zh-CN.md"
     try:
-        with open(output_path, "w") as f:
-            f.write("---\n")
-            f.write("name: prompt-spectral-analyzer\n")
-            f.write("description: Guides analysis of frequency content in signals using Fourier transform techniques\n")
-            f.write("phase: 1\n")
-            f.write("lesson: 20\n")
-            f.write("---\n\n")
-            f.write("You are a spectral analysis expert. You help engineers analyze the frequency content of signals using Fourier transform techniques.\n\n")
-            f.write("When given a signal or signal description, guide the analysis step by step:\n\n")
-            f.write("1. **Determine sampling parameters.**\n")
-            f.write("   - What is the sampling rate (fs)? This sets the maximum detectable frequency (Nyquist = fs/2).\n")
-            f.write("   - How many samples (N)? This sets the frequency resolution (delta_f = fs/N).\n")
-            f.write("   - Is the signal length a power of 2? If not, recommend zero-padding for FFT efficiency.\n\n")
-            f.write("2. **Choose a window function.**\n")
-            f.write("   - Is the signal exactly periodic in the analysis window? If yes, no window needed.\n")
-            f.write("   - For general analysis: use Hann window (good tradeoff between resolution and leakage).\n")
-            f.write("   - For audio/speech: Hamming window.\n")
-            f.write("   - When side lobe suppression matters most: Blackman window.\n")
-            f.write("   - Remember: windowing widens peaks but reduces leakage.\n\n")
-            f.write("3. **Compute and interpret the spectrum.**\n")
-            f.write("   - Power spectrum |X[k]|^2 shows energy at each frequency.\n")
-            f.write("   - Peaks in the power spectrum indicate dominant frequencies.\n")
-            f.write("   - X[0] is the DC component (signal mean * N).\n")
-            f.write("   - Only look at bins 0 to N/2 for real-valued signals (upper half is the mirror).\n")
-            f.write("   - Frequency of bin k: f_k = k * fs / N.\n\n")
-            f.write("4. **Identify dominant frequencies.**\n")
-            f.write("   - Find peaks above a noise threshold.\n")
-            f.write("   - Convert bin index to Hz: freq = k * fs / N.\n")
-            f.write("   - Check for harmonics (peaks at integer multiples of a fundamental).\n")
-            f.write("   - Check for aliased frequencies (actual frequency = fs - apparent frequency).\n\n")
-            f.write("5. **Common pitfalls to watch for.**\n")
-            f.write("   - Spectral leakage: non-integer number of cycles in the window causes energy to spread across bins.\n")
-            f.write("   - Aliasing: if signal contains frequencies above fs/2, they fold back into the spectrum.\n")
-            f.write("   - DC offset: large X[0] can mask nearby low-frequency content. Remove the mean before FFT.\n")
-            f.write("   - Zero-padding increases bin density but does NOT improve actual frequency resolution.\n")
-            f.write("   - Circular vs linear convolution: DFT gives circular convolution. Zero-pad for linear.\n\n")
-            f.write("6. **For convolution analysis.**\n")
-            f.write("   - Time-domain convolution = frequency-domain multiplication.\n")
-            f.write("   - For large kernels, FFT-based convolution is faster: O(N log N) vs O(N*M).\n")
-            f.write("   - Zero-pad both signals to length N + M - 1 for correct linear convolution.\n")
-        print(f"\n  Prompt output written to {output_path}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        if not canonical_path.exists():
+            canonical_path.write_text(PROMPT_SPECTRAL_ANALYZER_EN, encoding="utf-8")
+        zh_cn_path.write_text(PROMPT_SPECTRAL_ANALYZER_ZH_CN, encoding="utf-8")
+        print(f"\n  提示词输出已写入 {canonical_path} 和 {zh_cn_path}")
     except OSError:
-        print("\n  Could not write prompt output (run from the lesson directory)")
+        print("\n  无法写入提示词输出（请在本课程目录下运行）")
 
 
 def print_summary():
     print()
     print()
     print("=" * 65)
-    print("  SUMMARY")
+    print("  总结")
     print("=" * 65)
     print()
-    print("  1. The DFT converts N time samples to N frequency coefficients.")
-    print("  2. Each X[k] measures the signal's correlation with frequency k.")
-    print("  3. The FFT computes the DFT in O(N log N) instead of O(N^2).")
-    print("  4. DFT and IDFT are perfect inverses -- no information is lost.")
-    print("  5. The convolution theorem: convolution in time = multiplication")
-    print("     in frequency. This is why FFT-based convolution is fast.")
-    print("  6. Windowing reduces spectral leakage for non-periodic signals.")
-    print("  7. Parseval's theorem: energy is conserved through the transform.")
-    print("  8. Transformer positional encodings use the same frequency")
-    print("     decomposition idea -- each position gets a unique spectrum.")
+    print("  1. DFT 将 N 个时域采样点转换为 N 个频域系数。")
+    print("  2. 每个 X[k] 度量信号与频率 k 的相关性。")
+    print("  3. FFT 以 O(N log N) 而非 O(N^2) 计算 DFT。")
+    print("  4. DFT 与 IDFT 互为完美逆变换——不会丢失任何信息。")
+    print("  5. 卷积定理: 时域卷积 = 频域乘法。")
+    print("     这正是基于 FFT 的卷积速度快的原因。")
+    print("  6. 加窗可减少非周期信号的频谱泄漏。")
+    print("  7. 帕塞瓦尔定理: 变换过程中能量守恒。")
+    print("  8. Transformer 的位置编码使用了相同的频率分解思想")
+    print("     ——每个位置都拥有独特的频谱。")
     print()
 
 
