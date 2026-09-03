@@ -1,11 +1,11 @@
-"""CrewAI-shaped Crew and Flow primitives in stdlib.
+"""仿 CrewAI 的标准库 Crew 和 Flow 原语。
 
-Three-agent crew (researcher, writer, editor) producing a brief on
-"agent engineering 2026". Same crew is run Sequential, Hierarchical, and
-through a Flow to show all three execution shapes.
+Three-agent crew（研究员、撰写者、编辑）生成关于
+"agent engineering 2026" 的简报。同一个 crew 分别以 Sequential、Hierarchical
+以及通过 Flow 方式运行，展示三种执行形态。
 
-Stdlib + numpy. Mock LLM responses are deterministic hardcoded strings
-keyed off agent role and input prefix.
+标准库 + numpy。模拟的 LLM 响应为确定性硬编码字符串，
+以 agent 角色和输入前缀为键。
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ import numpy as np
 
 
 def tool(name: str) -> Callable[[Callable[..., str]], Callable[..., str]]:
-    """Mirror of CrewAI's @tool decorator. Marks a function as a tool the
-    Agent can call. Docstring is the description; signature is the schema."""
+    """镜像 CrewAI 的 @tool 装饰器。将一个函数标记为
+    Agent 可调用的工具。文档字符串即描述；签名即模式。"""
 
     def decorator(fn: Callable[..., str]) -> Callable[..., str]:
         fn.tool_name = name  # type: ignore[attr-defined]
@@ -31,7 +31,7 @@ def tool(name: str) -> Callable[[Callable[..., str]], Callable[..., str]]:
 
 @tool("Search the web")
 def search(query: str) -> str:
-    """Return top results for the query."""
+    """返回查询的最高匹配结果。"""
     fixtures = {
         "agent engineering": "src1: agent loop, src2: tool use, src3: memory",
         "crewai": "src1: docs intro, src2: flows guide, src3: tools ref",
@@ -71,8 +71,8 @@ class SequentialCrew:
         by_task: dict[int, str] = {}
         for task in self.tasks:
             if task.context:
-                # CrewAI behavior: feed outputs of every declared upstream task
-                # into the current one. Falls back to prior when none declared.
+                # CrewAI 行为：将每个已声明的上游任务的输出
+                # 注入当前任务。当没有声明上游任务时回退到先前的输出。
                 joined = "\n\n".join(
                     by_task[id(t)] for t in task.context if id(t) in by_task
                 )
@@ -119,8 +119,8 @@ class HierarchicalCrew:
 
 
 class Flow:
-    """Deterministic event-driven workflow. @start fires on kickoff;
-    @listen(topic) fires when another step emits that topic.
+    """确定性事件驱动工作流。@start 在启动时触发；
+    @listen(topic) 在另一个步骤发出该主题时触发。
     """
 
     def __init__(self) -> None:
@@ -156,8 +156,8 @@ class Flow:
 
 
 class Memory:
-    """Four-store memory matching CrewAI's short, long, entity, contextual.
-    Long-term retrieval uses numpy cosine similarity on hashed token vectors.
+    """四存储记忆体系，对应 CrewAI 的短期记忆、长期记忆、实体记忆、上下文记忆。
+    Long-term 检索使用 numpy 余弦相似度对哈希 token 向量进行计算。
     """
 
     def __init__(self, dim: int = 16) -> None:
@@ -199,7 +199,7 @@ class Memory:
 
 def _researcher(prior: Any, tools: list[Callable[..., str]], memory: Memory | None) -> str:
     topic = prior if isinstance(prior, str) else ""
-    # Run whichever search-ish tool the agent was wired with, in order.
+    # 依次运行 agent 所连接的 search-ish 工具。
     search_fn = next(
         (t for t in tools if getattr(t, "is_tool", False) and "search" in getattr(t, "tool_name", "").lower()),
         None,
@@ -254,13 +254,13 @@ def build_agents() -> tuple[Agent, Agent, Agent]:
 
 def main() -> None:
     print("=" * 70)
-    print("CREWAI CREW AND FLOW - Phase 14, Lesson 15")
+    print("CREWAI CREW AND FLOW - 第 14 阶段，第 15 课")
     print("=" * 70)
 
     researcher, writer, editor = build_agents()
     memory = Memory()
 
-    print("\n1. SequentialCrew (researcher -> writer -> editor)")
+    print("\n1. SequentialCrew（研究员 -> 撰写者 -> 编辑）")
     seq = SequentialCrew(
         agents=[researcher, writer, editor],
         tasks=[
@@ -273,7 +273,7 @@ def main() -> None:
     for line in seq.kickoff({"topic": "agent engineering 2026"}):
         print(f"  {line}")
 
-    print("\n2. HierarchicalCrew (manager routes)")
+    print("\n2. HierarchicalCrew（管理者路由）")
     manager = Agent(
         role="manager",
         goal="pick next specialist",
@@ -288,7 +288,7 @@ def main() -> None:
     for line in hcrew.kickoff("agent engineering 2026"):
         print(f"  {line}")
 
-    print("\n3. Flow (deterministic, event-driven)")
+    print("\n3. Flow（确定性，event-driven）")
     flow = Flow()
 
     @flow.start
@@ -319,11 +319,11 @@ def main() -> None:
     for step_name, topic, output in flow.kickoff("agent engineering 2026"):
         print(f"  [{step_name}] topic={topic!r} out={output[:60]}")
 
-    print("\n4. Memory: recall_long_term('brief')")
+    print("\n4. 记忆：recall_long_term('brief')")
     for role, value, score in memory.recall_long_term("brief"):
         print(f"  [{role}] score={score:+.3f} value={value[:50]}")
 
-    print("\n5. Second kickoff (long-term memory survives)")
+    print("\n5. 第二次启动（long-term 记忆保留）")
     memory.reset_short_term()
     seq2 = SequentialCrew(
         agents=[researcher, writer, editor],
@@ -335,12 +335,12 @@ def main() -> None:
         memory=memory,
     )
     seq2.kickoff({"topic": "agent engineering 2026"})
-    print(f"  long_term entries: {len(memory.long_term)}")
-    print(f"  short_term entries (this run): {len(memory.short_term)}")
+    print(f"  long_term 条目：{len(memory.long_term)}")
+    print(f"  short_term 条目（本次运行）：{len(memory.short_term)}")
 
     print()
-    print("Crew: LLM picks the shape. Flow: code owns the shape.")
-    print("Docs (2026): start production with a Flow; fold Crews in as sub-steps.")
+    print("Crew：由 LLM 选择执行形态。Flow：由代码掌控执行形态。")
+    print("文档（2026）：生产环境从 Flow 开始；将 Crew 作为 sub-steps. 纳入")
 
 
 if __name__ == "__main__":
