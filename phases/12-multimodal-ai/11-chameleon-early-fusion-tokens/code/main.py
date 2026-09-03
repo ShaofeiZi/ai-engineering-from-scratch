@@ -1,13 +1,13 @@
-"""Chameleon-style early-fusion: toy VQ quantizer + shared-vocab autoregressive decoder.
+"""Chameleon 风格早期融合：玩具级 VQ 量化器 + 共享词表自回归解码器。
 
-End-to-end pipeline:
-  1. VQ-VAE-ish quantizer: 8x8 grayscale patch -> integer codebook index, K=16.
-  2. Shared vocab: text ids 0..31, image ids 32..47, separators 48 (<image>), 49 (</image>).
-  3. Bigram decoder trained on synthetic (text + <image> codes </image>) pairs.
-  4. Sampling loop that emits mixed-modality output.
+端到端流程：
+  1. VQ-VAE-ish 量化器：8x8 灰度图块 -> 整数码本索引，K=16。
+  2. 共享词表：文本 id 0..31，图像 id 32..47，分隔符 48（<image>），49（</image>）。
+  3. 在合成数据（文本 + <image> 码字 </image>）对上训练 bigram 解码器。
+  4. 采样循环输出混合模态结果。
 
-Stdlib only. The transformer is a bigram count table — the point is to see the
-shared-vocabulary loop in miniature, not to get image quality.
+仅使用标准库。这里的 transformer 是一张 bigram 计数表——目的是让你看到
+共享词表循环的缩影，而非追求图像质量。
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ CODEBOOK = [[(i * 7 + 3 * j) % 8 for j in range(4)] for i in range(VOCAB_IMG)]
 
 
 def quantize_patch(patch: list[int]) -> int:
-    """Nearest-codebook lookup by L2 distance."""
+    """按 L2 距离查找最近的码本项。"""
     best = 0
     best_d = float("inf")
     for k, code in enumerate(CODEBOOK):
@@ -42,7 +42,7 @@ def quantize_patch(patch: list[int]) -> int:
 
 
 def image_to_tokens(img: list[list[int]]) -> list[int]:
-    """8x8 grayscale -> 4 patches of 4 floats (downsampled). Return token IDs."""
+    """8x8 灰度 -> 4 个各含 4 个浮点数的图块（下采样）。返回 token IDs."""
     patches = []
     for pr in range(0, 8, 4):
         for pc in range(0, 8, 4):
@@ -59,7 +59,7 @@ def image_to_tokens(img: list[list[int]]) -> list[int]:
 
 
 def synthesize_caption(kind: str) -> list[int]:
-    """Pick a short synthetic text token sequence."""
+    """选取一个短的合成文本 token 序列。"""
     if kind == "red":
         return [1, 5, 3, 7]
     if kind == "blue":
@@ -134,42 +134,43 @@ def render(tokens: list[int]) -> str:
 
 def main() -> None:
     print("=" * 60)
-    print("CHAMELEON EARLY-FUSION TOY (Phase 12, Lesson 11)")
+    print("CHAMELEON 早期融合玩具示例（第 12 阶段，第 11 课）")
     print("=" * 60)
 
-    print("\n1. VQ tokenizer — 8x8 grayscale -> 4 patches -> 4 image tokens")
+    print("\n1. VQ 分词器——8x8 灰度图 -> 4 个 patch -> 4 个图像 token")
     print("-" * 60)
+    kind_names = {"red": "红色", "blue": "蓝色", "green": "绿色", "gray": "灰色"}
     for kind in ["red", "blue", "green", "gray"]:
         img = synth_image(kind)
         codes = image_to_tokens(img)
-        print(f"  {kind:<6} -> codes {codes}")
+        print(f"  {kind_names[kind]:<6} -> 码字 {codes}")
 
-    print("\n2. Shared vocabulary layout")
+    print("\n2. 共享词表布局")
     print("-" * 60)
-    print(f"  text tokens   : 0..{VOCAB_TEXT - 1}")
-    print(f"  image tokens  : {IMG_OFFSET}..{IMG_OFFSET + VOCAB_IMG - 1}")
+    print(f"  文本 token   : 0..{VOCAB_TEXT - 1}")
+    print(f"  图像 token  : {IMG_OFFSET}..{IMG_OFFSET + VOCAB_IMG - 1}")
     print(f"  <image>       : {SEP_OPEN}")
     print(f"  </image>      : {SEP_CLOSE}")
-    print(f"  vocab total   : {VOCAB_SIZE}")
+    print(f"  词表总数   : {VOCAB_SIZE}")
 
-    print("\n3. Dataset (40 sequences of interleaved text + image tokens)")
+    print("\n3. 数据集（40 条交错文本与图像 token 的序列）")
     print("-" * 60)
     corpus = make_dataset(40)
     for seq in corpus[:4]:
         print("  " + render(seq))
 
-    print("\n4. Train bigram, sample mixed-modality output")
+    print("\n4. 训练二元模型，采样混合模态输出")
     print("-" * 60)
     bigram = train_bigram(corpus)
     for _ in range(3):
         out = generate(bigram, [1, 5], max_len=30)
         print("  " + render(out))
 
-    print("\nTAKEAWAY")
+    print("\n要点")
     print("-" * 60)
-    print("  one model, one vocab, one loss -> mixed-modality output for free")
-    print("  tokenizer quality caps image fidelity (lesson 12.12 on Emu3)")
-    print("  at scale you need QK-Norm + careful dropout for stable training")
+    print("  一个模型，一套词表，一个损失 -> 自然获得混合模态输出")
+    print("  分词器质量决定图像保真度上限（见第 12.12 课关于 Emu3）")
+    print("  在规模化训练时需要 QK-Norm + 精心设计的 dropout 才能稳定训练")
 
 
 if __name__ == "__main__":
