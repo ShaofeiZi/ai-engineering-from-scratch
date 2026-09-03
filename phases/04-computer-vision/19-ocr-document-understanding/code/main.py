@@ -83,7 +83,7 @@ def main():
     torch.manual_seed(0)
     model = TinyCRNN()
     opt = torch.optim.Adam(model.parameters(), lr=1e-3)
-    print(f"params: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"参数量：{sum(p.numel() for p in model.parameters()):,}")
 
     train_strings = [f"abc{d}" for d in range(10)] + [f"xy{d}{d+1}" for d in range(10)]
     for step in range(200):
@@ -95,7 +95,7 @@ def main():
         loss = ctc_loss(log_probs, targets, input_lens, target_lens, blank=0)
         opt.zero_grad(); loss.backward(); opt.step()
         if step % 40 == 0:
-            print(f"step {step:3d}  loss {loss.item():.3f}")
+            print(f"步骤 {step:3d}  损失 {loss.item():.3f}")
 
     model.eval()
     test_strings = ["abc7", "xy45", "abc2"]
@@ -105,7 +105,7 @@ def main():
     preds = [decode_to_str(ids) for ids in greedy_ctc_decode(log_probs)]
     for target, pred in zip(test_strings, preds):
         match = "ok" if target == pred else "diff"
-        print(f"  target {target!r:10s} -> pred {pred!r:10s}  {match}")
+        print(f"  目标 {target!r:10s} -> 预测 {pred!r:10s}  {match}")
 
 
 if __name__ == "__main__":
