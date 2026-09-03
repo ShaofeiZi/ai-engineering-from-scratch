@@ -1,8 +1,7 @@
-"""Multi-agent benchmark scorecard generator, stdlib only.
+"""多 Agent 基准测试记分卡生成器，仅使用 stdlib。
 
-Simulates 3 multi-agent systems on a toy task set. Computes MARBLE-style
-milestone metrics, random baseline delta, cost-per-milestone, and a
-contamination check by splitting seen/unseen tasks.
+在玩具任务集上模拟 3 个多 Agent 系统。计算 MARBLE 风格的里程碑指标、随机基线
+差值、每里程碑成本，并通过拆分已见/未见任务进行污染检查。
 """
 from __future__ import annotations
 
@@ -16,7 +15,7 @@ class SystemSim:
     base_accuracy: float
     cost_per_task: float
     milestone_completion_rate: float
-    training_contamination: float = 0.0  # extra accuracy on seen tasks
+    training_contamination: float = 0.0  # 在已见任务上的额外准确率
     variance: float = 0.1
 
 
@@ -56,7 +55,7 @@ def run_task(system: SystemSim, task_id: str, seen: bool, rng: random.Random) ->
 
 
 def random_baseline(rng: random.Random) -> float:
-    return 0.15  # random routing accuracy on this task family
+    return 0.15  # 此任务族上的随机路由准确率
 
 
 def run_bench(system: SystemSim, n_seen: int, n_held: int, seed: int = 0) -> dict:
@@ -81,11 +80,11 @@ def run_bench(system: SystemSim, n_seen: int, n_held: int, seed: int = 0) -> dic
 
 def format_scorecard() -> None:
     print("=" * 78)
-    print("BENCHMARK SCORECARD — MARBLE-style milestone + contamination check")
-    print("  contamination check: accuracy_seen - accuracy_held (delta > 0.1 = suspect)")
+    print("基准测试记分卡 — MARBLE 风格里程碑 + 污染检查")
+    print("  污染检查：accuracy_seen - accuracy_held（delta > 0.1 时可疑）")
     print("=" * 78)
-    print(f"{'system':10s} {'acc(seen)':>10s} {'acc(held)':>10s} {'Δ':>6s} "
-          f"{'mile(held)':>12s} {'cost/t':>8s} {'cost/mil':>10s} {'vs random':>12s}")
+    print(f"{'系统':10s} {'已见准确率':>10s} {'留出准确率':>10s} {'Δ':>6s} "
+          f"{'留出里程碑':>12s} {'每任务成本':>8s} {'每里程碑成本':>10s} {'相对随机':>12s}")
 
     rng = random.Random(0)
     rand_baseline = random_baseline(rng)
@@ -99,21 +98,21 @@ def format_scorecard() -> None:
               f"${r['cost_per_task']:>7.2f} ${r['cost_per_milestone_held']:>9.3f} "
               f"+{vs_random:>10.3f}")
 
-    print("\n  * = contamination flag; held-set accuracy is the canonical number")
-    print(f"  random baseline accuracy: {rand_baseline:.3f}")
+    print("\n  * = 污染标记；留出集准确率是规范指标")
+    print(f"  随机基线准确率：{rand_baseline:.3f}")
 
 
 def print_claim_scorecard() -> None:
     print("\n" + "=" * 78)
-    print("CLAIM CHECKLIST — read this before accepting any multi-agent result")
+    print("结论检查清单 — 接受任何多 Agent 结果前请先阅读")
     print("=" * 78)
     checklist = [
-        "Which benchmark + split? Pro vs Verified is a 40-point gap for frontier models.",
-        "Contamination check: is the benchmark post-training-cutoff?",
-        "Baseline comparison: vs single-LLM, vs random, vs prior multi-agent?",
-        "Statistical significance: N trials, p-value, confidence interval?",
-        "Task diversity: single task or many? Generalization beyond one domain?",
-        "Cost disclosure: tokens per task, wall-clock per task?",
+        "使用哪个基准和划分？对前沿模型而言，Pro 与 Verified 相差 40 个百分点。",
+        "污染检查：该基准是否晚于训练截止日期？",
+        "基线比较：对比单 LLM、随机方案还是此前的多 Agent？",
+        "统计显著性：N 次试验、p-value、置信区间？",
+        "任务多样性：单个任务还是多个任务？能否泛化到其他领域？",
+        "成本披露：每任务 token 数、每任务实际耗时？",
     ]
     for i, item in enumerate(checklist, 1):
         print(f"  [{i}] {item}")
@@ -122,11 +121,11 @@ def print_claim_scorecard() -> None:
 def main() -> None:
     format_scorecard()
     print_claim_scorecard()
-    print("\nTakeaways:")
-    print("  system-A scores highest on seen tasks but has contamination signal (large delta).")
-    print("  system-B is cheapest per milestone; lowest raw accuracy but transparent.")
-    print("  system-C sits in the middle but without contamination flag — trustworthy.")
-    print("  the ranking by 'raw accuracy' vs 'cost per milestone (held)' can differ sharply.")
+    print("\n要点：")
+    print("  system-A 在已见任务上得分最高，但存在污染信号（delta 较大）。")
+    print("  system-B 的每里程碑成本最低；原始准确率最低，但结果透明。")
+    print("  system-C 居中且没有污染标记，因此值得信任。")
+    print("  按“原始准确率”和“每里程碑成本（留出集）”得到的排名可能大相径庭。")
 
 
 if __name__ == "__main__":
