@@ -1,21 +1,21 @@
-// Phase 14 · Lesson 18 — Agno vs Mastra runtimes (TypeScript port).
-// Minimal Mastra-shaped sketch: Agent + Tool registry + Workflow, with a
-// mocked LLM step. Plus an Agno-shaped sketch for contrast. Stdlib only —
-// the real Mastra package wires Zod, the Vercel AI SDK, telemetry.
-// Refs: https://mastra.ai/docs/agents/overview
+// 第14阶段 · 第18课 — Agno 与 Mastra 运行时对比（TypeScript 移植版）。
+// 最小化的 Mastra 形状草图：Agent + 工具注册表 + 工作流，并带有
+// 模拟的 LLM 步骤。另附一个 Agno 形状的草图作为对比。仅用标准库 ——
+// 真正的 Mastra 包会接入 Zod、Vercel AI SDK 和遥测。
+// 参考：https://mastra.ai/docs/agents/overview
 //       https://mastra.ai/docs/workflows/overview
 //       https://docs.agno.com/introduction
 //       https://sdk.vercel.ai/docs/foundations/agents
 
 import process from "node:process";
 
-// --- Shared LLM stub. Mastra wires Vercel AI SDK's `generateText` here.
+// --- 共享 LLM 桩。Mastra 在此接入 Vercel AI SDK 的 `generateText`。
 
 type LLMResponse = { text: string; inputTokens: number; outputTokens: number };
 
 async function mockLLM(systemPrompt: string, userMessage: string): Promise<LLMResponse> {
   const inputTokens = Math.ceil((systemPrompt.length + userMessage.length) / 4);
-  // Simulate network latency without using a real model.
+  // 模拟网络延迟，不使用真实模型。
   await new Promise((r) => setTimeout(r, 5));
   return {
     text: `[mock reply to ${userMessage.slice(0, 60)}]`,
@@ -24,8 +24,8 @@ async function mockLLM(systemPrompt: string, userMessage: string): Promise<LLMRe
   };
 }
 
-// --- Agno-shaped: stateless agent + session store. One fresh agent per
-// request, history lives in the session store (your DB in production).
+// --- Agno 形状：无状态 agent + 会话存储。每个请求创建一个全新的 agent，
+// 历史记录保存在会话存储中（生产环境中即你的数据库）。
 
 type AgnoAgent = {
   name: string;
@@ -58,7 +58,7 @@ async function agnoHandler(
   return { reply, elapsedUs };
 }
 
-// --- Mastra-shaped: Agents + Tools + Workflows.
+// --- Mastra 形状：Agents + Tools + Workflows。
 
 type ToolInputSchema = Record<string, "string" | "number" | "boolean">;
 type ToolInput = Record<string, string | number | boolean>;
@@ -71,8 +71,8 @@ type MastraTool = {
   execute: (input: ToolInput) => Promise<ToolResult>;
 };
 
-// Cheap runtime check so a tool can refuse a wrong-shaped call. Real Mastra
-// uses zod schemas + inferred TS types here.
+// 轻量运行时检查，使工具可以拒绝形状不匹配的调用。真正的 Mastra
+// 在此使用 zod schema + 推断的 TS 类型。
 function checkSchema(schema: ToolInputSchema, input: ToolInput): string | null {
   for (const [key, expected] of Object.entries(schema)) {
     if (!(key in input)) return `missing field ${key}`;
@@ -101,8 +101,8 @@ class MastraAgent {
     const trace: AgentTrace = [];
     let tokens = 0;
 
-    // Agent decides tool calls (here pre-supplied). Each successful call
-    // appends a step to the trace; bad calls record the error.
+    // Agent 决定工具调用（此处为预先提供）。每次成功的调用会
+    // 向轨迹追加一步；错误的调用则记录错误信息。
     for (const call of calls) {
       const tool = this.tools.get(call.tool);
       if (!tool) {
@@ -118,7 +118,7 @@ class MastraAgent {
       trace.push({ tool: call.tool, result: output });
     }
 
-    // Final LLM step composes trace + user message into a reply.
+    // 最终的 LLM 步骤将轨迹 + 用户消息组合成一条回复。
     const traceText = trace.map((t) => `${t.tool}: ${t.result}`).join("\n");
     const reply = await mockLLM(this.instructions, `${userMessage}\n\nTool results:\n${traceText}`);
     tokens = reply.inputTokens + reply.outputTokens;
@@ -126,7 +126,7 @@ class MastraAgent {
   }
 }
 
-// Workflows: an ordered list of steps. Each step gets the previous output.
+// 工作流：一个有序的步骤列表。每个步骤接收上一步的输出。
 type WorkflowStep<I, O> = { name: string; run: (input: I) => Promise<O> | O };
 
 class MastraWorkflow {
@@ -146,27 +146,27 @@ class MastraWorkflow {
   }
 }
 
-// --- Demo
+// --- 演示
 
 const searchTool: MastraTool = {
   id: "search",
-  description: "Web search over a fixture corpus",
+  description: "在固定语料库上进行网络搜索",
   inputSchema: { query: "string" },
   execute: async (input) => ({ output: `3 results for ${String(input.query)}` }),
 };
 
 const summariseTool: MastraTool = {
   id: "summarise",
-  description: "Compress text to one sentence",
+  description: "将文本压缩为一句话",
   inputSchema: { text: "string" },
   execute: async (input) => ({ output: `summary: ${String(input.text).slice(0, 40)}...` }),
 };
 
 async function main(): Promise<void> {
-  process.stdout.write("=".repeat(70) + "\nAgno vs Mastra runtimes — Phase 14 · 18\n" + "=".repeat(70) + "\n");
+  process.stdout.write("=".repeat(70) + "\nAgno 与 Mastra 运行时对比 — 第14阶段 · 18\n" + "=".repeat(70) + "\n");
 
-  // 1. Agno-shaped — measure agent creation + handler latency.
-  process.stdout.write("\n1. Agno-shaped (stateless FastAPI-style handler)\n");
+  // 1. Agno 形状 — 衡量 agent 创建 + 处理器延迟。
+  process.stdout.write("\n1. Agno 形状（无状态 FastAPI 风格处理器）\n");
   const session = new AgnoSession();
   const agnoAgent: AgnoAgent = {
     name: "agno_a",
@@ -174,16 +174,16 @@ async function main(): Promise<void> {
   };
   for (let i = 0; i < 3; i += 1) {
     const { reply, elapsedUs } = await agnoHandler(session, agnoAgent, "s001", `query ${i}: how do I ship an agent`);
-    process.stdout.write(`  turn ${i}: ${reply}  (handler ${elapsedUs} us)\n`);
+    process.stdout.write(`  第 ${i} 轮：${reply}  （处理器 ${elapsedUs} 微秒）\n`);
   }
-  process.stdout.write(`  session history length: ${session.history("s001").length}\n`);
-  process.stdout.write("  pattern: fresh agent per request, session holds state, FastAPI/Hono is stateless.\n");
+  process.stdout.write(`  会话历史长度：${session.history("s001").length}\n`);
+  process.stdout.write("  模式：每个请求创建全新 agent，会话保存状态，FastAPI/Hono 本身无状态。\n");
 
-  // 2. Mastra-shaped — agent runs tools then summarises.
-  process.stdout.write("\n2. Mastra-shaped (Agents + Tools + Workflows)\n");
+  // 2. Mastra 形状 — agent 先运行工具再进行总结。
+  process.stdout.write("\n2. Mastra 形状（Agents + Tools + Workflows）\n");
   const mastraAgent = MastraAgent.withTools(
     "research_agent",
-    "Search, summarise, cite",
+    "搜索、总结、引用",
     [searchTool, summariseTool],
   );
   const result = await mastraAgent.run("research agent engineering", [
@@ -191,19 +191,19 @@ async function main(): Promise<void> {
     { tool: "search", input: { query: "BFCL V4 benchmarks" } },
     { tool: "unknown_tool", input: { query: "fails on purpose" } },
   ]);
-  process.stdout.write(`  agent output: ${result.output}  (~${result.tokens} tokens)\n`);
-  for (const t of result.trace) process.stdout.write(`    tool ${t.tool}: ${t.result}\n`);
+  process.stdout.write(`  agent 输出：${result.output}  （约 ${result.tokens} tokens）\n`);
+  for (const t of result.trace) process.stdout.write(`    工具 ${t.tool}：${t.result}\n`);
 
-  // 3. Workflow — normalise → search → summarise.
-  process.stdout.write("\n3. Workflow run\n");
+  // 3. 工作流 — 归一化 → 搜索 → 总结。
+  process.stdout.write("\n3. 工作流运行\n");
   const workflow = new MastraWorkflow()
     .addStep<string, string>("normalise", (p) => p.trim().toLowerCase())
     .addStep<string, string>("search", async (p) => (await searchTool.execute({ query: p })).output)
     .addStep<string, string>("summarise", async (p) => (await summariseTool.execute({ text: p })).output);
   const workflowTrace = await workflow.run("  Agent Engineering 2026  ");
-  for (const { name, output } of workflowTrace) process.stdout.write(`    ${name}: ${String(output)}\n`);
+  for (const { name, output } of workflowTrace) process.stdout.write(`    ${name}：${String(output)}\n`);
 
-  process.stdout.write("\npick by stack: python+fastapi → Agno; typescript+next/vercel → Mastra.\n");
+  process.stdout.write("\n按技术栈选择：python+fastapi → Agno；typescript+next/vercel → Mastra。\n");
 }
 
 main();

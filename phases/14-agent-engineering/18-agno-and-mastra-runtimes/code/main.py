@@ -1,5 +1,5 @@
-"""Side-by-side toys: Agno-shaped (stateless FastAPI) vs Mastra-shaped
-(primitive-rich). Stdlib only; meant to show the structural difference.
+"""并排玩具示例：仿 Agno（无状态 FastAPI）对比仿 Mastra
+（primitive-rich）。仅使用标准库；旨在展示结构上的差异。
 """
 
 from __future__ import annotations
@@ -91,21 +91,21 @@ def _mastra_tool_fn(query: str) -> str:
 
 def main() -> None:
     print("=" * 70)
-    print("AGNO vs MASTRA — Phase 14, Lesson 18")
+    print("AGNO 对比 MASTRA — 第 14 阶段，第 18 课")
     print("=" * 70)
 
-    print("\n1. AGNO-shaped (stateless session-scoped FastAPI handler)")
+    print("\n1. AGNO-shaped（无状态 session-scoped FastAPI 处理器）")
     session = AgnoSession()
     agent = AgnoAgent(name="agno_a", fn=_agno_agent_fn)
     for i in range(3):
         out = agno_request_handler(session, agent, "s001",
                                    f"query {i}: how do I ship an agent")
-        print(f"  turn {i}: {out}")
-    print(f"  session history length: {len(session.history('s001'))}")
-    print("  pattern: a fresh agent per request; session holds state; "
-          "FastAPI is stateless.")
+        print(f"  轮次 {i}：{out}")
+    print(f"  会话历史长度：{len(session.history('s001'))}")
+    print("  模式：每个请求使用新的智能体；session 保存状态；"
+          "FastAPI 保持无状态。")
 
-    print("\n2. MASTRA-shaped (Agents + Tools + Workflows)")
+    print("\n2. MASTRA-shaped（Agents + Tools + Workflows）")
     search_tool = MastraTool(
         name="search",
         input_schema={"type": "object",
@@ -122,20 +122,20 @@ def main() -> None:
         [("search", {"query": "agent engineering 2026"}),
          ("search", {"query": "BFCL V4 benchmarks"})],
     )
-    print(f"  agent output: {output}")
+    print(f"  智能体输出：{output}")
     for tool, result in trace:
-        print(f"    tool {tool}: {result}")
+        print(f"    工具 {tool}：{result}")
 
     workflow = MastraWorkflow(steps=[
         ("normalize", lambda p: p.strip().lower()),
         ("search", lambda p: f"found 3 results for {p}"),
         ("summarize", lambda p: f"summary: {p}"),
     ])
-    print("\n  workflow run")
+    print("\n  工作流运行")
     for name, out in workflow.run("  Agent Engineering 2026  "):
-        print(f"    {name}: {out}")
+        print(f"    {name}：{out}")
 
-    print("\npick by stack: python+fastapi  Agno; typescript+next/vercel  Mastra.")
+    print("\n按技术栈选择：python+fastapi  Agno；typescript+next/vercel  Mastra。")
 
 
 if __name__ == "__main__":
