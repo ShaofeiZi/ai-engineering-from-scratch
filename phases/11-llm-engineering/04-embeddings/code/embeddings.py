@@ -247,24 +247,24 @@ SAMPLE_DOCUMENTS = [
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("STEP 1: Document Chunking")
+    print("步骤1:文档弹簧")
     print("=" * 60)
 
     sample = SAMPLE_DOCUMENTS[0]
     fixed_chunks = chunk_text(sample, chunk_size=30, overlap=10)
     sentence_chunks = chunk_by_sentences(sample, max_chunk_tokens=30)
-    print(f"  Document length: {len(sample.split())} words")
-    print(f"\n  Fixed-size chunking (30 words, 10 overlap):")
-    print(f"    Chunks: {len(fixed_chunks)}")
+    print(f"  文档长度：{len(sample.split())} 个单词")
+    print("\n  固定大小分块（30 个单词，重叠 10 个）：")
+    print(f"    分块数：{len(fixed_chunks)}")
     for i, chunk in enumerate(fixed_chunks[:3]):
         print(f"    [{i}] {chunk[:80]}...")
-    print(f"\n  Sentence-based chunking (max 30 tokens):")
-    print(f"    Chunks: {len(sentence_chunks)}")
+    print("\n  按句子分块（最多 30 个 token）：")
+    print(f"    分块数：{len(sentence_chunks)}")
     for i, chunk in enumerate(sentence_chunks[:3]):
         print(f"    [{i}] {chunk[:80]}...")
 
     print("\n" + "=" * 60)
-    print("STEP 2: Embedding")
+    print("步骤2: Embedding")
     print("=" * 60)
 
     mini_docs = [
@@ -278,15 +278,15 @@ if __name__ == "__main__":
     embedder.fit(mini_docs)
     embeddings = embedder.embed_batch(mini_docs)
 
-    print(f"  Vocabulary size: {len(embedder.vocab)}")
-    print(f"  Embedding dimensions: {len(embeddings[0])}")
-    print(f"  Non-zero entries per embedding:")
+    print(f"  词表大小：{len(embedder.vocab)}")
+    print(f"  embedding 维度：{len(embeddings[0])}")
+    print("  每个 embedding 的非零项数：")
     for i, emb in enumerate(embeddings):
         nonzero = int(np.count_nonzero(emb))
-        print(f"    [{i}] \"{mini_docs[i][:40]}\" -> {nonzero} non-zero dims")
+        print(f"    [{i}] \"{mini_docs[i][:40]}\" -> {nonzero} 个非零维度")
 
     print("\n" + "=" * 60)
-    print("STEP 3: Similarity Metrics Comparison")
+    print("步骤3:相似度量比较")
     print("=" * 60)
 
     pairs = [
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         print(f"    Euclidean: {euc:.4f}")
 
     print("\n" + "=" * 60)
-    print("STEP 4: Semantic Search Engine")
+    print("步骤4:语义搜索引擎")
     print("=" * 60)
 
     engine = SemanticSearchEngine(chunk_size=50, overlap=10)
@@ -318,9 +318,9 @@ if __name__ == "__main__":
         "uptime-sla.md"
     ]
     num_chunks = engine.index_documents(SAMPLE_DOCUMENTS, source_names)
-    print(f"  Indexed {len(SAMPLE_DOCUMENTS)} documents into {num_chunks} chunks")
-    print(f"  Vocabulary size: {len(engine.embedder.vocab)} terms")
-    print(f"  Embedding dimensions: {len(engine.embedder.vocab)}")
+    print(f"  已将 {len(SAMPLE_DOCUMENTS)} 篇文档索引为 {num_chunks} 个分块")
+    print(f"  词表大小：{len(engine.embedder.vocab)} 个词项")
+    print(f"  embedding 维度：{len(engine.embedder.vocab)}")
 
     queries = [
         "What is the refund policy for enterprise customers?",
@@ -337,7 +337,7 @@ if __name__ == "__main__":
             print(f"    [{r['source']}] score={r['score']:.4f} | {r['text'][:70]}...")
 
     print("\n" + "=" * 60)
-    print("STEP 5: Metric Comparison on Full Corpus")
+    print("STEP 5:全公司计量比较")
     print("=" * 60)
 
     test_query = "How is data encrypted at rest?"
@@ -349,7 +349,7 @@ if __name__ == "__main__":
             print(f"    score={h['score']:>8.4f} | {h['preview']}...")
 
     print("\n" + "=" * 60)
-    print("STEP 6: Embedding Truncation (Matryoshka Simulation)")
+    print("步骤 6：嵌入截断（Matryoshka 模拟）")
     print("=" * 60)
 
     full_dim = len(engine.embedder.vocab)
@@ -364,7 +364,7 @@ if __name__ == "__main__":
         print(f"  dims={dims:>4d} ({frac*100:>5.1f}%): cosine={sim:.4f}")
 
     print("\n" + "=" * 60)
-    print("STEP 7: Binary Quantization")
+    print("步骤7:二进制量化")
     print("=" * 60)
 
     query_vec = engine.embedder.embed("API rate limits")
@@ -375,20 +375,20 @@ if __name__ == "__main__":
     binary_ids = [r["index"] for r in results_binary]
     overlap = len(set(full_ids) & set(binary_ids))
 
-    print(f"  Query: \"API rate limits\"")
-    print(f"  Full-precision top-5 indices: {full_ids}")
-    print(f"  Binary quant top-5 indices:   {binary_ids}")
-    print(f"  Overlap: {overlap}/5 ({overlap/5*100:.0f}%)")
+    print("  查询：\"API rate limits\"")
+    print(f"  全精度 top-5 索引：{full_ids}")
+    print(f"  二值量化 top-5 索引：{binary_ids}")
+    print(f"  重叠：{overlap}/5（{overlap/5*100:.0f}%）")
 
     storage_full = full_dim * 4
     storage_binary = math.ceil(full_dim / 8)
-    print(f"\n  Storage per vector:")
-    print(f"    Float32: {storage_full:,} bytes")
-    print(f"    Binary:  {storage_binary:,} bytes")
-    print(f"    Ratio:   {storage_full/storage_binary:.0f}x reduction")
+    print("\n  每个向量的存储空间：")
+    print(f"    Float32：{storage_full:,} 字节")
+    print(f"    二值：   {storage_binary:,} 字节")
+    print(f"    比率：   缩小 {storage_full/storage_binary:.0f} 倍")
 
     print("\n" + "=" * 60)
-    print("STEP 8: Chunk Size Experiment")
+    print("步骤8: 春千大小实验")
     print("=" * 60)
 
     test_query = "What is the refund policy for enterprise customers?"
@@ -402,16 +402,16 @@ if __name__ == "__main__":
               f"top_preview=\"{results[0]['text'][:50]}...\"")
 
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("内容提要")
     print("=" * 60)
-    print(f"  Documents indexed: {len(SAMPLE_DOCUMENTS)}")
-    print(f"  Total chunks: {num_chunks}")
-    print(f"  Vocabulary size: {len(engine.embedder.vocab)}")
-    print(f"  Embedding dimensions: {len(engine.embedder.vocab)}")
-    print("  Metrics implemented: cosine, dot product, euclidean, hamming")
-    print("  Chunking: fixed-size + sentence-based")
-    print("  Advanced: Matryoshka truncation, binary quantization")
-    print("\n  In production, replace SimpleEmbedder with:")
-    print("    OpenAI text-embedding-3-small (1536d, $0.02/1M tokens)")
-    print("    BGE-M3 (1024d, free, open source)")
-    print("    Voyage-3 (1024d, $0.06/1M tokens)")
+    print(f"  已索引文档数：{len(SAMPLE_DOCUMENTS)}")
+    print(f"  分块总数：{num_chunks}")
+    print(f"  词表大小：{len(engine.embedder.vocab)}")
+    print(f"  embedding 维度：{len(engine.embedder.vocab)}")
+    print("已执行的计量:余弦、点产品、euclide、火腿")
+    print("春金:固定大小+句子")
+    print("高级: Matryoshka 调序, 二进制定量")
+    print("\n (韩语) 在生产中,将SimpleEmbedder替换为:")
+    print("OpenAI文本-embedding-3-小(1536d,0.02/1Mtokens)")
+    print("BGE-M3(1024d,免费,开源)")
+    print("    Voyage-3（1024 维，每百万 token 0.06 美元）")
