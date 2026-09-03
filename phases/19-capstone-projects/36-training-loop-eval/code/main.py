@@ -1,16 +1,14 @@
-"""Training loop and evaluation harness for the lesson 35 GPT model.
+"""第 35 课 GPT 模型的训练循环与评测框架。
 
-Implements: batch construction with input/target shift by one, cross entropy
-loss in `calc_loss_batch`, held-out evaluation in `evaluate_model`, a qualitative
-generation probe in `generate_and_print_sample`, AdamW with a decay/no-decay
-split, a linear-warmup-plus-cosine learning rate schedule, gradient norm
-clipping, and a JSONL log of per step loss in `outputs/losses.jsonl`.
+实现内容包括：输入/目标错开一位的批次构造、`calc_loss_batch` 中的交叉熵损失、
+`evaluate_model` 中的留出评测、`generate_and_print_sample` 中的定性生成探针、
+区分衰减/不衰减参数的 AdamW、线性预热加余弦学习率调度、梯度范数裁剪，
+以及记录每步损失的 `outputs/losses.jsonl` JSONL 日志。
 
-The demo trains a tiny model on synthetic byte-level tokens for a small number
-of steps, writes the JSONL log, and prints eval losses and generated samples
-at the probe points. End to end runs in well under a minute on CPU.
+演示在合成字节级 token 上用少量步骤训练微型模型，写入 JSONL 日志，
+并在探针点打印评测损失和生成样本。CPU 上端到端运行远少于一分钟。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -33,7 +31,7 @@ LOG_PATH = OUTPUTS / "losses.jsonl"
 
 @dataclass
 class TrainConfig:
-    """Training and evaluation hyperparameters for the demo run."""
+    """演示运行使用的训练与评测超参数。"""
 
     batch_size: int = 4
     context_length: int = 32
@@ -184,10 +182,9 @@ def make_batches(
     context_length: int,
     seed: int = 0,
 ) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
-    """Yield (input, target) batches where target is input shifted by one position.
+    """生成 (input, target) 批次，其中 target 是错开一位的 input。
 
-    Sampling is uniform random over valid start positions. With a fixed seed the
-    sequence of batches is reproducible across runs.
+    在有效起始位置上均匀随机采样。固定种子时，批次序列可跨运行复现。
     """
     if token_ids.dim() != 1:
         raise ValueError("token_ids must be a 1D tensor")
@@ -211,7 +208,7 @@ def calc_loss_batch(
     inputs: torch.Tensor,
     targets: torch.Tensor,
 ) -> torch.Tensor:
-    """Forward, flatten across batch and time, return scalar cross entropy."""
+    """执行前向传播，展平批次和时间维度，返回标量交叉熵。"""
     logits = model(inputs)
     return F.cross_entropy(
         logits.reshape(-1, logits.size(-1)),
@@ -225,7 +222,7 @@ def evaluate_model(
     val_loader: Iterator[tuple[torch.Tensor, torch.Tensor]],
     max_batches: int,
 ) -> float:
-    """Mean cross entropy over `max_batches` validation batches; no grad, no dropout."""
+    """在 `max_batches` 个验证批次上计算平均交叉熵；不计算梯度，不使用 dropout。"""
     was_training = model.training
     model.eval()
     total = 0.0
@@ -250,7 +247,7 @@ def generate_and_print_sample(
     top_k: int = 40,
     seed: int = 0,
 ) -> list[int]:
-    """Print a short generated continuation from a fixed prompt and return the tokens."""
+    """打印从固定 prompt 生成的短续写，并返回 token。"""
     sample_gen = torch.Generator(device=prompt.device).manual_seed(seed)
     was_training = model.training
     model.eval()
@@ -272,12 +269,12 @@ def generate_and_print_sample(
     if was_training:
         model.train()
     seq = tokens.tolist()[0]
-    print(f"  sample tokens          : {seq}")
+    print(f"  样本 token             : {seq}")
     return seq
 
 
 def build_param_groups(model: nn.Module, weight_decay: float) -> list[dict]:
-    """Split parameters: matrix-shaped tensors get decay; scale/bias/embedding biases do not."""
+    """拆分参数：矩阵形张量使用衰减，缩放/偏置/嵌入偏置不使用。"""
     decay: list[nn.Parameter] = []
     no_decay: list[nn.Parameter] = []
     for name, param in model.named_parameters():
@@ -300,7 +297,7 @@ def cosine_with_warmup(
     max_lr: float,
     min_lr: float,
 ) -> float:
-    """Linear warmup then cosine decay to min_lr over the remaining steps."""
+    """先线性预热，再在剩余步骤中按余弦衰减到 min_lr。"""
     if step < warmup_steps:
         return max_lr * (step + 1) / max(warmup_steps, 1)
     progress = (step - warmup_steps) / max(total_steps - warmup_steps, 1)
@@ -317,7 +314,7 @@ def train(
     prompt: torch.Tensor,
     log_path: Path = LOG_PATH,
 ) -> list[dict]:
-    """Run the training loop, persist losses.jsonl, return the in-memory log."""
+    """运行训练循环，持久化 losses.jsonl，并返回内存日志。"""
     torch.manual_seed(cfg.seed)
     optimizer = torch.optim.AdamW(
         build_param_groups(model, cfg.weight_decay),
@@ -367,10 +364,10 @@ def train(
 
 
 def _synthetic_byte_tokens(length: int, vocab_size: int, seed: int) -> torch.Tensor:
-    """Deterministic synthetic tokens.
+    """确定性的合成 token。
 
-    Bytes drawn from a small repeating pattern so the model has structure to learn
-    in a handful of steps; the eval loss should drop visibly during the demo.
+    字节取自小型重复模式，使模型在少量步骤内就有结构可学；演示期间评测损失
+    应明显下降。
     """
     rng = torch.Generator().manual_seed(seed)
     base = torch.randint(0, vocab_size, (32,), generator=rng)
@@ -397,27 +394,27 @@ def demo() -> None:
     train_tokens = _synthetic_byte_tokens(length=4096, vocab_size=mcfg.vocab_size, seed=1)
     val_tokens = _synthetic_byte_tokens(length=1024, vocab_size=mcfg.vocab_size, seed=2)
 
-    print(f"train tokens   : {train_tokens.numel():,}")
-    print(f"val tokens     : {val_tokens.numel():,}")
-    print(f"model params   : {sum(p.numel() for p in GPTModel(mcfg).parameters()):,} (untied count)")
+    print(f"训练 token 数  : {train_tokens.numel():,}")
+    print(f"验证 token 数  : {val_tokens.numel():,}")
+    print(f"模型参数量      : {sum(p.numel() for p in GPTModel(mcfg).parameters()):,}（未绑定计数）")
 
     model = GPTModel(mcfg)
     prompt = torch.tensor([[7, 11, 13, 17]], dtype=torch.long)
 
-    print("\nTraining run:")
+    print("\n训练运行：")
     records = train(model, train_tokens, val_tokens, cfg, prompt)
 
-    print("\nFinal log records (last 3):")
+    print("\n最终日志记录（最后 3 条）：")
     for record in records[-3:]:
         print(" ", record)
-    print(f"\nWrote losses to {LOG_PATH}")
+    print(f"\n已将损失写入 {LOG_PATH}")
 
     first_loss = records[0]["train_loss"]
     last_loss = records[-1]["train_loss"]
-    print(f"First step train_loss  : {first_loss:.4f}")
-    print(f"Last step train_loss   : {last_loss:.4f}")
-    assert last_loss < first_loss, "training loss should decrease across the demo run"
-    print("Training loop check passed.")
+    print(f"首步 train_loss  ：{first_loss:.4f}")
+    print(f"末步 train_loss  ：{last_loss:.4f}")
+    assert last_loss < first_loss, "演示运行期间训练损失应下降"
+    print("训练循环检查通过。")
 
 
 if __name__ == "__main__":

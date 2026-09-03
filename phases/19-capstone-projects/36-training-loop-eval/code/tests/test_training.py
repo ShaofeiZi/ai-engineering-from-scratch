@@ -1,4 +1,4 @@
-"""Unit tests for the training loop, evaluation, schedule, and decay split."""
+"""训练循环、评估、调度器和衰减分组的单元测试。"""
 
 from __future__ import annotations
 
