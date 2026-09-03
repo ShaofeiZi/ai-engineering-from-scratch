@@ -33,32 +33,32 @@ async function fakeLLMCall(
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   return {
-    output: `[Response to: ${userMessage.slice(0, 80)}...]`,
+    output: `[响应：${userMessage.slice(0, 80)}...]`,
     tokens: simulatedTokens,
     calls: Math.floor(Math.random() * 5) + 1,
   };
 }
 
 async function singleAgentApproach(task: string): Promise<AgentResult> {
-  const systemPrompt = `You are a full-stack developer. You must:
-1. Research the requirements
-2. Write the code
-3. Review the code for bugs
-4. Write tests
-Do ALL of these in a single conversation.`;
+  const systemPrompt = `你是一名全栈开发者。你必须：
+1. 调研需求
+2. 编写代码
+3. 审查代码中的缺陷
+4. 编写测试
+在一次对话中完成所有这些工作。`;
 
   const contextWindow: string[] = [];
   let totalTokens = 0;
   let totalToolCalls = 0;
 
-  const research = await fakeLLMCall(systemPrompt, `Research: ${task}`);
+  const research = await fakeLLMCall(systemPrompt, `调研：${task}`);
   contextWindow.push(research.output);
   totalTokens += research.tokens;
   totalToolCalls += research.calls;
 
   const code = await fakeLLMCall(
     systemPrompt,
-    `Given this research:\n${contextWindow.join("\n")}\n\nNow write code for: ${task}`
+    `基于以下调研：\n${contextWindow.join("\n")}\n\n现在为这项任务编写代码：${task}`
   );
   contextWindow.push(code.output);
   totalTokens += code.tokens;
@@ -66,7 +66,7 @@ Do ALL of these in a single conversation.`;
 
   const review = await fakeLLMCall(
     systemPrompt,
-    `Given all previous context:\n${contextWindow.join("\n")}\n\nReview the code.`
+    `基于此前的全部上下文：\n${contextWindow.join("\n")}\n\n审查代码。`
   );
   contextWindow.push(review.output);
   totalTokens += review.tokens;
@@ -99,17 +99,17 @@ function createSpecialist(
 
 const researcher = createSpecialist(
   "researcher",
-  "You are a technical researcher. Read documentation, find patterns, and summarize findings. Output only the facts needed for implementation."
+  "你是一名技术研究员。阅读文档、发现规律并总结结论。只输出实现所需的事实。"
 );
 
 const coder = createSpecialist(
   "coder",
-  "You are a senior TypeScript developer. Given requirements and research notes, write clean, tested code. Nothing else."
+  "你是一名资深 TypeScript 开发者。根据需求和调研笔记，编写整洁且经过测试的代码。不要输出其他内容。"
 );
 
 const reviewer = createSpecialist(
   "reviewer",
-  "You are a code reviewer. Find bugs, security issues, and logic errors. Be specific. Cite line numbers."
+  "你是一名代码审查员。找出缺陷、安全问题和逻辑错误。说明要具体，并引用行号。"
 );
 
 async function multiAgentPipeline(task: string): Promise<AgentResult> {
@@ -129,7 +129,7 @@ async function multiAgentPipeline(task: string): Promise<AgentResult> {
 
   const coderInput = messages
     .filter((m) => m.to === "coder")
-    .map((m) => `[From ${m.from}]: ${m.content}`)
+    .map((m) => `[来自 ${m.from}]：${m.content}`)
     .join("\n");
 
   const codeResult = await coder.run(coderInput);
@@ -144,7 +144,7 @@ async function multiAgentPipeline(task: string): Promise<AgentResult> {
 
   const reviewerInput = messages
     .filter((m) => m.to === "reviewer")
-    .map((m) => `[From ${m.from}]: ${m.content}`)
+    .map((m) => `[来自 ${m.from}]：${m.content}`)
     .join("\n");
 
   const reviewResult = await reviewer.run(reviewerInput);
@@ -159,7 +159,7 @@ async function multiAgentPipeline(task: string): Promise<AgentResult> {
 
   return {
     content: messages
-      .map((m) => `[${m.from} -> ${m.to}]: ${m.content}`)
+      .map((m) => `[${m.from} -> ${m.to}]：${m.content}`)
       .join("\n\n"),
     tokensUsed: totalTokens,
     toolCalls: totalToolCalls,
@@ -172,11 +172,11 @@ async function multiAgentFanOut(task: string): Promise<AgentResult> {
   let totalToolCalls = 0;
 
   const [researchResult, requirementsResult] = await Promise.all([
-    researcher.run(`Research technical approach for: ${task}`),
+    researcher.run(`调研以下任务的技术方案：${task}`),
     createSpecialist(
       "requirements",
-      "You are a requirements analyst. Extract functional and non-functional requirements. Be exhaustive."
-    ).run(`Analyze requirements for: ${task}`),
+      "你是一名需求分析师。提取功能性需求和非功能性需求，不要遗漏。"
+    ).run(`分析以下任务的需求：${task}`),
   ]);
 
   messages.push({
@@ -196,7 +196,7 @@ async function multiAgentFanOut(task: string): Promise<AgentResult> {
 
   const coderInput = messages
     .filter((m) => m.to === "coder")
-    .map((m) => `[From ${m.from}]: ${m.content}`)
+    .map((m) => `[来自 ${m.from}]：${m.content}`)
     .join("\n");
 
   const codeResult = await coder.run(coderInput);
@@ -215,7 +215,7 @@ async function multiAgentFanOut(task: string): Promise<AgentResult> {
 
   return {
     content: messages
-      .map((m) => `[${m.from} -> ${m.to}]: ${m.content}`)
+      .map((m) => `[${m.from} -> ${m.to}]：${m.content}`)
       .join("\n\n"),
     tokensUsed: totalTokens,
     toolCalls: totalToolCalls,
@@ -223,35 +223,35 @@ async function multiAgentFanOut(task: string): Promise<AgentResult> {
 }
 
 async function main() {
-  const task = "Build a rate limiter middleware for an Express.js API";
+  const task = "为 Express.js API 构建限流中间件";
 
-  console.log("=== SINGLE AGENT APPROACH ===\n");
+  console.log("=== 单 Agent 方案 ===\n");
   const singleResult = await singleAgentApproach(task);
-  console.log(`Tokens used: ${singleResult.tokensUsed}`);
-  console.log(`Tool calls: ${singleResult.toolCalls}`);
-  console.log(`Context: everything in one window\n`);
+  console.log(`使用的 token：${singleResult.tokensUsed}`);
+  console.log(`工具调用：${singleResult.toolCalls}`);
+  console.log(`上下文：所有内容都在一个窗口中\n`);
 
-  console.log("=== MULTI-AGENT PIPELINE ===\n");
+  console.log("=== 多 Agent 流水线 ===\n");
   const pipelineResult = await multiAgentPipeline(task);
-  console.log(`Tokens used: ${pipelineResult.tokensUsed}`);
-  console.log(`Tool calls: ${pipelineResult.toolCalls}`);
-  console.log(`Context: each agent gets only what it needs\n`);
+  console.log(`使用的 token：${pipelineResult.tokensUsed}`);
+  console.log(`工具调用：${pipelineResult.toolCalls}`);
+  console.log(`上下文：每个 Agent 只获得自身所需内容\n`);
 
-  console.log("=== MULTI-AGENT FAN-OUT ===\n");
+  console.log("=== 多 Agent 扇出 ===\n");
   const fanOutResult = await multiAgentFanOut(task);
-  console.log(`Tokens used: ${fanOutResult.tokensUsed}`);
-  console.log(`Tool calls: ${fanOutResult.toolCalls}`);
-  console.log(`Context: researcher + requirements run in parallel\n`);
+  console.log(`使用的 token：${fanOutResult.tokensUsed}`);
+  console.log(`工具调用：${fanOutResult.toolCalls}`);
+  console.log(`上下文：researcher 与 requirements 并行运行\n`);
 
-  console.log("=== COMPARISON ===\n");
+  console.log("=== 对比 ===\n");
   console.log(
-    `Single agent context pollution: all ${singleResult.tokensUsed} tokens in one window`
+    `单 Agent 上下文污染：全部 ${singleResult.tokensUsed} 个 token 都在一个窗口中`
   );
   console.log(
-    `Multi-agent isolation: ${pipelineResult.tokensUsed} total tokens across 3 isolated windows`
+    `多 Agent 隔离：${pipelineResult.tokensUsed} 个 token 分布在 3 个隔离窗口中`
   );
   console.log(
-    `Fan-out parallelism: research + requirements ran simultaneously`
+    `扇出并行：research 与 requirements 同时运行`
   );
 }
 
