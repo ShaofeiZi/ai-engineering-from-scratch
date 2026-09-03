@@ -1,14 +1,14 @@
-"""Phase 13 Lesson 04 - structured output, JSON Schema 2020-12 subset.
+"""第13阶段第04课——结构化输出，JSON Schema 2020-12 子集。
 
-Stdlib JSON Schema validator supporting type, required, enum, minimum,
-maximum, minLength, maxLength, pattern, items, and additionalProperties.
-Wrapped around an Invoice schema to show the three failure modes:
+标准库 JSON Schema 验证器，支持 type、required、enum、minimum、
+maximum、minLength、maxLength、pattern、items 和 additionalProperties。
+以 Invoice schema 为封装示例，展示三种失败模式：
 
-  - parse error (invalid JSON; impossible in strict mode)
-  - schema violation (parsed but wrong)
-  - refusal (model declined; handled as typed outcome)
+  - 解析错误（无效的 JSON；在 strict 模式下不可能发生）
+  - schema 违规（解析成功但内容不正确）
+  - 拒绝（模型拒绝回答；作为类型化结果处理）
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -62,23 +62,23 @@ def validate(schema: dict, value: Any, path: str = "$") -> list[ValidationError]
     t = schema.get("type")
     if t == "object":
         if not isinstance(value, dict):
-            return [ValidationError(path, f"expected object, got {type(value).__name__}")]
+            return [ValidationError(path, f"期望 object，实际为 {type(value).__name__}")]
         required = schema.get("required", [])
         props = schema.get("properties", {})
         for field in required:
             if field not in value:
-                errors.append(ValidationError(f"{path}.{field}", "missing required field"))
+                errors.append(ValidationError(f"{path}.{field}", "缺少必填字段"))
         if schema.get("additionalProperties") is False:
             extras = set(value) - set(props)
             for extra in extras:
-                errors.append(ValidationError(f"{path}.{extra}", "additional property not allowed"))
+                errors.append(ValidationError(f"{path}.{extra}", "不允许额外属性"))
         for key, sub in props.items():
             if key in value:
                 errors.extend(validate(sub, value[key], f"{path}.{key}"))
         return errors
     if t == "array":
         if not isinstance(value, list):
-            return [ValidationError(path, f"expected array, got {type(value).__name__}")]
+            return [ValidationError(path, f"期望 array，实际为 {type(value).__name__}")]
         item_schema = schema.get("items")
         if item_schema is not None:
             for i, item in enumerate(value):
@@ -86,32 +86,32 @@ def validate(schema: dict, value: Any, path: str = "$") -> list[ValidationError]
         return errors
     if t == "string":
         if not isinstance(value, str):
-            errors.append(ValidationError(path, f"expected string, got {type(value).__name__}"))
+            errors.append(ValidationError(path, f"期望 string，实际为 {type(value).__name__}"))
             return errors
         if "minLength" in schema and len(value) < schema["minLength"]:
-            errors.append(ValidationError(path, f"shorter than minLength {schema['minLength']}"))
+            errors.append(ValidationError(path, f"长度小于 minLength {schema['minLength']}"))
         if "maxLength" in schema and len(value) > schema["maxLength"]:
-            errors.append(ValidationError(path, f"longer than maxLength {schema['maxLength']}"))
+            errors.append(ValidationError(path, f"长度大于 maxLength {schema['maxLength']}"))
         if "pattern" in schema and not re.match(schema["pattern"], value):
-            errors.append(ValidationError(path, f"does not match pattern {schema['pattern']!r}"))
+            errors.append(ValidationError(path, f"不匹配 pattern {schema['pattern']!r}"))
     elif t == "number":
         if not isinstance(value, (int, float)) or isinstance(value, bool):
-            errors.append(ValidationError(path, f"expected number, got {type(value).__name__}"))
+            errors.append(ValidationError(path, f"期望 number，实际为 {type(value).__name__}"))
             return errors
     elif t == "integer":
         if not isinstance(value, int) or isinstance(value, bool):
-            errors.append(ValidationError(path, f"expected integer, got {type(value).__name__}"))
+            errors.append(ValidationError(path, f"期望 integer，实际为 {type(value).__name__}"))
             return errors
     elif t == "boolean":
         if not isinstance(value, bool):
-            errors.append(ValidationError(path, f"expected boolean, got {type(value).__name__}"))
+            errors.append(ValidationError(path, f"期望 boolean，实际为 {type(value).__name__}"))
             return errors
     if "minimum" in schema and isinstance(value, (int, float)) and value < schema["minimum"]:
-        errors.append(ValidationError(path, f"below minimum {schema['minimum']}"))
+        errors.append(ValidationError(path, f"小于 minimum {schema['minimum']}"))
     if "maximum" in schema and isinstance(value, (int, float)) and value > schema["maximum"]:
-        errors.append(ValidationError(path, f"above maximum {schema['maximum']}"))
+        errors.append(ValidationError(path, f"大于 maximum {schema['maximum']}"))
     if "enum" in schema and value not in schema["enum"]:
-        errors.append(ValidationError(path, f"value {value!r} not in enum {schema['enum']}"))
+        errors.append(ValidationError(path, f"值 {value!r} 不在 enum {schema['enum']} 中"))
     return errors
 
 
@@ -123,7 +123,7 @@ class ParsedResult:
 
 
 def process_model_output(raw: str, schema: dict) -> ParsedResult:
-    """Three-branch handler: parse error, refusal, success/violation."""
+    """Three-branch 处理器：解析错误、拒绝、success/violation."""
     if raw.startswith("__REFUSAL__"):
         return ParsedResult("refusal", raw.removeprefix("__REFUSAL__").strip(), [])
     try:
@@ -138,7 +138,7 @@ def process_model_output(raw: str, schema: dict) -> ParsedResult:
 
 TEST_CASES = [
     (
-        "happy path",
+        "正常路径",
         json.dumps({
             "customer": "Acme Corp",
             "line_items": [
@@ -150,11 +150,11 @@ TEST_CASES = [
         }),
     ),
     (
-        "parse error (trailing comma)",
+        "解析错误（末尾逗号）",
         '{"customer": "Acme", "line_items": [], "total_usd": 0, "currency": "USD",}',
     ),
     (
-        "schema violation (extra field, bad sku)",
+        "Schema 违规（额外字段、无效 SKU）",
         json.dumps({
             "customer": "Acme",
             "line_items": [{"sku": "abc_123", "qty": 1, "unit_usd": 10, "discount": 0.1}],
@@ -163,42 +163,42 @@ TEST_CASES = [
         }),
     ),
     (
-        "schema violation (missing required)",
+        "Schema 违规（缺少必填字段）",
         json.dumps({"customer": "Acme", "line_items": []}),
     ),
     (
-        "refusal (model declined)",
-        "__REFUSAL__ The provided text is a song lyric, not an invoice.",
+        "拒绝（模型拒绝处理）",
+        "__REFUSAL__ 提供的文本是歌词，而不是发票。",
     ),
 ]
 
 
 def main() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 04 - STRUCTURED OUTPUT")
+    print("第 13 阶段第 04 课 - 结构化输出")
     print("=" * 72)
-    print("\nInvoice schema keys:",
+    print("\nInvoice schema 键：",
           list(INVOICE_SCHEMA["properties"].keys()))
     print()
 
     for name, raw in TEST_CASES:
         print("-" * 72)
-        print(f"TEST : {name}")
-        print(f"  raw: {raw[:80]}...")
+        print(f"测试：{name}")
+        print(f"  原始输出: {raw[:80]}...")
         result = process_model_output(raw, INVOICE_SCHEMA)
-        print(f"  kind: {result.kind}")
+        print(f"  类型: {result.kind}")
         if result.kind == "ok":
-            print(f"  payload customer = {result.payload['customer']}")
-            print(f"  total_usd        = {result.payload['total_usd']}")
+            print(f"  payload 中的 customer = {result.payload['customer']}")
+            print(f"  total_usd              = {result.payload['total_usd']}")
         elif result.kind == "refusal":
-            print(f"  reason: {result.payload}")
+            print(f"  原因: {result.payload}")
         else:
             for e in result.errors:
-                print(f"  error: {e}")
+                print(f"  错误: {e}")
         print()
 
-    print("summary: strict-mode eliminates parse_error and violation branches")
-    print("at the provider level; your code still handles refusal as typed outcome.")
+    print("摘要：strict-mode 消除了 parse_error 和违规分支")
+    print("在 provider 层级；你的代码仍需将拒绝作为类型化结果处理。")
 
 
 if __name__ == "__main__":
