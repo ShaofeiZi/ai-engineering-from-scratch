@@ -1,11 +1,10 @@
-"""GitHub issue-to-PR async cloud agent — dispatcher + budget + safety gates.
+"""GitHub issue-to-PR 异步云端智能体——分发器 + 预算 + 安全门禁。
 
-The hard architectural primitive is the dispatcher that enforces per-repo
-budgets, scoped GitHub App credentials, and a sandbox lifecycle that never
-lets the agent force-push or escape the repo scope. This scaffold implements
-the dispatcher, budget ledger, sandbox state machine, and verification gates.
+关键架构原语是分发器，它强制执行逐仓库预算、限定范围的 GitHub App 凭据，以及
+绝不允许智能体强制推送或逃离仓库范围的沙箱生命周期。此脚手架实现分发器、
+预算台账、沙箱状态机和验证门禁。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ from enum import Enum, auto
 
 
 # ---------------------------------------------------------------------------
-# webhook -> task enqueue  --  label trigger and queue contract
+# webhook -> 任务入队——标签触发器与队列契约
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -31,7 +30,7 @@ class Task:
 
 
 # ---------------------------------------------------------------------------
-# budget ledger  --  per-repo per-day $ and PR-count caps
+# 预算台账——逐仓库每日美元和 PR 数量上限
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -45,11 +44,10 @@ class BudgetLedger:
     def permit(self, repo: str, estimated_cost: float) -> tuple[bool, str]:
         if estimated_cost > self.per_task_dollar_cap:
             return False, f"task estimate ${estimated_cost:.2f} > cap ${self.per_task_dollar_cap}"
-        # Reserve against the worst-case per-task spend, not the estimate. The
-        # agent loop in ``run_agent`` is allowed to run up to ``per_task_dollar_cap``
-        # before tripping ``dollar_cap``, so admitting on ``estimated`` lets a
-        # burst of cap-hitting runs overrun the daily ceiling. ``record`` still
-        # writes the actual spend so unused reservation auto-reconciles.
+        # 按每个任务的最坏情况支出预留，而不是按估算值预留。``run_agent`` 中的
+        # 智能体循环在触发 ``dollar_cap`` 前最多可使用 ``per_task_dollar_cap``，
+        # 因此若按 ``estimated`` 准入，一批达到上限的运行会突破每日上限。``record``
+        # 仍会写入实际支出，因此未使用的预留会自动核销。
         worst_case = self.per_task_dollar_cap
         if self.spent_today[repo] + worst_case > self.daily_dollar_cap:
             return False, f"daily $ cap for {repo} would be exceeded"
@@ -64,7 +62,7 @@ class BudgetLedger:
 
 
 # ---------------------------------------------------------------------------
-# GitHub App identity  --  short-lived installation token, scoped permissions
+# GitHub App 身份——短期 installation token、限定范围的权限
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -81,7 +79,7 @@ class InstallationToken:
                                 "contents": "rw", "workflows": "r"})
 
     def can(self, action: str) -> bool:
-        # hard policy: never force-push
+        # 硬策略：绝不强制推送
         if action == "force_push":
             return False
         if action.startswith("write:main"):
@@ -90,7 +88,7 @@ class InstallationToken:
 
 
 # ---------------------------------------------------------------------------
-# sandbox state machine  --  CLONE -> INFER -> AGENT -> VERIFY -> PR
+# 沙箱状态机——CLONE -> INFER -> AGENT -> VERIFY -> PR
 # ---------------------------------------------------------------------------
 
 class SState(Enum):
@@ -118,7 +116,7 @@ class SandboxRun:
 
 
 # ---------------------------------------------------------------------------
-# agent loop stub  --  uses per-turn probability weighted by difficulty
+# 智能体循环 stub——使用按难度加权的逐轮概率
 # ---------------------------------------------------------------------------
 
 def run_agent(run: SandboxRun, difficulty: float, rng: random.Random,
@@ -170,8 +168,8 @@ def run_verify(run: SandboxRun, difficulty: float, rng: random.Random) -> None:
 
 
 def open_pr(run: SandboxRun, token: InstallationToken) -> None:
-    # Explicit runtime checks -- never use `assert` for a safety gate. `python -O`
-    # strips asserts, which would let a denied or expired token still open a PR.
+    # 使用显式运行时检查——安全门禁绝不能使用 `assert`。`python -O` 会移除断言，
+    # 从而让被拒绝或已过期的 token 仍可创建 PR。
     if time.time() >= token.expires_at:
         run.failure = "token_expired"
         run.state = SState.FAILED
@@ -185,7 +183,7 @@ def open_pr(run: SandboxRun, token: InstallationToken) -> None:
 
 
 # ---------------------------------------------------------------------------
-# dispatcher  --  pulls tasks, enforces budget, runs the sandbox flow
+# 分发器——拉取任务、强制预算并运行沙箱流程
 # ---------------------------------------------------------------------------
 
 def dispatch(task: Task, ledger: BudgetLedger, rng: random.Random) -> SandboxRun:
@@ -213,7 +211,7 @@ def dispatch(task: Task, ledger: BudgetLedger, rng: random.Random) -> SandboxRun
 
 
 # ---------------------------------------------------------------------------
-# demo  --  run 20 issues across 3 repos; some will hit budget cap
+# 演示——在 3 个仓库运行 20 个 issue；部分任务会触及预算上限
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -230,11 +228,11 @@ def main() -> None:
 
     opened = sum(1 for r in runs if r.pr_opened)
     failed = sum(1 for r in runs if r.state == SState.FAILED)
-    print(f"=== dispatch result ({len(runs)} tasks) ===")
-    print(f"PRs opened : {opened}")
-    print(f"failed     : {failed}")
+    print(f"=== 分发结果（{len(runs)} 个任务）===")
+    print(f"已创建 PR：{opened}")
+    print(f"失败      ：{failed}")
 
-    print("\nfailure reasons:")
+    print("\n失败原因：")
     reasons = defaultdict(int)
     for r in runs:
         if r.failure:
@@ -242,15 +240,15 @@ def main() -> None:
     for reason, n in sorted(reasons.items(), key=lambda x: -x[1]):
         print(f"  {reason:24s} {n}")
 
-    print("\nbudget summary:")
+    print("\n预算摘要：")
     for repo in repos:
-        print(f"  {repo:20s} spent=${ledger.spent_today[repo]:.2f}  "
+        print(f"  {repo:20s} 已花费=${ledger.spent_today[repo]:.2f}  "
               f"PRs={ledger.prs_today[repo]}")
 
     if opened:
         mean_cost = sum(r.dollars for r in runs if r.pr_opened) / opened
         mean_turns = sum(r.turns for r in runs if r.pr_opened) / opened
-        print(f"\npass set: mean $/PR = ${mean_cost:.2f}  mean turns = {mean_turns:.1f}")
+        print(f"\n通过集合：每个 PR 平均成本 = ${mean_cost:.2f}  平均轮次 = {mean_turns:.1f}")
 
 
 if __name__ == "__main__":
