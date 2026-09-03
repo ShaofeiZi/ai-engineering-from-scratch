@@ -1,4 +1,4 @@
-"""Unit tests for the prompt injection detector."""
+"""提示词注入检测器的单元测试。"""
 
 from __future__ import annotations
 

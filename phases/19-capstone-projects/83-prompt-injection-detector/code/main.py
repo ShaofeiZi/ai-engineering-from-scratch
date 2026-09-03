@@ -1,10 +1,10 @@
-"""Prompt injection detector with normalize -> substring -> regex pipeline.
+"""Prompt injection 检测器，采用 归一化 -> 子串匹配 -> 正则匹配 的流水线。
 
-Reads the taxonomy artifact from lesson 82, runs the layered detector across
-every fixture, runs it across a benign corpus, and writes a per-category
-precision/recall report to outputs/detector_report.json.
+读取课程 82 的分类体系产物，对每条样本运行分层检测器，
+再在良性语料上运行，并将按类别划分的
+precision/recall 报告写入 outputs/detector_report.json。
 
-Run: python3 main.py
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -132,7 +132,7 @@ class Detector:
                 compiled = re.compile(str(r["regex"]), re.IGNORECASE | re.DOTALL)
                 self.regex_rules.append({**r, "_compiled": compiled})
             else:
-                raise ValueError(f"rule {r.get('name')} missing substring or regex")
+                raise ValueError(f"规则 {r.get('name')} 缺少 substring 或 regex")
 
     def analyze(self, prompt: str) -> Verdict:
         normalized = normalize(prompt)
@@ -162,7 +162,7 @@ class Detector:
 def load_taxonomy() -> list[dict[str, object]]:
     if not TAXONOMY_PATH.exists():
         raise FileNotFoundError(
-            f"taxonomy artifact missing at {TAXONOMY_PATH}; run lesson 82 main.py first"
+            f"分类体系产物在 {TAXONOMY_PATH} 缺失；请先运行课程 82 的 main.py"
         )
     payload = json.loads(TAXONOMY_PATH.read_text())
     return list(payload["fixtures"])
@@ -233,17 +233,17 @@ def demo() -> int:
     benign = load_benign()
     detector = Detector()
     report = evaluate(detector, fixtures, benign)
-    print("Prompt injection detector evaluation")
-    print(f"  total fixtures:    {report['total_fixtures']}")
-    print(f"  total correct:     {report['total_correct']}")
-    print(f"  accuracy:          {report['accuracy']:.3f}")
-    print(f"  benign pass thru:  {report['benign_pass_through']} / {report['benign_total']}")
+    print("Prompt injection 检测器评估")
+    print(f"  样本总数:          {report['total_fixtures']}")
+    print(f"  正确数:            {report['total_correct']}")
+    print(f"  准确率:            {report['accuracy']:.3f}")
+    print(f"  良性放行数:        {report['benign_pass_through']} / {report['benign_total']}")
     print()
-    print("  per category precision / recall / f1:")
+    print("  各类别 precision / recall / f1：")
     for cat, m in report["per_category"].items():
         print(f"    {cat:22} p={m['precision']:.2f} r={m['recall']:.2f} f1={m['f1']:.2f}  (tp={m['tp']} fp={m['fp']} fn={m['fn']})")
     out = write_report(report)
-    print(f"\n  artifact written to {out}")
+    print(f"\n  产物已写入 {out}")
     return 0
 
 

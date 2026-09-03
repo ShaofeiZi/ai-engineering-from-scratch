@@ -1,6 +1,6 @@
-"""Detector rules as data. Each rule has a category, a base score, and one of
-substring or regex. Substring rules match case-insensitive on the normalized
-text. Regex rules use re.IGNORECASE."""
+"""作为数据的检测器规则。每条规则包含一个类别、一个基础分值，以及
+substring 或 regex 之一。Substring 规则在归一化后的文本上进行大小写不敏感匹配。
+Regex 规则使用 re.IGNORECASE。"""
 
 from __future__ import annotations
 
