@@ -44,17 +44,17 @@ def simulate_copy_accuracy(seq_len, context_dim=8, epochs=200, n_train=300, seed
 
 
 def main():
-    print("toy simulation of encoder-decoder bottleneck")
-    print("context vector has fixed size = 8 floats")
-    print("encoder decays state at rate 0.85 per step (simulates forgetting)")
+    print("编码器-解码器瓶颈的简化模拟")
+    print("上下文向量具有固定大小：8 个浮点数")
+    print("编码器状态每步按 0.85 的比率衰减（模拟遗忘）")
     print()
-    print(f"{'seq_len':>8}  {'accuracy':>10}")
+    print(f"{'序列长度':>8}  {'准确率':>10}")
     for length in [5, 10, 20, 40, 80]:
         acc = simulate_copy_accuracy(length)
         print(f"{length:>8}  {acc:>9.0%}")
     print()
-    print("real LSTMs decay more gracefully but hit the same ceiling.")
-    print("attention (lesson 10) removes the fixed-size constraint.")
+    print("真正的 LSTM 衰减更平缓，但仍会遇到相同上限。")
+    print("注意力机制（课程 10）消除了固定大小限制。")
 
 
 if __name__ == "__main__":
