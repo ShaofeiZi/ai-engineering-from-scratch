@@ -12,7 +12,7 @@ def sequential_bayes(prior, likelihood, false_positive_rate, num_tests):
     current = prior
     for i in range(num_tests):
         current = bayes(current, likelihood, false_positive_rate)
-        print(f"  After test {i + 1}: P(sick|positive) = {current:.6f}")
+        print(f"  第 {i + 1} 次检测后：P(患病|阳性) = {current:.6f}")
     return current
 
 
@@ -89,7 +89,7 @@ class NaiveBayes:
 
 def demo_bayes_theorem():
     print("=" * 60)
-    print("BAYES' THEOREM: MEDICAL TEST")
+    print("贝叶斯定理：医学检测")
     print("=" * 60)
 
     prior = 0.0001
@@ -97,19 +97,19 @@ def demo_bayes_theorem():
     fpr = 0.01
 
     posterior = bayes(prior, likelihood, fpr)
-    print(f"\n  Disease prevalence (prior):   {prior}")
-    print(f"  Test sensitivity (likelihood): {likelihood}")
-    print(f"  False positive rate:           {fpr}")
-    print(f"  P(sick | positive):            {posterior:.4f} ({posterior*100:.2f}%)")
-    print(f"\n  Despite 99% test accuracy, only {posterior*100:.2f}% of positives are truly sick.")
+    print(f"\n  疾病患病率（先验）：     {prior}")
+    print(f"  检测灵敏度（似然）：     {likelihood}")
+    print(f"  假阳性率：               {fpr}")
+    print(f"  P(患病 | 阳性)：         {posterior:.4f} ({posterior*100:.2f}%)")
+    print(f"\n  尽管检测准确率为 99%，阳性中真正患病的仅有 {posterior*100:.2f}%。")
 
-    print(f"\n  Sequential testing (2 positive tests):")
+    print(f"\n  序贯检测（2 次阳性结果）：")
     sequential_bayes(prior, likelihood, fpr, 2)
 
 
 def demo_spam_filter():
     print("\n" + "=" * 60)
-    print("BAYES' THEOREM: SPAM FILTER")
+    print("贝叶斯定理：垃圾邮件过滤")
     print("=" * 60)
 
     p_spam = 0.3
@@ -119,15 +119,15 @@ def demo_spam_filter():
     p_lottery = p_lottery_given_spam * p_spam + p_lottery_given_ham * (1 - p_spam)
     p_spam_given_lottery = p_lottery_given_spam * p_spam / p_lottery
 
-    print(f"\n  P(spam):                 {p_spam}")
-    print(f"  P('lottery' | spam):     {p_lottery_given_spam}")
-    print(f"  P('lottery' | not spam): {p_lottery_given_ham}")
-    print(f"  P(spam | 'lottery'):     {p_spam_given_lottery:.4f} ({p_spam_given_lottery*100:.1f}%)")
+    print(f"\n  P(垃圾邮件)：              {p_spam}")
+    print(f"  P('lottery' | 垃圾邮件)： {p_lottery_given_spam}")
+    print(f"  P('lottery' | 非垃圾)：    {p_lottery_given_ham}")
+    print(f"  P(垃圾邮件 | 'lottery')：   {p_spam_given_lottery:.4f} ({p_spam_given_lottery*100:.1f}%)")
 
 
 def demo_naive_bayes():
     print("\n" + "=" * 60)
-    print("NAIVE BAYES SPAM CLASSIFIER")
+    print("朴素贝叶斯垃圾邮件分类器")
     print("=" * 60)
 
     train_docs = [
@@ -153,8 +153,8 @@ def demo_naive_bayes():
     classifier = NaiveBayes(smoothing=1.0)
     classifier.train(train_docs, train_labels)
 
-    print(f"\n  Training: {len(train_docs)} documents ({sum(1 for l in train_labels if l == 'spam')} spam, {sum(1 for l in train_labels if l == 'ham')} ham)")
-    print(f"  Vocabulary size: {len(classifier.vocab)}")
+    print(f"\n  训练集：{len(train_docs)} 篇文档（{sum(1 for l in train_labels if l == 'spam')} 篇垃圾邮件，{sum(1 for l in train_labels if l == 'ham')} 篇正常邮件）")
+    print(f"  词表大小：{len(classifier.vocab)}")
 
     test_messages = [
         "free money waiting for you",
@@ -165,49 +165,49 @@ def demo_naive_bayes():
         "can we discuss the project update",
     ]
 
-    print("\n  Predictions:")
+    print("\n  预测结果：")
     for msg in test_messages:
         prediction = classifier.predict(msg)
         proba = classifier.predict_proba(msg)
         confidence = proba[prediction]
         print(f"    '{msg}'")
-        print(f"      -> {prediction} (confidence: {confidence:.3f})")
+        print(f"      -> {prediction}（置信度：{confidence:.3f}）")
 
-    print("\n  Top 5 spam indicator words:")
+    print("\n  最具代表性的 5 个垃圾邮件指示词：")
     for word, prob in classifier.top_words("spam", 5):
         print(f"    {word}: {prob:.4f}")
 
-    print("\n  Top 5 ham indicator words:")
+    print("\n  最具代表性的 5 个正常邮件指示词：")
     for word, prob in classifier.top_words("ham", 5):
         print(f"    {word}: {prob:.4f}")
 
 
 def demo_mle_vs_map():
     print("\n" + "=" * 60)
-    print("MLE vs MAP ESTIMATION")
+    print("MLE 与 MAP 估计")
     print("=" * 60)
 
     heads = 7
     total = 10
 
     mle = heads / total
-    print(f"\n  Observed: {heads} heads in {total} flips")
-    print(f"  MLE estimate: {mle:.4f}")
+    print(f"\n  观测结果：{total} 次抛掷中出现 {heads} 次正面")
+    print(f"  MLE 估计：{mle:.4f}")
 
     alpha = 2
     beta = 2
     map_estimate = (heads + alpha - 1) / (total + alpha + beta - 2)
-    print(f"\n  Beta({alpha},{beta}) prior (mild bias toward 0.5)")
-    print(f"  MAP estimate: {map_estimate:.4f}")
+    print(f"\n  Beta({alpha},{beta}) 先验（对 0.5 的弱偏向）")
+    print(f"  MAP 估计：{map_estimate:.4f}")
 
     alpha = 10
     beta = 10
     map_strong = (heads + alpha - 1) / (total + alpha + beta - 2)
-    print(f"\n  Beta({alpha},{beta}) prior (strong bias toward 0.5)")
-    print(f"  MAP estimate: {map_strong:.4f}")
+    print(f"\n  Beta({alpha},{beta}) 先验（对 0.5 的强偏向）")
+    print(f"  MAP 估计：{map_strong:.4f}")
 
-    print("\n  Stronger prior pulls the estimate toward 0.5 (prior mean).")
-    print("  This is the same effect as L2 regularization pulling weights toward zero.")
+    print("\n  先验越强，估计值越被拉向 0.5（先验均值）。")
+    print("  这与 L2 正则化将权重拉向零的效果相同。")
 
 
 def beta_update(alpha, beta_param, successes, failures):
@@ -216,46 +216,46 @@ def beta_update(alpha, beta_param, successes, failures):
 
 def sequential_update_demo():
     print("\n" + "=" * 60)
-    print("SEQUENTIAL BAYESIAN UPDATING")
+    print("序贯贝叶斯更新")
     print("=" * 60)
 
     alpha, beta_param = 1, 1
-    print(f"\n  Starting prior: Beta({alpha}, {beta_param})")
-    print(f"  Prior mean: {alpha / (alpha + beta_param):.4f}")
+    print(f"\n  初始先验：Beta({alpha}, {beta_param})")
+    print(f"  先验均值：{alpha / (alpha + beta_param):.4f}")
 
     batches = [
-        (7, 3, "Day 1: 7 heads, 3 tails"),
-        (5, 5, "Day 2: 5 heads, 5 tails"),
-        (3, 7, "Day 3: 3 heads, 7 tails"),
-        (6, 4, "Day 4: 6 heads, 4 tails"),
+        (7, 3, "第 1 天：7 次正面，3 次反面"),
+        (5, 5, "第 2 天：5 次正面，5 次反面"),
+        (3, 7, "第 3 天：3 次正面，7 次反面"),
+        (6, 4, "第 4 天：6 次正面，4 次反面"),
     ]
 
     for successes, failures, description in batches:
         alpha, beta_param = beta_update(alpha, beta_param, successes, failures)
         mean = alpha / (alpha + beta_param)
         print(f"\n  {description}")
-        print(f"  Posterior: Beta({alpha}, {beta_param})")
-        print(f"  Posterior mean: {mean:.4f}")
+        print(f"  后验：Beta({alpha}, {beta_param})")
+        print(f"  后验均值：{mean:.4f}")
         variance = (alpha * beta_param) / ((alpha + beta_param) ** 2 * (alpha + beta_param + 1))
         std = variance ** 0.5
-        print(f"  Posterior std:  {std:.4f}")
+        print(f"  后验标准差：{std:.4f}")
 
-    print(f"\n  Final belief after all data: Beta({alpha}, {beta_param})")
-    print(f"  Mean = {alpha / (alpha + beta_param):.4f}")
+    print(f"\n  所有数据后的最终信念：Beta({alpha}, {beta_param})")
+    print(f"  均值 = {alpha / (alpha + beta_param):.4f}")
 
     alpha_batch, beta_batch = 1, 1
     total_s = sum(s for s, _, _ in batches)
     total_f = sum(f for _, f, _ in batches)
     alpha_batch += total_s
     beta_batch += total_f
-    print(f"\n  Batch update (all data at once): Beta({alpha_batch}, {beta_batch})")
-    print(f"  Mean = {alpha_batch / (alpha_batch + beta_batch):.4f}")
-    print(f"  Sequential and batch give the same result: {alpha == alpha_batch and beta_param == beta_batch}")
+    print(f"\n  批量更新（一次性使用所有数据）：Beta({alpha_batch}, {beta_batch})")
+    print(f"  均值 = {alpha_batch / (alpha_batch + beta_batch):.4f}")
+    print(f"  序贯与批量结果一致：{alpha == alpha_batch and beta_param == beta_batch}")
 
 
 def ab_test_demo():
     print("\n" + "=" * 60)
-    print("BAYESIAN A/B TESTING")
+    print("贝叶斯 A/B 测试")
     print("=" * 60)
 
     import random as rng
@@ -267,10 +267,10 @@ def ab_test_demo():
     a_alpha, a_beta = 1 + a_clicks, 1 + (a_views - a_clicks)
     b_alpha, b_beta = 1 + b_clicks, 1 + (b_views - b_clicks)
 
-    print(f"\n  Variant A: {a_clicks}/{a_views} clicks")
-    print(f"  Variant B: {b_clicks}/{b_views} clicks")
-    print(f"\n  Posterior A: Beta({a_alpha}, {a_beta}), mean = {a_alpha / (a_alpha + a_beta):.4f}")
-    print(f"  Posterior B: Beta({b_alpha}, {b_beta}), mean = {b_alpha / (b_alpha + b_beta):.4f}")
+    print(f"\n  方案 A：{a_clicks}/{a_views} 次点击")
+    print(f"  方案 B：{b_clicks}/{b_views} 次点击")
+    print(f"\n  后验 A：Beta({a_alpha}, {a_beta})，均值 = {a_alpha / (a_alpha + a_beta):.4f}")
+    print(f"  后验 B：Beta({b_alpha}, {b_beta})，均值 = {b_alpha / (b_alpha + b_beta):.4f}")
 
     n_samples = 100000
     b_wins = 0
@@ -281,17 +281,17 @@ def ab_test_demo():
             b_wins += 1
 
     p_b_better = b_wins / n_samples
-    print(f"\n  Monte Carlo samples: {n_samples}")
+    print(f"\n  蒙特卡洛采样次数：{n_samples}")
     print(f"  P(B > A) = {p_b_better:.4f}")
 
     if p_b_better > 0.95:
-        print("  Decision: Ship variant B")
+        print("  决策：发布方案 B")
     elif p_b_better < 0.05:
-        print("  Decision: Ship variant A")
+        print("  决策：发布方案 A")
     else:
-        print("  Decision: Keep collecting data")
+        print("  决策：继续收集数据")
 
-    print("\n  Lift estimate:")
+    print("\n  提升估计：")
     lifts = []
     rng.seed(42)
     for _ in range(n_samples):
@@ -303,8 +303,8 @@ def ab_test_demo():
     median_lift = lifts[len(lifts) // 2]
     low = lifts[int(len(lifts) * 0.05)]
     high = lifts[int(len(lifts) * 0.95)]
-    print(f"  Median lift: {median_lift:.1%}")
-    print(f"  90% credible interval: [{low:.1%}, {high:.1%}]")
+    print(f"  中位提升：{median_lift:.1%}")
+    print(f"  90% 置信区间：[{low:.1%}, {high:.1%}]")
 
 
 def _beta_sample(alpha, beta_param, rng_module):
@@ -317,7 +317,7 @@ def _beta_sample(alpha, beta_param, rng_module):
 
 def _gamma_sample(shape, rng_module):
     if shape <= 0:
-        raise ValueError("Gamma shape parameter must be positive")
+        raise ValueError("Gamma 分布的形状参数必须为正数")
     if shape < 1:
         return _gamma_sample(shape + 1, rng_module) * rng_module.random() ** (1.0 / shape)
 
