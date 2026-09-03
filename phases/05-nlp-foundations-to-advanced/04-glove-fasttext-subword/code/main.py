@@ -60,21 +60,21 @@ def apply_bpe(word, merges):
 
 
 def main():
-    print("=== FastText n-grams ===")
+    print("=== FastText n-gram ===")
     for word in ["where", "whereupon"]:
         grams = sorted(char_ngrams(word))
-        print(f"{word:12s} {len(grams)} grams, e.g., {grams[:5]}")
+        print(f"{word:12s} {len(grams)} 个 n-gram，例如 {grams[:5]}")
     shared = char_ngrams("where") & char_ngrams("whereupon")
-    print(f"shared n-grams between where / whereupon: {len(shared)}")
+    print(f"where / whereupon 共有的 n-gram 数：{len(shared)}")
     print()
 
-    print("=== BPE on toy corpus ===")
+    print("=== 简化语料库上的 BPE ===")
     corpus = Counter({
         "low": 5, "lower": 2, "newest": 6, "widest": 3,
         "lowest": 4, "newer": 2,
     })
     merges = learn_bpe(corpus, k_merges=10)
-    print(f"learned {len(merges)} merges:")
+    print(f"已学习 {len(merges)} 次合并：")
     for a, b in merges:
         print(f"  {a!r} + {b!r} -> {a + b!r}")
     print()
