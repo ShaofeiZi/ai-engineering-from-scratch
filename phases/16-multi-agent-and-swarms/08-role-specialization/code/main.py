@@ -1,9 +1,9 @@
-"""Role specialization: planner, executor, critic, verifier.
+"""角色专业化：planner、executor、critic、verifier。
 
-Builds a small Python function. Critic (LLM-simulated) and verifier (code)
-together catch bugs that either alone would miss.
+构建一个小型 Python 函数。critic（由 LLM 模拟）和 verifier（代码）协同工作，
+捕获任何一方单独工作时会漏掉的缺陷。
 
-Run twice: once with correct executor output, once with off-spec output.
+运行两次：一次使用正确的 executor 输出，一次使用不符合规格的输出。
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ class VerifierReport:
 
 
 def planner(user_wish: str) -> Spec:
-    """Produces a structured spec from a high-level wish."""
+    """根据高层次愿望生成结构化规格。"""
     return Spec(
         task_name="add_two",
         signature="add_two(a: int, b: int) -> int",
@@ -54,78 +54,78 @@ def executor_buggy(spec: Spec) -> Artifact:
 
 
 def critic(spec: Spec, art: Artifact) -> CriticReport:
-    """LLM-style review. Pattern-matches against common issues but can be fooled
-    by plausible-looking code that is semantically wrong."""
+    """LLM 风格的审查。通过模式匹配发现常见问题，但可能被看似合理、
+    实际语义错误的代码骗过。"""
     notes: list[str] = []
     if "def" not in art.code:
-        notes.append("missing def statement")
+        notes.append("缺少 def 语句")
     if "return" not in art.code:
-        notes.append("missing return")
+        notes.append("缺少 return")
     if spec.task_name not in art.code:
-        notes.append(f"function name does not match spec '{spec.task_name}'")
+        notes.append(f"函数名与规格“{spec.task_name}”不匹配")
     approved = not notes
     return CriticReport(approved=approved, notes=notes)
 
 
 def verifier(spec: Spec, art: Artifact) -> VerifierReport:
-    """Run the code in a sandbox namespace and execute the tests. Deterministic."""
+    """在沙箱命名空间中运行代码并执行测试。结果是确定性的。"""
     ns: dict = {}
     try:
         exec(art.code, ns, ns)
     except Exception as e:
-        return VerifierReport(passed=False, failures=[f"exec error: {e}"])
+        return VerifierReport(passed=False, failures=[f"exec 错误：{e}"])
     fn = ns.get(spec.task_name)
     if not callable(fn):
-        return VerifierReport(passed=False, failures=[f"no callable '{spec.task_name}' produced"])
+        return VerifierReport(passed=False, failures=[f"未生成可调用对象“{spec.task_name}”"])
     failures: list[str] = []
     for args, expected in spec.tests:
         try:
             got = fn(*args)
         except Exception as e:
-            failures.append(f"call {args} raised {e}")
+            failures.append(f"调用 {args} 时抛出 {e}")
             continue
         if got != expected:
-            failures.append(f"call {args}: expected {expected}, got {got}")
+            failures.append(f"调用 {args}：预期 {expected}，实际得到 {got}")
     return VerifierReport(passed=not failures, failures=failures)
 
 
 def run_pipeline(user_wish: str, executor, label: str) -> None:
     print(f"\n=== {label} ===")
     spec = planner(user_wish)
-    print(f"  [planner] spec: {spec.signature} with {len(spec.tests)} tests")
+    print(f"  [planner] 规格：{spec.signature}，包含 {len(spec.tests)} 个测试")
     art = executor(spec)
-    print(f"  [executor] produced:\n    {art.code.replace(chr(10), chr(10)+'    ')}")
+    print(f"  [executor] 生成内容：\n    {art.code.replace(chr(10), chr(10)+'    ')}")
     crep = critic(spec, art)
-    print(f"  [critic] approved={crep.approved}, notes={crep.notes}")
+    print(f"  [critic] approved={crep.approved}，笔记={crep.notes}")
     vrep = verifier(spec, art)
-    print(f"  [verifier] passed={vrep.passed}, failures={vrep.failures}")
+    print(f"  [verifier] passed={vrep.passed}，失败项={vrep.failures}")
     if crep.approved and vrep.passed:
-        print("  RESULT: ship it.")
+        print("  结果：可以发布。")
     elif not vrep.passed:
-        print("  RESULT: verifier blocked ship (deterministic catch).")
+        print("  结果：verifier 阻止发布（确定性捕获）。")
     elif not crep.approved:
-        print("  RESULT: critic blocked ship (subjective catch).")
+        print("  结果：critic 阻止发布（主观判断捕获）。")
 
 
 def main() -> None:
-    print("Role specialization pipeline — planner, executor, critic, verifier")
+    print("角色专业化流水线 — planner、executor、critic、verifier")
     print("-" * 70)
 
     run_pipeline(
-        "A function that returns the sum of two integers.",
+        "返回两个整数之和的函数。",
         executor_correct,
-        "Correct executor output",
+        "正确的 executor 输出",
     )
 
     run_pipeline(
-        "A function that returns the sum of two integers.",
+        "返回两个整数之和的函数。",
         executor_buggy,
-        "Buggy executor output (looks plausible; fails runtime)",
+        "有缺陷的 executor 输出（看似合理，但运行时失败）",
     )
 
-    print("\nKey insight: the critic passes the buggy code because it looks fine.")
-    print("Only the verifier -- deterministic test execution -- catches the semantic bug.")
-    print("All-LLM pipelines (no verifier) would ship the bug. Classic MAST failure mode.")
+    print("\n关键洞察：critic 会放过有缺陷的代码，因为它看起来没有问题。")
+    print("只有 verifier，也就是确定性测试执行，才能捕获语义缺陷。")
+    print("全 LLM 流水线（没有 verifier）会把缺陷发布出去。这是典型的 MAST 失败模式。")
 
 
 if __name__ == "__main__":
