@@ -1,4 +1,4 @@
-"""Tests for the end-to-end eval runner."""
+"""端到端评估运行器的测试。"""
 
 from __future__ import annotations
 

@@ -1,10 +1,10 @@
-"""End-to-end eval runner: tasks -> adapter -> metric -> calibration -> leaderboard.
+"""端到端评测运行器：任务 -> 适配器 -> 指标 -> 校准 -> 排行榜。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- lesson 70 (task spec), 71 (metrics), 72 (code exec), 73 (calibration), 74 (leaderboard)
+概念参考：
+- ./docs/en.md（本课）
+- 第 70 课（任务规格）、71（指标）、72（代码执行）、73（校准）、74（排行榜）
 
-Stdlib + numpy. Run: python3 code/main.py
+仅依赖标准库 + numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -24,11 +24,11 @@ def _load_sibling(lesson_dir: str, module_name: str = "main"):
     here = os.path.dirname(os.path.abspath(__file__))
     sibling = os.path.normpath(os.path.join(here, "..", "..", lesson_dir, "code", "main.py"))
     if not os.path.isfile(sibling):
-        raise ImportError(f"sibling module not found: {sibling}")
+        raise ImportError(f"找不到兄弟模块：{sibling}")
     mod_name = f"_sibling_{lesson_dir.replace('-', '_')}"
     spec = importlib.util.spec_from_file_location(mod_name, sibling)
     if spec is None or spec.loader is None:
-        raise ImportError(f"could not build spec for {sibling}")
+        raise ImportError(f"无法为 {sibling} 构建模块规格")
     module = importlib.util.module_from_spec(spec)
     sys.modules[mod_name] = module
     spec.loader.exec_module(module)
@@ -342,7 +342,7 @@ def _load_fixture_tasks() -> list:
     good, _bad = spec_mod.load_fixtures(out_dir)
     tasks, errors = spec_mod.validate_file(good)
     if errors:
-        raise RuntimeError(f"fixture validation failed: {errors}")
+        raise RuntimeError(f"固件校验失败：{errors}")
     return tasks
 
 
@@ -360,23 +360,23 @@ def demo() -> int:
 
     print(render_markdown_block(report))
     print()
-    print(f"summary: {json.dumps(report.summary, indent=2)}")
+    print(f"摘要：{json.dumps(report.summary, indent=2)}")
     print()
-    print("pairwise differences (paired bootstrap):")
+    print("成对差异（配对自助法）：")
     for d in report.pairwise:
-        sig = "yes" if d["significant"] else "no"
-        print(f"  {d['model_a']} vs {d['model_b']}: diff={d['diff_mean']:+.3f}  ci=[{d['ci_lo']:+.3f},{d['ci_hi']:+.3f}]  significant={sig}")
+        sig = "是" if d["significant"] else "否"
+        print(f"  {d['model_a']} vs {d['model_b']}：差异={d['diff_mean']:+.3f}  置信区间=[{d['ci_lo']:+.3f},{d['ci_hi']:+.3f}]  显著={sig}")
 
     if not report.leaderboard:
-        print("ERROR: empty leaderboard")
+        print("错误：排行榜为空")
         return 1
     top = report.leaderboard[0]["model_id"]
     bot = report.leaderboard[-1]["model_id"]
     if top != "rule_based":
-        print(f"ERROR: expected rule_based at top, got {top}")
+        print(f"错误：预期 rule_based 居首，实际为 {top}")
         return 2
     if bot == "rule_based":
-        print(f"ERROR: rule_based should not be at the bottom")
+        print(f"错误：rule_based 不应排在末位")
         return 3
     return 0
 
