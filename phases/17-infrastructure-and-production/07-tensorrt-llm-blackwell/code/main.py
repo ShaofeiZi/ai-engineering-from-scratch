@@ -1,14 +1,13 @@
-"""Toy Blackwell + TRT-LLM economics calculator — stdlib Python.
+"""玩具版 Blackwell + TRT-LLM 经济性计算器，使用 Python stdlib。
 
-Computes HBM footprint and decode throughput for a model under three stacks:
+计算模型在以下技术栈中的 HBM 占用和 decode 吞吐量：
   H100 + BF16 + vLLM
   H100 + FP8 + vLLM
   B200 + NVFP4 weights / FP8 KV + TRT-LLM + Dynamo
   GB200 NVL72 + NVFP4 / FP8 + TRT-LLM + Dynamo
 
-The decode-throughput model is memory-bandwidth-limited: tokens/sec is
-proportional to HBM-bandwidth / bytes-per-token. Numbers are pedagogical
-illustrations of the shape of the 2026 Blackwell economics.
+decode 吞吐量模型受内存带宽限制：token/秒与 HBM 带宽 / 每 token 字节数成正比。
+这些数值仅用于展示 2026 年 Blackwell 经济性的趋势。
 """
 
 from __future__ import annotations
@@ -19,12 +18,12 @@ from dataclasses import dataclass
 @dataclass
 class Stack:
     name: str
-    hbm_gb: int               # per-GPU HBM
-    hbm_bw_tbs: float         # HBM bandwidth in TB/s
-    weight_bits: float        # effective weight precision
-    kv_bits: float            # KV cache precision
-    mtp_factor: float         # 1.0 = no draft, 1.8 = MTP on
-    disagg_factor: float      # additional throughput from disaggregation
+    hbm_gb: int               # 单块 GPU 的 HBM
+    hbm_bw_tbs: float         # HBM 带宽，单位 TB/s
+    weight_bits: float        # 有效权重精度
+    kv_bits: float            # KV cache 精度
+    mtp_factor: float         # 1.0 = 无 draft，1.8 = 启用 MTP
+    disagg_factor: float      # 分离式架构带来的额外吞吐量
     price_per_gpu_hour: float
 
 
@@ -39,8 +38,8 @@ STACKS = [
 
 def hbm_footprint_gb(params_b: float, active_b: float, seq_len: int, stack: Stack) -> tuple[float, float]:
     weight_gb = params_b * stack.weight_bits / 8
-    # KV cache for a typical head config: num_layers * 2 * num_kv_heads * head_dim * seq_len * bytes/element
-    # Use a representative 70B shape scaled by active param size
+    # 典型 head 配置的 KV cache：num_layers * 2 * num_kv_heads * head_dim * seq_len * 每元素字节数
+    # 使用一个有代表性的 70B 形状，再按激活参数规模缩放
     layers = 64 * (active_b / 35.0)**0.5
     kv_heads = 8
     head_dim = 128
@@ -49,8 +48,8 @@ def hbm_footprint_gb(params_b: float, active_b: float, seq_len: int, stack: Stac
 
 
 def decode_throughput(active_b: float, stack: Stack) -> float:
-    """Tokens per second per GPU, memory-bandwidth-limited.
-    Each decoded token reads `active_b * weight_bits/8` bytes of weights.
+    """每块 GPU 每秒处理的 token 数，受内存带宽限制。
+    每个 decode token 会读取 `active_b * weight_bits/8` 字节的权重。
     """
     bytes_per_token = active_b * 1e9 * stack.weight_bits / 8
     raw_tokens_per_s = stack.hbm_bw_tbs * 1e12 / bytes_per_token
@@ -64,39 +63,39 @@ def cost_per_million_tokens(active_b: float, stack: Stack) -> float:
 
 
 def print_stack(params_b: float, active_b: float, seq_len: int = 8192) -> None:
-    print(f"Model: {params_b}B total, {active_b}B active, {seq_len:,} tokens context")
+    print(f"模型：总计 {params_b}B 参数，激活 {active_b}B，上下文 {seq_len:,} token")
     print("-" * 90)
-    print(f"{'stack':40} {'W GB':>7} {'KV GB':>7} {'tok/s':>9} {'$/M tok':>10}")
+    print(f"{'技术栈':40} {'权重 GB':>7} {'KV GB':>7} {'token/秒':>9} {'$/M token':>10}")
     for s in STACKS:
         w, kv = hbm_footprint_gb(params_b, active_b, seq_len, s)
         tps = decode_throughput(active_b, s)
         cost = cost_per_million_tokens(active_b, s)
-        fits = "" if (w + kv) <= s.hbm_gb else "  (multi-GPU)"
+        fits = "" if (w + kv) <= s.hbm_gb else "  （多 GPU）"
         print(f"{s.name:40} {w:7.1f} {kv:7.2f} {tps:9.0f} {cost:10.4f}{fits}")
     print()
 
 
 def main() -> None:
     print("=" * 90)
-    print("TOY BLACKWELL + TRT-LLM ECONOMICS — memory-bandwidth-limited decode")
+    print("玩具版 BLACKWELL + TRT-LLM 经济性 — 受内存带宽限制的 decode")
     print("=" * 90)
     print()
 
-    print_stack(70, 70)    # dense 70B
-    print_stack(120, 36)   # GPT-OSS-120B MoE (30% active)
-    print_stack(405, 405)  # Llama 3.1 405B dense
-    print_stack(671, 37)   # DeepSeek-V3 scale MoE
+    print_stack(70, 70)    # 70B 稠密模型
+    print_stack(120, 36)   # GPT-OSS-120B MoE（30% 激活）
+    print_stack(405, 405)  # Llama 3.1 405B 稠密模型
+    print_stack(671, 37)   # DeepSeek-V3 规模的 MoE
 
     print("=" * 90)
-    print("KEY FINDING")
+    print("关键发现")
     print("-" * 90)
-    print("  The 7x cost gap stacks from four sources:")
-    print("    1. HBM bandwidth (H100 3.35 TB/s vs B200 8.0 TB/s) ~2.4x")
-    print("    2. NVFP4 weights (half the bytes per token)       ~2.0x")
-    print("    3. MTP draft (~1.8x on accepted tokens)           ~1.8x")
-    print("    4. Disaggregation (Dynamo: ~1.6-2.5x)             ~2.0x")
-    print("  Product ~14x raw, closer to 7x after overhead and real-traffic alpha.")
-    print("  Validate NVFP4 quality before migrating reasoning-heavy workloads.")
+    print("  7 倍成本差距由四个来源叠加而成：")
+    print("    1. HBM 带宽（H100 3.35 TB/s，B200 8.0 TB/s）约 2.4x")
+    print("    2. NVFP4 权重（每 token 字节数减半）             约 2.0x")
+    print("    3. MTP draft（对已接受 token 约 1.8x）           约 1.8x")
+    print("    4. 分离式架构（Dynamo：约 1.6-2.5x）            约 2.0x")
+    print("  原始乘积约 14x；计入开销和真实流量 alpha 后更接近 7x。")
+    print("  迁移推理密集型工作负载前，请先验证 NVFP4 的质量。")
 
 
 if __name__ == "__main__":
