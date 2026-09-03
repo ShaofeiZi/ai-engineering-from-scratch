@@ -1,4 +1,4 @@
-"""Tests for task spec validator, post-process, fixture loader."""
+"""任务规范校验器、后处理与夹具加载器的测试。"""
 
 from __future__ import annotations
 

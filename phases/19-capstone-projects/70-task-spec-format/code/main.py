@@ -1,10 +1,10 @@
-"""Task spec format: JSONL schema, validator, post-process, fixture loader.
+"""任务规格格式：JSONL schema、校验器、后处理、测试夹具加载器。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 Track B foundations
+概念参考：
+- ./docs/en.md（本课）
+- Phase 19 Track B 基础
 
-Stdlib only. Run: python3 code/main.py
+仅依赖标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -259,7 +259,7 @@ def post_process(text: str, rule: str) -> str:
             if line.strip():
                 return line.strip()
         return ""
-    raise ValueError(f"unknown post_process rule: {rule}")
+    raise ValueError(f"未知的 post_process 规则：{rule}")
 
 
 def fixture_tasks() -> list[dict]:
@@ -393,16 +393,16 @@ def demo() -> int:
     out_dir = tempfile.mkdtemp(prefix="aie_l70_")
     good, bad = load_fixtures(out_dir)
     ok_tasks, ok_errors = validate_file(good)
-    print(f"good fixture: validated={len(ok_tasks)} errors={len(ok_errors)}")
+    print(f"合法夹具：validated={len(ok_tasks)} errors={len(ok_errors)}")
     bad_tasks, bad_errors = validate_file(bad)
-    print(f"bad fixture: validated={len(bad_tasks)} errors={len(bad_errors)}")
+    print(f"非法夹具：validated={len(bad_tasks)} errors={len(bad_errors)}")
     for err in bad_errors[:5]:
         print(f"  {err.to_dict()}")
     if ok_tasks:
         sample = ok_tasks[0]
         rendered = render_prompt(sample)
         pp = post_process("  4  \n", "strip_whitespace")
-        print(f"sample render len={len(rendered)} pp={pp!r}")
+        print(f"样例渲染 len={len(rendered)} pp={pp!r}")
     if ok_errors:
         return 1
     if len(bad_errors) != len(bad_fixture_tasks()):
