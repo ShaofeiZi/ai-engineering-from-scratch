@@ -1,11 +1,11 @@
-"""Agent harness loop contract — deterministic state machine, hooks, pull points.
+"""智能体运行框架循环契约——确定性状态机、hook 与拉取点。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 14 lesson 01 (agent loop fundamentals)
-- Phase 13 lesson 02 (tool protocols overview)
+概念参考：
+- ./docs/en.md（本课程）
+- 阶段 14 课程 01（智能体循环基础）
+- 阶段 13 课程 02（工具协议概览）
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ EVENT_TYPES = (
 
 
 class HookAbort(Exception):
-    """Raised by a hook to cancel the in-flight turn."""
+    """由 hook 抛出，用于取消正在执行的轮次。"""
 
 
 @dataclass
@@ -103,7 +103,7 @@ class Step:
 
 @dataclass
 class PullRequest:
-    """Returned from run()/resume() when the loop yields control."""
+    """循环让出控制权时由 run()/resume() 返回。"""
     reason: str
     state: State
     payload: dict
@@ -137,7 +137,7 @@ Planner = Callable[[str, list[Step]], list[Step]]
 
 
 def _default_planner(goal: str, history: list[Step]) -> list[Step]:
-    """Deterministic stand-in planner. Returns a fixed three-step plan."""
+    """确定性的替代规划器。返回固定的三步计划。"""
     if history:
         return []
     return [
@@ -150,7 +150,7 @@ def _default_planner(goal: str, history: list[Step]) -> list[Step]:
 
 
 class HarnessLoop:
-    """Six-state deterministic loop with hook topics and event stream."""
+    """包含 hook topic 和事件流的六状态确定性循环。"""
 
     def __init__(
         self,
@@ -236,7 +236,7 @@ class HarnessLoop:
             return self._step()
         if self.state == State.AWAITING_TOOL:
             if payload is None:
-                raise ValueError("resume from AWAITING_TOOL requires a payload")
+                raise ValueError("从 AWAITING_TOOL 恢复时需要 payload")
             current = self._plan[self._cursor]
             if "error" in payload:
                 current.error = str(payload["error"])
