@@ -1,10 +1,10 @@
-"""Handoff-driven orchestration -- OpenAI Swarm in miniature.
+"""Handoff 驱动的编排：OpenAI Swarm 的微型实现。
 
-Two primitives:
+两个原语：
   - Agent(name, instructions, functions)
-  - handoff = a function returning an Agent
+  - handoff = 返回 Agent 的函数
 
-Run loop detects Agent-valued returns and switches the active agent.
+运行循环会检测返回值是否为 Agent，并切换当前活动的 Agent。
 """
 from __future__ import annotations
 
@@ -38,40 +38,40 @@ def triage_agent_factory() -> Agent:
 
     return Agent(
         name="triage",
-        instructions="Route user to: refunds, sales, or support.",
+        instructions="将用户路由到退款、销售或技术支持。",
         functions=[transfer_to_refunds, transfer_to_sales, transfer_to_support],
     )
 
 
 def refund_agent_factory() -> Agent:
     def process_refund(order_id: str) -> str:
-        return f"Refund processed for order {order_id}."
+        return f"订单 {order_id} 的退款已处理。"
 
     return Agent(
         name="refund",
-        instructions="Handle refund requests.",
+        instructions="处理退款请求。",
         functions=[process_refund],
     )
 
 
 def sales_agent_factory() -> Agent:
     def quote_product(product: str) -> str:
-        return f"Quote for {product}: $99/mo."
+        return f"{product} 的报价：每月 $99。"
 
     return Agent(
         name="sales",
-        instructions="Handle sales inquiries.",
+        instructions="处理销售咨询。",
         functions=[quote_product],
     )
 
 
 def support_agent_factory() -> Agent:
     def open_ticket(issue: str) -> str:
-        return f"Ticket opened for: {issue}"
+        return f"已为以下问题创建工单：{issue}"
 
     return Agent(
         name="support",
-        instructions="Handle technical support.",
+        instructions="处理技术支持。",
         functions=[open_ticket],
     )
 
@@ -83,18 +83,17 @@ support_agent = support_agent_factory()
 
 
 def scripted_router(current: Agent, user_msg: str) -> Union[str, Agent]:
-    """Stands in for an LLM that reads the user message and the current agent's
-    system prompt, then either emits text or calls a tool (which may return
-    another Agent). In real Swarm this is an LLM tool call."""
+    """代替真实 LLM：它读取用户消息和当前 Agent 的 system prompt，随后输出文本
+    或调用工具（工具可能返回另一个 Agent）。在真实 Swarm 中，这是一次 LLM 工具调用。"""
     text = user_msg.lower()
     if current.name == "triage":
-        if "refund" in text or "money back" in text:
+        if "refund" in text or "money back" in text or "退款" in text:
             return next(f for f in current.functions if f.__name__ == "transfer_to_refunds")()
-        if "buy" in text or "price" in text:
+        if "buy" in text or "price" in text or "购买" in text or "价格" in text:
             return next(f for f in current.functions if f.__name__ == "transfer_to_sales")()
-        if "broken" in text or "bug" in text:
+        if "broken" in text or "bug" in text or "故障" in text:
             return next(f for f in current.functions if f.__name__ == "transfer_to_support")()
-        return "Could you tell me what you need help with?"
+        return "请告诉我您需要哪方面的帮助？"
     if current.name == "refund":
         order = "42"
         for word in user_msg.split():
@@ -103,11 +102,11 @@ def scripted_router(current: Agent, user_msg: str) -> Union[str, Agent]:
                 break
         return next(f for f in current.functions if f.__name__ == "process_refund")(order)
     if current.name == "sales":
-        product = "enterprise plan"
+        product = "企业套餐"
         return next(f for f in current.functions if f.__name__ == "quote_product")(product)
     if current.name == "support":
         return next(f for f in current.functions if f.__name__ == "open_ticket")(user_msg)
-    return "[no response]"
+    return "[无响应]"
 
 
 def run_swarm(start_agent: Agent, user_messages: list[str]) -> list[Msg]:
@@ -118,7 +117,7 @@ def run_swarm(start_agent: Agent, user_messages: list[str]) -> list[Msg]:
         out = scripted_router(active, user)
         if isinstance(out, Agent):
             history.append(
-                Msg(role="assistant", content=f"(handoff to {out.name})", sender=active.name)
+                Msg(role="assistant", content=f"（handoff 至 {out.name}）", sender=active.name)
             )
             active = out
             out = scripted_router(active, user)
@@ -133,23 +132,23 @@ def render(history: list[Msg]) -> None:
 
 
 def main() -> None:
-    print("Handoff-driven orchestration -- OpenAI Swarm shape")
+    print("Handoff 驱动的编排 — OpenAI Swarm 结构")
     print("-" * 54)
 
     scenarios = [
-        ("Refund flow", ["I need a refund on order 77"]),
-        ("Sales flow", ["I want to buy the enterprise plan. what's the price?"]),
-        ("Support flow", ["my dashboard is broken"]),
-        ("Ambiguous", ["hello"]),
+        ("退款流程", ["我需要为订单 77 办理退款"]),
+        ("销售流程", ["我想购买企业套餐，价格是多少？"]),
+        ("支持流程", ["我的看板出现故障"]),
+        ("意图不明确", ["你好"]),
     ]
     for label, msgs in scenarios:
         print(f"\n=== {label} ===")
         history = run_swarm(triage_agent, msgs)
         render(history)
 
-    print("\nKey insight: every handoff is a tool call returning an Agent.")
-    print("The framework's sole job is detecting Agent-valued returns and switching active agent.")
-    print("No state machine. No DSL. The agent prompts ARE the routing logic.")
+    print("\n关键洞察：每次 handoff 都是一次返回 Agent 的工具调用。")
+    print("框架唯一的工作就是检测 Agent 类型的返回值，并切换活动 Agent。")
+    print("无需状态机，无需 DSL；Agent prompt 本身就是路由逻辑。")
 
 
 if __name__ == "__main__":
