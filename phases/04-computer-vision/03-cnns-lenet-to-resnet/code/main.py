@@ -116,8 +116,8 @@ def summary(name, net, x):
         y = net(x)
     params = sum(p.numel() for p in net.parameters())
     trainable = sum(p.numel() for p in net.parameters() if p.requires_grad)
-    print(f"{name:12s}  input {tuple(x.shape)} -> output {tuple(y.shape)}   "
-          f"params {params:>10,}   trainable {trainable:>10,}")
+    print(f"{name:12s}  输入 {tuple(x.shape)} -> 输出 {tuple(y.shape)}   "
+          f"参数量 {params:>10,}   可训练参数 {trainable:>10,}")
 
 
 def per_group_params(net):
@@ -129,7 +129,7 @@ def main():
     summary("MiniVGG",    MiniVGG(),    torch.randn(1, 3, 32, 32))
     summary("TinyResNet", TinyResNet(), torch.randn(1, 3, 32, 32))
 
-    print("\nTinyResNet parameters by group:")
+    print("\nTinyResNet 各组参数量：")
     for name, n in per_group_params(TinyResNet()).items():
         print(f"  {name:8s}  {n:>10,}")
 
