@@ -1,13 +1,13 @@
-"""Mock experiment script: reads a config json, prints intermediate and final metrics.
+"""模拟实验脚本：读取配置 json，打印中间指标与最终指标。
 
-Honoured knobs:
-    k          : int    sparsity setting; higher k drops perplexity (synthetic)
-    steps      : int    number of inner training steps to simulate
-    sleep_s    : float  sleep per step; used to force timeouts in tests
-    allocate_mb: int    extra bytes to hold; used to force the memory poller
-    __seed     : int    deterministic seed for the numpy random pass
+支持的配置项：
+    k          : int    稀疏度设置；k 越大，困惑度越低（合成数据）
+    steps      : int    模拟的内部训练步数
+    sleep_s    : float  每步休眠时长；用于在测试中强制触发超时
+    allocate_mb: int    额外占用的字节数；用于强制触发内存轮询
+    __seed     : int    numpy 随机过程的确定性种子
 
-Stdlib + numpy. The script is intentionally small; the lesson is the runner.
+仅依赖标准库与 numpy。脚本刻意保持精简；本课的重点在运行器本身。
 """
 
 from __future__ import annotations

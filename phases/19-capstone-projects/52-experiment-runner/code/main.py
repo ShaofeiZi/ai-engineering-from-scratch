@@ -1,10 +1,10 @@
-"""Experiment runner: subprocess sandbox with timeout, memory poller, ablation table.
+"""实验运行器：带超时、内存轮询和消融表的子进程沙箱。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 Track A lessons 20-29 (agent harness primitives)
+概念参考：
+- ./docs/en.md（本课）
+- Phase 19 Track A 第 20-29 课（智能体框架原语）
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -79,7 +79,7 @@ class ExperimentResult:
 
 
 def _rss_mb(pid: int) -> float | None:
-    """Best effort RSS read in MB. Returns None on unsupported platforms."""
+    """尽力读取以 MB 为单位的 RSS；平台不支持时返回 None。"""
     proc_status = f"/proc/{pid}/status"
     if os.path.exists(proc_status):
         try:
@@ -107,7 +107,7 @@ def _rss_mb(pid: int) -> float | None:
 
 
 class _MemoryPoller(threading.Thread):
-    """Polls subprocess RSS in MB; kills the process if it crosses the cap."""
+    """轮询子进程的 RSS（MB）；超过上限时终止进程。"""
 
     def __init__(self, proc: subprocess.Popen, cap_mb: int, interval_s: float = 0.05) -> None:
         super().__init__(daemon=True)
@@ -131,7 +131,7 @@ class _MemoryPoller(threading.Thread):
                 if not _MEMORY_POLLER_UNSUPPORTED_WARNED:
                     _MEMORY_POLLER_UNSUPPORTED_WARNED = True
                     _LOGGER.warning(
-                        "memory poller disabled: platform does not expose RSS via /proc or ps; wall clock timeout still applies",
+                        "内存轮询器已禁用：平台未通过 /proc 或 ps 提供 RSS；墙钟超时仍然生效",
                     )
                 return
             self.peak_rss_mb = rss if self.peak_rss_mb is None else max(self.peak_rss_mb, rss)
@@ -146,10 +146,10 @@ class _MemoryPoller(threading.Thread):
 
 
 def _scan_intermediates(stdout: str, metric_keys: list[str]) -> tuple[dict, list[dict]]:
-    """Walk stdout lines and pull every json line whose keys cover metric_keys.
+    """遍历 stdout，提取键覆盖 metric_keys 的每一行 JSON。
 
-    The last covering line is treated as the final metrics. Earlier lines are
-    returned as intermediates so the evaluator can plot learning curves.
+    最后一条符合条件的行视为最终指标；更早的行作为中间结果返回，以便评估器
+    绘制学习曲线。
     """
     intermediates: list[dict] = []
     final: dict = {}
@@ -173,7 +173,7 @@ def _scan_intermediates(stdout: str, metric_keys: list[str]) -> tuple[dict, list
 
 
 class ExperimentRunner:
-    """Spawn a subprocess, enforce timeout and memory cap, return an ExperimentResult."""
+    """启动子进程，实施超时与内存上限，并返回 ExperimentResult。"""
 
     def __init__(self, python_path: str | None = None, poll_interval_s: float = 0.05) -> None:
         self._python = python_path or sys.executable
