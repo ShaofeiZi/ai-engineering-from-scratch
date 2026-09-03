@@ -1,8 +1,8 @@
-# Educational implementation for ../docs/en.md.
-# Builds FID, cosine similarity, and Elo updates from Python's standard library.
-# FID follows Heusel et al. (2017), https://arxiv.org/abs/1706.08500.
-# CLIP-style scoring follows Radford et al. (2021), https://arxiv.org/abs/2103.00020.
-# The seeded demo is deterministic and terminates without external services.
+# ../docs/en.md 的教学实现。
+# 使用 Python 标准库构建 FID、余弦相似度和 Elo 更新。
+# FID 遵循 Heusel 等人（2017）的论文：https://arxiv.org/abs/1706.08500。
+# CLIP 风格评分遵循 Radford 等人（2021）的论文：https://arxiv.org/abs/2103.00020。
+# 此演示固定了随机种子，结果确定，且无需外部服务即可结束。
 
 import math
 import random
@@ -42,7 +42,7 @@ def matmul(A, B):
 
 
 def symmetric_eigendecomposition(M, tolerance=1e-12, max_sweeps=50):
-    """Return eigenvalues and column eigenvectors for a symmetric matrix."""
+    """返回对称矩阵的特征值及按列排列的特征向量。"""
     n = len(M)
     if n == 0 or any(len(row) != n for row in M):
         raise ValueError("matrix must be non-empty and square")
@@ -110,7 +110,7 @@ def symmetric_eigendecomposition(M, tolerance=1e-12, max_sweeps=50):
 
 
 def jacobi_sqrt(M, iters=50):
-    """Principal square root of a symmetric PSD matrix via Jacobi rotations."""
+    """通过 Jacobi 旋转计算对称半正定矩阵的主平方根。"""
     eigenvalues, vectors = symmetric_eigendecomposition(M, max_sweeps=iters)
     spectral_scale = max(1.0, max(abs(value) for value in eigenvalues))
     if any(value < -1e-12 * spectral_scale for value in eigenvalues):
@@ -200,17 +200,17 @@ def main():
     rng = random.Random(29)
     d = 4
 
-    print("=== FID bias at small N ===")
+    print("=== 小样本量 N 下的 FID 偏差 ===")
     for n in [50, 200, 1000]:
         real = make_features(0.0, n, d, rng)
-        gen = make_features(0.0, n, d, rng)  # same distribution
+        gen = make_features(0.0, n, d, rng)  # 相同分布
         score = fid(real, gen)
-        print(f"  N={n:5d}: FID (identical distributions) = {score:.4f}  (lower = more similar)")
+        print(f"  N={n:5d}：FID（相同分布）= {score:.4f}  （越低越相似）")
 
-    print("  -> FID should be 0 for identical distributions but is biased up at small N")
+    print("  -> 相同分布的 FID 理应为 0，但在 N 较小时会出现向上偏差")
     print()
 
-    print("=== FID separates different distributions ===")
+    print("=== FID 区分不同分布 ===")
     real = make_features(0.0, 500, d, rng)
     for shift in [0.0, 0.2, 0.5, 1.0]:
         gen = make_features(shift, 500, d, rng)
@@ -218,25 +218,25 @@ def main():
         print(f"  shift={shift:.1f}: FID = {score:.3f}")
 
     print()
-    print("=== CLIP-like cosine similarity ===")
+    print("=== 类 CLIP 余弦相似度 ===")
     prompt = [1.0, 0.5, -0.2, 0.3]
     for image_center in [1.0, 0.5, 0.0, -0.5]:
         image = [image_center + rng.gauss(0, 0.1) for _ in range(d)]
         score = clip_like(image, prompt)
-        print(f"  image center {image_center:+.1f}: CLIP-like score = {score:+.3f}")
+        print(f"  图像中心 {image_center:+.1f}：类 CLIP 分数 = {score:+.3f}")
 
     print()
-    print("=== Elo from synthetic A/B preferences ===")
+    print("=== 根据合成 A/B 偏好计算 Elo ===")
     r_a, r_b = 1000, 1000
     for i in range(200):
-        # Suppose model A wins 70% of the time
+        # 假设模型 A 的胜率为 70%
         winner = "a" if rng.random() < 0.7 else "b"
         r_a, r_b = elo_update(r_a, r_b, winner)
-    print(f"  after 200 pairs (A wins 70%): r_A = {r_a:.0f}, r_B = {r_b:.0f}")
+    print(f"  经过 200 对比较（A 胜率 70%）：r_A = {r_a:.0f}，r_B = {r_b:.0f}")
 
     print()
-    print("takeaway: FID is a distance; CLIP is an adherence score; Elo aggregates preferences.")
-    print("          production evaluation uses all three plus qualitative failure audits.")
+    print("要点：FID 衡量距离，CLIP 衡量遵循程度，Elo 汇总偏好。")
+    print("      生产评估会综合使用这三者，并辅以定性的失败案例审查。")
 
 
 if __name__ == "__main__":

@@ -138,10 +138,12 @@ class EvaluationMetricTests(unittest.TestCase):
             main()
 
         self.assertEqual(first_output.getvalue(), second_output.getvalue())
-        self.assertIn("N=   50: FID", first_output.getvalue())
-        self.assertIn("after 200 pairs", first_output.getvalue())
+        self.assertIn("N=   50：FID", first_output.getvalue())
+        self.assertIn("经过 200 对比较", first_output.getvalue())
         self.assertTrue(
-            first_output.getvalue().rstrip().endswith("qualitative failure audits.")
+            first_output.getvalue().rstrip().endswith(
+                "并辅以定性的失败案例审查。"
+            )
         )
 
 
