@@ -91,22 +91,22 @@ def main():
     returns_greedy = [rollout(greedy_policy, rng2)[0] for _ in range(5000)]
     mean_greedy = sum(returns_greedy) / len(returns_greedy)
 
-    print("=== 4x4 GridWorld, 5000 rollouts ===")
-    print(f"random policy:  mean return = {mean_random:.2f}   (optimal = -6.00)")
-    print(f"greedy  policy: mean return = {mean_greedy:.2f}")
+    print("=== 4x4 GridWorld，5000 次轨迹采样 ===")
+    print(f"随机策略：平均回报 = {mean_random:.2f}   （最优值 = -6.00）")
+    print(f"贪心策略：平均回报 = {mean_greedy:.2f}")
 
     print()
-    print("=== Policy evaluation V^pi(s) for uniform-random policy ===")
+    print("=== 均匀随机策略的策略评估 V^pi(s) ===")
     for gamma in (0.5, 0.9, 0.99):
         values = policy_evaluation(uniform_policy, gamma=gamma)
         print_value_grid(values, f"gamma = {gamma}")
         print()
 
-    print("=== Policy evaluation V^pi(s) for greedy down+right policy (gamma=0.99) ===")
+    print("=== 向下加向右贪心策略的策略评估 V^pi(s)（gamma=0.99）===")
     values = policy_evaluation(greedy_policy, gamma=0.99)
     print_value_grid(values, "greedy policy")
     print()
-    print("note: greedy values at (0,0) track the true optimal return far closer than random.")
+    print("说明：(0,0) 处的贪心价值比随机策略更接近真实最优回报。")
 
 
 if __name__ == "__main__":
