@@ -1,9 +1,8 @@
-"""Voting and debate topology harness, stdlib only.
+"""投票与辩论拓扑测试工具，仅使用 stdlib。
 
-Runs star / chain / tree / graph topologies under a scripted task. Each
-agent has a base-accuracy probability and an error_bias direction (which
-wrong answer it drifts to on miss). We simulate N agents, rounds of
-refinement, and measure (accuracy, tokens, simulated latency).
+在脚本化任务中运行 star / chain / tree / graph 拓扑。每个 Agent 都有基础准确率
+和 error_bias 方向（出错时偏向哪个错误答案）。模拟 N 个 Agent 进行多轮精炼，
+并测量准确率、token 数和模拟延迟。
 """
 from __future__ import annotations
 
@@ -77,8 +76,8 @@ def run_tree(agents: list[SimAgent], correct: str, rng: random.Random) -> RunRes
 
 
 def run_graph(agents: list[SimAgent], correct: str, rng: random.Random, rounds: int = 2) -> RunResult:
-    # Every agent proposes, then every agent sees all proposals and may update
-    # (scaled down accuracy if they drift toward consensus).
+    # 每个 Agent 先提出答案，然后查看所有提案并可能更新自己的答案
+    # （如果向共识漂移，则按比例降低准确率）。
     positions = [a.answer(correct, rng) for a in agents]
     tokens = sum(a.tokens_per_call for a in agents)
     for _ in range(rounds - 1):
@@ -109,11 +108,11 @@ def make_agents(n: int, heterogeneous: bool, seed: int) -> list[SimAgent]:
 
 
 def bench(correct: str, trials: int, heterogeneous: bool) -> None:
-    tag = "HETEROGENEOUS" if heterogeneous else "HOMOGENEOUS (monoculture)"
+    tag = "异构" if heterogeneous else "同构（monoculture）"
     print("\n" + "=" * 72)
-    print(f"BENCHMARK — {tag}")
+    print(f"基准测试 — {tag}")
     print("=" * 72)
-    print(f"{'topology':10s} {'N':>3s} {'acc':>8s} {'avg_tokens':>12s} {'steps':>6s}")
+    print(f"{'拓扑':10s} {'N':>3s} {'准确率':>8s} {'平均 token':>12s} {'步数':>6s}")
     for topology in ("star", "chain", "tree", "graph"):
         for n in (3, 5, 7):
             acc_sum = 0
@@ -139,11 +138,11 @@ def bench(correct: str, trials: int, heterogeneous: bool) -> None:
 def main() -> None:
     bench(correct="RIGHT", trials=200, heterogeneous=False)
     bench(correct="RIGHT", trials=200, heterogeneous=True)
-    print("\nTakeaways:")
-    print("  heterogeneous ensembles outperform homogeneous at every topology/N.")
-    print("  graph/N=7 shows coordination tax: tokens inflate ~7x over star/N=3.")
-    print("  star is the cost-sweet-spot for low-stakes aggregation.")
-    print("  chain underperforms on monoculture because one bias propagates along the chain.")
+    print("\n要点：")
+    print("  在每种拓扑和 N 取值下，异构 ensemble 都优于同构 ensemble。")
+    print("  graph/N=7 展现了协调税：token 数约为 star/N=3 的 7 倍。")
+    print("  对低风险聚合而言，star 是成本甜点位。")
+    print("  chain 在 monoculture 下表现较差，因为一种偏差会沿链传播。")
 
 
 if __name__ == "__main__":
