@@ -17,10 +17,10 @@ def check_convexity(f, dim, bounds=(-5, 5), samples=2000, label=""):
             violations += 1
             worst_violation = max(worst_violation, gap)
     is_convex = violations == 0
-    status = "CONVEX" if is_convex else "NOT CONVEX"
+    status = "凸" if is_convex else "非凸"
     if label:
-        print(f"  {label:30s}  {status:10s}  violations: {violations}/{samples}"
-              + (f"  worst: {worst_violation:.6f}" if violations > 0 else ""))
+        print(f"  {label:30s}  {status:10s}  违规次数: {violations}/{samples}"
+              + (f"  最大违规: {worst_violation:.6f}" if violations > 0 else ""))
     return is_convex, violations
 
 
@@ -125,7 +125,7 @@ def lagrange_solve(f_grad, g_val, g_grad, x0, lr=0.01,
 
 def demo_convexity_checker():
     print("=" * 65)
-    print("  CONVEXITY CHECKER")
+    print("  凸性检测器")
     print("=" * 65)
     print()
 
@@ -152,36 +152,36 @@ def demo_convexity_checker():
     )
 
     print()
-    print("  Top group: expected convex. Bottom group: expected non-convex.")
+    print("  上一组：预期为凸。下一组：预期为非凸。")
 
 
 def demo_hessian_analysis():
     print()
     print()
     print("=" * 65)
-    print("  HESSIAN ANALYSIS AND CURVATURE")
+    print("  Hessian 矩阵分析与曲率")
     print("=" * 65)
 
     print()
-    print("  f(x,y) = 5x^2 + y^2 (elongated bowl)")
+    print("  f(x,y) = 5x^2 + y^2（拉长碗形）")
     H1 = [[10, 0], [0, 2]]
     e1, e2 = hessian_eigenvalues_2d(H1)
     psd = is_positive_semidefinite_2d(H1)
     print(f"  Hessian: [[{H1[0][0]}, {H1[0][1]}], [{H1[1][0]}, {H1[1][1]}]]")
-    print(f"  Eigenvalues: {e1:.1f}, {e2:.1f}")
-    print(f"  Condition number: {e1 / e2:.1f}")
-    print(f"  Positive semidefinite: {psd}")
-    print(f"  Convex: {psd}")
+    print(f"  特征值: {e1:.1f}, {e2:.1f}")
+    print(f"  条件数: {e1 / e2:.1f}")
+    print(f"  半正定: {psd}")
+    print(f"  凸: {psd}")
 
     print()
-    print("  f(x,y) = x^2 - y^2 (saddle)")
+    print("  f(x,y) = x^2 - y^2（鞍点）")
     H2 = [[2, 0], [0, -2]]
     e1, e2 = hessian_eigenvalues_2d(H2)
     psd = is_positive_semidefinite_2d(H2)
     print(f"  Hessian: [[{H2[0][0]}, {H2[0][1]}], [{H2[1][0]}, {H2[1][1]}]]")
-    print(f"  Eigenvalues: {e1:.1f}, {e2:.1f}")
-    print(f"  Positive semidefinite: {psd}")
-    print(f"  Saddle point: mixed signs confirm saddle")
+    print(f"  特征值: {e1:.1f}, {e2:.1f}")
+    print(f"  半正定: {psd}")
+    print(f"  鞍点：符号相反确认鞍点")
 
     print()
     print("  f(x,y) = x^2 + 3xy + y^2")
@@ -189,26 +189,26 @@ def demo_hessian_analysis():
     e1, e2 = hessian_eigenvalues_2d(H3)
     psd = is_positive_semidefinite_2d(H3)
     print(f"  Hessian: [[{H3[0][0]}, {H3[0][1]}], [{H3[1][0]}, {H3[1][1]}]]")
-    print(f"  Eigenvalues: {e1:.1f}, {e2:.1f}")
-    print(f"  Positive semidefinite: {psd}")
-    print(f"  Convex: {psd} (negative eigenvalue means indefinite)")
+    print(f"  特征值: {e1:.1f}, {e2:.1f}")
+    print(f"  半正定: {psd}")
+    print(f"  凸: {psd}（存在负特征值，说明不定）")
 
     print()
-    print("  Rosenbrock at minimum (1, 1)")
+    print("  Rosenbrock 函数在极小值点 (1, 1)")
     Hmin = [[802, -400], [-400, 200]]
     e1, e2 = hessian_eigenvalues_2d(Hmin)
     psd = is_positive_semidefinite_2d(Hmin)
     print(f"  Hessian: [[{Hmin[0][0]}, {Hmin[0][1]}], [{Hmin[1][0]}, {Hmin[1][1]}]]")
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
-    print(f"  Condition number: {e1 / e2:.1f}")
-    print(f"  Positive semidefinite at (1,1): {psd}")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
+    print(f"  条件数: {e1 / e2:.1f}")
+    print(f"  在 (1,1) 处半正定: {psd}")
 
 
 def demo_newtons_method():
     print()
     print()
     print("=" * 65)
-    print("  NEWTON'S METHOD vs GRADIENT DESCENT")
+    print("  牛顿法 vs 梯度下降")
     print("=" * 65)
 
     def f(x):
@@ -223,17 +223,17 @@ def demo_newtons_method():
     start = [10.0, 10.0]
 
     print()
-    print(f"  Function: f(x,y) = 50x^2 + y^2")
-    print(f"  Minimum at: (0, 0), f = 0")
-    print(f"  Starting point: ({start[0]}, {start[1]}), f = {f(start):.1f}")
-    print(f"  Condition number: {100 / 2:.0f} (elongated valley)")
+    print(f"  函数: f(x,y) = 50x^2 + y^2")
+    print(f"  极小值点: (0, 0), f = 0")
+    print(f"  起点: ({start[0]}, {start[1]}), f = {f(start):.1f}")
+    print(f"  条件数: {100 / 2:.0f}（拉长谷形）")
 
     newton_hist = newtons_method(grad_f, hessian_f, start, steps=50)
     gd_hist = optimize_gd(grad_f, start, lr=0.015, steps=500)
 
     print()
-    print(f"  Newton's method: {len(newton_hist) - 1} steps to converge")
-    print(f"  {'Step':>6s}  {'x':>12s}  {'y':>12s}  {'f(x,y)':>14s}")
+    print(f"  牛顿法: {len(newton_hist) - 1} 步收敛")
+    print(f"  {'步数':>6s}  {'x':>12s}  {'y':>12s}  {'f(x,y)':>14s}")
     print(f"  {'-' * 48}")
     for i, p in enumerate(newton_hist):
         print(f"  {i:6d}  {p[0]:12.8f}  {p[1]:12.8f}  {f(p):14.8f}")
@@ -246,38 +246,38 @@ def demo_newtons_method():
             gd_converged = i
             break
 
-    print(f"  Gradient descent (lr=0.015): {len(gd_hist) - 1} steps taken")
+    print(f"  梯度下降 (lr=0.015): 共 {len(gd_hist) - 1} 步")
     steps_to_show = [0, 1, 5, 10, 25, 50, 100, 200, 300, 400, 499]
     steps_to_show = [s for s in steps_to_show if s < len(gd_hist)]
-    print(f"  {'Step':>6s}  {'x':>12s}  {'y':>12s}  {'f(x,y)':>14s}")
+    print(f"  {'步数':>6s}  {'x':>12s}  {'y':>12s}  {'f(x,y)':>14s}")
     print(f"  {'-' * 48}")
     for i in steps_to_show:
         p = gd_hist[i]
         print(f"  {i:6d}  {p[0]:12.8f}  {p[1]:12.8f}  {f(p):14.8f}")
 
     print()
-    print(f"  Newton converged in {len(newton_hist) - 1} step(s)")
-    print(f"  GD reached f < {threshold} at step {gd_converged}"
-          + (" (did not converge)" if gd_converged == len(gd_hist) - 1 else ""))
+    print(f"  牛顿法在 {len(newton_hist) - 1} 步内收敛")
+    print(f"  梯度下降在第 {gd_converged} 步达到 f < {threshold}"
+          + ("（未收敛）" if gd_converged == len(gd_hist) - 1 else ""))
     print()
-    print("  Newton's method is exact for quadratic functions.")
-    print("  GD struggles with high condition number (elongated valleys).")
+    print("  牛顿法对二次函数是精确的。")
+    print("  梯度下降在高条件数（拉长谷形）下表现较差。")
 
 
 def demo_condition_number_effect():
     print()
     print()
     print("=" * 65)
-    print("  CONDITION NUMBER EFFECT ON GRADIENT DESCENT")
+    print("  条件数对梯度下降的影响")
     print("=" * 65)
     print()
 
     conditions = [1, 5, 10, 50, 100]
 
-    print(f"  Minimizing f(x,y) = c*x^2 + y^2, start = (10, 10)")
-    print(f"  Newton always converges in 1 step for any condition number.")
+    print(f"  最小化 f(x,y) = c*x^2 + y^2，起点 = (10, 10)")
+    print(f"  牛顿法对任意条件数均在 1 步内收敛。")
     print()
-    print(f"  {'Cond #':>8s}  {'GD steps':>10s}  {'Newton steps':>14s}  {'GD final loss':>14s}")
+    print(f"  {'条件数':>8s}  {'GD 步数':>10s}  {'牛顿步数':>14s}  {'GD 最终损失':>14s}")
     print(f"  {'-' * 50}")
 
     for c in conditions:
@@ -307,13 +307,13 @@ def demo_lagrange_multipliers():
     print()
     print()
     print("=" * 65)
-    print("  LAGRANGE MULTIPLIER SOLVER")
+    print("  拉格朗日乘子求解器")
     print("=" * 65)
 
     print()
-    print("  Problem: minimize f(x,y) = x^2 + y^2")
-    print("  Subject to: g(x,y) = x + y - 1 = 0")
-    print("  Analytical solution: x = 0.5, y = 0.5, lambda = -1")
+    print("  问题：最小化 f(x,y) = x^2 + y^2")
+    print("  约束条件：g(x,y) = x + y - 1 = 0")
+    print("  解析解：x = 0.5, y = 0.5, lambda = -1")
     print()
 
     def f_grad(x):
@@ -331,7 +331,7 @@ def demo_lagrange_multipliers():
     milestones = [0, 49, 499, 999, 2499, 4999]
     milestones = [m for m in milestones if m < len(history)]
 
-    print(f"  {'Step':>6s}  {'x':>8s}  {'y':>8s}  {'lambda':>8s}  {'g(x,y)':>10s}  {'f(x,y)':>10s}")
+    print(f"  {'步数':>6s}  {'x':>8s}  {'y':>8s}  {'lambda':>8s}  {'g(x,y)':>10s}  {'f(x,y)':>10s}")
     print(f"  {'-' * 56}")
 
     for i in milestones:
@@ -341,15 +341,15 @@ def demo_lagrange_multipliers():
 
     final_x, final_lam, final_g = history[-1]
     print()
-    print(f"  Final:   x = {final_x[0]:.6f}, y = {final_x[1]:.6f}")
+    print(f"  最终结果：   x = {final_x[0]:.6f}, y = {final_x[1]:.6f}")
     print(f"  lambda = {final_lam:.6f}")
-    print(f"  Constraint violation: {abs(final_g):.2e}")
-    print(f"  Objective value: {final_x[0] ** 2 + final_x[1] ** 2:.6f}")
+    print(f"  约束违反量: {abs(final_g):.2e}")
+    print(f"  目标函数值: {final_x[0] ** 2 + final_x[1] ** 2:.6f}")
 
     print()
     print()
-    print("  Problem: minimize f(x,y) = (x-3)^2 + (y-3)^2")
-    print("  Subject to: x + 2y = 4")
+    print("  问题：最小化 f(x,y) = (x-3)^2 + (y-3)^2")
+    print("  约束条件：x + 2y = 4")
     print()
 
     def f_grad2(x):
@@ -365,41 +365,41 @@ def demo_lagrange_multipliers():
                               lr=0.002, lr_lambda=0.002, steps=20000)
 
     final_x2, final_lam2, final_g2 = history2[-1]
-    print(f"  Solution: x = {final_x2[0]:.6f}, y = {final_x2[1]:.6f}")
+    print(f"  解：x = {final_x2[0]:.6f}, y = {final_x2[1]:.6f}")
     print(f"  lambda = {final_lam2:.6f}")
-    print(f"  Constraint x + 2y = {final_x2[0] + 2 * final_x2[1]:.6f} (target: 4)")
-    print(f"  Objective: {(final_x2[0] - 3) ** 2 + (final_x2[1] - 3) ** 2:.6f}")
+    print(f"  约束 x + 2y = {final_x2[0] + 2 * final_x2[1]:.6f}（目标: 4）")
+    print(f"  目标函数值: {(final_x2[0] - 3) ** 2 + (final_x2[1] - 3) ** 2:.6f}")
 
     x_exact = 2.0
     y_exact = 1.0
     print()
-    print(f"  Analytical: x = 2, y = 1, lambda = 2")
-    print(f"  Error: {math.sqrt((final_x2[0] - x_exact) ** 2 + (final_x2[1] - y_exact) ** 2):.2e}")
+    print(f"  解析解：x = 2, y = 1, lambda = 2")
+    print(f"  误差: {math.sqrt((final_x2[0] - x_exact) ** 2 + (final_x2[1] - y_exact) ** 2):.2e}")
 
 
 def demo_regularization_geometry():
     print()
     print()
     print("=" * 65)
-    print("  REGULARIZATION AS CONSTRAINED OPTIMIZATION")
+    print("  正则化与约束优化")
     print("=" * 65)
     print()
 
     def unconstrained_min():
         return [3.0, 2.0]
 
-    print("  Unconstrained minimum of (x-3)^2 + (y-2)^2: (3, 2)")
+    print("  (x-3)^2 + (y-2)^2 的无约束极小值点：(3, 2)")
     print()
 
-    print("  L2 constraint: x^2 + y^2 <= 1 (unit circle)")
+    print("  L2 约束：x^2 + y^2 <= 1（单位圆）")
     x_l2 = [3.0 / math.sqrt(13), 2.0 / math.sqrt(13)]
-    print(f"  Projected solution: ({x_l2[0]:.6f}, {x_l2[1]:.6f})")
+    print(f"  投影解: ({x_l2[0]:.6f}, {x_l2[1]:.6f})")
     print(f"  ||w||^2 = {x_l2[0] ** 2 + x_l2[1] ** 2:.6f}")
-    print(f"  Both weights nonzero: weights shrink but none eliminated")
+    print(f"  两个权重均非零：权重缩小但未被消除")
     print()
 
-    print("  L1 constraint: |x| + |y| <= 1 (unit diamond)")
-    print("  Solution sits at a corner of the diamond.")
+    print("  L1 约束：|x| + |y| <= 1（单位菱形）")
+    print("  解位于菱形的角点。")
 
     best_val = float('inf')
     best_x = None
@@ -425,26 +425,26 @@ def demo_regularization_geometry():
         ([0.0, -1.0], (0 - 3) ** 2 + (-1 - 2) ** 2),
     ]
 
-    print(f"  Scanning diamond boundary...")
-    print(f"  Best on edges: ({best_x[0]:.4f}, {best_x[1]:.4f}), "
-          f"objective = {best_val:.4f}")
+    print(f"  扫描菱形边界...")
+    print(f"  边上最优: ({best_x[0]:.4f}, {best_x[1]:.4f}), "
+          f"目标值 = {best_val:.4f}")
     print()
-    print(f"  Diamond corners:")
+    print(f"  菱形角点:")
     for pt, val in corner_vals:
-        marker = " <-- best corner" if val == min(v for _, v in corner_vals) else ""
-        print(f"    ({pt[0]:5.1f}, {pt[1]:5.1f})  objective = {val:.1f}{marker}")
+        marker = " <-- 最优角点" if val == min(v for _, v in corner_vals) else ""
+        print(f"    ({pt[0]:5.1f}, {pt[1]:5.1f})  目标值 = {val:.1f}{marker}")
 
     print()
-    print("  L1 pushes solution toward corners (axis-aligned).")
-    print("  L2 pushes solution toward the nearest point on the circle.")
-    print("  L1 produces sparsity. L2 produces small but nonzero weights.")
+    print("  L1 将解推向角点（沿坐标轴方向）。")
+    print("  L2 将解推向圆上最近的点。")
+    print("  L1 产生稀疏性。L2 产生较小但非零的权重。")
 
 
 def demo_first_vs_second_order():
     print()
     print()
     print("=" * 65)
-    print("  FIRST-ORDER vs SECOND-ORDER: CONVERGENCE SPEED")
+    print("  一阶 vs 二阶方法：收敛速度")
     print("=" * 65)
     print()
 
@@ -465,17 +465,17 @@ def demo_first_vs_second_order():
 
     start = [0.5, 0.5]
 
-    print(f"  Rosenbrock function: f(x,y) = (1-x)^2 + 100(y-x^2)^2")
-    print(f"  Minimum at (1, 1), f = 0")
-    print(f"  Start: ({start[0]}, {start[1]}), f = {rosenbrock(start):.4f}")
+    print(f"  Rosenbrock 函数: f(x,y) = (1-x)^2 + 100(y-x^2)^2")
+    print(f"  极小值点 (1, 1), f = 0")
+    print(f"  起点: ({start[0]}, {start[1]}), f = {rosenbrock(start):.4f}")
     print()
 
     newton_hist = newtons_method(rosenbrock_grad, rosenbrock_hessian, start, steps=100)
 
     gd_hist = optimize_gd(rosenbrock_grad, start, lr=0.001, steps=10000)
 
-    print(f"  Newton's method ({len(newton_hist) - 1} steps):")
-    print(f"  {'Step':>6s}  {'x':>10s}  {'y':>10s}  {'f(x,y)':>14s}")
+    print(f"  牛顿法（{len(newton_hist) - 1} 步）:")
+    print(f"  {'步数':>6s}  {'x':>10s}  {'y':>10s}  {'f(x,y)':>14s}")
     print(f"  {'-' * 44}")
     for i, p in enumerate(newton_hist[:15]):
         print(f"  {i:6d}  {p[0]:10.6f}  {p[1]:10.6f}  {rosenbrock(p):14.8f}")
@@ -492,38 +492,38 @@ def demo_first_vs_second_order():
             gd_converge_step = i
             break
 
-    print(f"  Gradient descent (lr=0.001, {len(gd_hist) - 1} steps):")
+    print(f"  梯度下降（lr=0.001, {len(gd_hist) - 1} 步）:")
     show_steps = [0, 10, 100, 500, 1000, 2000, 5000, 9999]
     show_steps = [s for s in show_steps if s < len(gd_hist)]
-    print(f"  {'Step':>6s}  {'x':>10s}  {'y':>10s}  {'f(x,y)':>14s}")
+    print(f"  {'步数':>6s}  {'x':>10s}  {'y':>10s}  {'f(x,y)':>14s}")
     print(f"  {'-' * 44}")
     for i in show_steps:
         p = gd_hist[i]
         print(f"  {i:6d}  {p[0]:10.6f}  {p[1]:10.6f}  {rosenbrock(p):14.8f}")
 
     print()
-    print(f"  Newton converged (f < 1e-12) in {len(newton_hist) - 1} steps")
+    print(f"  牛顿法在 {len(newton_hist) - 1} 步内收敛 (f < 1e-12)")
     if gd_converge_step < len(gd_hist) - 1:
-        print(f"  GD converged (f < {gd_threshold}) in {gd_converge_step} steps")
+        print(f"  梯度下降在 {gd_converge_step} 步内收敛 (f < {gd_threshold})")
     else:
         final_gd = rosenbrock(gd_hist[-1])
-        print(f"  GD did not reach f < {gd_threshold} in {len(gd_hist) - 1} steps "
-              f"(final: {final_gd:.2e})")
+        print(f"  梯度下降在 {len(gd_hist) - 1} 步内未达到 f < {gd_threshold} "
+              f"（最终值: {final_gd:.2e}）")
 
     print()
-    print("  Newton uses O(n^3) per step but converges quadratically.")
-    print("  GD uses O(n) per step but converges linearly.")
-    print("  For small problems, Newton wins. For millions of parameters, GD wins.")
+    print("  牛顿法每步复杂度为 O(n^3)，但二次收敛。")
+    print("  梯度下降每步复杂度为 O(n)，但线性收敛。")
+    print("  小规模问题中牛顿法占优；百万级参数时梯度下降占优。")
 
 
 def demo_convex_vs_nonconvex_landscape():
     print()
     print()
     print("=" * 65)
-    print("  CONVEX vs NON-CONVEX: ASCII LANDSCAPE")
+    print("  凸 vs 非凸：ASCII 地形图")
     print("=" * 65)
     print()
-    print("  Convex: f(x) = x^2")
+    print("  凸函数: f(x) = x^2")
     print()
 
     for y_level in range(10, -1, -1):
@@ -542,10 +542,10 @@ def demo_convex_vs_nonconvex_landscape():
 
     print("  " + "-" * 41)
     print("  " + " " * 18 + "x=0")
-    print("  One valley. Gradient descent always finds the bottom.")
+    print("  只有一个谷。梯度下降总能找到底部。")
 
     print()
-    print("  Non-convex: f(x) = sin(3x) + 0.1*x^2")
+    print("  非凸函数: f(x) = sin(3x) + 0.1*x^2")
     print()
 
     for y_level in range(10, -1, -1):
@@ -561,30 +561,30 @@ def demo_convex_vs_nonconvex_landscape():
         print(line)
 
     print("  " + "-" * 51)
-    print("  Multiple valleys. Gradient descent may get stuck.")
+    print("  存在多个谷。梯度下降可能陷入局部最优。")
 
 
 def demo_duality_intuition():
     print()
     print()
     print("=" * 65)
-    print("  DUALITY: PRIMAL vs DUAL")
+    print("  对偶性：原始问题 vs 对偶问题")
     print("=" * 65)
     print()
-    print("  Primal: minimize x^2 + y^2 subject to x + y >= 1")
-    print("  Rewrite constraint as: -(x + y - 1) <= 0")
+    print("  原始问题：最小化 x^2 + y^2，约束 x + y >= 1")
+    print("  将约束改写为：-(x + y - 1) <= 0")
     print()
-    print("  Lagrangian: L = x^2 + y^2 + lambda * (1 - x - y)")
+    print("  拉格朗日函数：L = x^2 + y^2 + lambda * (1 - x - y)")
     print("  dL/dx = 2x - lambda = 0  =>  x = lambda/2")
     print("  dL/dy = 2y - lambda = 0  =>  y = lambda/2")
     print()
-    print("  Dual function:")
+    print("  对偶函数：")
     print("    d(lambda) = min_x,y [x^2 + y^2 + lambda(1 - x - y)]")
     print("              = (lambda/2)^2 + (lambda/2)^2 + lambda(1 - lambda)")
     print("              = lambda^2/2 + lambda - lambda^2")
     print("              = lambda - lambda^2/2")
     print()
-    print("  Dual problem: maximize lambda - lambda^2/2 s.t. lambda >= 0")
+    print("  对偶问题：最大化 lambda - lambda^2/2，约束 lambda >= 0")
     print("  d'(lambda) = 1 - lambda = 0  =>  lambda* = 1")
     print()
 
@@ -594,31 +594,31 @@ def demo_duality_intuition():
     primal_val = x_star ** 2 + y_star ** 2
     dual_val = lam_star - lam_star ** 2 / 2
 
-    print(f"  Primal solution: x = {x_star}, y = {y_star}")
-    print(f"  Primal objective: {primal_val}")
-    print(f"  Dual objective:   {dual_val}")
-    print(f"  Strong duality:   primal = dual = {primal_val}")
-    print(f"  Constraint: x + y = {x_star + y_star} >= 1  (active)")
-    print(f"  Complementary slackness: lambda * (1 - x - y) = {lam_star * (1 - x_star - y_star)}")
+    print(f"  原始解: x = {x_star}, y = {y_star}")
+    print(f"  原始目标值: {primal_val}")
+    print(f"  对偶目标值:   {dual_val}")
+    print(f"  强对偶性:   原始 = 对偶 = {primal_val}")
+    print(f"  约束: x + y = {x_star + y_star} >= 1 （紧约束）")
+    print(f"  互补松弛条件: lambda * (1 - x - y) = {lam_star * (1 - x_star - y_star)}")
 
 
 def print_summary():
     print()
     print()
     print("=" * 65)
-    print("  SUMMARY")
+    print("  总结")
     print("=" * 65)
     print()
-    print("  1. Convex functions have one valley. Every local min is global.")
-    print("  2. The Hessian encodes curvature. PSD Hessian = convex.")
-    print("  3. Newton's method uses curvature for faster convergence.")
-    print("  4. Lagrange multipliers handle equality constraints.")
-    print("  5. KKT conditions handle inequality constraints.")
-    print("  6. L1 regularization = diamond constraint = sparsity.")
-    print("  7. L2 regularization = circle constraint = weight shrinkage.")
-    print("  8. Duality converts hard primal problems into sometimes-easier duals.")
-    print("  9. Neural networks are non-convex, but overparameterization and")
-    print("     stochastic noise make gradient descent work anyway.")
+    print("  1. 凸函数只有一个谷。每个局部极小值都是全局最小值。")
+    print("  2. Hessian 矩阵编码曲率信息。半正定 Hessian = 凸。")
+    print("  3. 牛顿法利用曲率信息实现更快收敛。")
+    print("  4. 拉格朗日乘子处理等式约束。")
+    print("  5. KKT 条件处理不等式约束。")
+    print("  6. L1 正则化 = 菱形约束 = 稀疏性。")
+    print("  7. L2 正则化 = 圆形约束 = 权重缩小。")
+    print("  8. 对偶性将困难的原始问题转化为有时更易求解的对偶问题。")
+    print("  9. 神经网络是非凸的，但过参数化和随机噪声")
+    print("     使得梯度下降依然有效。")
     print()
 
 
