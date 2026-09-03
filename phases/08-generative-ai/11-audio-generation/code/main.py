@@ -7,8 +7,8 @@ NUM_STYLES = 2
 
 
 def make_tokens(style, length, rng):
-    """Synthetic 'audio token' sequences by style."""
-    if style == 0:  # alternating, speech-like
+    """按风格生成合成“音频 token”序列。"""
+    if style == 0:  # 交替变化，类似语音
         return [(i + rng.randint(0, 1)) % VOCAB for i in range(length)]
     return [(i * 3 + rng.randint(0, 1)) % VOCAB for i in range(length)]
 
@@ -58,41 +58,41 @@ def main():
     rng = random.Random(42)
     counts = init_counts()
 
-    print("=== training codec-token bigram per style on 500 sequences each ===")
+    print("=== 每种风格使用 500 个序列训练编解码器 token 二元模型 ===")
     for _ in range(500):
         for style in range(NUM_STYLES):
             seq = make_tokens(style, length=20, rng=rng)
             update_counts(counts, seq, style)
 
     print()
-    print("=== generate 20 tokens per style, start=0 ===")
+    print("=== 每种风格生成 20 个 token，start=0 ===")
     for style in range(NUM_STYLES):
-        label = "speech-like (alternating)" if style == 0 else "music-like (ramp)"
-        print(f"\nstyle {style}: {label}")
+        label = "类似语音（交替）" if style == 0 else "类似音乐（渐变）"
+        print(f"\n风格 {style}：{label}")
         for temp in [0.7, 1.0]:
             out = generate(counts, style, start=0, length=20, rng=rng, temperature=temp)
             print(f"  temp {temp:.1f}: {out}")
 
     print()
-    print("=== entropy at each position for style 0 conditional on token 5 ===")
+    print("=== 风格 0 在以 token 5 为条件时各位置的熵 ===")
     p = probs(counts, 0, 5)
     top3 = sorted(range(VOCAB), key=lambda i: -p[i])[:3]
     print(f"  p(next | style=0, prev=5): H = {entropy(p):.3f}")
-    print(f"  top-3: {[(i, round(p[i], 3)) for i in top3]}")
+    print(f"  前 3 名：{[(i, round(p[i], 3)) for i in top3]}")
 
     print()
-    print("=== VALL-E-style prompt continuation ===")
+    print("=== VALL-E 风格的提示续写 ===")
     prompt = make_tokens(0, length=5, rng=rng)[:5]
-    print(f"  3-second voice prompt (tokens): {prompt}")
+    print(f"  3 秒语音提示（token）：{prompt}")
     continuation = list(prompt)
     for _ in range(15):
         p = probs(counts, 0, continuation[-1])
         continuation.append(sample_from(p, rng))
-    print(f"  continuation: {continuation}")
+    print(f"  续写结果：{continuation}")
 
     print()
-    print("takeaway: tokens + transformer = entire TTS / music generation substrate.")
-    print("          RVQ of Encodec / DAC makes real audio fit in the same loop.")
+    print("要点：token + Transformer 构成了完整的 TTS / 音乐生成基础。")
+    print("      Encodec / DAC 的 RVQ 让真实音频也能进入同一流程。")
 
 
 if __name__ == "__main__":
