@@ -1,18 +1,18 @@
-"""Minimal YAML subset parser sufficient for the constitution file.
+"""足以解析宪法文件的极简 YAML 子集解析器。
 
-Supports:
-- nested block mappings with two-space indentation
-- block sequences ('- key: value' style)
-- string scalars (plain, single-quoted, double-quoted)
-- integer scalars
-- inline list values on the right of ':' for simple atoms
-- comments after '#' on a line
+支持：
+- 两空格缩进的嵌套块映射
+- 块序列（采用 '- key: value' 形式）
+- 字符串标量（普通、单引号、双引号）
+- 整数标量
+- 在 ':' 右侧的内联列表值（用于简单原子）
+- 行内 '#' 之后的注释
 
-Does NOT support: anchors, aliases, tags, flow style, multi-doc, multi-line
-folded/literal blocks. The constitution format avoids those by design.
+不支持：锚点、别名、标签、流式风格、多文档、多行折叠/字面块。
+宪法格式在设计时即有意避开这些特性。
 
-If PyYAML is installed it is preferred via load_yaml; this fallback exists so
-the lesson runs on any standard Python install.
+若已安装 PyYAML，则通过 load_yaml 优先使用它；此回退实现存在的目的，
+是让本课程在任何标准的 Python 安装环境下都能运行。
 """
 
 from __future__ import annotations
@@ -117,7 +117,7 @@ def _parse_mapping(lines: list[str], start: int, indent: int) -> tuple[dict[str,
             break
         m = re.match(r"^([A-Za-z_][\w-]*)\s*:\s*(.*)$", stripped)
         if not m:
-            raise ValueError(f"malformed line: {line!r}")
+            raise ValueError(f"格式错误的行: {line!r}")
         key = m.group(1)
         rest = m.group(2)
         if rest.strip() == "":
