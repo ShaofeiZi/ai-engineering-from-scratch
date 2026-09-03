@@ -1,9 +1,9 @@
-"""Embodied VLA action format toys — stdlib.
+"""具身 VLA 动作格式玩具 — 标准库。
 
-Three mini-implementations:
-  1. Discrete-bin action tokenization (RT-2 / OpenVLA).
-  2. A FAST-style DCT-quantize compressor.
-  3. Token-count comparison across (discrete, FAST, continuous flow).
+三个小型实现：
+  1. 离散区间动作分词（RT-2 / OpenVLA）。
+  2. 一个 FAST 风格的 DCT 量化压缩器。
+  3. 比较离散、FAST 与连续流的 token 数。
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 
 def discretize(action: list[float], bins: int = 256) -> list[int]:
-    """Map a [-1,1]^D action to D integer bins."""
+    """将 [-1,1]^D 动作映射到 D 个整数区间。"""
     tokens = []
     for a in action:
         idx = int((a + 1) / 2 * (bins - 1))
@@ -27,7 +27,7 @@ def undiscretize(tokens: list[int], bins: int = 256) -> list[float]:
 
 
 def dct(x: list[float]) -> list[float]:
-    """Naive type-II DCT."""
+    """朴素 II 型 DCT。"""
     n = len(x)
     out = []
     for k in range(n):
@@ -40,9 +40,9 @@ def dct(x: list[float]) -> list[float]:
 
 def fast_compress(trajectory: list[list[float]], keep_coeff: int = 4,
                   bins: int = 32) -> list[int]:
-    """FAST-style tokenizer: per-dim DCT + keep low-freq + quantize.
-    trajectory: list of actions (list of floats), shape (T, D).
-    Returns a flat integer token list."""
+    """FAST 风格分词器：逐维 DCT + 保留低频系数 + 量化。
+    轨迹：动作列表（浮点数列表），形状 (T, D)。
+    返回一个扁平的整数 token 列表。"""
     if not trajectory:
         return []
     D = len(trajectory[0])
@@ -62,7 +62,7 @@ def compare_formats() -> None:
     D = 10
     trajectory = [[math.sin(0.1 * t + 0.3 * d) for d in range(D)] for t in range(T)]
 
-    print("\nACTION TOKEN COUNTS (30-step trajectory, 10-DOF)")
+    print("\n动作 TOKEN 数（30 步轨迹，10 自由度）")
     print("-" * 60)
     per_step_discrete = len(discretize(trajectory[0]))
     total_discrete = per_step_discrete * T
@@ -70,60 +70,60 @@ def compare_formats() -> None:
     total_fast = len(fast_tokens)
     continuous_flow_count = 1
     rows = [
-        ("discrete 256-bin (RT-2)",   total_discrete, "per-step autoregressive"),
-        ("FAST 4-coeff per dim",      total_fast,     "sequence compressor"),
-        ("flow-matching (pi0)",       continuous_flow_count, "single head output"),
+        ("离散 256 区间（RT-2）",      total_discrete, "逐步自回归"),
+        ("FAST 每维 4 个系数",         total_fast,     "序列压缩器"),
+        ("流匹配（pi0）",              continuous_flow_count, "单头输出"),
     ]
     for name, count, note in rows:
-        print(f"  {name:<28}  {count:>6} tokens   ({note})")
-    print(f"\n  speedup: FAST ~{total_discrete / total_fast:.1f}x vs discrete bin")
+        print(f"  {name:<28}  {count:>6} 个 token   ({note})")
+    print(f"\n  加速：FAST ~{total_discrete / total_fast:.1f}x 相比离散区间")
 
 
 def round_trip_demo() -> None:
-    print("\nROUND-TRIP: 10-DOF action through discretize + undiscretize")
+    print("\n往返转换：10 自由度动作经过离散化与反离散化")
     print("-" * 60)
     action = [0.1, -0.5, 0.25, -0.75, 0.9, -0.1, 0.0, 0.33, -0.67, 0.5]
     tokens = discretize(action, bins=256)
     recovered = undiscretize(tokens, bins=256)
-    print(f"  original  : {[round(a, 3) for a in action]}")
-    print(f"  tokens    : {tokens}")
-    print(f"  recovered : {[round(r, 3) for r in recovered]}")
+    print(f"  原始值    ：{[round(a, 3) for a in action]}")
+    print(f"  token     ：{tokens}")
+    print(f"  恢复值    ：{[round(r, 3) for r in recovered]}")
     max_err = max(abs(a - r) for a, r in zip(action, recovered))
-    print(f"  max abs error: {max_err:.4f}  (bin width = 2/255 ~ 0.0078)")
+    print(f"  最大绝对误差：{max_err:.4f}  （区间宽度 = 2/255 ~ 0.0078）")
 
 
 def lineage_table() -> None:
-    print("\nVLA LINEAGE")
+    print("\nVLA 演进路线")
     print("-" * 60)
     rows = [
-        ("RT-2",       "2023", "PaLM-X + discrete bin",  "closed"),
-        ("OpenVLA",    "2024", "Llama 7B + discrete bin", "open"),
-        ("Octo",       "2024", "small diffusion head",   "open"),
-        ("pi0",        "2024", "flow-matching head",     "open"),
-        ("pi0-FAST",   "2025", "flow + FAST tokenizer",  "open"),
-        ("GR00T N1",   "2025", "dual-system humanoid",   "open"),
-        ("GR00T N1.7", "2025", "sim-to-real data scale", "open"),
+        ("RT-2",       "2023", "PaLM-X + 离散区间",       "闭源"),
+        ("OpenVLA",    "2024", "Llama 7B + 离散区间",     "开放"),
+        ("Octo",       "2024", "小型扩散头",             "开放"),
+        ("pi0",        "2024", "流匹配头",               "开放"),
+        ("pi0-FAST",   "2025", "流 + FAST 分词器",       "开放"),
+        ("GR00T N1",   "2025", "双系统人形机器人",       "开放"),
+        ("GR00T N1.7", "2025", "仿真到现实的数据规模化", "开放"),
     ]
-    print(f"  {'model':<12}{'year':<6}{'pattern':<28}{'open/closed'}")
+    print(f"  {'模型':<12}{'年份':<6}{'模式':<28}{'开放/闭源'}")
     for r in rows:
         print(f"  {r[0]:<12}{r[1]:<6}{r[2]:<28}{r[3]}")
 
 
 def main() -> None:
     print("=" * 60)
-    print("EMBODIED VLAS (Phase 12, Lesson 21)")
+    print("具身 VLA（第 12 阶段，第 21 课）")
     print("=" * 60)
 
     round_trip_demo()
     compare_formats()
     lineage_table()
 
-    print("\nCO-FINE-TUNING RATIO (web VQA : robot trajectories)")
+    print("\n联合微调比例（网络 VQA：机器人轨迹）")
     print("-" * 60)
-    print("  RT-2       : ~1:1")
-    print("  OpenVLA    : ~0.5:1 web-to-robot")
-    print("  pi0        : similar balance")
-    print("  too much VQA -> forgets actions; too much robot -> loses language")
+    print("  RT-2       ：~1:1")
+    print("  OpenVLA    ：网络数据与机器人数据之比约 0.5:1")
+    print("  pi0        ：类似的比例")
+    print("  VQA 过多 -> 遗忘动作；机器人数据过多 -> 丢失语言")
 
 
 if __name__ == "__main__":
