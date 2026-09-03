@@ -1,10 +1,10 @@
-"""LaTeX paper skeleton generator with figure injection and a mocked prose generator.
+"""带有插图注入和模拟正文生成器的 LaTeX 论文骨架生成器。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 lessons 50-53 (earlier auto-research stages)
+概念参考：
+- ./docs/en.md（本课）
+- 第 19 阶段第 50-53 课（更早的自动研究阶段）
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Callable, Iterable
 
 
 class PaperValidationError(Exception):
-    """Raised when the paper fails a structural gate before render."""
+    """当论文在渲染前未通过结构性校验时抛出。"""
 
 
 @dataclass
@@ -123,7 +123,7 @@ def _escape_latex(text: str) -> str:
 
 
 def render_latex(paper: Paper) -> str:
-    """Render a Paper to a full LaTeX document string."""
+    """将 Paper 渲染为完整的 LaTeX 文档字符串。"""
     _validate(paper)
 
     lines: list[str] = []
@@ -168,7 +168,7 @@ def render_bibtex(paper: Paper) -> str:
 
 
 class MockProseGenerator:
-    """Deterministic prose generator. Substitutes for a model in tests and demos."""
+    """确定性文本生成器，在测试与演示中替代模型。"""
 
     def __init__(self, outlines: dict[str, str]) -> None:
         self.outlines = outlines
@@ -186,12 +186,12 @@ class MockProseGenerator:
 
 
 def read_experiment_manifest(manifests: Iterable[dict], paper_dir: str) -> list[Figure]:
-    """Convert experiment output manifests into Figure records.
+    """将实验输出 manifest 转换为 Figure 记录。
 
-    Each manifest is expected to be a dict of shape:
+    每个 manifest 应为以下形态的 dict：
         {"name": str, "artifacts": [{"path": str, "caption": str}, ...]}
-    Paths in artifacts may be absolute or relative to the manifest's cwd; we
-    normalise them relative to paper_dir.
+    artifact 路径可以是绝对路径，也可以相对于 manifest 的 cwd；这里会将其
+    归一化为相对于 paper_dir 的路径。
     """
     figs: list[Figure] = []
     counter = 0
@@ -224,7 +224,7 @@ class PaperWriter:
         return paper
 
     def write(self, paper: Paper, out_dir: str) -> dict:
-        """Validate, fill prose, render, and write three files. Returns the manifest dict."""
+        """校验、填充正文、渲染并写入三个文件，返回 manifest dict。"""
         os.makedirs(out_dir, exist_ok=True)
         self.fill_prose(paper)
         tex = render_latex(paper)
@@ -261,9 +261,9 @@ class PaperWriter:
 
 
 def demo(out_dir: str | None = None) -> dict:
-    """Self-contained demo. Builds a small paper from two mocked experiments.
+    """自包含演示：根据两个模拟实验构建一篇短论文。
 
-    Writes into a temp directory by default so the worktree stays clean.
+    默认写入临时目录，以保持工作树干净。
     """
     import tempfile as _tempfile
     if out_dir is None:

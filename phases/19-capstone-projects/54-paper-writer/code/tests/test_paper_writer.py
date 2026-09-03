@@ -1,4 +1,4 @@
-"""Tests for the paper writer: skeleton render, figure injection, validation gates, manifest contract."""
+"""论文写入器的测试：骨架渲染、图表注入、校验门禁与 manifest 契约。"""
 
 from __future__ import annotations
 
