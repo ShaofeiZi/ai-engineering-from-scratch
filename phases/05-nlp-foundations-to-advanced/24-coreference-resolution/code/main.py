@@ -134,31 +134,31 @@ def main():
         "The device impressed the audience."
     )
 
-    print("=== toy rule-based coreference ===")
-    print(f"document: {doc}")
+    print("=== 简化的规则共指消解 ===")
+    print(f"文档：{doc}")
     print()
 
     mentions = extract_mentions(doc)
-    print(f"extracted {len(mentions)} mentions:")
+    print(f"提取出 {len(mentions)} 个提及：")
     for m in mentions:
-        print(f"  [{m['type']:<7}] {m['text']:<22} feats={m['features']}")
+        print(f"  [{m['type']:<7}] {m['text']:<22} 特征={m['features']}")
 
     print()
     links = resolve(mentions)
-    print("pronoun links:")
+    print("代词链接：")
     for pronoun, antecedent in links:
         ant_text = antecedent["text"] if antecedent else "<none>"
         print(f"  {pronoun['text']:<8} -> {ant_text}")
 
     print()
-    print("clusters:")
+    print("聚类：")
     for i, cluster in enumerate(clusters(mentions, links)):
         if len(cluster) > 1:
-            print(f"  cluster {i}: {cluster}")
+            print(f"  聚类 {i}：{cluster}")
 
     print()
-    print("note: rules handle easy pronouns; production models are span-based neural.")
-    print("note: neuter pronoun 'it' / 'its' prefers neuter-head nominals like 'the company'.")
+    print("注意：规则可处理简单代词；生产级模型使用基于文本跨度的神经网络。")
+    print("注意：中性代词 'it' / 'its' 倾向指代以中性词为中心的名词短语，如 'the company'。")
 
 
 if __name__ == "__main__":
