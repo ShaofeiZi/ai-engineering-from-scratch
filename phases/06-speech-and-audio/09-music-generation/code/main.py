@@ -1,11 +1,10 @@
-"""Music-generation cartoon: symbolic chord/drum generation from a prompt.
+"""音乐生成简化模型：根据提示生成符号化和弦与鼓点。
 
-This is a pedagogical stand-in. Real music-gen uses neural codec LM
-(MusicGen / ACE-Step) or latent diffusion (Stable Audio). Here we walk
-through the "tokens over time" idea at a symbolic level so the shape is
-visible.
+这是教学用替代实现。真正的音乐生成使用神经编解码器 LM
+（MusicGen / ACE-Step）或潜空间扩散（Stable Audio）。此处在符号层面演示
+“token 随时间展开”的概念，使其结构清晰可见。
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 import random
@@ -80,10 +79,10 @@ def fake_generate(prompt, rng=None):
 
 
 def visualize(piece):
-    print(f"  key: {piece['key']}  genre: {piece['genre']}  tempo: {piece['bpm']} bpm  bars: {piece['bars']}")
-    print(f"  chords: {' | '.join(piece['chords'])}")
+    print(f"  调性：{piece['key']}  流派：{piece['genre']}  速度：{piece['bpm']} bpm  小节数：{piece['bars']}")
+    print(f"  和弦：{' | '.join(piece['chords'])}")
     drum = piece["drums"]
-    print(f"  drums (kick=X snare=o): {drum}")
+    print(f"  鼓点（底鼓=X，军鼓=o）：{drum}")
 
 
 def main():
@@ -94,32 +93,32 @@ def main():
         "jazz swing in A",
     ]
 
-    print("=== Step 1: prompt → symbolic music piece (toy) ===")
+    print("=== 步骤 1：提示 → 符号化乐曲（简化版）===")
     for p in prompts:
-        print(f"prompt: {p!r}")
+        print(f"提示：{p!r}")
         piece = fake_generate(p)
         visualize(piece)
         print()
 
-    print("=== Step 2: 2026 music-gen model cheatsheet ===")
+    print("=== 步骤 2：2026 年音乐生成模型速查表 ===")
     models = [
-        ("MusicGen-large",     3300, "30 s",  "no",  "MIT"),
-        ("Stable Audio Open",  1200, "47 s",  "no",  "non-commercial"),
-        ("ACE-Step XL (Apr 26)", 4000, "2 min+", "yes", "Apache-2.0"),
-        ("YuE",                7000, "2 min+", "yes", "Apache-2.0"),
-        ("Suno v5 (closed)",      0, "4 min",  "yes", "commercial"),
-        ("Udio v4 (closed)",      0, "4 min",  "yes + stems", "commercial"),
+        ("MusicGen-large",       3300, "30 秒",       "否",         "MIT"),
+        ("Stable Audio Open",    1200, "47 秒",       "否",         "非商业"),
+        ("ACE-Step XL（4 月 26 日）", 4000, "2 分钟以上", "是",         "Apache-2.0"),
+        ("YuE",                  7000, "2 分钟以上",   "是",         "Apache-2.0"),
+        ("Suno v5（闭源）",         0, "4 分钟",      "是",         "商业许可"),
+        ("Udio v4（闭源）",         0, "4 分钟",      "是 + 分轨",  "商业许可"),
     ]
-    print("  | model               | params (M) | length | vocals | license        |")
+    print("  | 模型                | 参数量(M)  | 时长   | 人声   | 许可证         |")
     for name, p, length, v, lic in models:
         print(f"  | {name:<20} | {p:>10} | {length:>6} | {v:<12} | {lic:<14} |")
 
     print()
-    print("takeaways:")
-    print("  - open models: MusicGen (instrumental), ACE-Step / YuE (full song)")
-    print("  - commercial: Suno v5 = quality leader; Udio v4 = producer tools (stems + inpaint)")
-    print("  - legal: Warner + UMG settlements (2025-2026) define safe zones")
-    print("  - always tag AI-generated music with watermark + metadata disclosure")
+    print("要点：")
+    print("  - 开放模型：MusicGen（器乐）、ACE-Step / YuE（完整歌曲）")
+    print("  - 商业模型：Suno v5 质量领先；Udio v4 提供制作人工具（分轨 + 局部重绘）")
+    print("  - 法律：Warner + UMG 的和解协议（2025–2026）界定了安全边界")
+    print("  - 始终用水印和元数据披露标记 AI 生成音乐")
 
 
 if __name__ == "__main__":
