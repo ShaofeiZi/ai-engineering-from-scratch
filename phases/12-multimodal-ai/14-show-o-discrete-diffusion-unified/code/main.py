@@ -1,7 +1,7 @@
-"""Show-o masked-discrete-diffusion sampler — stdlib.
+"""Show-o 掩码离散扩散采样器——标准库实现。
 
-16 tokens, K=8 vocab, T=8 steps, cosine schedule. Mock "transformer" logits so
-the sampling loop is the focus, not the model. Prints the mask evolution.
+16 个 token，词表大小 K=8，T=8 步，余弦调度。使用模拟的 "transformer" logits，使得
+采样循环成为重点，而非模型本身。打印掩码的演变过程。
 """
 
 from __future__ import annotations
@@ -17,12 +17,12 @@ MASK = -1
 
 
 def cosine_schedule(T: int) -> list[float]:
-    """Mask ratio at step t, in [0, 1]. Goes 1.0 -> 0.0."""
+    """第 t 步的掩码比例，取值在 [0, 1] 之间。从 1.0 -> 0.0。"""
     return [math.cos(math.pi * (t + 1) / (2 * T)) for t in range(T)]
 
 
 def mock_logits(tokens: list[int], prompt_seed: int = 0) -> list[list[float]]:
-    """Pretend-transformer: bias toward specific tokens based on prompt + position."""
+    """模拟 Transformer：根据提示和位置偏向特定 token。"""
     logits = []
     for i, t in enumerate(tokens):
         base = [random.gauss(0, 0.3) for _ in range(VOCAB)]
@@ -42,7 +42,7 @@ def softmax(xs: list[float]) -> list[float]:
 
 
 def step_unmask(tokens: list[int], prompt_seed: int, keep_ratio: float) -> list[int]:
-    """Predict all masked tokens; keep top keep_ratio of them confident."""
+    """预测所有被掩码的 token；保留其中置信度最高的 keep_ratio 个。"""
     logits = mock_logits(tokens, prompt_seed)
     preds = []
     confs = []
@@ -86,28 +86,28 @@ def render(tokens: list[int]) -> str:
 
 def main() -> None:
     print("=" * 60)
-    print("SHOW-O MASKED-DISCRETE-DIFFUSION SAMPLER (Phase 12, Lesson 14)")
+    print("SHOW-O 掩码离散扩散采样器（第 12 阶段，第 14 课）")
     print("=" * 60)
 
     T = 8
-    print(f"\nSchedule (cosine, T={T} steps)")
+    print(f"\n调度（余弦，T={T} 步）")
     print("-" * 60)
     for t, r in enumerate(cosine_schedule(T)):
-        print(f"  step {t:>2}  mask_ratio = {r:.3f}")
+        print(f"  步骤 {t:>2}  mask_ratio = {r:.3f}")
 
-    print("\nSAMPLING TRACE (prompt_seed=3)")
+    print("\n采样轨迹（prompt_seed=3）")
     print("-" * 60)
     traces = sample(prompt_seed=3, T=T)
     for i, tr in enumerate(traces):
         n_mask = sum(1 for x in tr if x == MASK)
-        print(f"  step {i:>2}  masked={n_mask:>2}  | {render(tr)}")
+        print(f"  步骤 {i:>2}  已掩码={n_mask:>2}  | {render(tr)}")
 
-    print("\nFOUR TASKS, ONE CHECKPOINT")
+    print("\n四项任务，一个检查点")
     print("-" * 60)
-    print("  1. text gen : standard NTP on text tokens")
-    print("  2. VQA      : image in -> text out (causal NTP on text)")
-    print("  3. T2I      : text in -> masked image + diffusion sampler")
-    print("  4. inpaint  : partially-masked image -> fill in via same loop")
+    print("  1. 文本生成：对文本 token 执行标准 NTP")
+    print("  2. VQA      ：图像输入 -> 文本输出（对文本执行因果 NTP）")
+    print("  3. T2I      ：文本输入 -> 被掩码图像 + 扩散采样器")
+    print("  4. 图像修复：部分遮蔽图像 -> 通过相同循环填充")
 
 
 if __name__ == "__main__":
