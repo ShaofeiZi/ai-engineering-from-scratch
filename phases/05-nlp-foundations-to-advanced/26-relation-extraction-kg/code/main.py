@@ -57,7 +57,7 @@ def print_graph(graph):
         for rel, obj, ev in graph[subj]:
             label = RELATION_LABELS.get(rel, rel)
             print(f"  ({subj}) --[{label}]--> ({obj})")
-            print(f"      evidence: \"{ev}\"")
+            print(f"      证据：\"{ev}\"")
 
 
 def main():
@@ -72,28 +72,28 @@ def main():
         "Yann LeCun works at Meta."
     )
 
-    print("=== rule-based relation extraction (with provenance) ===")
-    print(f"document: {doc}")
+    print("=== 基于规则的关系抽取（含来源）===")
+    print(f"文档：{doc}")
     print()
 
     triples = extract(doc)
     verified = verify(triples, doc)
 
-    print(f"extracted: {len(triples)}  verified: {len(verified)}")
+    print(f"已抽取：{len(triples)}  已验证：{len(verified)}")
     print()
     graph = build_graph(verified)
     print_graph(graph)
 
     print()
-    print("=== query: Tim Cook's employer ===")
+    print("=== 查询：Tim Cook 的雇主 ===")
     for rel, obj, ev in graph.get("Tim Cook", []):
         if rel == "P169":
-            print(f"  Tim Cook is CEO of {obj}")
-            print(f"  source: \"{ev}\"")
+            print(f"  Tim Cook 任职 CEO 的组织是 {obj}")
+            print(f"  来源：\"{ev}\"")
 
     print()
-    print("note: rule-based RE = high precision, low recall.")
-    print("production stacks mix patterns + REBEL + LLM with AEVS verification.")
+    print("注意：基于规则的关系抽取具有高精确率、低召回率。")
+    print("生产级技术栈会混合模式、REBEL 和 LLM，并使用 AEVS 验证。")
 
 
 if __name__ == "__main__":
