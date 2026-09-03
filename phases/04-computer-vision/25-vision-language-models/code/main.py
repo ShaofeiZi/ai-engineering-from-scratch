@@ -39,8 +39,8 @@ def cross_modal_error_rate(image_emb, text_emb, text_confidence,
 
 def deepstack_features(per_layer_features):
     """
-    Simulate DeepStack: per_layer_features is list of (N_patches, d) tensors
-    from multiple ViT depths. Stack along channel dim and project.
+    模拟 DeepStack：per_layer_features 是来自多个 ViT 深度的
+    (N_patches, d) 张量列表。沿通道维堆叠后再进行投影。
     """
     return torch.cat(per_layer_features, dim=-1)
 
@@ -62,12 +62,12 @@ def synthetic_vision_class_data(num_classes=5, num_patches=16, d_vit=32, per_cla
 def main():
     torch.manual_seed(0)
 
-    print("[toy vlm: train projector + head on synthetic vision tokens]")
+    print("[简化 VLM：在合成视觉 token 上训练投影器和预测头]")
     X, Y = synthetic_vision_class_data()
     split = int(0.85 * len(X))
     x_tr, y_tr = X[:split], Y[:split]
     x_va, y_va = X[split:], Y[split:]
-    print(f"  train {len(x_tr)}, val {len(x_va)}")
+    print(f"  训练集 {len(x_tr)}，验证集 {len(x_va)}")
 
     model = ToyVLM(vit_dim=32, llm_dim=64, num_classes=5)
     opt = torch.optim.Adam(model.parameters(), lr=3e-3)
@@ -79,15 +79,15 @@ def main():
         if step % 30 == 0:
             with torch.no_grad():
                 acc = (model(x_va).argmax(-1) == y_va).float().mean().item()
-            print(f"  step {step:3d}  ce {loss.item():.3f}  val_acc {acc:.3f}")
+            print(f"  步骤 {step:3d}  交叉熵 {loss.item():.3f}  验证准确率 {acc:.3f}")
 
-    print("\n[deepstack concatenation]")
-    layers = [torch.randn(4, 16, 32) for _ in range(3)]  # 3 ViT depths
+    print("\n[DeepStack 拼接]")
+    layers = [torch.randn(4, 16, 32) for _ in range(3)]  # 3 个 ViT 深度
     stacked = deepstack_features(layers)
-    print(f"  3 layers of (4, 16, 32) -> deepstack {tuple(stacked.shape)}")
+    print(f"  3 层 (4, 16, 32) -> DeepStack {tuple(stacked.shape)}")
 
-    print("\n[CMER simulation]")
-    # Simulated scenario: 8 outputs, half hallucinate (low sim, high conf)
+    print("\n[CMER 模拟]")
+    # 模拟场景：8 个输出中一半产生幻觉（低相似度、高置信度）
     image = F.normalize(torch.randn(8, 32), dim=-1)
     text_good = image + 0.05 * torch.randn_like(image)
     text_good = F.normalize(text_good, dim=-1)
@@ -95,7 +95,7 @@ def main():
     text = torch.cat([text_good[:4], text_bad[4:]], dim=0)
     conf = torch.tensor([0.95, 0.9, 0.88, 0.85, 0.92, 0.9, 0.87, 0.91])
     cmer = cross_modal_error_rate(image, text, conf)
-    print(f"  CMER = {cmer:.3f}  (expected ~0.5 with 4 hallucinations out of 8)")
+    print(f"  CMER = {cmer:.3f}  （8 个输出中有 4 个幻觉时，预期约为 0.5）")
 
 
 if __name__ == "__main__":
