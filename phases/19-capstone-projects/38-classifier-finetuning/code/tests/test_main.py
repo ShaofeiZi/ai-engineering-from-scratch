@@ -1,4 +1,4 @@
-"""Tests for the classifier fine-tuning lesson."""
+"""分类器微调课程的测试。"""
 
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ class DatasetTests(unittest.TestCase):
         texts, labels = make_dataset(n_per_class=100, seed=2)
         tr_t, _tr_y, te_t, te_y = stratified_split(texts, labels, test_frac=0.2, seed=2)
         self.assertEqual(len(tr_t) + len(te_t), 200)
-        # 20 percent of each class lands in the test split.
+        # 每个类别有 20% 的样本进入测试集。
         self.assertEqual(te_y.count(0), 20)
         self.assertEqual(te_y.count(1), 20)
 
@@ -100,7 +100,7 @@ class FreezeTests(unittest.TestCase):
         freeze_body(model)
         after = trainable_params(model)
         self.assertLess(after, before)
-        # Head must still be trainable.
+        # 分类头必须仍可训练。
         self.assertGreater(after, 0)
         for p in model.body.parameters():
             self.assertFalse(p.requires_grad)
@@ -150,7 +150,7 @@ class ForwardTests(unittest.TestCase):
         model.eval()
         tok = ByteTokenizer()
         ids1, mask1 = tok.encode("hello", max_len=cfg.max_len)
-        # Perturb only masked (pad) positions; pooled output must stay unchanged.
+        # 仅扰动被掩蔽的 pad 位置；池化输出必须保持不变。
         ids2 = list(ids1)
         mask2 = list(mask1)
         for i, m in enumerate(mask2):
@@ -191,7 +191,7 @@ class EvaluateTests(unittest.TestCase):
         metrics = evaluate(model, test_dl)
         self.assertIsInstance(metrics, Metrics)
         self.assertGreater(metrics.f1, 0.5)
-        # Sanity: TP + FP + FN + TN must equal the test set size.
+        # 合理性检查：TP + FP + FN + TN 必须等于测试集大小。
         self.assertEqual(metrics.tp + metrics.fp + metrics.fn + metrics.tn, len(test_ds))
 
 
