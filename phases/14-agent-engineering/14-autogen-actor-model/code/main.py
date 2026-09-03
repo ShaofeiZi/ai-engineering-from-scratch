@@ -1,8 +1,8 @@
-"""A stdlib actor runtime modeled on AutoGen v0.4 Core.
+"""一个仿照 AutoGen v0.4 Core 的标准库 actor 运行时。
 
-Actors have private state and an inbox. Messages are the only interaction.
-Failures in one actor are caught by the runtime and routed to a dead-letter
-queue; other actors keep running.
+Actor 拥有私有状态和收件箱。消息是唯一的交互方式。
+某个 actor 中的故障会被运行时捕获并路由到 dead-letter
+队列；其他 actor 继续运行。
 """
 
 from __future__ import annotations
@@ -122,7 +122,7 @@ class ChecklistAgent(Actor):
 
 def main() -> None:
     print("=" * 70)
-    print("AUTOGEN V0.4 ACTOR RUNTIME (STDLIB) — Phase 14, Lesson 14")
+    print("AUTOGEN V0.4 ACTOR 运行时（标准库）— 第 14 阶段，第 14 课")
     print("=" * 70)
 
     runtime = Runtime()
@@ -151,19 +151,19 @@ def main() -> None:
 
     runtime.run_until_idle()
 
-    print("\nmessage trace")
+    print("\n消息追踪")
     for line in runtime.trace:
         print(f"  {line}")
 
-    print(f"\nchecklist consensus: {checklist.consensus}")
-    print(f"dead-letter queue:   {len(runtime.dead_letters)} message(s)")
+    print(f"\n检查清单共识: {checklist.consensus}")
+    print(f"dead-letter 队列:   {len(runtime.dead_letters)} 条消息")
     for msg, reason in runtime.dead_letters:
         print(f"  DLQ m{msg.mid:03d} ({reason}) "
               f"{msg.sender} -> {msg.recipient} topic={msg.topic}")
 
     print()
-    print("property: reviewer's crash on 'crash_me' did not stop")
-    print("the 'review' messages from being processed. fault isolation.")
+    print("属性: 审查者在 'crash_me' 上崩溃并未阻止")
+    print("'review' 消息继续被处理。故障隔离。")
 
 
 if __name__ == "__main__":
