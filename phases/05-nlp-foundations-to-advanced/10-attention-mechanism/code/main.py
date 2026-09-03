@@ -10,18 +10,18 @@ def softmax(scores):
 
 def dot(a, b):
     if len(a) != len(b):
-        raise ValueError(f"dot: length mismatch {len(a)} vs {len(b)}")
+        raise ValueError(f"dot：长度不匹配，{len(a)} 与 {len(b)}")
     return sum(x * y for x, y in zip(a, b))
 
 
 def dot_attention(decoder_state, encoder_states):
     if not encoder_states:
-        raise ValueError("dot_attention: encoder_states must not be empty")
+        raise ValueError("dot_attention：encoder_states 不能为空")
     d_s = len(decoder_state)
     for i, h in enumerate(encoder_states):
         if len(h) != d_s:
             raise ValueError(
-                f"dot_attention: encoder_states[{i}] length {len(h)} != decoder_state length {d_s}"
+                f"dot_attention：encoder_states[{i}] 长度 {len(h)} != decoder_state 长度 {d_s}"
             )
     scores = [dot(decoder_state, h) for h in encoder_states]
     weights = softmax(scores)
@@ -36,7 +36,7 @@ def dot_attention(decoder_state, encoder_states):
 def matvec(M, v):
     for i, row in enumerate(M):
         if len(row) != len(v):
-            raise ValueError(f"matvec: row {i} length {len(row)} != vector length {len(v)}")
+            raise ValueError(f"matvec：第 {i} 行长度 {len(row)} != 向量长度 {len(v)}")
     return [sum(M[i][j] * v[j] for j in range(len(v))) for i in range(len(M))]
 
 
@@ -68,21 +68,21 @@ def main():
     ]
     positions = ["cat", "sat", "mat"]
 
-    print("=== Luong dot attention ===")
-    for name, s in [("close to 'cat'", [0.9, 0.1, 0.2]), ("close to 'mat'", [0.1, 0.9, 0.3]), ("neutral", [0.4, 0.4, 0.2])]:
+    print("=== Luong 点积注意力 ===")
+    for name, s in [("接近 'cat'", [0.9, 0.1, 0.2]), ("接近 'mat'", [0.1, 0.9, 0.3]), ("中性", [0.4, 0.4, 0.2])]:
         _, weights = dot_attention(s, H)
         pretty = {p: round(w, 3) for p, w in zip(positions, weights)}
-        print(f"  decoder state {name:20s} -> weights {pretty}")
+        print(f"  解码器状态 {name:20s} -> 权重 {pretty}")
 
     print()
-    print("=== Bahdanau additive attention (d_attn=2) ===")
+    print("=== Bahdanau 加性注意力（d_attn=2）===")
     W_a = [[0.6, 0.3, 0.1], [0.1, 0.5, 0.4]]
     U_a = [[0.5, 0.2, 0.3], [0.2, 0.6, 0.2]]
     v_a = [0.8, 0.6]
-    for name, s in [("close to 'cat'", [0.9, 0.1, 0.2]), ("close to 'mat'", [0.1, 0.9, 0.3])]:
+    for name, s in [("接近 'cat'", [0.9, 0.1, 0.2]), ("接近 'mat'", [0.1, 0.9, 0.3])]:
         _, weights = additive_attention(s, H, W_a, U_a, v_a)
         pretty = {p: round(w, 3) for p, w in zip(positions, weights)}
-        print(f"  decoder state {name:20s} -> weights {pretty}")
+        print(f"  解码器状态 {name:20s} -> 权重 {pretty}")
 
 
 if __name__ == "__main__":
