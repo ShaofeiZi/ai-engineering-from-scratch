@@ -1,8 +1,8 @@
-# Lesson program for compiling specifications into explicit decision boundaries.
-# Read: phases/14-agent-engineering/51-write-specifications-that-preserve-judgment/docs/en.md
-# Reference: Zave and Jackson, Four Dark Corners of Requirements Engineering, 1997.
-# Reference: Gotel and Finkelstein, Requirements Traceability, IEEE ICRE 1994.
-# Run this file to generate outputs/executable-specification.json.
+#用于将规格说明编译为显式决策边界的课程程序。
+#阅读：phases/14-agent-engineering/51-write-specifications-that-preserve-judgment/docs/en.md
+#参考文献：Zave 和 Jackson，《需求工程的四个暗角》，1997 年。
+#参考文献：Gotel 和 Finkelstein，《需求可追溯性》，IEEE ICRE 1994 年。
+#运行此文件以生成 outputs/executable-specification.json.
 from __future__ import annotations
 
 import json
