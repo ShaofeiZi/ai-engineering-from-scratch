@@ -1,10 +1,10 @@
-"""Checkpointed workflow with idempotency, precondition, verify, rollback.
+"""带检查点的工作流：幂等性、前置条件、验证、回滚。
 
-Simulates four scenarios:
-  1. clean run
-  2. retry after commit-crash  -> idempotency prevents double-execute
-  3. precondition fail         -> workflow aborts without firing
-  4. verify fail               -> rollback fires
+模拟四种场景：
+  1. 正常运行
+  2. 提交崩溃后重试  -> 幂等性阻止重复执行
+  3. 前置条件失败     -> 工作流中止，不触发执行
+  4. 验证失败         -> 触发回滚
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import tempfile
 from dataclasses import dataclass
 
 
-# ---------- Mini database ----------
+# ---------- 迷你数据库 ----------
 
 DB = {"balance_A": 1500, "balance_B": 200, "last_transfer_id": None}
 
@@ -29,13 +29,13 @@ def persist_transfer(txid: str, from_acct: str, to_acct: str, amount: int) -> No
 
 def rollback_transfer(txid: str, from_acct: str, to_acct: str, amount: int,
                       prior_last_transfer_id: str | None) -> None:
-    # Compensating transaction: restore balances and the prior transfer id.
+    # 补偿事务：恢复余额和先前的转账 ID。
     DB[f"balance_{from_acct}"] += amount
     DB[f"balance_{to_acct}"] -= amount
     DB["last_transfer_id"] = prior_last_transfer_id
 
 
-# ---------- Checkpoint store ----------
+# ---------- 检查点存储 ----------
 
 @dataclass
 class Checkpoint:
@@ -51,10 +51,10 @@ class Checkpoint:
             return json.load(f)
 
     def save(self, k: str, v: dict) -> None:
-        # Atomic write: serialize to a sibling temp file, fsync, then
-        # rename. If the process crashes mid-write, the original file
-        # is still intact, so the next retry finds the previous
-        # idempotency record rather than a truncated JSON blob.
+        # 原子写入：先序列化到同目录临时文件，fsync，再
+        # 重命名。如果进程在写入过程中崩溃，原始文件
+        # 仍然完好，因此下次重试会找到之前的
+        # 幂等记录，而不是截断的 JSON 数据。
         data = self.load()
         data[k] = v
         tmp_path = f"{self.path}.tmp"
@@ -65,7 +65,7 @@ class Checkpoint:
         os.replace(tmp_path, self.path)
 
 
-# ---------- Workflow ----------
+# ---------- 工作流 ----------
 
 def key(txid: str) -> str:
     return hashlib.sha256(txid.encode()).hexdigest()[:12]
@@ -78,10 +78,10 @@ def run_transfer(cp: Checkpoint, txid: str, from_acct: str, to_acct: str,
     k = key(txid)
     record = cp.load().get(k, {"status": "new"})
 
-    # Idempotency across all terminal states. A retry of the same txid
-    # after ANY terminal verdict — committed, verified, rolled-back,
-    # aborted-precondition — must short-circuit to the original result
-    # instead of re-executing.
+    # 所有终态的幂等性。同一个 txid 在任意终态
+    # 判决之后重试——已提交、已验证、已回滚、
+    # 前置条件中止——都必须短路返回原始结果，
+    # 而不是重新执行。
     terminal_results = {
         "committed": "idempotent-skip",
         "verified": "ok",
@@ -91,28 +91,27 @@ def run_transfer(cp: Checkpoint, txid: str, from_acct: str, to_acct: str,
     if record["status"] in terminal_results:
         return terminal_results[record["status"]]
 
-    # Precondition check: post-transfer balance must remain >= min_balance
+    # 前置条件检查：转账后余额必须保持 >= min_balance
     if DB[f"balance_{from_acct}"] - amount < min_balance:
         cp.save(k, {"status": "aborted-precondition", "txid": txid})
         return "aborted-precondition"
 
-    # Capture prior state so rollback can restore exactly (not just invert).
+    # 捕获先前状态，以便回滚时精确恢复（而非简单反转）。
     prior_last_transfer_id = DB["last_transfer_id"]
 
-    # Record intent BEFORE the side effect, so a crash between the
-    # save and persist_transfer leaves a "committed" marker the retry
-    # can detect and short-circuit. We only promote to "verified" once
-    # the post-action read (below) confirms the side effect landed.
+    # 在副作用发生之前记录意图，这样在 save 和
+    # persist_transfer 之间崩溃时，会留下 "committed" 标记，
+    # 重试时可以检测并短路。只有在后续读取（下方）
+    # 确认副作用已落地后，才提升为 "verified"。
     #
-    # Subtle durability gap (lesson trade-off): if the process crashes
-    # AFTER cp.save and BEFORE persist_transfer, a retry will see
-    # status == "committed" and return "idempotent-skip" even though
-    # the transfer never actually ran. Production systems close this
-    # gap by either (a) carrying the idempotency key into the side
-    # effect itself so the destination DB enforces exactly-once, or
-    # (b) gating "committed" on a post-action read of the destination,
-    # which is exactly what the verify step below does for the
-    # non-crash path.
+    # 持久性细微缺口（课程权衡）：如果进程在
+    # cp.save 之后、persist_transfer 之前崩溃，重试会看到
+    # status == "committed" 并返回 "idempotent-skip"，
+    # 即使转账实际上从未执行。生产系统通过以下方式
+    # 消除此缺口：(a) 将幂等键传递到副作用本身，
+    # 让目标 DB 强制 exactly-once，或
+    # (b) 对 "committed" 增加目标的事后读取校验，
+    # 这正是下方验证步骤在非崩溃路径中所做的。
     cp.save(k, {"status": "committed", "txid": txid,
                 "from_acct": from_acct, "to_acct": to_acct,
                 "amount": amount,
@@ -121,7 +120,7 @@ def run_transfer(cp: Checkpoint, txid: str, from_acct: str, to_acct: str,
     if inject_crash_after_execute:
         raise RuntimeError("simulated crash after execute")
 
-    # Post-action verify
+    # 事后验证
     if inject_verify_fail or DB["last_transfer_id"] != txid:
         rollback_transfer(txid, from_acct, to_acct, amount, prior_last_transfer_id)
         cp.save(k, {"status": "rolled-back", "txid": txid})
@@ -131,60 +130,60 @@ def run_transfer(cp: Checkpoint, txid: str, from_acct: str, to_acct: str,
     return "ok"
 
 
-# ---------- Driver ----------
+# ---------- 驱动程序 ----------
 
 def main() -> None:
     print("=" * 80)
-    print("CHECKPOINTS AND ROLLBACK (Phase 15, Lesson 16)")
+    print("检查点与回滚（第 15 阶段，第 16 课）")
     print("=" * 80)
 
     tmp = tempfile.mkdtemp()
     print()
-    print("Scenario 1: clean run")
+    print("场景 1：正常运行")
     print("-" * 80)
     cp = Checkpoint(os.path.join(tmp, "cp1.json"))
     out = run_transfer(cp, "tx-001", "A", "B", 100, min_balance=200)
-    print(f"  result={out}  DB={DB}")
+    print(f"  结果={out}  DB={DB}")
 
-    print("\nScenario 2: crash mid-commit, retry (idempotency catches)")
+    print("\n场景 2：提交过程中崩溃，重试（幂等性捕获）")
     print("-" * 80)
     cp = Checkpoint(os.path.join(tmp, "cp2.json"))
     try:
         run_transfer(cp, "tx-002", "A", "B", 100, min_balance=200,
                      inject_crash_after_execute=True)
     except RuntimeError as e:
-        print(f"  crash: {e}")
-    # Retry after the crash
+        print(f"  崩溃: {e}")
+    # 崩溃后重试
     out = run_transfer(cp, "tx-002", "A", "B", 100, min_balance=200)
-    print(f"  retry result={out}  DB={DB}")
+    print(f"  重试结果={out}  DB={DB}")
 
-    print("\nScenario 3: precondition fails (balance would go below min)")
+    print("\n场景 3：前置条件失败（余额将低于最小值）")
     print("-" * 80)
     cp = Checkpoint(os.path.join(tmp, "cp3.json"))
     out = run_transfer(cp, "tx-003", "A", "B", 10_000, min_balance=200)
-    print(f"  result={out}  DB={DB}")
+    print(f"  结果={out}  DB={DB}")
 
-    print("\nScenario 4: verify fails -> rollback")
+    print("\n场景 4：验证失败 -> 回滚")
     print("-" * 80)
     cp = Checkpoint(os.path.join(tmp, "cp4.json"))
     balances_before = dict(DB)
     out = run_transfer(cp, "tx-004", "A", "B", 100, min_balance=200,
                        inject_verify_fail=True)
     balances_after = dict(DB)
-    print(f"  result={out}  balances_before_after_equal="
+    print(f"  结果={out}  前后余额是否相等="
           f"{balances_before == balances_after}")
 
     print()
     print("=" * 80)
-    print("HEADLINE: idempotency + precondition + verify + rollback")
+    print("要点：幂等性 + 前置条件 + 验证 + 回滚")
     print("-" * 80)
-    print("  Four pieces, not one. Each covers a distinct failure class:")
-    print("  idempotency -> retry-safe on crash")
-    print("  precondition -> state drift between approval and commit")
-    print("  verify       -> the side effect did not happen when we thought it did")
-    print("  rollback     -> known-bad state restored or alerted")
-    print("  Article 14 operational reading: checkpoints queryable, rollbacks")
-    print("  rehearsed, audit trail survives deploys.")
+    print("  四个部分，缺一不可。各自覆盖不同的故障类别：")
+    print("  幂等性   -> 崩溃时重试安全")
+    print("  前置条件 -> 审批与提交之间的状态漂移")
+    print("  验证     -> 副作用在我们以为发生时并未发生")
+    print("  回滚     -> 已知不良状态已恢复或告警")
+    print("  第 14 条运维解读：检查点可查询，回滚已演练，")
+    print("  审计链在部署中存活。")
 
 
 if __name__ == "__main__":
