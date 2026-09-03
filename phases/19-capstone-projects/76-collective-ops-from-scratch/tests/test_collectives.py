@@ -1,4 +1,4 @@
-"""Unit tests for the queue-mesh collectives. Run with: python3 -m unittest discover tests"""
+"""队列网格集合通信原语的单元测试。运行命令：python3 -m unittest discover tests"""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ class TestCollectives(unittest.TestCase):
             self.assertTrue(torch.allclose(mesh_out[r], gloo_out[r], atol=1e-5))
 
     def test_allreduce_byte_count_matches_formula(self):
-        """Ring allreduce per-rank bytes = 2 * T * (N - 1) / N."""
+        """Ring allreduce 每个 rank 的字节数 = 2 * T * (N - 1) / N。"""
         torch.manual_seed(5)
         ws = 4
         n = 64
@@ -75,7 +75,7 @@ class TestCollectives(unittest.TestCase):
         self.assertEqual(per_rank_bytes, expected)
 
     def test_allreduce_world_size_two(self):
-        """Smallest non-trivial world size still produces correct sum."""
+        """最小的非平凡 world size 仍能产生正确的和。"""
         ws = 2
         inputs = [torch.ones(8) * (r + 1) for r in range(ws)]
         mesh_out, _ = run_mesh("allreduce", ws, inputs)
@@ -84,7 +84,7 @@ class TestCollectives(unittest.TestCase):
             self.assertTrue(torch.allclose(mesh_out[r], expected, atol=1e-6))
 
     def test_primitive_names(self):
-        """The exported PRIMITIVES list is the contract for downstream lessons."""
+        """导出的 PRIMITIVES 列表是下游课程使用的契约。"""
         self.assertEqual(set(PRIMITIVES),
                          {"allreduce", "broadcast", "allgather", "reduce_scatter"})
 
