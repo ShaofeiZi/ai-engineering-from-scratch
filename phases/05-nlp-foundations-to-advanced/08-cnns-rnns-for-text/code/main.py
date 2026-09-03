@@ -23,13 +23,13 @@ def max_pool(values):
 
 
 def main():
-    print("=== vanishing gradient sim ===")
+    print("=== 梯度消失模拟 ===")
     for length in [10, 50, 100, 200]:
-        print(f"  len={length:3d}  w=0.9  gradient attenuation = {vanishing_gradient_sim(length):.2e}")
-    print("  a plain RNN loses 99.99% of its gradient by step 100.")
+        print(f"  长度={length:3d}  w=0.9  梯度衰减 = {vanishing_gradient_sim(length):.2e}")
+    print("  普通 RNN 到第 100 步时会损失 99.99% 的梯度。")
     print()
 
-    print("=== TextCNN conceptual pass ===")
+    print("=== TextCNN 概念演示 ===")
     embeddings = [
         [1.0, 0.2, 0.5],
         [0.8, 0.9, 0.1],
@@ -43,10 +43,10 @@ def main():
     act_w2 = conv1d_over_embeddings(embeddings, filter_w2, bias=-0.5)
     act_w3 = conv1d_over_embeddings(embeddings, filter_w3, bias=-0.4)
 
-    print(f"  5 tokens x 3 embed_dim")
-    print(f"  width-2 filter activations: {[round(x, 2) for x in act_w2]}")
-    print(f"  width-3 filter activations: {[round(x, 2) for x in act_w3]}")
-    print(f"  max-pooled features:        [{max_pool(act_w2):.2f}, {max_pool(act_w3):.2f}]")
+    print(f"  5 个 token x 3 维嵌入")
+    print(f"  宽度为 2 的滤波器激活值：{[round(x, 2) for x in act_w2]}")
+    print(f"  宽度为 3 的滤波器激活值：{[round(x, 2) for x in act_w3]}")
+    print(f"  最大池化特征：            [{max_pool(act_w2):.2f}, {max_pool(act_w3):.2f}]")
 
 
 if __name__ == "__main__":
