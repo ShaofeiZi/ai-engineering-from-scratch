@@ -1,11 +1,11 @@
-"""Toy ReWOO — Planner, Workers, Solver. Stdlib only.
+"""玩具版 ReWOO — 规划器、工作者、求解器。仅使用标准库。
 
-Demonstrates the decoupled pattern from Xu et al. (arXiv:2305.18323):
-  1. Planner emits a DAG of (tool, args) steps with references (#E1, #E2, ...).
-  2. Workers run each step in topological order.
-  3. Solver composes the final answer from question + plan + evidence.
+演示 Xu 等人（arXiv:2305.18323）提出的解耦模式：
+  1. 规划器生成一个由 (tool, args) 步骤组成的 DAG，其中包含引用（#E1、#E2、...）。
+  2. 工作者按拓扑顺序执行每个步骤。
+  3. 求解器根据问题 + 计划 + 证据组合出最终答案。
 
-Compare run_rewoo() vs run_react() at the bottom for token-use intuition.
+在底部的 run_rewoo() 与 run_react() 对比中可以直观感受 token 用量的差异。
 """
 
 from __future__ import annotations
@@ -158,7 +158,7 @@ def run_react_mock(question: str, tools: ToolRegistry,
 
 def main() -> None:
     print("=" * 70)
-    print("REWOO — Planner, Workers, Solver (Phase 14, Lesson 02)")
+    print("ReWOO — 规划器、工作者、求解器（第 14 阶段，第 02 课）")
     print("=" * 70)
 
     tools = ToolRegistry()
@@ -177,13 +177,13 @@ def main() -> None:
     run = run_rewoo("What is the population of the capital of France, rounded?",
                     planner, tools, solver)
 
-    print("\nPLAN")
+    print("\n计划")
     for step in run.plan.steps:
         print(f"  {step.id}: {step.tool}({step.args})")
-    print("\nEVIDENCE")
+    print("\n证据")
     for k, v in run.evidence.items():
         print(f"  {k} -> {v}")
-    print(f"\nFINAL: {run.answer}")
+    print(f"\n最终结果：{run.answer}")
 
     react_chars = run_react_mock(
         run.question, tools,
@@ -191,11 +191,11 @@ def main() -> None:
          ("search", {"query": "population of Paris"}),
          ("round_million", {"text": "11.2 million metro"})])
     rewoo_chars = run.planner_chars + run.worker_chars + run.solver_chars
-    print("\nTOKEN INTUITION (chars, approximate)")
-    print(f"  react total  : {react_chars}")
-    print(f"  rewoo total  : {rewoo_chars}")
-    print(f"  ratio        : {react_chars / max(rewoo_chars, 1):.2f}x")
-    print("\npaper claim: ~5x fewer tokens on HotpotQA. toy approximates the shape.")
+    print("\nToken 用量直觉（字符数，近似值）")
+    print(f"  react 总计  : {react_chars}")
+    print(f"  rewoo 总计  : {rewoo_chars}")
+    print(f"  比率        : {react_chars / max(rewoo_chars, 1):.2f}x")
+    print("\n论文声明：在 HotpotQA 上 token 用量减少约 5 倍。本玩具示例近似展示其趋势。")
 
 
 if __name__ == "__main__":
