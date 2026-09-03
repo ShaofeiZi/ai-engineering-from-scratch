@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 06: trace the stateless MCP request lifecycle.
-Lesson: phases/13-tools-and-protocols/06-mcp-fundamentals/docs/en.md
-Specification: https://modelcontextprotocol.io/specification/2026-07-28/
-Builds JSON-RPC requests, validates per-request metadata, and emits results.
-Run: python3 main.py
+"""阶段 13 第 06 课：追踪无状态 MCP 请求生命周期。
+课程：phases/13-tools-and-protocols/06-mcp-fundamentals/docs/en.md
+规范：https://modelcontextprotocol.io/specification/2026-07-28/
+构建 JSON-RPC 请求，验证 per-request 元数据，并输出结果。
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -236,14 +236,14 @@ def main() -> None:
         ),
         make_request(4, "tools/list", version="2027-01-01"),
     ]
-    print("MCP 2026-07-28 stateless request trace")
+    print("MCP 2026-07-28 无状态请求追踪")
     for current in requests:
         print()
         show(current)
         response = dispatch(current)
         if response is not None:
             show(response)
-    print("\nTransport closes. No protocol session was created or terminated.")
+    print("\n传输层关闭。未创建或终止任何协议会话。")
 
 
 if __name__ == "__main__":
