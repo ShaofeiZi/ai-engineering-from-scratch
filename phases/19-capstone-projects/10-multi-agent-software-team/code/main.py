@@ -1,12 +1,10 @@
-"""Multi-agent software team — typed task board + handoff accounting scaffold.
+"""多智能体软件团队——类型化任务板 + 交接统计脚手架。
 
-The hard architectural primitive is the typed message task board that
-coordinates an architect, N parallel coders, a reviewer, and a tester, with
-every role boundary producing a trace span. This scaffold runs the full
-message flow with stubbed LLM calls so the handoff logic and token accounting
-are observable end to end.
+关键架构原语是类型化消息任务板，它协调一名架构师、N 名并行编码者、一名审查者
+和一名测试者，并在每个角色边界生成 trace span。此脚手架使用 stub LLM 调用
+运行完整消息流，使交接逻辑和 token 统计可以端到端观察。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -18,7 +16,7 @@ from enum import Enum
 
 
 # ---------------------------------------------------------------------------
-# typed message task board  --  A2A-style typed messages
+# 类型化消息任务板——A2A 风格的类型化消息
 # ---------------------------------------------------------------------------
 
 class MsgKind(Enum):
@@ -56,7 +54,7 @@ class Board:
 
 
 # ---------------------------------------------------------------------------
-# role stubs  --  architect, coders, reviewer, tester
+# 角色 stub——架构师、编码者、审查者、测试者
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -64,18 +62,18 @@ class Subtask:
     name: str
     files: list[str]
     lines_changed: int = 0
-    has_bug: bool = False  # for injected-bug probe
+    has_bug: bool = False  # 用于注入缺陷的探测
 
 
 def architect_plan(issue: str, rng: random.Random) -> list[Subtask]:
-    """Stubbed architect plan."""
+    """架构师计划的 stub 实现。"""
     subs = [
         Subtask("parser", ["src/parser.py"]),
         Subtask("cache", ["src/cache.py", "src/cache_test.py"]),
         Subtask("api", ["src/api.py"]),
         Subtask("migration", ["src/migrate.py"]),
     ]
-    # randomly inject one bug for reviewer probe
+    # 随机注入一个缺陷，用于探测审查者
     subs[rng.randrange(len(subs))].has_bug = rng.random() < 0.3
     return subs
 
@@ -87,47 +85,47 @@ def coder_implement(sub: Subtask, rng: random.Random) -> dict:
 
 
 def reviewer_check(diffs: list[dict], rng: random.Random) -> tuple[bool, str]:
-    """Reviewer stub. Catches bugs ~85% of the time; 15% false-approve rate."""
+    """审查者 stub。约 85% 的概率发现缺陷，误批准率为 15%。"""
     buggy = [d for d in diffs if d["has_bug"]]
     if not buggy:
         return True, "lgtm"
     if rng.random() < 0.85:
-        return False, f"found bug in {buggy[0]['subtask']}: please revisit"
-    return True, "lgtm (FALSE-APPROVE)"
+        return False, f"在 {buggy[0]['subtask']} 中发现缺陷，请重新检查"
+    return True, "lgtm（误批准）"
 
 
 def tester_run(diffs: list[dict], rng: random.Random) -> tuple[bool, str]:
-    """Tester stub. Catches any remaining bugs, with ~3% flake rate."""
+    """测试者 stub。发现所有残留缺陷，约有 3% 的 flaky 概率。"""
     buggy = [d for d in diffs if d["has_bug"]]
     if buggy:
-        return False, f"test fails in {buggy[0]['subtask']} module"
+        return False, f"{buggy[0]['subtask']} 模块中的测试失败"
     if rng.random() < 0.03:
-        return False, "flaky test"
-    return True, "412/412 passing"
+        return False, "flaky 测试"
+    return True, "412/412 通过"
 
 
 # ---------------------------------------------------------------------------
-# orchestrator  --  runs the full flow, computes token amplification
+# 编排器——运行完整流程并计算 token 放大率
 # ---------------------------------------------------------------------------
 
 def run_team(issue: str, n_coders: int = 4, rng: random.Random | None = None) -> dict:
     rng = rng or random.Random(0)
     board = Board()
 
-    # architect
+    # 架构师
     plan = architect_plan(issue, rng)
     board.post(Msg(MsgKind.PLAN_REQUEST, by="architect", to="board",
                    payload={"issue": issue, "subtasks": [s.name for s in plan]},
                    tokens=4500))
 
-    # dispatch subtasks to coders
+    # 将子任务分派给编码者
     for i, sub in enumerate(plan[:n_coders]):
         coder = f"coder-{chr(65 + i)}"
         board.post(Msg(MsgKind.SUBTASK, by="architect", to=coder,
                        payload={"subtask": sub.name, "files": sub.files},
                        tokens=1200))
 
-    # coders implement in parallel
+    # 编码者并行实现
     diffs: list[dict] = []
     for i, sub in enumerate(plan[:n_coders]):
         coder = f"coder-{chr(65 + i)}"
@@ -136,31 +134,31 @@ def run_team(issue: str, n_coders: int = 4, rng: random.Random | None = None) ->
         board.post(Msg(MsgKind.DIFF_READY, by=coder, to="merge_coord",
                        payload=result, tokens=3200 + result["lines"] * 30))
 
-    # merge (no conflict by construction in this scaffold)
+    # 合并（此脚手架的构造保证不会发生冲突）
     board.post(Msg(MsgKind.REVIEW_NEEDED, by="merge_coord", to="reviewer",
                    payload={"diffs": diffs}, tokens=2000))
 
-    # reviewer
+    # 审查者
     approved, comment = reviewer_check(diffs, rng)
     if approved:
         board.post(Msg(MsgKind.APPROVED, by="reviewer", to="tester",
                        payload={"comment": comment}, tokens=1800))
     else:
-        # route back to coder who owned the subtask (simplified: first coder)
+        # 路由回负责该子任务的编码者（简化为第一名编码者）
         board.post(Msg(MsgKind.REVIEW_FEEDBACK, by="reviewer", to="coder-A",
                        payload={"comment": comment}, tokens=1800))
-        # coder revises
+        # 编码者修订
         board.post(Msg(MsgKind.DIFF_READY, by="coder-A", to="merge_coord",
                        payload={"subtask": "parser", "lines": 52, "has_bug": False},
                        tokens=3100))
-        # reviewer re-approves
+        # 审查者重新批准
         board.post(Msg(MsgKind.APPROVED, by="reviewer", to="tester",
                        payload={"comment": "now lgtm"}, tokens=1500))
-        # update diffs: drop bug
+        # 更新 diff：移除缺陷
         diffs = [{"subtask": d["subtask"], "lines": d["lines"], "has_bug": False}
                  for d in diffs]
 
-    # tester
+    # 测试者
     passed, testmsg = tester_run(diffs, rng)
     if passed:
         board.post(Msg(MsgKind.TEST_PASSED, by="tester", to="pr_opener",
@@ -181,12 +179,12 @@ def run_team(issue: str, n_coders: int = 4, rng: random.Random | None = None) ->
 
 
 # ---------------------------------------------------------------------------
-# run several matched trials vs single-agent baseline
+# 运行多组配对试验，并与单智能体基线比较
 # ---------------------------------------------------------------------------
 
 def single_agent_baseline(issue: str, rng: random.Random) -> dict:
-    """Stub: one Sonnet 4.7 in a single worktree does the whole thing."""
-    # slower but fewer handoffs; tokens roughly the whole budget minus role overhead
+    """Stub：由单个工作树中的一个 Sonnet 4.7 完成全部工作。"""
+    # 速度较慢但交接更少；token 数约为总预算减去角色开销
     return {
         "passed": rng.random() < 0.68,
         "total_tokens": 18_000 + rng.randint(0, 6_000),
@@ -195,17 +193,17 @@ def single_agent_baseline(issue: str, rng: random.Random) -> dict:
 
 def main() -> None:
     rng = random.Random(11)
-    print("=== multi-agent team run ===")
+    print("=== 多智能体团队运行 ===")
     result = run_team("fix widget parser race", n_coders=4, rng=rng)
-    print(f"approved     : {result['approved']}  ({result['review_comment']})")
-    print(f"tested passed: {result['tested_passed']}  ({result['test_msg']})")
-    print(f"handoffs     : {result['handoffs']}")
-    print(f"total tokens : {result['total_tokens']:,}")
-    print("tokens by role:")
+    print(f"已批准      ：{result['approved']}  ({result['review_comment']})")
+    print(f"测试已通过  ：{result['tested_passed']}  ({result['test_msg']})")
+    print(f"交接次数    ：{result['handoffs']}")
+    print(f"token 总数  ：{result['total_tokens']:,}")
+    print("按角色统计 token：")
     for role, n in sorted(result['tokens_by_role'].items(), key=lambda x: -x[1]):
         print(f"  {role:14s} {n:>6,}")
 
-    print("\n=== 10 matched trials vs single-agent baseline ===")
+    print("\n=== 10 组配对试验与单智能体基线对比 ===")
     team_pass = 0
     baseline_pass = 0
     team_tok_sum = 0
@@ -221,9 +219,9 @@ def main() -> None:
         team_tok_sum += r_team['total_tokens']
         base_tok_sum += r_base['total_tokens']
 
-    print(f"team pass    : {team_pass}/10   tokens/run: {team_tok_sum/10:,.0f}")
-    print(f"baseline pass: {baseline_pass}/10   tokens/run: {base_tok_sum/10:,.0f}")
-    print(f"token amplification: {team_tok_sum / max(1, base_tok_sum):.2f}x")
+    print(f"团队通过    ：{team_pass}/10   每次运行 token：{team_tok_sum/10:,.0f}")
+    print(f"基线通过    ：{baseline_pass}/10   每次运行 token：{base_tok_sum/10:,.0f}")
+    print(f"token 放大率：{team_tok_sum / max(1, base_tok_sum):.2f}x")
 
 
 if __name__ == "__main__":
