@@ -336,7 +336,7 @@ class FullPipeline:
 
 def demo_data_leakage():
     print("=" * 60)
-    print("DATA LEAKAGE DEMONSTRATION")
+    print("数据泄漏演示")
     print("=" * 60)
 
     rng = np.random.RandomState(42)
@@ -363,19 +363,19 @@ def demo_data_leakage():
     model_clean.fit(X_train_clean, y_train)
     acc_clean = np.mean(model_clean.predict(X_test_clean) == y_test)
 
-    print(f"  Leaky (scaler fit on all data):    {acc_leaky:.3f}")
-    print(f"  Clean (scaler fit on train only):  {acc_clean:.3f}")
-    print(f"  Difference:                        {acc_leaky - acc_clean:+.3f}")
+    print(f"  泄漏（缩放器在全部数据上拟合）:    {acc_leaky:.3f}")
+    print(f"  干净（缩放器仅在训练集上拟合）:    {acc_clean:.3f}")
+    print(f"  差异:                               {acc_leaky - acc_clean:+.3f}")
     print()
-    print("  On this simple case the difference may be small,")
-    print("  but on real data with target encoding or feature")
-    print("  selection, leakage can inflate accuracy by 10-30%.")
+    print("  在这个简单例子中差异可能较小，")
+    print("  但在真实数据上，如果使用目标编码或特征")
+    print("  选择，泄漏可能使准确率虚高 10-30%。")
     print()
 
 
 def demo_pipeline_from_scratch():
     print("=" * 60)
-    print("PIPELINE FROM SCRATCH")
+    print("从零实现的流水线")
     print("=" * 60)
 
     rng = np.random.RandomState(42)
@@ -394,15 +394,15 @@ def demo_pipeline_from_scratch():
     train_acc = pipe.score(X_train, y_train)
     test_acc = pipe.score(X_test, y_test)
 
-    print(f"  Pipeline (scaler + logistic regression):")
-    print(f"  Train accuracy: {train_acc:.3f}")
-    print(f"  Test accuracy:  {test_acc:.3f}")
+    print(f"  流水线（标准化 + 逻辑回归）:")
+    print(f"  训练准确率: {train_acc:.3f}")
+    print(f"  测试准确率:  {test_acc:.3f}")
     print()
 
 
 def demo_full_pipeline():
     print("=" * 60)
-    print("FULL PIPELINE WITH MIXED DATA TYPES")
+    print("混合数据类型的完整流水线")
     print("=" * 60)
 
     data = make_mixed_data(n_samples=500)
@@ -418,15 +418,15 @@ def demo_full_pipeline():
     train_acc = pipe.score(train)
     test_acc = pipe.score(test)
 
-    print(f"  Full pipeline (impute + scale + encode + tree):")
-    print(f"  Train accuracy: {train_acc:.3f}")
-    print(f"  Test accuracy:  {test_acc:.3f}")
+    print(f"  完整流水线（插补 + 标准化 + 编码 + 决策树）:")
+    print(f"  训练准确率: {train_acc:.3f}")
+    print(f"  测试准确率:  {test_acc:.3f}")
     print()
 
 
 def demo_cross_validation():
     print("=" * 60)
-    print("CROSS-VALIDATION WITH PIPELINE")
+    print("流水线的交叉验证")
     print("=" * 60)
 
     data = make_mixed_data(n_samples=500)
@@ -440,47 +440,47 @@ def demo_cross_validation():
 
     scores = cross_validate_pipeline(make_pipeline, data, n_folds=5)
 
-    print(f"  5-fold CV scores: {[f'{s:.3f}' for s in scores]}")
-    print(f"  Mean: {np.mean(scores):.3f} +/- {np.std(scores):.3f}")
+    print(f"  5 折交叉验证得分: {[f'{s:.3f}' for s in scores]}")
+    print(f"  均值: {np.mean(scores):.3f} +/- {np.std(scores):.3f}")
     print()
-    print("  Each fold fits the preprocessor on its own training split.")
-    print("  No data leakage across folds.")
+    print("  每一折都在自己的训练划分上拟合预处理器。")
+    print("  各折之间不存在数据泄漏。")
     print()
 
 
 def demo_unknown_categories():
     print("=" * 60)
-    print("HANDLING UNKNOWN CATEGORIES")
+    print("处理未知类别")
     print("=" * 60)
 
     train_cats = np.array([["new_york"], ["chicago"], ["la"], ["houston"]])
     encoder = OneHotEncoder(handle_unknown="ignore")
     encoder.fit(train_cats)
 
-    print(f"  Known categories: {encoder.categories[0]}")
+    print(f"  已知类别: {encoder.categories[0]}")
 
     train_encoded = encoder.transform(train_cats)
-    print(f"  'new_york' encoded: {train_encoded[0]}")
+    print(f"  'new_york' 编码: {train_encoded[0]}")
 
     unknown = np.array([["seattle"]])
     unknown_encoded = encoder.transform(unknown)
-    print(f"  'seattle' (unknown) encoded: {unknown_encoded[0]}")
-    print(f"  Unknown category produces zero vector (no crash).")
+    print(f"  'seattle'（未知）编码: {unknown_encoded[0]}")
+    print(f"  未知类别产生全零向量（不会崩溃）。")
     print()
 
 
 def demo_model_comparison():
     print("=" * 60)
-    print("MODEL COMPARISON VIA PIPELINE")
+    print("通过流水线进行模型比较")
     print("=" * 60)
 
     data = make_mixed_data(n_samples=500)
 
     models = [
-        ("Logistic Regression", lambda: LogisticRegressionSimple(lr=0.05, n_iter=1000)),
-        ("Decision Tree d=3", lambda: DecisionTreeSimple(max_depth=3)),
-        ("Decision Tree d=5", lambda: DecisionTreeSimple(max_depth=5)),
-        ("Decision Tree d=10", lambda: DecisionTreeSimple(max_depth=10)),
+        ("逻辑回归", lambda: LogisticRegressionSimple(lr=0.05, n_iter=1000)),
+        ("决策树 d=3", lambda: DecisionTreeSimple(max_depth=3)),
+        ("决策树 d=5", lambda: DecisionTreeSimple(max_depth=5)),
+        ("决策树 d=10", lambda: DecisionTreeSimple(max_depth=10)),
     ]
 
     for name, model_fn in models:
@@ -499,7 +499,7 @@ def demo_model_comparison():
 
 def demo_sklearn_pipeline():
     print("=" * 60)
-    print("SKLEARN PIPELINE (if installed)")
+    print("SKLEARN 流水线（如已安装）")
     print("=" * 60)
 
     try:
@@ -511,7 +511,7 @@ def demo_sklearn_pipeline():
         from sklearn.ensemble import GradientBoostingClassifier
         from sklearn.model_selection import cross_val_score
     except ImportError:
-        print("  sklearn not installed, skipping.")
+        print("  未安装 sklearn，跳过。")
         print()
         return
 
@@ -548,20 +548,20 @@ def demo_sklearn_pipeline():
     ])
 
     scores = cross_val_score(full_pipe, df, y, cv=5, scoring="accuracy")
-    print(f"  sklearn GBM pipeline:")
-    print(f"  5-fold CV: {scores.mean():.3f} +/- {scores.std():.3f}")
-    print(f"  Per fold:  {[f'{s:.3f}' for s in scores]}")
+    print(f"  sklearn GBM 流水线:")
+    print(f"  5 折交叉验证: {scores.mean():.3f} +/- {scores.std():.3f}")
+    print(f"  各折:  {[f'{s:.3f}' for s in scores]}")
     print()
 
     full_pipe.fit(df, y)
-    print(f"  Pipeline steps: {[name for name, _ in full_pipe.steps]}")
-    print(f"  Preprocessor transformers: {[name for name, _, _ in preprocessor.transformers]}")
+    print(f"  流水线步骤: {[name for name, _ in full_pipe.steps]}")
+    print(f"  预处理器转换器: {[name for name, _, _ in preprocessor.transformers]}")
     print()
 
 
 def demo_experiment_tracking():
     print("=" * 60)
-    print("EXPERIMENT TRACKING (manual log)")
+    print("实验跟踪（手动日志）")
     print("=" * 60)
 
     data = make_mixed_data(n_samples=500)
@@ -597,7 +597,7 @@ def demo_experiment_tracking():
         }
         experiments.append(result)
 
-    print(f"  {'Run':>4}  {'Config':>40}  {'Accuracy':>10}  {'Std':>8}")
+    print(f"  {'运行':>4}  {'配置':>40}  {'准确率':>10}  {'标准差':>8}")
     print(f"  {'-'*4}  {'-'*40}  {'-'*10}  {'-'*8}")
     for exp in experiments:
         config_str = str(exp["config"])[:40]
@@ -607,15 +607,15 @@ def demo_experiment_tracking():
         )
 
     best = max(experiments, key=lambda e: e["mean_accuracy"])
-    print(f"\n  Best run: #{best['run_id']}")
-    print(f"  Config: {best['config']}")
-    print(f"  Accuracy: {best['mean_accuracy']:.3f} +/- {best['std_accuracy']:.3f}")
+    print(f"\n  最佳运行: #{best['run_id']}")
+    print(f"  配置: {best['config']}")
+    print(f"  准确率: {best['mean_accuracy']:.3f} +/- {best['std_accuracy']:.3f}")
     print()
 
 
 def demo_reproducibility():
     print("=" * 60)
-    print("REPRODUCIBILITY CHECK")
+    print("可复现性检查")
     print("=" * 60)
 
     data = make_mixed_data(n_samples=500, seed=42)
@@ -631,13 +631,13 @@ def demo_reproducibility():
     run2 = cross_validate_pipeline(make_pipe, data, n_folds=5, seed=42)
     run3 = cross_validate_pipeline(make_pipe, data, n_folds=5, seed=99)
 
-    print(f"  Run 1 (seed=42): {[f'{s:.4f}' for s in run1]}")
-    print(f"  Run 2 (seed=42): {[f'{s:.4f}' for s in run2]}")
-    print(f"  Run 3 (seed=99): {[f'{s:.4f}' for s in run3]}")
-    print(f"  Run 1 == Run 2: {all(abs(a-b) < 1e-10 for a,b in zip(run1, run2))}")
-    print(f"  Run 1 == Run 3: {all(abs(a-b) < 1e-10 for a,b in zip(run1, run3))}")
+    print(f"  运行 1（seed=42）：{[f'{s:.4f}' for s in run1]}")
+    print(f"  运行 2（seed=42）：{[f'{s:.4f}' for s in run2]}")
+    print(f"  运行 3（seed=99）：{[f'{s:.4f}' for s in run3]}")
+    print(f"  运行 1 == 运行 2：{all(abs(a-b) < 1e-10 for a,b in zip(run1, run2))}")
+    print(f"  运行 1 == 运行 3：{all(abs(a-b) < 1e-10 for a,b in zip(run1, run3))}")
     print()
-    print("  Same seed, same data, same results. That is reproducibility.")
+    print("  相同的 seed、相同的数据会得到相同的结果，这就是可复现性。")
     print()
 
 
@@ -651,4 +651,4 @@ if __name__ == "__main__":
     demo_sklearn_pipeline()
     demo_experiment_tracking()
     demo_reproducibility()
-    print("All pipeline demos complete.")
+    print("所有流水线演示均已完成。")
