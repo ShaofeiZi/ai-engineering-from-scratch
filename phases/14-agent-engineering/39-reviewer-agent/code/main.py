@@ -1,12 +1,11 @@
-"""Reviewer agent stub with a five-dimension rubric.
+"""带有五维评分标准的审查者代理存根。
 
-Consumes builder artifacts (diff summary, state, feedback, verification verdict)
-and emits review_report.json with per-dimension scores and a final verdict.
+消费构建产物（差异摘要、状态、反馈、验证结论），
+并输出 review_report.json，其中包含各维度分数和最终结论。
 
-In production each dimension scorer calls an LLM. Here we keep them
-deterministic for the lesson — the structure is what travels.
+在生产环境中，每个维度评分器会调用 LLM.；这里我们保持其确定性以用于课程教学——真正可复用的是其结构。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -133,7 +132,7 @@ def main() -> None:
             )
             + "\n"
         )
-        print(f"task {report.task_id}: total={report.total}/10 verdict={report.verdict}")
+        print(f"任务 {report.task_id}：总分={report.total}/10 结论={report.verdict}")
         for d in report.dimensions:
             print(f"  {d.name:22} {d.score}  {d.note}")
         print()
