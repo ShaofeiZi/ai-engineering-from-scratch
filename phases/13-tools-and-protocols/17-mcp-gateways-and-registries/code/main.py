@@ -1,10 +1,10 @@
-"""Phase 13 Lesson 17: a stateless MCP gateway and admission catalog.
+"""第13阶段 第17课：一个无状态 MCP 网关与准入目录。
 
-Companion to ../docs/en.md. This in-process protocol model implements current
-discovery, routing validation, deterministic tool aggregation, Registry
-server.json admission, RBAC, rate limits, descriptor pins, stateless backend
-forwarding, and a modeled subscriptions/listen response. Lesson 09 supplies
-the complete Streamable HTTP adapter.
+本课是 ../docs/en.md. 的配套内容。此 in-process 协议模型实现了当前的
+发现、路由验证、确定性工具聚合、Registry
+server.json 准入、RBAC、速率限制、描述符固定、无状态后端
+转发，以及一个建模的 subscriptions/listen 响应。第09课提供了
+完整的 Streamable HTTP 适配器。
 """
 
 from __future__ import annotations
@@ -462,8 +462,8 @@ def demo() -> None:
         body, headers = make_request(method, request_id, params)
         status, response = gateway.handle("bearer-alice", body, headers)
         print(status, method, json.dumps(response)[:260])
-    print("forwarded request ids:", gateway.forwarded_request_ids)
-    print("audit:", gateway.audit)
+    print("转发的请求 ID：", gateway.forwarded_request_ids)
+    print("审计：", gateway.audit)
 
 
 if __name__ == "__main__":
