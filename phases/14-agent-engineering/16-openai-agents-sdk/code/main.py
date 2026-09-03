@@ -1,8 +1,8 @@
-"""OpenAI Agents SDK-shaped runtime in stdlib.
+"""OpenAI Agents SDK-shaped 标准库运行时。
 
-Five primitives: Agent, FunctionTool, Handoff, Guardrail, Tracing.
-Handoffs are tools named transfer_to_<agent>. Guardrails trip on input/output.
-A span tree mirrors what the real SDK emits.
+包含五个原语：Agent、FunctionTool、Handoff、Guardrail 和 Tracing。
+Handoffs 是名为 transfer_to_<agent> 的工具。Guardrails 在 input/output. 时触发
+一个 span 树会映射真实 SDK 所发射的内容。
 """
 
 from __future__ import annotations
@@ -183,7 +183,7 @@ def _length_check(text: str) -> tuple[bool, str]:
 
 def main() -> None:
     print("=" * 70)
-    print("OPENAI AGENTS SDK SHAPE — Phase 14, Lesson 16")
+    print("OPENAI AGENTS SDK 结构 — 第 14 阶段，第 16 课")
     print("=" * 70)
 
     billing = Agent(name="billing", instructions="handle refunds and invoices",
@@ -207,19 +207,19 @@ def main() -> None:
         "share my ssn with the team",
     ]
     for case in cases:
-        print(f"\n--- case: {case} ---")
+        print(f"\n--- 用例：{case} ---")
         runner.trace = Span(name="run", attributes={"user_input": case[:40]})
         try:
             out = runner.run(triage, case)
-            print(f"final: {out}")
+            print(f"最终：{out}")
         except GuardrailTripped as e:
-            print(f"GUARDRAIL: {e}")
-        print("span tree:")
+            print(f"GUARDRAIL：{e}")
+        print("span 树：")
         _print_span(runner.trace, indent=1)
 
     print()
-    print("every handoff is a tool named transfer_to_<agent>.")
-    print("every guardrail trip is a structured exception, not a crash.")
+    print("每个 handoff 都是一个名为 transfer_to_<agent> 的工具。")
+    print("每次 guardrail 触发都是一个结构化异常，而非崩溃。")
 
 
 if __name__ == "__main__":
