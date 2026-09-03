@@ -1,9 +1,9 @@
-"""MemGPT-shaped two-tier memory in stdlib.
+"""仿 MemGPT 的双层内存实现，仅使用标准库。
 
-Main context is a fixed-size prompt buffer (core dict + messages list).
-Archival memory is an external searchable store. Agents page data in and out
-via memory tools. No LLM call — a scripted agent drives the scenario so the
-control flow is testable offline.
+主上下文是一个 fixed-size 提示缓冲区（核心字典 + 消息列表）。
+归档记忆是一个外部可搜索存储。代理通过记忆工具将数据
+换入换出。没有 LLM 调用——由脚本化代理驱动场景，
+因此控制流可离线测试。
 """
 
 from __future__ import annotations
@@ -140,7 +140,7 @@ def run_scripted_agent(tools: MemoryTools, script: list[ToolCall]) -> list[str]:
 
 def main() -> None:
     print("=" * 70)
-    print("MEMGPT VIRTUAL CONTEXT — Phase 14, Lesson 07")
+    print("MEMGPT 虚拟上下文 — 第 14 阶段，第 07 课")
     print("=" * 70)
 
     main_ctx = MainContext(max_messages=3)
@@ -169,28 +169,28 @@ def main() -> None:
     ]
     observations = run_scripted_agent(tools, script)
 
-    print("\ntool trace (memory writes)")
+    print("\n工具追踪（记忆写入）")
     for call, obs in zip(script, observations):
         print(f"  {call.name}({call.args}) -> {obs}")
 
-    print("\nfilling main context until eviction kicks in")
+    print("\n填充主上下文直到触发逐出机制")
     main_ctx.append("user", "what were you saying about tool chains?")
     main_ctx.append("assistant", "let me check archival")
 
-    print(f"\nmain context ({len(main_ctx.messages)} messages, "
-          f"{len(main_ctx.evicted)} evicted)")
+    print(f"\n主上下文（{len(main_ctx.messages)} 条消息，"
+          f"已逐出 {len(main_ctx.evicted)} 条）")
     print(main_ctx.render())
 
-    print("\npage in: archival_memory_search('tool chains drift')")
+    print("\n换入：archival_memory_search('tool chains drift')")
     hit = tools.archival_memory_search("tool chains drift", top_k=2)
     print(hit)
 
-    print("\nconversation_search for 'retrieval bot'")
+    print("\nconversation_search 用于 'retrieval bot'")
     print(tools.conversation_search("retrieval bot"))
 
     print()
-    print("pattern: memory is interrupt-driven. agent calls a tool, runtime")
-    print("fetches, result splices back as observation. same as Unix read().")
+    print("模式：记忆由中断驱动。智能体调用工具，运行时")
+    print("执行获取，结果作为观察拼接回。与 Unix read() 相同。")
 
 
 if __name__ == "__main__":
