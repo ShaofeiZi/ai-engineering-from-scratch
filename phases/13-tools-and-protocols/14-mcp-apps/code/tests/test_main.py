@@ -1,4 +1,4 @@
-"""Tests for the stateless MCP Apps lesson server."""
+"""无状态 MCP Apps 课程服务器测试。"""
 
 from __future__ import annotations
 

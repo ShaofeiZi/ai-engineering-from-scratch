@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 14: MCP Apps on the MCP 2026-07-28 wire.
-Lesson: phases/13-tools-and-protocols/14-mcp-apps/docs/en.md
-Spec: https://modelcontextprotocol.io/specification/2026-07-28
-Models discovery, tools, resources, and a self-contained MCP Apps UI.
-Lesson 09 owns the HTTP adapter; the UI pins its postMessage origin.
+"""第13阶段 第14课：MCP 应用在 MCP 2026-07-28 线上。
+课程：phases/13-tools-and-protocols/14-mcp-apps/docs/en.md
+规格：https://modelcontextprotocol.io/specification/2026-07-28
+模型发现、工具、资源，以及一个 self-contained MCP 应用 UI.
+第09课拥有 HTTP 适配器；UI 固定其 postMessage 来源。
 """
 
 from __future__ import annotations
@@ -276,7 +276,7 @@ def demo() -> None:
         body, headers = make_request(method, request_id, params)
         status, response = server.handle(body, headers)
         summary = response.get("result", response.get("error"))
-        print(f"{status} {method}: {json.dumps(summary)[:220]}")
+        print(f"{status} {method}：{json.dumps(summary)[:220]}")
 
 
 if __name__ == "__main__":
