@@ -1,7 +1,7 @@
-"""Companion code for docs/en.md: admit, pin, monitor, and roll back MCP servers.
-Protocol contract: https://modelcontextprotocol.io/specification/2026-07-28/server/discover
-Registry contract: https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md
-Run `python3 main.py` for the finite demo or `python3 -m unittest discover -s tests`.
+"""docs/en.md 的配套代码：准入、固定、监控并回滚 MCP 服务器。
+协议合约：https://modelcontextprotocol.io/specification/2026-07-28/server/discover
+注册合约：https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md
+运行 `python3 main.py` 执行有限演示，或运行 `python3 -m unittest discover -s tests`。
 """
 
 from __future__ import annotations
