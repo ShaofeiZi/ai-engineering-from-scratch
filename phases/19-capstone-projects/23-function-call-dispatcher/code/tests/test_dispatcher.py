@@ -1,4 +1,4 @@
-"""Tests for the function call dispatcher: timeout, retry, idempotency, concurrency."""
+"""函数调用分发器的测试：超时、重试、幂等性与并发。"""
 
 from __future__ import annotations
 

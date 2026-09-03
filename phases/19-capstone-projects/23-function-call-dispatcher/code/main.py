@@ -1,11 +1,11 @@
-"""Function call dispatcher with timeout, retry, idempotency, concurrency limit.
+"""支持超时、重试、幂等性和并发限制的函数调用分发器。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
+概念参考：
+- ./docs/en.md（本课程）
 - JSON-RPC 2.0 specification (error envelope shape)
 - IETF draft draft-bhutton-json-schema-2020-12 (schema subset reused)
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -26,11 +26,11 @@ ERR_INTERNAL = -32603
 
 
 class TransientError(Exception):
-    """Raised by a handler to indicate the failure is worth retrying."""
+    """由 handler 抛出，表示该失败值得重试。"""
 
 
 class _DispatchedError(Exception):
-    """Internal sentinel that wraps a DispatchError so dedup followers preserve kind."""
+    """包装 DispatchError 的内部 sentinel，使去重后的跟随调用保留错误类型。"""
 
     def __init__(self, error: "DispatchError") -> None:
         super().__init__(error.message)
@@ -71,7 +71,7 @@ class _ToolRecord:
 
 
 class MiniRegistry:
-    """A trimmed registry: name, schema, handler, idempotent, timeout."""
+    """精简注册表：名称、schema、handler、幂等性、超时。"""
 
     def __init__(self) -> None:
         self._recs: dict[str, _ToolRecord] = {}
@@ -127,7 +127,7 @@ class _InFlight:
 
 
 class Dispatcher:
-    """Per-call timeout, retry, idempotency, concurrency limit."""
+    """逐调用超时、重试、幂等性与并发限制。"""
 
     def __init__(
         self,
@@ -139,7 +139,7 @@ class Dispatcher:
         sleep: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
         if max_attempts <= 0:
-            raise ValueError("max_attempts must be > 0")
+            raise ValueError("max_attempts 必须大于 0")
         self.registry = registry
         self.max_attempts = max_attempts
         self._sem = asyncio.Semaphore(concurrency)
@@ -298,7 +298,7 @@ async def _demo() -> None:
     async def flaky_fetch(id: int) -> dict:
         counter["a"] += 1
         if counter["a"] < 2:
-            raise TransientError("upstream not ready")
+            raise TransientError("上游尚未就绪")
         return {"id": id, "name": "ada"}
 
     async def slow(n: int) -> int:
