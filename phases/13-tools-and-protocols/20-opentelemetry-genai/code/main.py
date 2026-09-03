@@ -1,14 +1,14 @@
-"""Phase 13 Lesson 20 - OTel GenAI span emitter, stdlib only.
+"""第13阶段第20课 - OTel GenAI span 发射器，仅使用标准库。
 
-Emits spans in an OTLP-JSON-like format to stdout for an agent that:
-  - invokes an LLM chat (gen_ai.operation.name = "chat")
-  - dispatches two tools (gen_ai.operation.name = "execute_tool")
-  - makes one MCP client call (CLIENT span with traceparent propagation)
+以 OTLP-JSON-like 格式向 stdout 输出 spans，模拟一个如下 agent：
+  - 调用 LLM 聊天（gen_ai.operation.name = "chat"）
+  - 分发两个工具（gen_ai.operation.name = "execute_tool"）
+  - 发起一次 MCP 客户端调用（CLIENT span，携带 traceparent 传播）
 
-Content capture (gen_ai.content.prompt / completion) is off by default;
-enable by setting OTEL_CAPTURE_CONTENT=1 before running.
+内容捕获（gen_ai.content.prompt / completion）默认关闭；
+可在运行前设置 OTEL_CAPTURE_CONTENT=1 来启用。
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -85,8 +85,8 @@ def fake_llm_call(span: Span, prompt: str) -> str:
     })
     if CAPTURE_CONTENT:
         span.add_event("gen_ai.content.prompt", {"content": prompt[:200]})
-        span.add_event("gen_ai.content.completion", {"content": "sample completion"})
-    return "sample completion"
+        span.add_event("gen_ai.content.completion", {"content": "示例补全内容"})
+    return "示例补全内容"
 
 
 def fake_tool_execute(span: Span, tool: str, args: dict) -> dict:
@@ -95,7 +95,7 @@ def fake_tool_execute(span: Span, tool: str, args: dict) -> dict:
         "gen_ai.tool.name": tool,
         "gen_ai.tool.call.id": f"call_{uuid.uuid4().hex[:8]}",
     })
-    return {"content": [{"type": "text", "text": f"{tool} ran with {args}"}]}
+    return {"content": [{"type": "text", "text": f"{tool} 使用参数 {args} 执行完毕"}]}
 
 
 def fake_mcp_call(parent: Span, tool: str) -> dict:
@@ -125,7 +125,7 @@ def agent_loop() -> None:
         "gen_ai.provider.name": "openai",
         "gen_ai.request.model": "gpt-4o",
     })
-    fake_llm_call(llm1, "user wants weather in three cities")
+    fake_llm_call(llm1, "用户想查询三个城市的天气")
     llm1.finish()
 
     for city in ("Bengaluru", "Tokyo", "Zurich"):
@@ -141,7 +141,7 @@ def agent_loop() -> None:
         "gen_ai.provider.name": "openai",
         "gen_ai.request.model": "gpt-4o",
     })
-    fake_llm_call(llm2, "synthesize three weather results")
+    fake_llm_call(llm2, "汇总三个城市的天气结果")
     llm2.finish()
 
     root.finish()
@@ -149,14 +149,14 @@ def agent_loop() -> None:
 
 def main() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 19 - OTEL GENAI SPAN EMITTER")
-    print(f"  content capture : {'ON' if CAPTURE_CONTENT else 'off (set OTEL_CAPTURE_CONTENT=1)'}")
+    print("第 13 阶段第 20 课 - OTel GenAI span 发射器")
+    print(f"  内容捕获：{'已开启' if CAPTURE_CONTENT else '已关闭（设置 OTEL_CAPTURE_CONTENT=1 可开启）'}")
     print("=" * 72)
 
     agent_loop()
 
-    print(f"\nemitted {len(SPANS)} spans across 1 trace")
-    print(f"\nOTLP-JSON-shaped spans:\n")
+    print(f"\n共发射 {len(SPANS)} 个 span，跨 1 条 trace")
+    print("\nOTLP-JSON 形态的 span：\n")
     for span in SPANS:
         summary = {
             "name": span.name,
@@ -170,7 +170,7 @@ def main() -> None:
         }
         print(json.dumps(summary))
 
-    print("\ntry: OTEL_CAPTURE_CONTENT=1 python code/main.py")
+    print("\n尝试：OTEL_CAPTURE_CONTENT=1 python code/main.py")
 
 
 if __name__ == "__main__":
