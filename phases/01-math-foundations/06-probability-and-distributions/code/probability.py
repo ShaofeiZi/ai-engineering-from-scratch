@@ -132,117 +132,117 @@ def demonstrate_clt(dist_fn, n_per_sample, n_averages):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("PROBABILITY AND DISTRIBUTIONS")
+    print("概率与分布")
     print("=" * 60)
 
-    print("\n--- Conditional Probability ---")
+    print("\n--- 条件概率 ---")
     p_king_given_face = conditional_probability(4 / 52, 12 / 52)
-    print(f"P(King | Face card) = {p_king_given_face:.4f}")
+    print(f"P(国王 | 人头牌) = {p_king_given_face:.4f}")
 
-    print("\n--- PMF: Bernoulli (p=0.7) ---")
+    print("\n--- PMF：伯努利分布 (p=0.7) ---")
     for k in [0, 1]:
         print(f"  P(X={k}) = {bernoulli_pmf(k, 0.7):.4f}")
 
-    print("\n--- PMF: Categorical ---")
+    print("\n--- PMF：分类分布 ---")
     cat_probs = [0.1, 0.3, 0.4, 0.2]
     for k, p in enumerate(cat_probs):
         print(f"  P(X={k}) = {categorical_pmf(k, cat_probs):.4f}")
 
-    print("\n--- PMF: Poisson (lambda=3) ---")
+    print("\n--- PMF：泊松分布 (lambda=3) ---")
     for k in range(10):
         print(f"  P(X={k}) = {poisson_pmf(k, 3):.4f}")
 
-    print("\n--- PDF: Normal (mu=0, sigma=1) ---")
+    print("\n--- PDF：正态分布 (mu=0, sigma=1) ---")
     for x in [-3, -2, -1, 0, 1, 2, 3]:
         print(f"  f({x:+d}) = {normal_pdf(x, 0, 1):.4f}")
 
-    print("\n--- Expected Value & Variance ---")
+    print("\n--- 期望与方差 ---")
     die_values = [1, 2, 3, 4, 5, 6]
     die_probs = [1 / 6] * 6
     mu = expected_value(die_values, die_probs)
     var = variance(die_values, die_probs)
-    print(f"  Fair die: E[X] = {mu:.4f}, Var(X) = {var:.4f}, SD = {var ** 0.5:.4f}")
+    print(f"  公正骰子：E[X] = {mu:.4f}, Var(X) = {var:.4f}, SD = {var ** 0.5:.4f}")
 
-    print("\n--- Sampling: Bernoulli (p=0.3, n=20) ---")
+    print("\n--- 采样：伯努利分布 (p=0.3, n=20) ---")
     bern_samples = sample_bernoulli(0.3, 20)
-    print(f"  Samples: {bern_samples}")
-    print(f"  Empirical mean: {sum(bern_samples) / len(bern_samples):.4f} (expected 0.3)")
+    print(f"  样本：{bern_samples}")
+    print(f"  经验均值：{sum(bern_samples) / len(bern_samples):.4f}（期望 0.3）")
 
-    print("\n--- Sampling: Categorical ---")
+    print("\n--- 采样：分类分布 ---")
     cat_samples = sample_categorical([0.1, 0.3, 0.4, 0.2], 1000)
     counts = [cat_samples.count(i) for i in range(4)]
-    print(f"  Counts from 1000 samples: {counts}")
-    print(f"  Empirical: {[c / 1000 for c in counts]}")
-    print(f"  Expected:  [0.1, 0.3, 0.4, 0.2]")
+    print(f"  1000 次样本的计数：{counts}")
+    print(f"  经验频率：{[c / 1000 for c in counts]}")
+    print(f"  期望：[0.1, 0.3, 0.4, 0.2]")
 
-    print("\n--- Sampling: Normal (Box-Muller) ---")
+    print("\n--- 采样：正态分布（Box-Muller）---")
     norm_samples = sample_normal_box_muller(0, 1, 10000)
     sample_mean = sum(norm_samples) / len(norm_samples)
     sample_var = sum((x - sample_mean) ** 2 for x in norm_samples) / len(norm_samples)
-    print(f"  10000 samples from N(0,1):")
-    print(f"  Sample mean: {sample_mean:.4f} (expected 0)")
-    print(f"  Sample var:  {sample_var:.4f} (expected 1)")
+    print(f"  来自 N(0,1) 的 10000 个样本：")
+    print(f"  样本均值：{sample_mean:.4f}（期望 0）")
+    print(f"  样本方差：{sample_var:.4f}（期望 1）")
 
     print("\n--- Softmax ---")
     logits = [2.0, 1.0, 0.1]
     probs = softmax(logits)
-    print(f"  Logits:  {logits}")
-    print(f"  Softmax: [{', '.join(f'{p:.4f}' for p in probs)}]")
-    print(f"  Sum:     {sum(probs):.4f}")
+    print(f"  Logits： {logits}")
+    print(f"  Softmax：[{', '.join(f'{p:.4f}' for p in probs)}]")
+    print(f"  总和：   {sum(probs):.4f}")
 
-    print("\n--- Softmax with large logits (stability test) ---")
+    print("\n--- 大 logits 的 Softmax（数值稳定性测试）---")
     large_logits = [100, 101, 102]
     probs_large = softmax(large_logits)
-    print(f"  Logits:  {large_logits}")
-    print(f"  Softmax: [{', '.join(f'{p:.4f}' for p in probs_large)}]")
-    print(f"  (No overflow because we subtract max before exp)")
+    print(f"  Logits： {large_logits}")
+    print(f"  Softmax：[{', '.join(f'{p:.4f}' for p in probs_large)}]")
+    print(f"  （因为在 exp 之前减去了最大值，所以不会溢出）")
 
-    print("\n--- Log Probabilities ---")
+    print("\n--- 对数概率 ---")
     log_probs = log_softmax(logits)
-    print(f"  Logits:      {logits}")
-    print(f"  Log-softmax: [{', '.join(f'{lp:.4f}' for lp in log_probs)}]")
-    print(f"  Verify exp:  [{', '.join(f'{math.exp(lp):.4f}' for lp in log_probs)}]")
+    print(f"  Logits：     {logits}")
+    print(f"  Log-softmax：[{', '.join(f'{lp:.4f}' for lp in log_probs)}]")
+    print(f"  验证 exp：   [{', '.join(f'{math.exp(lp):.4f}' for lp in log_probs)}]")
 
-    print("\n--- Cross-Entropy Loss ---")
+    print("\n--- 交叉熵损失 ---")
     ce = cross_entropy_loss([2.0, 1.0, 0.1], target_index=0)
-    print(f"  Logits: [2.0, 1.0, 0.1], target: 0")
-    print(f"  Cross-entropy loss: {ce:.4f}")
+    print(f"  Logits：[2.0, 1.0, 0.1]，目标：0")
+    print(f"  交叉熵损失：{ce:.4f}")
 
-    print("\n--- Why log probabilities matter ---")
+    print("\n--- 对数概率为何重要 ---")
     word_prob = 0.01
     n_words = 50
     raw_product = word_prob ** n_words
     log_sum = n_words * math.log(word_prob)
     print(f"  P(word)^{n_words} = {word_prob}^{n_words}")
-    print(f"  Raw product: {raw_product:.2e} (underflows with more terms)")
-    print(f"  Log sum:     {log_sum:.4f} (stable)")
-    print(f"  Recovered:   {math.exp(log_sum):.2e}")
+    print(f"  原始乘积：{raw_product:.2e}（项数更多时会下溢）")
+    print(f"  对数求和：{log_sum:.4f}（稳定）")
+    print(f"  还原值：  {math.exp(log_sum):.2e}")
 
-    print("\n--- Joint & Marginal Distributions ---")
+    print("\n--- 联合分布与边缘分布 ---")
     joint = [
         [0.40, 0.10],
         [0.05, 0.45],
     ]
     marginal_x, marginal_y = joint_to_marginals(joint)
-    print(f"  Joint distribution (weather x umbrella):")
-    print(f"    Sun,  no umbrella: {joint[0][0]}")
-    print(f"    Sun,  umbrella:    {joint[0][1]}")
-    print(f"    Rain, no umbrella: {joint[1][0]}")
-    print(f"    Rain, umbrella:    {joint[1][1]}")
-    print(f"  Marginal X (weather):  {marginal_x}")
-    print(f"  Marginal Y (umbrella): {marginal_y}")
-    print(f"  Independent? {check_independence(joint, marginal_x, marginal_y)}")
+    print(f"  联合分布（天气 x 伞）：")
+    print(f"    晴天，不带伞：{joint[0][0]}")
+    print(f"    晴天，带伞：  {joint[0][1]}")
+    print(f"    雨天，不带伞：{joint[1][0]}")
+    print(f"    雨天，带伞：  {joint[1][1]}")
+    print(f"  边缘分布 X（天气）： {marginal_x}")
+    print(f"  边缘分布 Y（伞）：   {marginal_y}")
+    print(f"  是否独立？{check_independence(joint, marginal_x, marginal_y)}")
 
-    print("\n--- Central Limit Theorem ---")
-    print("  Averaging uniform [0,1) samples:")
+    print("\n--- 中心极限定理 ---")
+    print("  对均匀分布 [0,1) 样本取平均：")
     for n in [1, 2, 5, 30]:
         avgs = demonstrate_clt(random.random, n, 10000)
         avg_mean = sum(avgs) / len(avgs)
         avg_std = (sum((x - avg_mean) ** 2 for x in avgs) / len(avgs)) ** 0.5
-        print(f"    n={n:2d}: mean={avg_mean:.4f}, std={avg_std:.4f}")
-    print("  As n grows, std shrinks and distribution approaches normal.")
+        print(f"    n={n:2d}: 均值={avg_mean:.4f}, 标准差={avg_std:.4f}")
+    print("  随着 n 增大，标准差减小，分布趋近正态。")
 
-    print("\n--- Visualization ---")
+    print("\n--- 可视化 ---")
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -251,7 +251,7 @@ if __name__ == "__main__":
         fig, axes = plt.subplots(2, 3, figsize=(15, 9))
 
         ax = axes[0][0]
-        ax.set_title("Bernoulli PMF (p=0.7)")
+        ax.set_title("伯努利 PMF (p=0.7)")
         ax.bar([0, 1], [bernoulli_pmf(0, 0.7), bernoulli_pmf(1, 0.7)],
                color=["#4a90d9", "#d94a4a"], width=0.4)
         ax.set_xlabel("k")
@@ -259,14 +259,14 @@ if __name__ == "__main__":
         ax.set_xticks([0, 1])
 
         ax = axes[0][1]
-        ax.set_title("Poisson PMF (lambda=3)")
+        ax.set_title("泊松 PMF (lambda=3)")
         ks = list(range(12))
         ax.bar(ks, [poisson_pmf(k, 3) for k in ks], color="#4a90d9", width=0.6)
         ax.set_xlabel("k")
         ax.set_ylabel("P(X=k)")
 
         ax = axes[0][2]
-        ax.set_title("Normal PDF")
+        ax.set_title("正态 PDF")
         xs = [i * 0.01 - 5 for i in range(1001)]
         for mu_val, sigma_val, label in [(0, 1, "N(0,1)"), (0, 2, "N(0,2)"), (2, 0.5, "N(2,0.5)")]:
             ys = [normal_pdf(x, mu_val, sigma_val) for x in xs]
@@ -276,7 +276,7 @@ if __name__ == "__main__":
         ax.legend()
 
         ax = axes[1][0]
-        ax.set_title("Uniform PDF [a=1, b=4]")
+        ax.set_title("均匀 PDF [a=1, b=4]")
         xs_u = [i * 0.01 - 1 for i in range(701)]
         ys_u = [uniform_pdf(x, 1, 4) for x in xs_u]
         ax.plot(xs_u, ys_u, color="#4a90d9", linewidth=2)
@@ -286,20 +286,20 @@ if __name__ == "__main__":
         ax.set_ylim(0, 0.5)
 
         ax = axes[1][1]
-        ax.set_title("Central Limit Theorem")
+        ax.set_title("中心极限定理")
         for n_val, color in [(1, "#aaaaaa"), (2, "#88aacc"), (5, "#4a90d9"), (30, "#d94a4a")]:
             avgs = demonstrate_clt(random.random, n_val, 10000)
             ax.hist(avgs, bins=50, alpha=0.5, color=color, label=f"n={n_val}", density=True)
-        ax.set_xlabel("Sample mean")
-        ax.set_ylabel("Density")
+        ax.set_xlabel("样本均值")
+        ax.set_ylabel("密度")
         ax.legend()
 
         ax = axes[1][2]
-        ax.set_title("Softmax Output")
+        ax.set_title("Softmax 输出")
         logit_sets = [
-            ([1, 1, 1], "equal [1,1,1]"),
-            ([2, 1, 0], "spread [2,1,0]"),
-            ([10, 1, 0], "sharp [10,1,0]"),
+            ([1, 1, 1], "相等 [1,1,1]"),
+            ([2, 1, 0], "分散 [2,1,0]"),
+            ([10, 1, 0], "尖锐 [10,1,0]"),
         ]
         x_positions = range(3)
         width = 0.25
@@ -307,20 +307,20 @@ if __name__ == "__main__":
             sm = softmax(lg)
             offset = (idx - 1) * width
             ax.bar([x + offset for x in x_positions], sm, width=width, label=label)
-        ax.set_xlabel("Class")
-        ax.set_ylabel("Probability")
+        ax.set_xlabel("类别")
+        ax.set_ylabel("概率")
         ax.set_xticks(list(x_positions))
-        ax.set_xticklabels(["Class 0", "Class 1", "Class 2"])
+        ax.set_xticklabels(["类别 0", "类别 1", "类别 2"])
         ax.legend()
 
         plt.tight_layout()
         plt.savefig("probability_distributions.png", dpi=150)
-        print("  Saved: probability_distributions.png")
+        print("  已保存：probability_distributions.png")
         plt.close()
 
     except ImportError:
-        print("  matplotlib not available, skipping visualization.")
+        print("  matplotlib 不可用，跳过可视化。")
 
     print("\n" + "=" * 60)
-    print("All probability computations complete.")
+    print("所有概率计算完成。")
     print("=" * 60)
