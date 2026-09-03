@@ -151,20 +151,20 @@ def main():
             s = s_next
         returns_log.append(total)
 
-    print(f"=== DQN on 4x4 GridWorld ({episodes} episodes, batch={batch}, target sync every {sync_every} steps) ===")
+    print(f"=== 4x4 GridWorld 上的 DQN（{episodes} 个回合，batch={batch}，每 {sync_every} 步同步目标网络）===")
     print()
-    print("learning curve (mean return per block of 50 episodes):")
+    print("学习曲线（每 50 个回合一组的平均回报）：")
     for i in range(0, episodes, 50):
         chunk = returns_log[i : i + 50]
-        print(f"  episodes {i:3d}-{i+49:3d}: mean = {sum(chunk) / len(chunk):6.2f}")
+        print(f"  回合 {i:3d}-{i+49:3d}：均值 = {sum(chunk) / len(chunk):6.2f}")
 
     print()
     q0, _ = forward(online, state_features((0, 0)))
-    print("Q(0,0) per action:")
+    print("各动作的 Q(0,0)：")
     for a, v in zip(ACTIONS, q0):
         print(f"  {a:<6} = {v:6.2f}")
     print()
-    print("greedy policy from trained net:")
+    print("训练后网络得到的贪心策略：")
     arrows = {"up": "^", "down": "v", "left": "<", "right": ">"}
     for r in range(GRID):
         row = []
