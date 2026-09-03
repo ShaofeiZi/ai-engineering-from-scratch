@@ -1,4 +1,4 @@
-"""Tests for explicit workspace scope and stateless elicitation."""
+"""显式工作区范围与无状态 elicitation 测试。"""
 
 from __future__ import annotations
 

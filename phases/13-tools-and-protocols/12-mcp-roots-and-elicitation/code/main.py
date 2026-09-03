@@ -1,9 +1,9 @@
-"""Phase 13 Lesson 12: explicit scope and elicitation through MRTR.
+"""阶段 13 第 12 课：通过 MRTR. 进行显式范围界定与引导
 
-Lesson: ../docs/en.md
-Specification: https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-This example uses only Python's standard library.
-Run: python3 main.py
+课程：../docs/en.md
+规范：https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
+本示例仅使用 Python 标准库。
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -515,11 +515,11 @@ def main() -> None:
             "params": {"_meta": request_meta()},
         }
     )
-    print("discover:", json.dumps(discovery["result"], indent=2))
+    print("发现：", json.dumps(discovery["result"], indent=2))
     server, final, request_ids = run_mrtr()
-    print("independent request ids:", request_ids)
-    print("final:", json.dumps(final["result"], indent=2))
-    print("remaining note ids:", sorted(server.notes))
+    print("独立请求 ID：", request_ids)
+    print("最终：", json.dumps(final["result"], indent=2))
+    print("剩余笔记 ID：", sorted(server.notes))
 
 
 if __name__ == "__main__":
