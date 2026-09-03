@@ -1,10 +1,10 @@
-"""Parse agent-rules.md, run a fake agent turn, score the turn against the rules.
+"""解析 agent-rules.md，运行一次模拟的 agent 轮次，并根据规则对该轮次评分。
 
-Each rule in the markdown has a slug, a category, a one-line description,
-and a `check:` field that names a function on `RuleChecker`. Adding a new
-rule means adding a check; the checker grows with the workbench.
+markdown 中的每条规则都有一个 slug、一个 category、一个 one-line 描述，
+以及一个 `check:` 字段，该字段指定了 `RuleChecker` 上的一个函数。添加新
+规则意味着添加一个新的 check；checker 会随 workbench 一起扩展。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -151,12 +151,12 @@ def main() -> None:
     bad = score(rules, checker, bad_trace)
     good = score(rules, checker, good_trace)
 
-    print("rules parsed:", [r.slug for r in rules])
+    print("已解析的规则：", [r.slug for r in rules])
     print()
-    print("bad trace:")
+    print("错误的 trace：")
     for r in bad:
         print(f"  {r['slug']:42} {'PASS' if r['passed'] else 'FAIL'}")
-    print("\ngood trace:")
+    print("\n正确的 trace：")
     for r in good:
         print(f"  {r['slug']:42} {'PASS' if r['passed'] else 'FAIL'}")
 
@@ -167,7 +167,7 @@ def main() -> None:
         )
         + "\n"
     )
-    print(f"\nwrote {REPORT_PATH.name}")
+    print(f"\n已写入 {REPORT_PATH.name}")
 
 
 if __name__ == "__main__":
