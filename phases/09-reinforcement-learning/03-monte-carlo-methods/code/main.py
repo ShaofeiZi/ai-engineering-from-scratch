@@ -118,24 +118,24 @@ def print_policy(policy, title):
 def main():
     rng = random.Random(1)
     V, counts = mc_policy_evaluation(uniform_policy, episodes=20000, gamma=0.99, rng=rng)
-    print(f"=== first-visit MC, uniform-random policy, 20000 episodes, gamma=0.99 ===")
+    print("=== 首次访问 MC，均匀随机策略，20000 个回合，gamma=0.99 ===")
     print_V(V, "V^pi(s)")
     print()
-    print(f"V(0,0) MC estimate     = {V[(0,0)]:.2f}")
-    print(f"V(0,0) DP  reference   = -39.41   (from lesson 02 of this phase)")
-    print(f"visit counts at (0,0)  = {counts[(0,0)]}")
+    print(f"V(0,0) 的 MC 估计值 = {V[(0,0)]:.2f}")
+    print("V(0,0) 的 DP 参考值 = -39.41   （来自本阶段第 02 课）")
+    print(f"(0,0) 的访问次数     = {counts[(0,0)]}")
     print()
 
     rng2 = random.Random(1)
     _Q, greedy, log = mc_control(episodes=30000, gamma=0.99, epsilon=0.1, rng=rng2)
-    print("=== epsilon-greedy MC control, 30000 episodes ===")
+    print("=== epsilon-greedy MC 控制，30000 个回合 ===")
     print_policy(greedy, "greedy policy recovered")
     print()
     tail = log[-5000:]
     if tail:
         mean_tail = sum(tail) / len(tail)
-        print(f"mean return over last 5000 episodes = {mean_tail:.2f}")
-        print("(optimal return on this 4x4 GridWorld = -6.0)")
+        print(f"最后 5000 个回合的平均回报 = {mean_tail:.2f}")
+        print("（此 4x4 GridWorld 的最优回报 = -6.0）")
 
 
 if __name__ == "__main__":
