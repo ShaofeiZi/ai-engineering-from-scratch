@@ -1,8 +1,8 @@
-"""Managed LLM platform comparator — stdlib Python.
+"""托管 LLM 平台比较器，使用 Python stdlib。
 
-Models three platforms (Bedrock on-demand, Azure PTU, Vertex on-demand) on the
-same synthetic workload. Reports per-day cost, TTFT median / P99, and attribution
-fidelity. Pedagogical: prices and latencies are 2026 public-domain approximations.
+在相同的合成工作负载上对三个平台（Bedrock on-demand、Azure PTU、Vertex on-demand）
+建模。报告每日成本、TTFT 中位数 / P99 和归因保真度。用于教学：价格和延迟是依据
+2026 年公开资料得到的近似值。
 """
 
 from __future__ import annotations
@@ -15,27 +15,27 @@ import statistics
 @dataclass
 class Platform:
     name: str
-    per_mtok_input: float        # $/M input tokens on-demand
-    per_mtok_output: float       # $/M output tokens on-demand
-    ptu_hourly: float | None     # $/hour for one reservation unit (None = not offered)
-    ptu_tokens_per_hour: int     # tokens/hour a single PTU delivers
-    ttft_median_ms: float        # median TTFT on shared capacity
-    ttft_p99_ms: float           # P99 TTFT on shared capacity
-    ttft_median_ptu_ms: float    # median TTFT on dedicated PTU
-    attribution: str             # qualitative FinOps surface grade
+    per_mtok_input: float        # 按需输入 token 的 $/M
+    per_mtok_output: float       # 按需输出 token 的 $/M
+    ptu_hourly: float | None     # 一个预留单元的 $/小时（None 表示不提供）
+    ptu_tokens_per_hour: int     # 单个 PTU 每小时可处理的 token 数
+    ttft_median_ms: float        # 共享容量下的 TTFT 中位数
+    ttft_p99_ms: float           # 共享容量下的 TTFT P99
+    ttft_median_ptu_ms: float    # 专用 PTU 下的 TTFT 中位数
+    attribution: str             # 定性的 FinOps 能力等级
 
 
 PLATFORMS = [
-    Platform("Bedrock on-demand",    3.00, 15.00, 21.0, 1_200_000, 75, 180, 55, "A (Application Inference Profiles)"),
-    Platform("Azure OpenAI (PTU)",    2.50, 10.00, 10.0, 2_000_000, 50, 140, 38, "B (scopes + tags + PTU obj)"),
-    Platform("Vertex AI Gemini",     1.25,  5.00, None,          0, 60, 160,  0, "B+ (BQ billing export)"),
+    Platform("Bedrock 按需服务",    3.00, 15.00, 21.0, 1_200_000, 75, 180, 55, "A（应用推理配置文件）"),
+    Platform("Azure OpenAI（PTU）",  2.50, 10.00, 10.0, 2_000_000, 50, 140, 38, "B（作用域 + 标签 + PTU 对象）"),
+    Platform("Vertex AI Gemini",     1.25,  5.00, None,          0, 60, 160,  0, "B+（BQ 账单导出）"),
 ]
 
 
 def simulate(tokens_in_per_day: int, tokens_out_per_day: int, sla_ttft_ms: float, use_ptu: bool) -> None:
-    print(f"\nWorkload: {tokens_in_per_day/1e6:.1f}M input, {tokens_out_per_day/1e6:.1f}M output per day")
-    print(f"SLA: TTFT P99 < {sla_ttft_ms:.0f} ms   |   PTU path: {'enabled' if use_ptu else 'off'}\n")
-    header = f"{'Platform':25}  {'$/day':>9}  {'TTFT P50':>10}  {'TTFT P99':>10}  {'SLA':>6}  Attribution"
+    print(f"\n工作负载：每天 {tokens_in_per_day/1e6:.1f}M 输入、{tokens_out_per_day/1e6:.1f}M 输出")
+    print(f"SLA：TTFT P99 < {sla_ttft_ms:.0f} ms   |   PTU 路径：{'启用' if use_ptu else '关闭'}\n")
+    header = f"{'平台':25}  {'$/天':>9}  {'TTFT P50':>10}  {'TTFT P99':>10}  {'SLA':>6}  归因能力"
     print(header)
     print("-" * len(header))
 
@@ -51,52 +51,52 @@ def simulate(tokens_in_per_day: int, tokens_out_per_day: int, sla_ttft_ms: float
             cost = min(cost_ondemand, cost_ptu)
             ttft_p50 = p.ttft_median_ptu_ms if cost == cost_ptu else p.ttft_median_ms
             ttft_p99 = ttft_p50 * 1.5 if cost == cost_ptu else p.ttft_p99_ms
-            path = "PTU" if cost == cost_ptu else "on-demand"
+            path = "PTU" if cost == cost_ptu else "按需"
         else:
             cost = cost_ondemand
             ttft_p50 = p.ttft_median_ms
             ttft_p99 = p.ttft_p99_ms
-            path = "on-demand"
+            path = "按需"
 
-        sla_ok = "PASS" if ttft_p99 < sla_ttft_ms else "FAIL"
-        print(f"{p.name:25}  ${cost:8.2f}  {ttft_p50:7.0f} ms  {ttft_p99:7.0f} ms  {sla_ok:>6}  {p.attribution}  [{path}]")
+        sla_ok = "通过" if ttft_p99 < sla_ttft_ms else "失败"
+        print(f"{p.name:25}  ${cost:8.2f}  {ttft_p50:7.0f} 毫秒  {ttft_p99:7.0f} 毫秒  {sla_ok:>6}  {p.attribution}  [{path}]")
 
 
 def break_even_demo() -> None:
     print("\n" + "=" * 80)
-    print("PTU BREAK-EVEN SWEEP — Azure OpenAI, GPT-4o class")
+    print("PTU 盈亏平衡扫描 — Azure OpenAI，GPT-4o 级别")
     print("=" * 80)
     p = PLATFORMS[1]  # Azure
-    print(f"On-demand rate: ${p.per_mtok_output:.2f}/M output  |  PTU: ${p.ptu_hourly:.0f}/hr, {p.ptu_tokens_per_hour/1e6:.1f}M tok/hr\n")
-    print(f"{'Util %':>8}  {'On-demand $/day':>18}  {'PTU $/day':>12}  Winner")
+    print(f"按需费率：${p.per_mtok_output:.2f}/M 输出  |  PTU：${p.ptu_hourly:.0f}/小时，{p.ptu_tokens_per_hour/1e6:.1f}M token/小时\n")
+    print(f"{'利用率 %':>8}  {'按需 $/天':>18}  {'PTU $/天':>12}  胜出方案")
     for util_pct in (10, 20, 30, 40, 50, 60, 70, 80, 90, 100):
         tokens_per_day = int(p.ptu_tokens_per_hour * 24 * (util_pct / 100.0))
         ondemand = (tokens_per_day / 1e6) * p.per_mtok_output
         ptu = 24 * p.ptu_hourly
-        winner = "PTU" if ptu < ondemand else "on-demand"
+        winner = "PTU" if ptu < ondemand else "按需"
         print(f"{util_pct:>7}%  ${ondemand:>16.2f}  ${ptu:>10.2f}  {winner}")
 
 
 def lock_in_cost() -> None:
     print("\n" + "=" * 80)
-    print("TWO-PROVIDER MINIMUM — cost uplift for redundancy")
+    print("双提供商最低配置 — 冗余带来的成本增量")
     print("=" * 80)
     tokens_per_day = 5_000_000
     primary_cost = (tokens_per_day / 1e6) * 10.00
     gateway_overhead_pct = 3.0
     failover_headroom_pct = 10.0
     uplift = primary_cost * (gateway_overhead_pct + failover_headroom_pct) / 100
-    print(f"Primary daily spend: ${primary_cost:.2f}")
-    print(f"Gateway overhead ({gateway_overhead_pct:.0f}%): ${primary_cost * gateway_overhead_pct / 100:.2f}/day")
-    print(f"Idle secondary headroom ({failover_headroom_pct:.0f}%): ${primary_cost * failover_headroom_pct / 100:.2f}/day")
-    print(f"Total uplift: ${uplift:.2f}/day")
-    print(f"Monthly uplift: ${uplift * 30:.2f}")
-    print("Cost of one multi-hour regional outage without redundancy: customer churn, SLA credits, war-room time")
+    print(f"主提供商每日支出：${primary_cost:.2f}")
+    print(f"网关开销（{gateway_overhead_pct:.0f}%）：${primary_cost * gateway_overhead_pct / 100:.2f}/天")
+    print(f"空闲的次级容量余量（{failover_headroom_pct:.0f}%）：${primary_cost * failover_headroom_pct / 100:.2f}/天")
+    print(f"总增量：${uplift:.2f}/天")
+    print(f"每月增量：${uplift * 30:.2f}")
+    print("没有冗余时，一次持续数小时的区域中断会造成：客户流失、SLA 赔偿和作战室时间")
 
 
 def main() -> None:
     print("=" * 80)
-    print("MANAGED LLM PLATFORM COMPARATOR — 2026 approximations")
+    print("托管 LLM 平台比较器 — 2026 年近似值")
     print("=" * 80)
 
     simulate(tokens_in_per_day=3_000_000, tokens_out_per_day=1_000_000, sla_ttft_ms=200, use_ptu=False)
