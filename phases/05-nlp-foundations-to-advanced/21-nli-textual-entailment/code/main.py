@@ -57,7 +57,7 @@ def evaluate(examples):
         correct += int(ok)
         confusion[(gold, pred)] += 1
         tag = "  OK" if ok else "MISS"
-        print(f"  [{tag}] gold={gold:<13} pred={pred:<13} conf={conf:.2f}")
+        print(f"  [{tag}] 标准答案={gold:<13} 预测={pred:<13} 置信度={conf:.2f}")
         print(f"         p: {premise}")
         print(f"         h: {hypothesis}")
     return correct, len(examples), confusion
@@ -79,19 +79,19 @@ def main():
         ("Birds were singing outside the window.", "The room was silent.", "neutral"),
     ]
 
-    print("=== toy NLI classifier (lexical overlap + negation) ===")
+    print("=== 简化 NLI 分类器（词汇重叠 + 否定）===")
     print()
     correct, total, confusion = evaluate(examples)
     print()
-    print(f"accuracy: {correct}/{total} ({100 * correct / total:.1f}%)")
+    print(f"准确率：{correct}/{total} ({100 * correct / total:.1f}%)")
     print()
-    print("confusion (gold -> pred):")
+    print("混淆情况（标准答案 -> 预测）：")
     for (gold, pred), count in sorted(confusion.items()):
         print(f"  {gold:<14} -> {pred:<14}  {count}")
     print()
-    print("note: this classifier exploits two shallow features.")
-    print("production NLI uses DeBERTa-v3-MNLI at ~91% on MNLI-matched.")
-    print("the shape of the task — (premise, hypothesis) -> label — stays identical.")
+    print("注意：该分类器只利用两个浅层特征。")
+    print("生产级 NLI 使用 DeBERTa-v3-MNLI，在 MNLI-matched 上约为 91%。")
+    print("任务形式——（前提，假设）-> 标签——保持不变。")
 
 
 if __name__ == "__main__":
