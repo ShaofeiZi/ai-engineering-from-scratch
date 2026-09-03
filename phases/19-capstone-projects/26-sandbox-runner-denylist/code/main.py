@@ -1,11 +1,11 @@
 """
-Sandbox runner with denylist, path jail, and timeout.
+带拒绝列表、路径沙箱和超时机制的沙箱运行器。
 
 See: phases/19-capstone-projects/26-sandbox-runner-denylist/docs/en.md
-Concept refs:
-  - POSIX subprocess semantics (wall-clock timeout, return codes).
-  - Symlink-safe path jail via realpath prefix check.
-The demo at the bottom runs a battery of allow/deny calls and exits zero.
+概念参考：
+  - POSIX 子进程语义（墙钟时间超时、返回码）。
+  - 通过 realpath 前缀检查实现对符号链接安全的路径沙箱。
+文件末尾的演示会运行一组允许/拒绝调用，并以状态码 0 退出。
 """
 
 from __future__ import annotations
@@ -89,13 +89,13 @@ TRUNCATION_MARKER: bytes = b"\n[sandbox: output truncated]\n"
 
 
 # ---------------------------------------------------------------------------
-# Result and configuration
+# 结果与配置
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class SandboxResult:
-    """Structured outcome of a sandbox.run call."""
+    """sandbox.run 调用的结构化结果。"""
 
     argv: list[str]
     exit_code: int
@@ -127,7 +127,7 @@ class SandboxResult:
 
 @dataclass
 class SandboxConfig:
-    """All knobs the sandbox accepts."""
+    """沙箱接受的全部配置项。"""
 
     project_root: str
     max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES
@@ -139,13 +139,13 @@ class SandboxConfig:
     env_allowlist: tuple[str, ...] = ("PATH", "HOME", "LANG", "LC_ALL", "TERM")
 
     def __post_init__(self) -> None:
-        # Resolve once and cache. The sandbox compares argument realpaths
-        # against this value, so any later symlink resolution is consistent.
+        # 只解析一次并缓存。沙箱会把参数的 realpath 与此值比较，
+        # 从而保证后续符号链接解析结果一致。
         self.project_root = os.path.realpath(self.project_root)
 
 
 # ---------------------------------------------------------------------------
-# Refusal helpers
+# 拒绝辅助函数
 # ---------------------------------------------------------------------------
 
 
@@ -197,12 +197,11 @@ _PATH_HINT = re.compile(r"[/\\]|^\.{1,2}$")
 
 
 def _looks_like_path(arg: str) -> bool:
-    """Conservative path-like detector.
+    """保守的路径特征检测器。
 
-    Returns True for arguments that look like file paths: contain a slash,
-    are exactly . or .., or end in a common path-y suffix. The sandbox does
-    not need to be exhaustive: any false negative just means the path is not
-    jail-checked, which is fine for non-path arguments.
+    对看起来像文件路径的参数返回 True：包含斜杠，或恰好是 . 或 ..。
+    沙箱不必穷尽所有情况：假阴性只意味着该路径不会接受沙箱检查，
+    对非路径参数来说没有问题。
     """
 
     if not arg:
@@ -219,7 +218,7 @@ def _check_path_jail(argv: Sequence[str], cfg: SandboxConfig) -> str | None:
             continue
         if arg.startswith("-"):
             continue
-        # Resolve against root if arg is relative; let absolute paths stay absolute.
+        # 相对参数以根目录为基准解析；绝对路径保持为绝对路径。
         candidate = arg
         if not os.path.isabs(candidate):
             candidate = os.path.join(root, candidate)
@@ -233,7 +232,7 @@ def _check_path_jail(argv: Sequence[str], cfg: SandboxConfig) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Output truncation
+# 输出截断
 # ---------------------------------------------------------------------------
 
 
@@ -245,13 +244,13 @@ def truncate_stream(buf: bytes, max_bytes: int) -> tuple[bytes, bool]:
 
 
 # ---------------------------------------------------------------------------
-# The sandbox
+# 沙箱
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class Sandbox:
-    """A subprocess runner that refuses dangerous calls and jails paths."""
+    """拒绝危险调用并限制路径范围的子进程运行器。"""
 
     config: SandboxConfig
 
@@ -371,7 +370,7 @@ class Sandbox:
 
 
 # ---------------------------------------------------------------------------
-# Helpers for the demo (cross-platform tool selection)
+# 演示辅助函数（跨平台工具选择）
 # ---------------------------------------------------------------------------
 
 
@@ -392,16 +391,16 @@ def _which(name: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Demo
+# 演示
 # ---------------------------------------------------------------------------
 
 
 def _seed_project_root() -> str:
-    """Create a temp project root with a single tracked file."""
+    """创建一个只含单个受跟踪文件的临时项目根目录。"""
 
     root = tempfile.mkdtemp(prefix="sandbox-demo-")
     with open(os.path.join(root, "hello.txt"), "w", encoding="utf-8") as fh:
-        fh.write("hello from inside the sandbox\n")
+        fh.write("来自沙箱内部的问候\n")
     sub = os.path.join(root, "src")
     os.makedirs(sub, exist_ok=True)
     with open(os.path.join(sub, "main.py"), "w", encoding="utf-8") as fh:
@@ -421,11 +420,11 @@ def _print_outcome(label: str, result: SandboxResult) -> None:
     )
     print(f"  - {label:38s} -> {badge}")
     if result.denied or result.timed_out:
-        print(f"      reason: {result.reason}")
+        print(f"      原因：{result.reason}")
 
 
 def run_demo() -> int:
-    """Self-terminating demo. Returns 0 on success."""
+    """可自行终止的演示；成功时返回 0。"""
 
     root = _seed_project_root()
     config = SandboxConfig(
@@ -441,11 +440,11 @@ def run_demo() -> int:
     sleep = find_executable(("sleep",))
     ls = find_executable(("ls",))
 
-    print("SANDBOX DEMO")
+    print("沙箱演示")
     print(f"project_root={root}")
     print("")
 
-    print("legal calls:")
+    print("合法调用：")
     if ls:
         _print_outcome("ls .", sandbox.run([ls, "."]))
     _print_outcome("echo hello", sandbox.run([echo, "hello", "from", "sandbox"]))
@@ -454,13 +453,13 @@ def run_demo() -> int:
         _print_outcome("cat src/main.py", sandbox.run([cat, "src/main.py"]))
 
     print("")
-    print("denied by name:")
+    print("按名称拒绝：")
     _print_outcome("rm -rf .", sandbox.run(["rm", "-rf", "."]))
     _print_outcome("sudo apt update", sandbox.run(["sudo", "apt", "update"]))
     _print_outcome("curl http://x", sandbox.run(["curl", "http://example.com"]))
 
     print("")
-    print("denied by argv interpreter:")
+    print("按 argv 解释器用法拒绝：")
     _print_outcome(
         "python3 -c '...'",
         sandbox.run(["python3", "-c", "print('hi')"]),
@@ -471,20 +470,20 @@ def run_demo() -> int:
     )
 
     print("")
-    print("denied by shell metachar:")
+    print("按 shell 元字符拒绝：")
     _print_outcome(
         "echo a ; rm -rf",
         sandbox.run([echo, "a", ";", "rm", "-rf"]),
     )
 
     print("")
-    print("denied by path jail:")
+    print("按路径沙箱拒绝：")
     if cat:
         _print_outcome("cat ../../etc/passwd", sandbox.run([cat, "../../etc/passwd"]))
         _print_outcome("cat /etc/passwd", sandbox.run([cat, "/etc/passwd"]))
 
     print("")
-    print("timeout / truncation:")
+    print("超时/截断：")
     if sleep:
         _print_outcome("sleep 5 (cap 2)", sandbox.run([sleep, "5"]))
     if yes:

@@ -1,4 +1,4 @@
-"""Tests for the sandbox runner."""
+"""沙箱运行器的测试。"""
 
 from __future__ import annotations
 
@@ -156,7 +156,7 @@ class SandboxIntegrationTests(unittest.TestCase):
     def test_traversal_refused(self) -> None:
         cat = find_executable(("cat",))
         if cat is None:
-            self.skipTest("cat not available")
+            self.skipTest("cat 不可用")
         result = self.sandbox.run([cat, "../../etc/passwd"])
         self.assertTrue(result.denied)
         self.assertIn("outside project root", result.reason)
@@ -164,7 +164,7 @@ class SandboxIntegrationTests(unittest.TestCase):
     def test_truncation_fires_on_large_stdout(self) -> None:
         echo = find_executable(("echo",))
         if echo is None:
-            self.skipTest("echo not available")
+            self.skipTest("echo 不可用")
         big = "y" * 4096
         result = self.sandbox.run([echo, big])
         self.assertTrue(result.truncated)
@@ -173,7 +173,7 @@ class SandboxIntegrationTests(unittest.TestCase):
     def test_timeout_fires(self) -> None:
         sleep = find_executable(("sleep",))
         if sleep is None:
-            self.skipTest("sleep not available")
+            self.skipTest("sleep 不可用")
         cfg = SandboxConfig(
             project_root=self.root, max_output_bytes=128, timeout_seconds=0.3
         )
