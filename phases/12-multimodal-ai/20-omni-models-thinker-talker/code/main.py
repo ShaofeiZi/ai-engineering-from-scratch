@@ -1,7 +1,6 @@
-"""Thinker-Talker streaming pipeline — TTFAB calculator + VAD turn-taking.
+"""Thinker-Talker 流式管线——TTFAB 计算器与 VAD 回合切换。
 
-Stdlib. No audio processing; focus on the latency budget and concurrency of
-parallel streaming between Thinker (text) and Talker (speech).
+标准库。无音频处理；重点关注延迟预算以及 Thinker（文本）与 Talker（语音）之间并行流式的并发。
 """
 
 from __future__ import annotations
@@ -26,30 +25,31 @@ class LatencyComponent:
 def ttfab(cfg: StreamConfig) -> list[LatencyComponent]:
     components = []
     mic_ms = 40 + (cfg.mic_sr // 8000) * 5
-    components.append(LatencyComponent("mic -> speech tokens", mic_ms))
+    components.append(LatencyComponent("麦克风 -> 语音 token", mic_ms))
 
     prefill = 100 * (cfg.thinker_b / 7.0)
     if cfg.include_vision:
         prefill += 80
-    components.append(LatencyComponent("Thinker prefill (prompt + history)", prefill))
+    components.append(LatencyComponent("Thinker 预填充（提示 + 历史）", prefill))
 
     first_text = 40 * (cfg.thinker_b / 7.0)
-    components.append(LatencyComponent("Thinker first text token", first_text))
+    components.append(LatencyComponent("Thinker 首个文本 token", first_text))
 
     talker_first = max(15, 20 * (cfg.talker_m / 300.0))
-    components.append(LatencyComponent("Talker first speech tokens", talker_first))
+    components.append(LatencyComponent("Talker 首批语音 token", talker_first))
 
     rvq_decode = 30
-    components.append(LatencyComponent("residual-VQ decode (8 layers parallel)", rvq_decode))
+    components.append(LatencyComponent("残差 VQ 解码（8 层并行）", rvq_decode))
 
     wave_decode = 70
-    components.append(LatencyComponent("waveform decoder (SNAC-class)", wave_decode))
+    components.append(LatencyComponent("波形解码器（SNAC 级）", wave_decode))
     return components
 
 
 def print_ttfab(cfg: StreamConfig) -> float:
-    print(f"\nCONFIG: Thinker={cfg.thinker_b}B  Talker={cfg.talker_m}M  "
-          f"mic={cfg.mic_sr}Hz  vision={cfg.include_vision}")
+    vision = "是" if cfg.include_vision else "否"
+    print(f"\n配置：Thinker={cfg.thinker_b}B  Talker={cfg.talker_m}M  "
+          f"麦克风={cfg.mic_sr}Hz  视觉={vision}")
     print("-" * 60)
     total = 0.0
     for c in ttfab(cfg):
@@ -57,13 +57,13 @@ def print_ttfab(cfg: StreamConfig) -> float:
         print(f"  {c.name:<40}  +{c.ms:>5.0f} ms  ({total:>6.0f})")
     print(f"  TTFAB = {total:.0f} ms", end=" ")
     if total < 250:
-        print("  -> GPT-4o class")
+        print("  -> GPT-4o 等级")
     elif total < 400:
-        print("  -> conversational")
+        print("  -> 对话级")
     elif total < 700:
-        print("  -> noticeable but usable")
+        print("  -> 可感知但可用")
     else:
-        print("  -> sluggish, user drift")
+        print("  -> 迟钝，用户注意力分散")
     return total
 
 
@@ -74,32 +74,32 @@ class VADEvent:
 
 
 def simulate_turn_taking(silence_threshold_ms: int = 200) -> list[VADEvent]:
-    """Simulate a user turn ending detected by silence."""
+    """模拟通过静音检测到的用户回合结束。"""
     events = []
-    events.append(VADEvent(0, "user starts speaking"))
-    events.append(VADEvent(450, "user audio tokens streaming"))
-    events.append(VADEvent(3800, "user stops speaking"))
-    events.append(VADEvent(3800 + silence_threshold_ms, "VAD triggers end-of-turn"))
-    events.append(VADEvent(3800 + silence_threshold_ms + 200, "Thinker begins prefill"))
-    events.append(VADEvent(3800 + silence_threshold_ms + 400, "Talker first audio out"))
+    events.append(VADEvent(0, "用户开始说话"))
+    events.append(VADEvent(450, "用户音频 token 流式输入"))
+    events.append(VADEvent(3800, "用户停止说话"))
+    events.append(VADEvent(3800 + silence_threshold_ms, "VAD 触发回合结束"))
+    events.append(VADEvent(3800 + silence_threshold_ms + 200, "Thinker 开始预填充"))
+    events.append(VADEvent(3800 + silence_threshold_ms + 400, "Talker 输出首段音频"))
     return events
 
 
 def demo_vad() -> None:
-    print("\nHALF-DUPLEX TURN-TAKING (VAD silence 200ms)")
+    print("\n半双工回合切换（VAD 静音 200ms）")
     print("-" * 60)
     for e in simulate_turn_taking(200):
         print(f"  t={e.time_ms:>6.0f} ms  {e.kind}")
-    print("  net response lag after user stops: ~400ms")
+    print("  用户停止后的净响应延迟：~400ms")
 
 
 def duplex_modes() -> None:
-    print("\nDUPLEX MODES")
+    print("\n双工模式")
     print("-" * 60)
     modes = [
-        ("half-duplex",  "user speaks, model listens; swap; clear turns"),
-        ("turn-taking",  "VAD silence detects end-of-turn (200-400ms)"),
-        ("full-duplex",  "both can speak; requires training + backchannel data"),
+        ("半双工",  "用户说、模型听，然后交换；回合边界清晰"),
+        ("回合切换", "VAD 通过 200-400ms 静音检测回合结束"),
+        ("全双工",  "双方可同时说话；需要训练与反馈信号数据"),
     ]
     for mode, note in modes:
         print(f"  {mode:<14}: {note}")
@@ -107,7 +107,7 @@ def duplex_modes() -> None:
 
 def main() -> None:
     print("=" * 60)
-    print("OMNI THINKER-TALKER STREAMING (Phase 12, Lesson 20)")
+    print("OMNI THINKER-TALKER 流式处理（第12阶段，第20课）")
     print("=" * 60)
 
     configs = [
@@ -122,13 +122,13 @@ def main() -> None:
     demo_vad()
     duplex_modes()
 
-    print("\nOPEN STREAMING DESIGNS")
+    print("\n开放流式设计")
     print("-" * 60)
     designs = [
-        ("Mini-Omni (2024)",  "first open streaming, text+speech interleaved"),
-        ("Moshi (2024)",      "single transformer inner-monologue, 160ms TTFAB"),
-        ("Qwen2.5-Omni (3/25)", "Thinker-Talker split + TMRoPE, ~350ms TTFAB"),
-        ("Qwen3-Omni (11/25)", "scaled Qwen3 base, approaches GPT-4o latency"),
+        ("Mini-Omni (2024)",  "首个开放流式模型，文本与语音交错"),
+        ("Moshi (2024)",      "单 Transformer 内心独白，TTFAB 为 160ms"),
+        ("Qwen2.5-Omni (3/25)", "Thinker-Talker 拆分 + TMRoPE，TTFAB 约 350ms"),
+        ("Qwen3-Omni (11/25)", "扩展 Qwen3 基座，延迟接近 GPT-4o"),
     ]
     for name, note in designs:
         print(f"  {name:<22}: {note}")
