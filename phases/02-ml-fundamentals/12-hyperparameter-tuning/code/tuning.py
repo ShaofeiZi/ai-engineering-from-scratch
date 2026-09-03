@@ -301,7 +301,7 @@ def convergence_curve(history):
 
 def demo_grid_search():
     print("=" * 60)
-    print("GRID SEARCH")
+    print("网格搜索")
     print("=" * 60)
 
     X_tr, y_tr, X_val, y_val, X_te, y_te = make_data()
@@ -320,21 +320,21 @@ def demo_grid_search():
     for v in param_grid.values():
         total_combos *= len(v)
 
-    print(f"  Total combinations: {total_combos}")
-    print(f"  Best params: {best_params}")
-    print(f"  Best val neg_mse: {best_score:.4f} (MSE = {-best_score:.4f})")
-    print(f"  Time: {elapsed:.1f}s")
+    print(f"  总组合数: {total_combos}")
+    print(f"  最佳参数: {best_params}")
+    print(f"  最佳验证 neg_mse: {best_score:.4f} (MSE = {-best_score:.4f})")
+    print(f"  耗时: {elapsed:.1f}s")
 
     model = GBMForTuning(**best_params)
     model.fit(X_tr, y_tr)
     test_mse = -neg_mse(model, X_te, y_te)
-    print(f"  Test MSE: {test_mse:.4f}")
+    print(f"  测试 MSE: {test_mse:.4f}")
     print()
 
 
 def demo_random_search():
     print("=" * 60)
-    print("RANDOM SEARCH")
+    print("随机搜索")
     print("=" * 60)
 
     X_tr, y_tr, X_val, y_val, X_te, y_te = make_data()
@@ -355,14 +355,14 @@ def demo_random_search():
             param_distributions, X_tr, y_tr, X_val, y_val, n_iter=n_iter
         )
         elapsed = time.time() - start
-        print(f"  n_iter={n_iter:>3d}  best_mse={-best_score:.4f}  time={elapsed:.1f}s")
+        print(f"  n_iter={n_iter:>3d}  最佳_mse={-best_score:.4f}  耗时={elapsed:.1f}s")
 
     print()
 
     best_params, best_score, _ = random_search(
         param_distributions, X_tr, y_tr, X_val, y_val, n_iter=100
     )
-    print(f"  Best params (100 trials):")
+    print(f"  最佳参数 (100次试验):")
     for k, v in best_params.items():
         if isinstance(v, float):
             print(f"    {k}: {v:.4f}")
@@ -372,13 +372,13 @@ def demo_random_search():
     model = GBMForTuning(**best_params)
     model.fit(X_tr, y_tr)
     test_mse = -neg_mse(model, X_te, y_te)
-    print(f"  Test MSE: {test_mse:.4f}")
+    print(f"  测试 MSE: {test_mse:.4f}")
     print()
 
 
 def demo_bayesian():
     print("=" * 60)
-    print("BAYESIAN OPTIMIZATION")
+    print("贝叶斯优化")
     print("=" * 60)
 
     X_tr, y_tr, X_val, y_val, X_te, y_te = make_data()
@@ -405,13 +405,13 @@ def demo_bayesian():
     optimizer = SimpleBayesianOptimizer(param_space, n_initial=10, seed=42)
     best_params, best_score, history = optimizer.optimize(objective, n_iter=50)
 
-    print(f"  Best params (50 trials):")
+    print(f"  最佳参数 (50次试验):")
     for k, v in best_params.items():
         if isinstance(v, float):
             print(f"    {k}: {v:.4f}")
         else:
             print(f"    {k}: {v}")
-    print(f"  Best val MSE: {-best_score:.4f}")
+    print(f"  最佳验证 MSE: {-best_score:.4f}")
 
     int_params = {}
     for k, v in best_params.items():
@@ -422,13 +422,13 @@ def demo_bayesian():
     model = GBMForTuning(**int_params)
     model.fit(X_tr, y_tr)
     test_mse = -neg_mse(model, X_te, y_te)
-    print(f"  Test MSE: {test_mse:.4f}")
+    print(f"  测试 MSE: {test_mse:.4f}")
     print()
 
 
 def demo_comparison():
     print("=" * 60)
-    print("HEAD-TO-HEAD: GRID vs RANDOM vs BAYESIAN")
+    print("对比: 网格 vs 随机 vs 贝叶斯")
     print("=" * 60)
 
     X_tr, y_tr, X_val, y_val, X_te, y_te = make_data()
@@ -468,10 +468,10 @@ def demo_comparison():
     optimizer = SimpleBayesianOptimizer(param_space, n_initial=10, seed=42)
     _, bayes_score, bayes_history = optimizer.optimize(objective, n_iter=n_grid)
 
-    print(f"  Budget: {n_grid} evaluations each")
-    print(f"  Grid search   best MSE: {-grid_score:.4f}")
-    print(f"  Random search best MSE: {-rand_score:.4f}")
-    print(f"  Bayesian opt  best MSE: {-bayes_score:.4f}")
+    print(f"  预算: 各{n_grid}次评估")
+    print(f"  网格搜索   最佳 MSE: {-grid_score:.4f}")
+    print(f"  随机搜索   最佳 MSE: {-rand_score:.4f}")
+    print(f"  贝叶斯优化 最佳 MSE: {-bayes_score:.4f}")
     print()
 
     grid_curve = convergence_curve(grid_history)
@@ -479,7 +479,7 @@ def demo_comparison():
     bayes_curve = convergence_curve(bayes_history)
 
     checkpoints = [5, 10, 20, n_grid - 1]
-    print(f"  {'Eval':>6}  {'Grid MSE':>10}  {'Random MSE':>10}  {'Bayes MSE':>10}")
+    print(f"  {'评估':>6}  {'网格 MSE':>10}  {'随机 MSE':>10}  {'贝叶斯 MSE':>10}")
     print(f"  {'-'*6}  {'-'*10}  {'-'*10}  {'-'*10}")
     for cp in checkpoints:
         if cp < len(grid_curve):
@@ -489,23 +489,23 @@ def demo_comparison():
             )
 
     print()
-    print("Random search explores the full continuous space (better coverage).")
-    print("Bayesian optimization learns from past results (better convergence).")
-    print("Grid search is only competitive with few hyperparameters.")
+    print("随机搜索能探索完整的连续空间（覆盖更广）。")
+    print("贝叶斯优化从历史结果中学习（收敛更快）。")
+    print("网格搜索仅在超参数较少时才有竞争力。")
     print()
 
 
 def demo_optuna():
     print("=" * 60)
-    print("OPTUNA (if installed)")
+    print("OPTUNA（如已安装）")
     print("=" * 60)
 
     try:
         import optuna
         optuna.logging.set_verbosity(optuna.logging.WARNING)
     except ImportError:
-        print("  Optuna not installed. Install with: pip install optuna")
-        print("  Skipping Optuna demo.")
+        print("  Optuna 未安装。安装命令: pip install optuna")
+        print("  跳过 Optuna 演示。")
         print()
         return
 
@@ -531,13 +531,13 @@ def demo_optuna():
     study = optuna.create_study(direction="minimize")
     study.optimize(objective, n_trials=50)
 
-    print(f"  Best params:")
+    print(f"  最佳参数:")
     for k, v in study.best_params.items():
         if isinstance(v, float):
             print(f"    {k}: {v:.4f}")
         else:
             print(f"    {k}: {v}")
-    print(f"  Best val MSE: {study.best_value:.4f}")
+    print(f"  最佳验证 MSE: {study.best_value:.4f}")
 
     best = study.best_params
     model = GBMForTuning(
@@ -549,11 +549,11 @@ def demo_optuna():
     )
     model.fit(X_tr, y_tr)
     test_mse = np.mean((model.predict(X_te) - y_te) ** 2)
-    print(f"  Test MSE: {test_mse:.4f}")
+    print(f"  测试 MSE: {test_mse:.4f}")
 
     try:
         importances = optuna.importance.get_param_importances(study)
-        print(f"\n  Hyperparameter importances:")
+        print(f"\n  超参数重要性:")
         for k, v in importances.items():
             bar = "#" * int(v * 40)
             print(f"    {k:>20s}: {v:.3f} {bar}")
@@ -569,4 +569,4 @@ if __name__ == "__main__":
     demo_bayesian()
     demo_comparison()
     demo_optuna()
-    print("All tuning demos complete.")
+    print("所有调参演示完成。")
