@@ -108,10 +108,10 @@ def main():
     y_pred = [predict_nb(apply_negation(tokenize(t)), priors, word_probs) for t, _ in test]
     for (text, actual), predicted in zip(test, y_pred):
         mark = "OK" if actual == predicted else "MISS"
-        print(f"[{mark}] pred={predicted}  true={actual}  :: {text}")
+        print(f"[{mark}] 预测={predicted}  真实={actual}  :: {text}")
 
     print()
-    print("metrics:", evaluate(y_true, y_pred))
+    print("指标：", evaluate(y_true, y_pred))
 
 
 if __name__ == "__main__":
