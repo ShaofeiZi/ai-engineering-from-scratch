@@ -1,12 +1,11 @@
-"""Decision-tree recommender for agent frameworks.
+"""代理框架决策树推荐器。
 
-Takes a problem descriptor and recommends LangGraph, CrewAI, AutoGen, Agno, or
-"no framework" with a one-sentence justification. The tree encodes the tradeoffs
-described in docs/en.md.
+接收问题描述并推荐 LangGraph、CrewAI、AutoGen、Agno 或“无框架”，
+同时给出决策理由。决策树编码了 docs/en.md 中描述的权衡。
 
-Run:
-    python main.py           # runs the bundled test suite
-    python main.py --ask     # interactive prompt mode
+运行：
+python main.py        # 运行内置测试套件
+python main.py --ask  # 交互式问答模式
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ from typing import Callable
 
 @dataclass(frozen=True)
 class Problem:
-    """Shape descriptor for an agentic task."""
+    """描述代理任务形态。"""
 
     has_typed_state: bool = False
     has_roles: bool = False
@@ -39,65 +38,60 @@ class Recommendation:
 
 
 def recommend(p: Problem) -> Recommendation:
-    # Smallest-first: if it's 2 or fewer calls, skip the framework entirely.
+    # 最小化优先：调用不超过两次时完全跳过框架。
     if p.total_llm_calls <= 2 and not any(
         (p.has_roles, p.has_dialogue, p.needs_resume, p.has_parallel_fanout, p.needs_human_interrupt)
     ):
         return Recommendation(
             "plain python",
-            "Two or fewer LLM calls with no state, roles, dialogue, fanout, "
-            "or resume needs; a framework is pure overhead.",
+            "LLM 调用不超过两次，且没有状态、角色、对话、扇出或恢复需求；"
+            "引入框架只会增加开销。",
         )
 
-    # Durable state or human interrupts or time-travel -> LangGraph.
+    # 持久状态、人工中断或并行扇出 -> LangGraph。
     if p.needs_resume or p.needs_human_interrupt or p.has_parallel_fanout:
         return Recommendation(
             "langgraph",
-            "Typed state, checkpointer, interrupts, and Send fanout are only "
-            "first-class in LangGraph.",
+            "类型化状态、检查点、中断和 Send 扇出都是 LangGraph 的一等能力。",
         )
 
-    # Dialogue-shaped problem -> AutoGen.
+    # 对话型问题 -> AutoGen。
     if p.has_dialogue and not p.has_typed_state:
         return Recommendation(
             "autogen",
-            "Proposer-critic or teacher-student dialogue is AutoGen's native "
-            "shape; GroupChat selects speakers without hand-wiring.",
+            "提议者-批评者或教师-学生对话是 AutoGen 的原生形态；"
+            "GroupChat 无需手工编排即可选择发言者。",
         )
 
-    # Role-driven pipeline -> CrewAI.
+    # 角色驱动管道 -> CrewAI。
     if p.has_roles and not p.has_typed_state:
         return Recommendation(
             "crewai",
-            "Specialist roles with a short sequential or hierarchical plan "
-            "are cheapest to express in CrewAI.",
+            "带有短顺序计划或分层计划的专家角色，在 CrewAI 中表达成本最低。",
         )
 
-    # Single agent + sessions -> Agno.
+    # 单代理 + 会话记忆 -> Agno。
     if p.needs_session_memory and not p.has_roles and not p.has_dialogue:
         return Recommendation(
             "agno",
-            "Single agent with tools and persistent session memory; Agno's "
-            "storage drivers are built in.",
+            "单代理需要工具和持久会话记忆；Agno 内置了存储驱动。",
         )
 
-    # Typed state but no other signals still points at LangGraph.
+    # 有类型化状态但没有其他信号时，仍选择 LangGraph。
     if p.has_typed_state:
         return Recommendation(
             "langgraph",
-            "Typed state is LangGraph's core abstraction; map your TypedDict "
-            "onto a StateGraph.",
+            "类型化状态是 LangGraph 的核心抽象；可将 TypedDict 映射到 StateGraph。",
         )
 
-    # Fallback.
+    # 默认分支。
     return Recommendation(
         "langgraph",
-        "Default for multi-step agents with any uncertainty about future state "
-        "or branching needs.",
+        "多步骤代理只要未来状态或分支需求存在不确定性，就默认选择 LangGraph。",
     )
 
 
-# Tests -----------------------------------------------------------------------
+# 测试 ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
 
 def _check(label: str, actual: Recommendation, expected_framework: str) -> bool:
@@ -110,37 +104,37 @@ def _check(label: str, actual: Recommendation, expected_framework: str) -> bool:
 def run_tests() -> int:
     cases: list[tuple[str, Problem, str]] = [
         (
-            "two-call summarizer, no state",
+            "两次调用的摘要器，无状态",
             Problem(total_llm_calls=2),
             "plain python",
         ),
         (
-            "long-running workflow with human approval",
+            "需要人工审批的长时工作流",
             Problem(has_typed_state=True, needs_human_interrupt=True, total_llm_calls=8),
             "langgraph",
         ),
         (
-            "research with parallel fanout to three retrievers",
+            "并行扇出到三个检索器的研究任务",
             Problem(has_typed_state=True, has_parallel_fanout=True, total_llm_calls=5),
             "langgraph",
         ),
         (
-            "proposer-critic coding loop",
+            "提议者-批评者编码循环",
             Problem(has_dialogue=True, total_llm_calls=10),
             "autogen",
         ),
         (
-            "marketing pipeline with researcher/writer/editor roles",
+            "包含研究员、作者和编辑角色的营销管道",
             Problem(has_roles=True, total_llm_calls=4),
             "crewai",
         ),
         (
-            "chat assistant with persistent user memory",
+            "带持久用户记忆的聊天助手",
             Problem(needs_session_memory=True, total_llm_calls=6),
             "agno",
         ),
         (
-            "workflow that must resume after crash",
+            "崩溃后必须恢复的工作流",
             Problem(has_typed_state=True, needs_resume=True, total_llm_calls=12),
             "langgraph",
         ),
@@ -151,7 +145,7 @@ def run_tests() -> int:
         if not _check(label, recommend(problem), expected):
             failures += 1
     print()
-    print(f"{len(cases) - failures}/{len(cases)} cases passed.")
+    print(f"通过 {len(cases) - failures}/{len(cases)} 个用例。")
     return 0 if failures == 0 else 1
 
 
@@ -160,14 +154,14 @@ def run_interactive() -> int:
         return input(f"{prompt} [y/N] ").strip().lower().startswith("y")
 
     p = Problem(
-        has_typed_state=yes("Typed state / explicit state schema?"),
-        has_roles=yes("Specialist roles with distinct goals?"),
-        has_dialogue=yes("Multi-agent dialogue (speaker-ordering emergent)?"),
-        has_parallel_fanout=yes("Parallel fanout across N sub-workers?"),
-        needs_resume=yes("Must resume after process restart?"),
-        needs_human_interrupt=yes("Needs human approval mid-run?"),
-        total_llm_calls=int(input("Approx LLM calls per run? ").strip() or "1"),
-        needs_session_memory=yes("Needs durable per-user session memory?"),
+        has_typed_state=yes("是否需要类型化状态或显式状态 schema？"),
+        has_roles=yes("是否包含目标各异的专家角色？"),
+        has_dialogue=yes("是否需要多代理对话（发言顺序动态产生）？"),
+        has_parallel_fanout=yes("是否要并行扇出到 N 个子 worker？"),
+        needs_resume=yes("进程重启后是否必须恢复？"),
+        needs_human_interrupt=yes("运行中是否需要人工审批？"),
+        total_llm_calls=int(input("每次运行大约调用 LLM 多少次？ ").strip() or "1"),
+        needs_session_memory=yes("是否需要持久化每位用户的会话记忆？"),
     )
     r = recommend(p)
     print()
@@ -177,7 +171,7 @@ def run_interactive() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ask", action="store_true", help="interactive mode")
+    parser.add_argument("--ask", action="store_true", help="交互模式")
     args = parser.parse_args()
     return run_interactive() if args.ask else run_tests()
 
