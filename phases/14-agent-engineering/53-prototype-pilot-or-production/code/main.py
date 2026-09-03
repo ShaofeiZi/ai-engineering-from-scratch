@@ -1,8 +1,8 @@
-# Lesson program for selecting prototype, pilot, or production controls.
-# Read: phases/14-agent-engineering/53-prototype-pilot-or-production/docs/en.md
-# Reference: Boehm, A Spiral Model of Software Development and Enhancement, 1988.
-# Reference: Fagerholm et al., Building Blocks for Continuous Experimentation, 2014.
-# Run this file to generate outputs/stage-decisions.json.
+#用于选择原型、试点或生产控制方案的课程程序。
+#阅读：phases/14-agent-engineering/53-prototype-pilot-or-production/docs/en.md
+#参考文献：Boehm，《A Spiral Model of Software Development and Enhancement》，1988年。
+#参考文献：Fagerholm 等，《Building Blocks for Continuous Experimentation》，2014年。
+#运行此文件以生成 outputs/stage-decisions.json.
 from __future__ import annotations
 
 import json
