@@ -37,7 +37,7 @@ def kmeans(data, k, max_iterations=100, seed=42):
             euclidean_distance(old, new) < 1e-6
             for old, new in zip(centroids, new_centroids)
         ):
-            print(f"  Converged at iteration {iteration + 1}")
+            print(f"  在第 {iteration + 1} 次迭代时收敛")
             break
 
         centroids = new_centroids
@@ -91,19 +91,19 @@ def silhouette_score(data, assignments):
 
 
 def find_best_k(data, max_k=10):
-    print("Elbow method:")
+    print("肘部法：")
     inertias = []
     for k in range(1, max_k + 1):
         assignments, centroids = kmeans(data, k)
         inertia = compute_inertia(data, assignments, centroids)
         inertias.append(inertia)
-        print(f"  K={k}: inertia={inertia:.2f}")
+        print(f"  K={k}: 惯性={inertia:.2f}")
 
-    print("\nSilhouette scores:")
+    print("\n轮廓系数：")
     for k in range(2, max_k + 1):
         assignments, centroids = kmeans(data, k)
         score = silhouette_score(data, assignments)
-        print(f"  K={k}: silhouette={score:.4f}")
+        print(f"  K={k}: 轮廓={score:.4f}")
 
     return inertias
 
@@ -211,7 +211,7 @@ def gmm(data, k, max_iterations=100, seed=42):
             euclidean_distance(old_means[j], means[j]) for j in range(k)
         )
         if shift < 1e-6:
-            print(f"  GMM converged at iteration {iteration + 1}")
+            print(f"  GMM 在第 {iteration + 1} 次迭代时收敛")
             break
 
     assignments = []
@@ -339,49 +339,49 @@ if __name__ == "__main__":
     centers = [[2, 2], [8, 3], [5, 8]]
     data, true_labels = make_blobs(centers, n_per_cluster=50, spread=0.8)
 
-    print("=== K-Means on 3 blobs ===")
+    print("=== 3 个簇上的 K-Means ===")
     assignments, centroids = kmeans(data, k=3)
-    print(f"  Centroids: {[[round(c, 2) for c in cent] for cent in centroids]}")
+    print(f"  质心: {[[round(c, 2) for c in cent] for cent in centroids]}")
     sil = silhouette_score(data, assignments)
-    print(f"  Silhouette score: {sil:.4f}")
+    print(f"  轮廓系数: {sil:.4f}")
 
-    print("\n=== Elbow Method ===")
+    print("\n=== 肘部法 ===")
     find_best_k(data, max_k=6)
 
-    print("\n=== DBSCAN on 3 blobs ===")
+    print("\n=== 3 个簇上的 DBSCAN ===")
     db_labels = dbscan(data, eps=1.5, min_samples=5)
     n_clusters = len(set(db_labels) - {-1})
     n_noise = db_labels.count(-1)
-    print(f"  Found {n_clusters} clusters, {n_noise} noise points")
+    print(f"  发现 {n_clusters} 个簇，{n_noise} 个噪声点")
 
-    print("\n=== GMM on 3 blobs ===")
+    print("\n=== 3 个簇上的 GMM ===")
     gmm_assignments, gmm_means, gmm_weights, _ = gmm(data, k=3)
-    print(f"  Means: {[[round(m, 2) for m in mean] for mean in gmm_means]}")
-    print(f"  Weights: {[round(w, 3) for w in gmm_weights]}")
+    print(f"  均值: {[[round(m, 2) for m in mean] for mean in gmm_means]}")
+    print(f"  权重: {[round(w, 3) for w in gmm_weights]}")
     gmm_sil = silhouette_score(data, gmm_assignments)
-    print(f"  Silhouette score: {gmm_sil:.4f}")
+    print(f"  轮廓系数: {gmm_sil:.4f}")
 
-    print("\n=== Hierarchical Clustering on 3 blobs (Ward linkage) ===")
+    print("\n=== 3 个簇上的层次聚类（Ward 连接）===")
     small_data = data[:30]
     hc_labels, merges = agglomerative_clustering(small_data, n_clusters=3)
     hc_sil = silhouette_score(small_data, hc_labels)
-    print(f"  Silhouette score: {hc_sil:.4f}")
-    print(f"  Last 3 merges: {[(a, b, round(d, 2)) for a, b, d, _ in merges[-3:]]}")
+    print(f"  轮廓系数: {hc_sil:.4f}")
+    print(f"  最后 3 次合并: {[(a, b, round(d, 2)) for a, b, d, _ in merges[-3:]]}")
 
-    print("\n=== DBSCAN on moons (non-spherical clusters) ===")
+    print("\n=== 月牙形数据上的 DBSCAN（非球形簇）===")
     moon_data, moon_labels = make_moons(n_samples=200, noise=0.1)
     moon_db = dbscan(moon_data, eps=0.3, min_samples=5)
     n_moon_clusters = len(set(moon_db) - {-1})
     n_moon_noise = moon_db.count(-1)
-    print(f"  Found {n_moon_clusters} clusters, {n_moon_noise} noise points")
+    print(f"  发现 {n_moon_clusters} 个簇，{n_moon_noise} 个噪声点")
 
-    print("\n=== K-Means on moons (will fail to separate) ===")
+    print("\n=== 月牙形数据上的 K-Means（无法分离）===")
     moon_km, moon_centroids = kmeans(moon_data, k=2)
     moon_sil = silhouette_score(moon_data, moon_km)
-    print(f"  Silhouette score: {moon_sil:.4f}")
-    print("  K-Means splits moons poorly because they are not spherical")
+    print(f"  轮廓系数: {moon_sil:.4f}")
+    print("  K-Means 对月牙形簇划分效果很差，因为它们不是球形的")
 
-    print("\n=== Anomaly detection with DBSCAN ===")
+    print("\n=== 用 DBSCAN 进行异常检测 ===")
     anomaly_data = list(data)
     anomaly_data.append([20.0, 20.0])
     anomaly_data.append([-5.0, -5.0])
@@ -392,6 +392,6 @@ if __name__ == "__main__":
         for i in range(len(anomaly_labels))
         if anomaly_labels[i] == -1
     ]
-    print(f"  Detected {len(anomalies)} anomalies")
+    print(f"  检测到 {len(anomalies)} 个异常点")
     for a in anomalies[-3:]:
-        print(f"    Point {[round(v, 2) for v in a]}")
+        print(f"    点 {[round(v, 2) for v in a]}")
