@@ -173,7 +173,7 @@ class TaskManager {
       task.status = {
         state: "rejected",
         timestamp: Date.now(),
-        message: textMessage("agent", `No handler for ${agentName}`),
+        message: textMessage("agent", `没有 ${agentName} 对应的处理器`),
       };
       return task;
     }
@@ -337,7 +337,7 @@ class AuditableRunner {
     } catch (err) {
       entry.status = "failed";
       entry.trajectory.push({
-        reasoning: `Error: ${String(err)}`,
+        reasoning: `错误：${String(err)}`,
         timestamp: Date.now(),
       });
       entry.completedAt = Date.now();
@@ -508,12 +508,12 @@ class ProtocolGateway {
     sessionId?: string
   ): Promise<{ task: Task; audit: AuditEntry } | { error: string }> {
     if (!this.identityRegistry.verify(fromDid, signature, message.id)) {
-      return { error: "Identity verification failed" };
+      return { error: "身份验证失败" };
     }
 
     const card = this.registry.resolve(targetAgent);
     if (!card) {
-      return { error: `Agent ${targetAgent} not found in registry` };
+      return { error: `注册表中找不到 Agent ${targetAgent}` };
     }
 
     const audit = await this.auditRunner.run(
@@ -535,7 +535,7 @@ class ProtocolGateway {
     const candidates = this.registry.discoverBySkillTag(skillTag);
     if (candidates.length === 0) {
       return Promise.resolve({
-        error: `No agents found with skill tag: ${skillTag}`,
+        error: `找不到具有该技能 tag 的 Agent：${skillTag}`,
       });
     }
     return this.delegateTask(
@@ -551,7 +551,7 @@ async function protocolDemo() {
   const registry = new AgentRegistry();
   registry.register({
     name: "researcher",
-    description: "Searches and summarizes findings",
+    description: "搜索并总结发现",
     version: "1.0.0",
     url: "https://researcher.local/a2a/v1",
     capabilities: { streaming: true, pushNotifications: false },
@@ -560,8 +560,8 @@ async function protocolDemo() {
     skills: [
       {
         id: "web-research",
-        name: "Web Research",
-        description: "Searches the web",
+        name: "网页调研",
+        description: "搜索网页",
         tags: ["research", "search", "summarization"],
         inputModes: ["text/plain"],
         outputModes: ["application/json"],
@@ -570,7 +570,7 @@ async function protocolDemo() {
   });
   registry.register({
     name: "coder",
-    description: "Writes code from specs",
+    description: "根据规格编写代码",
     version: "1.0.0",
     url: "https://coder.local/a2a/v1",
     capabilities: { streaming: false, pushNotifications: false },
@@ -579,8 +579,8 @@ async function protocolDemo() {
     skills: [
       {
         id: "code-gen",
-        name: "Code Generation",
-        description: "Generates code",
+        name: "代码生成",
+        description: "生成代码",
         tags: ["coding", "generation"],
         inputModes: ["text/plain", "application/json"],
         outputModes: ["text/plain"],
@@ -603,7 +603,7 @@ async function protocolDemo() {
       };
 
       researchTrajectory.push({
-        reasoning: "Searching for React 19 documentation",
+        reasoning: "搜索 React 19 文档",
         toolName: "web_search",
         toolInput: { query: "React 19 compiler features" },
         toolOutput: {
@@ -613,12 +613,12 @@ async function protocolDemo() {
       });
 
       researchTrajectory.push({
-        reasoning: "Extracting key findings from search results",
+        reasoning: "从搜索结果中提取关键发现",
         toolName: "doc_analysis",
         toolInput: { url: "react.dev/blog/react-19" },
         toolOutput: {
           summary:
-            "React 19 compiler auto-memoizes, no manual useMemo needed",
+            "React 19 编译器会自动记忆化，无需手动使用 useMemo",
         },
         timestamp: Date.now(),
       });
@@ -634,9 +634,9 @@ async function protocolDemo() {
               kind: "data" as const,
               data: {
                 findings: [
-                  "React 19 compiler auto-memoizes components",
-                  "No more manual useMemo/useCallback needed",
-                  "Compiler runs at build time, not runtime",
+                  "React 19 编译器会自动记忆化组件",
+                  "不再需要手动使用 useMemo/useCallback",
+                  "编译器在构建时而非运行时运行",
                 ],
                 sources: ["react.dev/blog/react-19"],
               },
@@ -658,7 +658,7 @@ async function protocolDemo() {
 
   auditRunner.registerAgent("researcher", async () => ({
     output: [
-      textMessage("agent", "React 19 compiler auto-memoizes components"),
+      textMessage("agent", "React 19 编译器会自动记忆化组件"),
     ],
     trajectory: researchTrajectory,
   }));
@@ -678,27 +678,27 @@ async function protocolDemo() {
     identityRegistry
   );
 
-  console.log("=== Protocol Demo ===\n");
+  console.log("=== 协议演示 ===\n");
 
-  console.log("1. Agent Discovery (A2A)");
+  console.log("1. Agent 发现（A2A）");
   const researchAgents = registry.discoverBySkillTag("research");
   console.log(
-    `   Found ${researchAgents.length} agent(s):`,
+    `   找到 ${researchAgents.length} 个 Agent：`,
     researchAgents.map((a) => a.name)
   );
 
-  console.log("\n2. Identity Verification (ANP)");
-  const message = textMessage("user", "Research React 19 compiler features");
+  console.log("\n2. 身份验证（ANP）");
+  const message = textMessage("user", "调研 React 19 编译器功能");
   const signature = signPayload(coderIdentity, message.id);
   const verified = identityRegistry.verify(
     coderIdentity.did,
     signature,
     message.id
   );
-  console.log(`   Coder DID: ${coderIdentity.did}`);
-  console.log(`   Signature verified: ${verified}`);
+  console.log(`   Coder DID：${coderIdentity.did}`);
+  console.log(`   签名验证结果：${verified}`);
 
-  console.log("\n3. Task Delegation (A2A + ACP + ANP)");
+  console.log("\n3. 任务委派（A2A + ACP + ANP）");
   const result = await gateway.delegateTask(
     coderIdentity.did,
     signature,
@@ -708,28 +708,28 @@ async function protocolDemo() {
   );
 
   if ("error" in result) {
-    console.log(`   Error: ${result.error}`);
+    console.log(`   错误：${result.error}`);
     return;
   }
 
-  console.log(`   Task ID: ${result.task.id}`);
-  console.log(`   Task state: ${result.task.status.state}`);
-  console.log(`   Artifacts: ${result.task.artifacts.length}`);
+  console.log(`   任务 ID：${result.task.id}`);
+  console.log(`   任务状态：${result.task.status.state}`);
+  console.log(`   产物数量：${result.task.artifacts.length}`);
 
-  console.log("\n4. Audit Trail (ACP)");
-  console.log(`   Run ID: ${result.audit.runId}`);
-  console.log(`   Status: ${result.audit.status}`);
-  console.log(`   Trajectory steps: ${result.audit.trajectory.length}`);
+  console.log("\n4. 审计轨迹（ACP）");
+  console.log(`   运行 ID：${result.audit.runId}`);
+  console.log(`   状态：${result.audit.status}`);
+  console.log(`   轨迹步骤数：${result.audit.trajectory.length}`);
   for (const step of result.audit.trajectory) {
     console.log(`     - ${step.reasoning}`);
     if (step.toolName) {
-      console.log(`       Tool: ${step.toolName}`);
+      console.log(`       工具：${step.toolName}`);
     }
   }
 
-  console.log("\n5. Full Audit Log");
+  console.log("\n5. 完整审计日志");
   const fullLog = auditRunner.getFullAuditLog();
-  console.log(`   Total runs: ${fullLog.length}`);
+  console.log(`   总运行次数：${fullLog.length}`);
   for (const entry of fullLog) {
     const duration = entry.completedAt
       ? `${entry.completedAt - entry.startedAt}ms`
@@ -739,6 +739,6 @@ async function protocolDemo() {
 }
 
 protocolDemo().catch((err) => {
-  console.error("Protocol demo failed:", err);
+  console.error("协议演示失败：", err);
   process.exitCode = 1;
 });
