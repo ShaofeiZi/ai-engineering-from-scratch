@@ -1,7 +1,7 @@
-"""Four orchestration patterns: supervisor, swarm, hierarchical, debate.
+"""四种编排模式：supervisor、swarm、hierarchical、debate。
 
-Same three-intent task (refund / bug / sales) handled four ways. Measure
-op count per pattern to see cost trade-offs.
+相同的 three-intent 任务（退款 / bug / 销售）以四种方式处理。统计
+每种模式的操作数以查看成本 trade-offs.
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def debate(tasks: list[str]) -> tuple[list[str], int]:
 
 def main() -> None:
     print("=" * 70)
-    print("ORCHESTRATION PATTERNS — Phase 14, Lesson 28")
+    print("编排模式 — 第 14 阶段，第 28 课")
     print("=" * 70)
 
     tasks = [
@@ -117,8 +117,8 @@ def main() -> None:
             print(f"  {line}")
 
     print()
-    print("supervisor: cleanest. swarm: shortest. hierarchical: deepest.")
-    print("debate: most expensive. pick topology AFTER picking the problem.")
+    print("supervisor：最简洁。swarm：最短。hierarchical：最深。")
+    print("debate：最昂贵。选择拓扑 AFTER 选择问题。")
 
 
 if __name__ == "__main__":
