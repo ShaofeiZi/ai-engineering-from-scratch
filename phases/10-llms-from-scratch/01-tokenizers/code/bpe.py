@@ -38,7 +38,7 @@ class BPETokenizer:
             self.merges[best_pair] = new_token
             self.vocab[new_token] = self.vocab[best_pair[0]] + self.vocab[best_pair[1]]
             merged_str = self.vocab[new_token]
-            print(f"Merge {i + 1}: {best_pair} -> {new_token} = {merged_str}")
+            print(f"合并 {i + 1}：{best_pair} -> {new_token} = {merged_str}")
 
         return self
 
@@ -68,13 +68,13 @@ def demo_bpe():
     )
 
     print("=" * 60)
-    print("Training BPE tokenizer")
+    print("训练 BPE tokenizer")
     print("=" * 60)
 
     tokenizer = BPETokenizer()
     tokenizer.train(corpus, num_merges=30)
 
-    print(f"\nVocabulary size: {tokenizer.vocab_size()}")
+    print(f"\n词表大小：{tokenizer.vocab_size()}")
 
     test_sentences = [
         "The cat sat on the mat.",
@@ -84,29 +84,29 @@ def demo_bpe():
     ]
 
     print("\n" + "=" * 60)
-    print("Encoding test sentences")
+    print("编码测试句")
     print("=" * 60)
 
     for sentence in test_sentences:
         encoded = tokenizer.encode(sentence)
         decoded = tokenizer.decode(encoded)
         raw_bytes = len(sentence.encode("utf-8"))
-        print(f"\nOriginal:  {sentence}")
-        print(f"Encoded:   {encoded}")
-        print(f"Decoded:   {decoded}")
-        print(f"Tokens:    {len(encoded)} (from {raw_bytes} bytes)")
-        print(f"Ratio:     {len(encoded) / raw_bytes:.2f}")
+        print(f"\n原文：  {sentence}")
+        print(f"编码：  {encoded}")
+        print(f"解码：  {decoded}")
+        print(f"token 数：{len(encoded)}（原文 {raw_bytes} 字节）")
+        print(f"比率：  {len(encoded) / raw_bytes:.2f}")
 
 
 def demo_tiktoken():
     try:
         import tiktoken
     except ImportError:
-        print("\ntiktoken not installed. Run: pip install tiktoken")
+        print("\n> 未安装 tiktoken。请运行：pip install tiktoken")
         return
 
     print("\n" + "=" * 60)
-    print("Comparing with tiktoken (GPT-4 tokenizer)")
+    print("与 tiktoken（GPT-4 tokenizer）比较")
     print("=" * 60)
 
     enc = tiktoken.get_encoding("cl100k_base")
@@ -123,9 +123,9 @@ def demo_tiktoken():
         tokens = enc.encode(text)
         decoded_pieces = [enc.decode([t]) for t in tokens]
         print(f"\n'{text}'")
-        print(f"  Tokens:  {decoded_pieces}")
-        print(f"  IDs:     {tokens}")
-        print(f"  Count:   {len(tokens)}")
+        print(f"  token：{decoded_pieces}")
+        print(f"  ID：   {tokens}")
+        print(f"  数量： {len(tokens)}")
 
 
 if __name__ == "__main__":

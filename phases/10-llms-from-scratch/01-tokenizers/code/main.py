@@ -85,22 +85,22 @@ def vocabulary_stats(tokenizer, texts):
 
     avg_tokens_per_word = total_tokens / total_words if total_words > 0 else 0
 
-    print(f"Vocabulary size: {tokenizer.vocab_size()}")
-    print(f"Avg tokens per word: {avg_tokens_per_word:.2f}")
-    print(f"Total unique tokens used: {len(token_usage)}")
+    print(f"词表大小：{tokenizer.vocab_size()}")
+    print(f"每个单词的平均 token 数：{avg_tokens_per_word:.2f}")
+    print(f"使用过的唯一 token 总数：{len(token_usage)}")
 
-    print(f"\nTop 10 most used tokens:")
+    print("\n使用频率最高的 10 个 token：")
     for token_id, count in token_usage.most_common(10):
         display = tokenizer.token_to_str(token_id)
         print(f"  {token_id:4d}: '{display}' x{count}")
 
     unused = tokenizer.vocab_size() - len(token_usage)
-    print(f"\nUnused tokens: {unused} out of {tokenizer.vocab_size()}")
+    print(f"\n未使用的 token：{unused}/{tokenizer.vocab_size()}")
 
 
 def demo_char_tokenizer():
     print("=" * 60)
-    print("STEP 1: Character-Level Tokenizer")
+    print("步骤1:字符级 Tokenizer")
     print("=" * 60)
 
     ct = CharTokenizer()
@@ -110,14 +110,14 @@ def demo_char_tokenizer():
         encoded = ct.encode(text)
         decoded = ct.decode(encoded)
         print(f"  '{text}' -> {encoded}")
-        print(f"  Roundtrip: {'PASS' if decoded == text else 'FAIL'}")
-        print(f"  Tokens: {len(encoded)}")
+        print(f"  往返一致性：{'通过' if decoded == text else '失败'}")
+        print(f"  token 数：{len(encoded)}")
         print()
 
 
 def demo_bpe_training():
     print("=" * 60)
-    print("STEP 2: BPE Training")
+    print("步骤 2：BPE 训练")
     print("=" * 60)
 
     corpus = (
@@ -134,15 +134,15 @@ def demo_bpe_training():
     tokenizer = BPETokenizer()
     tokenizer.train(corpus, num_merges=50)
 
-    print(f"\nVocabulary size after training: {tokenizer.vocab_size()}")
-    print(f"Number of merges learned: {len(tokenizer.merges)}")
+    print(f"\n训练后的词表大小：{tokenizer.vocab_size()}")
+    print(f"学到的合并规则数：{len(tokenizer.merges)}")
 
     return tokenizer, corpus
 
 
 def demo_encode_decode(tokenizer):
     print("\n" + "=" * 60)
-    print("STEP 3: Encode and Decode")
+    print("步骤3:编码和解码")
     print("=" * 60)
 
     test_sentences = [
@@ -160,21 +160,21 @@ def demo_encode_decode(tokenizer):
         ratio = len(encoded) / raw_bytes
         roundtrip = "PASS" if decoded == sentence else "FAIL"
         print(f"\n  '{sentence}'")
-        print(f"  Encoded: {encoded[:15]}{'...' if len(encoded) > 15 else ''}")
-        print(f"  Tokens: {len(encoded)} (from {raw_bytes} bytes)")
-        print(f"  Compression ratio: {ratio:.2f}")
-        print(f"  Roundtrip: {roundtrip}")
+        print(f"  编码结果：{encoded[:15]}{'...' if len(encoded) > 15 else ''}")
+        print(f"  token 数：{len(encoded)}（原文 {raw_bytes} 字节）")
+        print(f"  压缩比：{ratio:.2f}")
+        print(f"  往返一致性：{roundtrip}")
 
 
 def demo_tiktoken_comparison(tokenizer):
     print("\n" + "=" * 60)
-    print("STEP 4: Compare with tiktoken")
+    print("步骤 4：与 tiktoken 比较")
     print("=" * 60)
 
     try:
         import tiktoken
     except ImportError:
-        print("  tiktoken not installed. Run: pip install tiktoken")
+        print("未安装 tiktoken。请运行：pip install tiktoken")
         return
 
     enc = tiktoken.get_encoding("cl100k_base")
@@ -192,15 +192,15 @@ def demo_tiktoken_comparison(tokenizer):
         tk_tokens = enc.encode(text)
         tk_pieces = [enc.decode([t]) for t in tk_tokens]
         print(f"\n  '{text}'")
-        print(f"  Our BPE:  {len(our_tokens)} tokens")
-        print(f"  tiktoken: {len(tk_tokens)} tokens -> {tk_pieces}")
+        print(f"  本课程 BPE：{len(our_tokens)} 个 token")
+        print(f"  tiktoken：  {len(tk_tokens)} 个 token -> {tk_pieces}")
         ratio = len(our_tokens) / len(tk_tokens) if len(tk_tokens) > 0 else 0
-        print(f"  Ours / tiktoken: {ratio:.1f}x")
+        print(f"  本课程 BPE / tiktoken：{ratio:.1f}x")
 
 
 def demo_vocabulary_analysis(tokenizer, corpus):
     print("\n" + "=" * 60)
-    print("STEP 5: Vocabulary Analysis")
+    print("步骤5:词汇分析")
     print("=" * 60)
 
     test_texts = [
@@ -212,7 +212,7 @@ def demo_vocabulary_analysis(tokenizer, corpus):
 
     vocabulary_stats(tokenizer, test_texts)
 
-    print(f"\nCompression ratios:")
+    print("\n压缩比：")
     for text in test_texts[:3]:
         preview = text[:50] + "..." if len(text) > 50 else text
         ratio = compression_ratio(tokenizer, text)

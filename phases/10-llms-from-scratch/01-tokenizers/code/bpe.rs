@@ -59,7 +59,7 @@ impl BPETokenizer {
 
             let display = String::from_utf8_lossy(&new_bytes);
             println!(
-                "Merge {}: ({}, {}) -> {} = {:?}",
+                "合并 {} : ({},{}) - > {} = {:?}",
                 i + 1,
                 best_pair.0,
                 best_pair.1,
@@ -102,13 +102,13 @@ fn main() {
     );
 
     println!("{}", "=".repeat(60));
-    println!("Training BPE tokenizer");
+    println!("培训BPEtokenizer");
     println!("{}", "=".repeat(60));
 
     let mut tokenizer = BPETokenizer::new();
     tokenizer.train(corpus, 30);
 
-    println!("\nVocabulary size: {}", tokenizer.vocab_size());
+    println!("\n词汇大小: {}", tokenizer.vocab_size());
 
     let test_sentences = vec![
         "The cat sat on the mat.",
@@ -118,7 +118,7 @@ fn main() {
     ];
 
     println!("\n{}", "=".repeat(60));
-    println!("Encoding test sentences");
+    println!("编码测试句");
     println!("{}", "=".repeat(60));
 
     for sentence in test_sentences {
@@ -126,15 +126,15 @@ fn main() {
         let decoded = tokenizer.decode(&encoded);
         let raw_bytes = sentence.len();
 
-        println!("\nOriginal:  {}", sentence);
-        println!("Encoded:   {:?}", encoded);
-        println!("Decoded:   {}", decoded);
-        println!("Tokens:    {} (from {} bytes)", encoded.len(), raw_bytes);
-        println!("Ratio:     {:.2}", encoded.len() as f64 / raw_bytes as f64);
+        println!("\n 原件: {}", sentence);
+        println!("编码: {:?}", encoded);
+        println!("解码器: {}", decoded);
+        println!("Tokens: {}(来自 {} 字节)", encoded.len(), raw_bytes);
+        println!("比率: {:.2}", encoded.len() as f64 / raw_bytes as f64);
     }
 
     println!("\n{}", "=".repeat(60));
-    println!("Performance: encode 100K iterations");
+    println!("性能: 编码 100K 迭代");
     println!("{}", "=".repeat(60));
 
     let test = "The cat sat on the mat and the dog sat on the log.";
@@ -144,7 +144,7 @@ fn main() {
     }
     let elapsed = start.elapsed();
     println!(
-        "100K encodes in {:.2}ms ({:.0} encodes/sec)",
+        "100K 编码为{:.2}ms({:.0}编码为/sec)",
         elapsed.as_secs_f64() * 1000.0,
         100_000.0 / elapsed.as_secs_f64()
     );
