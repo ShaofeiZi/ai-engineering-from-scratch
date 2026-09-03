@@ -1,4 +1,4 @@
-"""Unit tests for vision-language pretraining."""
+"""视觉语言预训练的单元测试。"""
 
 from __future__ import annotations
 

@@ -1,11 +1,10 @@
-"""Vision-language pretraining: contrastive InfoNCE plus language modeling.
+"""视觉-语言预训练：对比 InfoNCE 加语言建模。
 
-The model combines a small ViT encoder (lesson 59), a two-layer projection
-(lesson 60), and a cross-attention decoder (lesson 61). Training runs for 50
-steps over a synthetic 200-pair mock corpus. Both contrastive and LM losses
-share gradients through the encoder and projection.
+模型组合了小型 ViT 编码器（第 59 课）、两层投影（第 60 课）
+和交叉注意力解码器（第 61 课）。训练在合成的 200 对 mock 语料上
+运行 50 步。对比损失和 LM 损失通过编码器和投影共享梯度。
 
-Run with: python3 main.py
+运行方式：python3 main.py
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ def _load_module(name: str, path: Path):
         return sys.modules[name]
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"could not load {path}")
+        raise ImportError(f"无法加载 {path}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
@@ -72,15 +71,15 @@ class PretrainConfig:
 
 def info_nce_loss(image_emb: torch.Tensor, text_emb: torch.Tensor,
                   log_tau: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Bidirectional InfoNCE used in CLIP and friends.
+    """CLIP 等模型中使用的双向 InfoNCE。
 
-    Returns (loss, similarity_matrix). image_emb and text_emb must have the
-    same shape (N, D). The similarity matrix is symmetric in semantics but not
-    in values (rows are images, columns are texts).
-    """
+返回 (loss, similarity_matrix)。image_emb 和 text_emb 必须具有
+相同形状 (N, D)。相似度矩阵在语义上对称但数值上不对称
+（行为图像，列为文本）。
+"""
     if image_emb.shape != text_emb.shape:
         raise ValueError(
-            f"shape mismatch image {tuple(image_emb.shape)} vs text {tuple(text_emb.shape)}"
+            f"形状不匹配：image {tuple(image_emb.shape)} vs text {tuple(text_emb.shape)}"
         )
     n = image_emb.shape[0]
     img_n = F.normalize(image_emb, dim=-1)
@@ -97,14 +96,13 @@ def info_nce_loss(image_emb: torch.Tensor, text_emb: torch.Tensor,
 
 def lm_loss(logits: torch.Tensor, target_ids: torch.Tensor,
             padding_id: int = PAD_ID) -> torch.Tensor:
-    """Next-token cross-entropy with padding masked.
+    """带 padding 掩码的下一 token 交叉熵。
 
-    `logits` shape is (B, L, V). `target_ids` shape is (B, L). The shift is
-    applied outside this function so the caller controls which positions are
-    predictions and which are inputs.
-    """
+`logits` 形状为 (B, L, V)。`target_ids` 形状为 (B, L)。
+位移在本函数外部完成，因此调用方控制哪些位置是预测、哪些是输入。
+"""
     if logits.dim() != 3 or target_ids.dim() != 2:
-        raise ValueError(f"logits must be 3D and targets 2D, got {logits.shape} {target_ids.shape}")
+        raise ValueError(f"logits 必须为 3D 且 targets 为 2D，得到 {logits.shape} {target_ids.shape}")
     b, l, v = logits.shape
     flat_logits = logits.reshape(b * l, v)
     flat_target = target_ids.reshape(b * l)
@@ -112,7 +110,7 @@ def lm_loss(logits: torch.Tensor, target_ids: torch.Tensor,
 
 
 class TextSideEncoder(nn.Module):
-    """Tiny text encoder: embedding lookup + mean pool over non-padding tokens."""
+    """轻量文本编码器：embedding 查表 + 对非 padding token 做均值池化。"""
 
     def __init__(self, vocab_size: int, embed_dim: int) -> None:
         super().__init__()
@@ -120,7 +118,7 @@ class TextSideEncoder(nn.Module):
 
     def forward(self, ids: torch.Tensor) -> torch.Tensor:
         if ids.dim() != 2:
-            raise ValueError(f"expected (B, L), got {tuple(ids.shape)}")
+            raise ValueError(f"期望 (B, L)，得到 {tuple(ids.shape)}")
         x = self.embed(ids)
         mask = (ids != PAD_ID).float().unsqueeze(-1)
         denom = mask.sum(dim=1).clamp(min=1.0)
@@ -128,7 +126,7 @@ class TextSideEncoder(nn.Module):
 
 
 class MultimodalModel(nn.Module):
-    """Encoder + projection + text side + cross-attention decoder, all trainable."""
+    """编码器 + 投影 + 文本侧 + 交叉注意力解码器，全部可训练。"""
 
     def __init__(self, cfg: PretrainConfig) -> None:
         super().__init__()
@@ -191,14 +189,13 @@ class MultimodalModel(nn.Module):
 
 def make_mock_corpus(seed: int, n_pairs: int, vocab_size: int, max_len: int
                      ) -> list[tuple[torch.Tensor, torch.Tensor]]:
-    """Build a deterministic mock corpus of n_pairs synthetic image-caption pairs.
+    """构建确定性的 mock 语料，包含 n_pairs 个合成 image-caption 对。
 
-    Caption tokens are correlated with the image seed so the model has a small
-    amount of learnable signal across the contrastive batch. Token id 0 is
-    reserved for padding.
-    """
+caption token 与图像 seed 相关，使模型在对比 batch 中能获得少量
+可学习的信号。token id 0 保留为 padding。
+"""
     if vocab_size <= 50:
-        raise ValueError(f"vocab_size must be > 50, got {vocab_size}")
+        raise ValueError(f"vocab_size 必须 > 50，得到 {vocab_size}")
     pairs = []
     rng = np.random.default_rng(seed)
     for i in range(n_pairs):
@@ -233,8 +230,8 @@ def train(cfg: PretrainConfig) -> dict:
     corpus = make_mock_corpus(cfg.seed + 1, cfg.n_pairs, cfg.text_vocab, cfg.max_text_len)
     if cfg.batch_size > len(corpus):
         raise ValueError(
-            f"batch_size ({cfg.batch_size}) cannot exceed corpus size ({len(corpus)}) "
-            "with replace=False"
+            f"batch_size（{cfg.batch_size}）不能超过语料大小（{len(corpus)}） "
+            "（replace=False）"
         )
 
     rng = np.random.default_rng(cfg.seed + 2)
@@ -254,7 +251,7 @@ def train(cfg: PretrainConfig) -> dict:
         history["total"].append(total.item())
 
         if step % 5 == 0 or step == cfg.steps - 1:
-            print(f"  step {step:3d}  contrast {contrast.item():.4f}  "
+            print(f"  步骤 {step:3d}  对比损失 {contrast.item():.4f}  "
                   f"lm {lm.item():.4f}  tau {stats['tau']:.3f}  "
                   f"diag {stats['diag']:+.3f}  off {stats['off_diag']:+.3f}")
     return history
@@ -262,39 +259,39 @@ def train(cfg: PretrainConfig) -> dict:
 
 def main() -> None:
     print("=" * 60)
-    print("VISION-LANGUAGE PRETRAINING")
+    print("视觉-语言预训练")
     print("=" * 60)
 
     cfg = PretrainConfig()
-    print(f"  text vocab     : {cfg.text_vocab}")
-    print(f"  max text length: {cfg.max_text_len}")
-    print(f"  embed dim      : {cfg.embed_dim}")
-    print(f"  n pairs        : {cfg.n_pairs}")
-    print(f"  batch size     : {cfg.batch_size}")
-    print(f"  steps          : {cfg.steps}")
-    print(f"  lm weight      : {cfg.lm_weight}")
-    print(f"  initial tau    : {math.exp(cfg.init_log_tau):.3f}")
+    print(f"  文本词表大小   : {cfg.text_vocab}")
+    print(f"  最大文本长度   : {cfg.max_text_len}")
+    print(f"  嵌入维度       : {cfg.embed_dim}")
+    print(f"  配对数量       : {cfg.n_pairs}")
+    print(f"  批次大小       : {cfg.batch_size}")
+    print(f"  步数           : {cfg.steps}")
+    print(f"  LM 权重        : {cfg.lm_weight}")
+    print(f"  初始 tau       : {math.exp(cfg.init_log_tau):.3f}")
 
-    print("\ntraining:")
+    print("\n训练：")
     hist = train(cfg)
 
     init_contrast = hist["contrast"][0]
     final_contrast = hist["contrast"][-1]
     init_lm = hist["lm"][0]
     final_lm = hist["lm"][-1]
-    print(f"\ncontrast loss : {init_contrast:.4f} -> {final_contrast:.4f}"
-          f"  (drop {init_contrast - final_contrast:+.4f})")
-    print(f"lm loss       : {init_lm:.4f} -> {final_lm:.4f}"
-          f"  (drop {init_lm - final_lm:+.4f})")
+    print(f"\n对比损失：{init_contrast:.4f} -> {final_contrast:.4f}"
+          f"  （下降 {init_contrast - final_contrast:+.4f}）")
+    print(f"LM 损失：{init_lm:.4f} -> {final_lm:.4f}"
+          f"  （下降 {init_lm - final_lm:+.4f}）")
 
     if final_contrast < init_contrast and final_lm < init_lm:
-        print("ok: both losses decreased")
+        print("通过：两个损失均下降")
     elif final_contrast < init_contrast or final_lm < init_lm:
-        print("partial: at least one loss decreased")
+        print("部分通过：至少一个损失下降")
     else:
-        print("FAIL: neither loss decreased")
+        print("失败：两个损失均未下降")
 
-    print("\ndone.")
+    print("\n完成。")
 
 
 if __name__ == "__main__":
