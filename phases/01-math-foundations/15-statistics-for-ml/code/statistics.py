@@ -3,6 +3,13 @@ import random
 
 random.seed(42)
 
+EFFECT_INTERPRETATION_LABELS = {
+    "negligible": "可忽略",
+    "small": "小",
+    "medium": "中",
+    "large": "大",
+}
+
 
 def mean(data):
     return sum(data) / len(data)
@@ -364,6 +371,10 @@ def interpret_cohens_d(d):
     return "large"
 
 
+def format_effect_interpretation(label):
+    return EFFECT_INTERPRETATION_LABELS.get(label, label)
+
+
 def bonferroni_correction(p_values, alpha=0.05):
     m = len(p_values)
     adjusted_alpha = alpha / m
@@ -480,186 +491,199 @@ def statistical_vs_practical_significance(small_n=30, large_n=100000, effect=0.1
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("DESCRIPTIVE STATISTICS")
+    print("描述性统计")
     print("=" * 60)
     data = [23, 45, 12, 67, 34, 89, 21, 56, 43, 78, 31, 64, 19, 52, 41]
-    print(f"Data: {data}")
-    print(f"Mean:     {mean(data):.2f}")
-    print(f"Median:   {median(data):.2f}")
-    print(f"Mode:     {mode(data)}")
-    print(f"Std Dev:  {std_dev(data):.2f}")
-    print(f"Variance: {variance(data):.2f}")
+    print(f"数据: {data}")
+    print(f"均值:     {mean(data):.2f}")
+    print(f"中位数:   {median(data):.2f}")
+    print(f"众数:     {mode(data)}")
+    print(f"标准差:  {std_dev(data):.2f}")
+    print(f"方差: {variance(data):.2f}")
     print(f"P25:      {percentile(data, 25):.2f}")
     print(f"P50:      {percentile(data, 50):.2f}")
     print(f"P75:      {percentile(data, 75):.2f}")
     print(f"IQR:      {iqr(data):.2f}")
 
     skewed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 1000]
-    print(f"\nSkewed data: {skewed}")
-    print(f"Mean:   {mean(skewed):.2f}  (pulled by outlier)")
-    print(f"Median: {median(skewed):.2f}  (robust to outlier)")
+    print(f"\n偏态数据: {skewed}")
+    print(f"均值:   {mean(skewed):.2f}  (被离群值拉偏)")
+    print(f"中位数: {median(skewed):.2f}  (对离群值稳健)")
 
     print("\n" + "=" * 60)
-    print("CORRELATION")
+    print("相关性")
     print("=" * 60)
     x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     y_linear = [2.1, 3.9, 6.2, 7.8, 10.1, 12.3, 13.8, 16.1, 18.0, 20.2]
-    print(f"Linear relationship:")
+    print(f"线性关系:")
     print(f"  Pearson:  {pearson_correlation(x, y_linear):.4f}")
     print(f"  Spearman: {spearman_correlation(x, y_linear):.4f}")
 
     y_quadratic = [xi ** 2 for xi in x]
-    print(f"Quadratic relationship (y = x^2):")
-    print(f"  Pearson:  {pearson_correlation(x, y_quadratic):.4f}  (not perfect, relationship is nonlinear)")
-    print(f"  Spearman: {spearman_correlation(x, y_quadratic):.4f}  (perfect, relationship is monotonic)")
+    print(f"二次关系 (y = x^2):")
+    print(f"  Pearson:  {pearson_correlation(x, y_quadratic):.4f}  (非完美,关系是非线性的)")
+    print(f"  Spearman: {spearman_correlation(x, y_quadratic):.4f}  (完美,关系是单调的)")
 
     y_none = [random.gauss(0, 1) for _ in x]
-    print(f"No relationship (random):")
+    print(f"无关系 (随机):")
     print(f"  Pearson:  {pearson_correlation(x, y_none):.4f}")
     print(f"  Spearman: {spearman_correlation(x, y_none):.4f}")
 
     print("\n" + "=" * 60)
-    print("COVARIANCE MATRIX")
+    print("协方差矩阵")
     print("=" * 60)
     feature1 = [random.gauss(0, 1) for _ in range(100)]
     feature2 = [f + random.gauss(0, 0.5) for f in feature1]
     feature3 = [random.gauss(0, 1) for _ in range(100)]
     cov_mat = covariance_matrix([feature1, feature2, feature3])
-    print("3-feature covariance matrix:")
+    print("3 个特征的协方差矩阵:")
     for row in cov_mat:
         print(f"  [{row[0]:7.3f}  {row[1]:7.3f}  {row[2]:7.3f}]")
-    print("Feature 1 and 2 are correlated (constructed that way).")
-    print("Feature 3 is independent.")
+    print("特征 1 和特征 2 是相关的 (构造时即如此)。")
+    print("特征 3 是独立的。")
 
     print("\n" + "=" * 60)
-    print("HYPOTHESIS TESTING: ONE-SAMPLE T-TEST")
+    print("假设检验: 单样本 t 检验")
     print("=" * 60)
     sample = generate_normal(50, mu=52, sigma=10)
     result = one_sample_ttest(sample, mu_0=50)
-    print(f"Testing if population mean = 50 (true mean = 52)")
-    print(f"  Sample mean: {mean(sample):.2f}")
-    print(f"  t-statistic: {result['t_statistic']:.4f}")
-    print(f"  df:          {result['df']}")
-    print(f"  p-value:     {result['p_value']:.4f}")
-    print(f"  Significant at alpha=0.05: {result['p_value'] < 0.05}")
+    print(f"检验总体均值是否 = 50 (真实均值 = 52)")
+    print(f"  样本均值: {mean(sample):.2f}")
+    print(f"  t 统计量: {result['t_statistic']:.4f}")
+    print(f"  自由度:          {result['df']}")
+    print(f"  p 值:     {result['p_value']:.4f}")
+    print(f"  在 alpha=0.05 下是否显著: {result['p_value'] < 0.05}")
 
     print("\n" + "=" * 60)
-    print("HYPOTHESIS TESTING: TWO-SAMPLE T-TEST")
+    print("假设检验: 双样本 t 检验")
     print("=" * 60)
     model_a_scores = generate_normal(30, mu=0.85, sigma=0.05)
     model_b_scores = generate_normal(30, mu=0.88, sigma=0.05)
     result = two_sample_ttest(model_a_scores, model_b_scores)
     d = cohens_d(model_a_scores, model_b_scores)
-    print(f"Model A mean: {mean(model_a_scores):.4f}")
-    print(f"Model B mean: {mean(model_b_scores):.4f}")
-    print(f"  t-statistic: {result['t_statistic']:.4f}")
-    print(f"  p-value:     {result['p_value']:.4f}")
-    print(f"  Cohen's d:   {d:.4f} ({interpret_cohens_d(d)})")
-    print(f"  Significant: {result['p_value'] < 0.05}")
+    print(f"模型 A 均值: {mean(model_a_scores):.4f}")
+    print(f"模型 B 均值: {mean(model_b_scores):.4f}")
+    print(f"  t 统计量: {result['t_statistic']:.4f}")
+    print(f"  p 值:     {result['p_value']:.4f}")
+    effect_label = interpret_cohens_d(d)
+    print(f"  Cohen's d:   {d:.4f} ({format_effect_interpretation(effect_label)})")
+    print(f"  是否显著: {result['p_value'] < 0.05}")
 
     print("\n" + "=" * 60)
-    print("PAIRED T-TEST (CROSS-VALIDATION)")
+    print("配对 t 检验 (交叉验证)")
     print("=" * 60)
     cv_a = [0.82, 0.85, 0.81, 0.84, 0.83, 0.86, 0.80, 0.84, 0.82, 0.85]
     cv_b = [0.84, 0.87, 0.83, 0.86, 0.85, 0.88, 0.83, 0.86, 0.85, 0.87]
     result = paired_ttest(cv_a, cv_b)
-    print(f"Model A folds: {cv_a}")
-    print(f"Model B folds: {cv_b}")
-    print(f"  Mean diff:   {mean([b - a for a, b in zip(cv_a, cv_b)]):.4f}")
-    print(f"  t-statistic: {result['t_statistic']:.4f}")
-    print(f"  p-value:     {result['p_value']:.4f}")
-    print(f"  Significant: {result['p_value'] < 0.05}")
+    print(f"模型 A 折: {cv_a}")
+    print(f"模型 B 折: {cv_b}")
+    print(f"  均值差:   {mean([b - a for a, b in zip(cv_a, cv_b)]):.4f}")
+    print(f"  t 统计量: {result['t_statistic']:.4f}")
+    print(f"  p 值:     {result['p_value']:.4f}")
+    print(f"  是否显著: {result['p_value'] < 0.05}")
 
     print("\n" + "=" * 60)
-    print("CHI-SQUARED TEST")
+    print("卡方检验")
     print("=" * 60)
     observed = [120, 80, 95, 105]
     expected = [100, 100, 100, 100]
     result = chi_squared_test(observed, expected)
-    print(f"Observed: {observed}")
-    print(f"Expected: {expected}")
-    print(f"  chi-squared: {result['chi2']:.4f}")
-    print(f"  df:          {result['df']}")
-    print(f"  p-value:     {result['p_value']:.4f}")
-    print(f"  Significant: {result['p_value'] < 0.05}")
+    print(f"观察值: {observed}")
+    print(f"期望值: {expected}")
+    print(f"  卡方值: {result['chi2']:.4f}")
+    print(f"  自由度:          {result['df']}")
+    print(f"  p 值:     {result['p_value']:.4f}")
+    print(f"  是否显著: {result['p_value'] < 0.05}")
 
     print("\n" + "=" * 60)
-    print("BOOTSTRAP CONFIDENCE INTERVALS")
+    print("Bootstrap 置信区间")
     print("=" * 60)
     data = generate_normal(50, mu=100, sigma=15)
     boot_mean = bootstrap_statistic(data, mean, n_bootstrap=5000)
     boot_median = bootstrap_statistic(data, median, n_bootstrap=5000)
-    print(f"Sample size: 50, true mean: 100")
-    print(f"Bootstrap mean:   {boot_mean['estimate']:.2f}  "
+    print(f"样本量: 50, 真实均值: 100")
+    print(f"Bootstrap 均值:   {boot_mean['estimate']:.2f}  "
           f"95% CI: [{boot_mean['ci_lower']:.2f}, {boot_mean['ci_upper']:.2f}]  "
           f"SE: {boot_mean['std_error']:.2f}")
-    print(f"Bootstrap median: {boot_median['estimate']:.2f}  "
+    print(f"Bootstrap 中位数: {boot_median['estimate']:.2f}  "
           f"95% CI: [{boot_median['ci_lower']:.2f}, {boot_median['ci_upper']:.2f}]  "
           f"SE: {boot_median['std_error']:.2f}")
 
-    print("\nBootstrap model comparison:")
+    print("\nBootstrap 模型比较:")
     scores_a = generate_normal(40, mu=0.85, sigma=0.04)
     scores_b = generate_normal(40, mu=0.88, sigma=0.04)
     comp = bootstrap_compare(scores_a, scores_b, mean, n_bootstrap=5000)
-    print(f"  Model A mean: {mean(scores_a):.4f}")
-    print(f"  Model B mean: {mean(scores_b):.4f}")
-    print(f"  Diff:         {comp['observed_diff']:.4f}")
+    print(f"  模型 A 均值: {mean(scores_a):.4f}")
+    print(f"  模型 B 均值: {mean(scores_b):.4f}")
+    print(f"  差值:         {comp['observed_diff']:.4f}")
     print(f"  95% CI:       [{comp['ci_lower']:.4f}, {comp['ci_upper']:.4f}]")
-    print(f"  Significant:  {comp['significant']} (CI excludes 0)")
+    print(f"  是否显著:  {comp['significant']} (CI 不包含 0)")
 
     print("\n" + "=" * 60)
-    print("A/B TEST SIMULATOR")
+    print("A/B 测试模拟器")
     print("=" * 60)
-    print("\nTest 1: No real effect (true_effect = 0)")
+    print("\n测试 1: 无真实效应 (true_effect = 0)")
     ab1 = ab_test_simulator(n_per_group=200, true_effect=0.0)
-    print(f"  Group A mean: {ab1['group_a_mean']:.2f}")
-    print(f"  Group B mean: {ab1['group_b_mean']:.2f}")
-    print(f"  Observed diff: {ab1['observed_diff']:.2f}")
-    print(f"  p-value: {ab1['t_test']['p_value']:.4f}")
-    print(f"  Significant (t-test): {ab1['significant_ttest']}")
-    print(f"  Cohen's d: {ab1['cohens_d']:.4f} ({ab1['effect_interpretation']})")
+    print(f"  A 组均值: {ab1['group_a_mean']:.2f}")
+    print(f"  B 组均值: {ab1['group_b_mean']:.2f}")
+    print(f"  观察到的差值: {ab1['observed_diff']:.2f}")
+    print(f"  p 值: {ab1['t_test']['p_value']:.4f}")
+    print(f"  是否显著 (t 检验): {ab1['significant_ttest']}")
+    print(
+        f"  Cohen's d: {ab1['cohens_d']:.4f} "
+        f"({format_effect_interpretation(ab1['effect_interpretation'])})"
+    )
 
-    print("\nTest 2: Real effect (true_effect = 5)")
+    print("\n测试 2: 有真实效应 (true_effect = 5)")
     ab2 = ab_test_simulator(n_per_group=200, true_effect=5.0)
-    print(f"  Group A mean: {ab2['group_a_mean']:.2f}")
-    print(f"  Group B mean: {ab2['group_b_mean']:.2f}")
-    print(f"  Observed diff: {ab2['observed_diff']:.2f}")
-    print(f"  p-value: {ab2['t_test']['p_value']:.4f}")
-    print(f"  Significant (t-test): {ab2['significant_ttest']}")
-    print(f"  Cohen's d: {ab2['cohens_d']:.4f} ({ab2['effect_interpretation']})")
+    print(f"  A 组均值: {ab2['group_a_mean']:.2f}")
+    print(f"  B 组均值: {ab2['group_b_mean']:.2f}")
+    print(f"  观察到的差值: {ab2['observed_diff']:.2f}")
+    print(f"  p 值: {ab2['t_test']['p_value']:.4f}")
+    print(f"  是否显著 (t 检验): {ab2['significant_ttest']}")
+    print(
+        f"  Cohen's d: {ab2['cohens_d']:.4f} "
+        f"({format_effect_interpretation(ab2['effect_interpretation'])})"
+    )
 
     print("\n" + "=" * 60)
-    print("MULTIPLE COMPARISON PROBLEM")
+    print("多重比较问题")
     print("=" * 60)
-    print("\n20 tests with NO real effect (all null hypotheses true):")
+    print("\n20 次检验均无真实效应 (所有原假设为真):")
     multi = run_multiple_ab_tests(n_tests=20, true_effect=0.0)
-    print(f"  Tests significant (uncorrected): {multi['uncorrected_significant']}/20")
-    print(f"  Tests significant (Bonferroni):  {multi['corrected_significant']}/20")
-    print(f"  Expected false positives at alpha=0.05: ~1")
-    print(f"  Bonferroni adjusted alpha: {0.05/20:.4f}")
+    print(f"  显著的检验数 (未校正): {multi['uncorrected_significant']}/20")
+    print(f"  显著的检验数 (Bonferroni):  {multi['corrected_significant']}/20")
+    print(f"  alpha=0.05 时的期望假阳性数: ~1")
+    print(f"  Bonferroni 校正后 alpha: {0.05/20:.4f}")
 
     print("\n" + "=" * 60)
-    print("STATISTICAL VS PRACTICAL SIGNIFICANCE")
+    print("统计显著性 vs 实际显著性")
     print("=" * 60)
     result = statistical_vs_practical_significance(
         small_n=30, large_n=100000, effect=0.1
     )
-    print(f"\nTrue effect: {result['true_effect']} (tiny)")
-    print(f"\nSmall sample (n={result['small_sample']['n']}):")
-    print(f"  p-value:  {result['small_sample']['p_value']:.4f}")
-    print(f"  Cohen's d: {result['small_sample']['cohens_d']:.4f} ({result['small_sample']['interpretation']})")
-    print(f"  Significant: {result['small_sample']['significant']}")
-    print(f"\nLarge sample (n={result['large_sample']['n']}):")
-    print(f"  p-value:  {result['large_sample']['p_value']:.4f}")
-    print(f"  Cohen's d: {result['large_sample']['cohens_d']:.4f} ({result['large_sample']['interpretation']})")
-    print(f"  Significant: {result['large_sample']['significant']}")
-    print(f"\nLesson: large n can make a negligible effect 'significant'.")
-    print("Always check effect size, not just p-values.")
+    print(f"\n真实效应: {result['true_effect']} (微小)")
+    print(f"\n小样本 (n={result['small_sample']['n']}):")
+    print(f"  p 值:  {result['small_sample']['p_value']:.4f}")
+    print(
+        f"  Cohen's d: {result['small_sample']['cohens_d']:.4f} "
+        f"({format_effect_interpretation(result['small_sample']['interpretation'])})"
+    )
+    print(f"  是否显著: {result['small_sample']['significant']}")
+    print(f"\n大样本 (n={result['large_sample']['n']}):")
+    print(f"  p 值:  {result['large_sample']['p_value']:.4f}")
+    print(
+        f"  Cohen's d: {result['large_sample']['cohens_d']:.4f} "
+        f"({format_effect_interpretation(result['large_sample']['interpretation'])})"
+    )
+    print(f"  是否显著: {result['large_sample']['significant']}")
+    print(f"\n启示: 大样本量会让可忽略的效应也变得'显著'。")
+    print("始终要检查效应量,而不仅仅是 p 值。")
 
     print("\n" + "=" * 60)
-    print("POWER ANALYSIS SIMULATION")
+    print("统计功效分析模拟")
     print("=" * 60)
-    print("\nHow often do we detect a real effect (true_effect=3)?")
+    print("\n我们能多频繁地检测到真实效应 (true_effect=3)?")
     n_sims = 200
     detected = 0
     for _ in range(n_sims):
@@ -668,8 +692,8 @@ if __name__ == "__main__":
         res = two_sample_ttest(a, b)
         if res["p_value"] < 0.05:
             detected += 1
-    print(f"  Power (n=50, effect=3, std=10): {detected/n_sims:.2f}")
-    print(f"  ({detected}/{n_sims} simulations detected the effect)")
+    print(f"  功效 (n=50, effect=3, std=10): {detected/n_sims:.2f}")
+    print(f"  ({detected}/{n_sims} 次模拟检测到了效应)")
 
     detected_large = 0
     for _ in range(n_sims):
@@ -678,6 +702,6 @@ if __name__ == "__main__":
         res = two_sample_ttest(a, b)
         if res["p_value"] < 0.05:
             detected_large += 1
-    print(f"  Power (n=200, effect=3, std=10): {detected_large/n_sims:.2f}")
-    print(f"  ({detected_large}/{n_sims} simulations detected the effect)")
-    print("  Larger samples give more power to detect real effects.")
+    print(f"  功效 (n=200, effect=3, std=10): {detected_large/n_sims:.2f}")
+    print(f"  ({detected_large}/{n_sims} 次模拟检测到了效应)")
+    print("  更大的样本量能赋予更强的检测真实效应的功效。")
