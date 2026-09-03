@@ -1,7 +1,7 @@
-"""Toy web-agent harness with execution-based eval and trajectory efficiency.
+"""简易网页智能体测试框架，带有基于执行的评估和轨迹效率分析。
 
-Models a minimal shopping app; 3 tasks with gold trajectories; a scripted agent
-attempts each task; we record success + steps-over-gold per OSWorld-Human.
+模拟一个最小化购物应用；3 个任务配有黄金轨迹；一个脚本化代理
+尝试每个任务；我们记录每个 OSWorld-Human. 的成功 + steps-over-gold
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ def _agent_task_3(app: ShoppingApp) -> list[str]:
 
 def main() -> None:
     print("=" * 70)
-    print("WEBARENA/OSWORLD-STYLE HARNESS — Phase 14, Lesson 20")
+    print("WEBARENA/OSWORLD 风格测试框架 — 第 14 阶段，第 20 课")
     print("=" * 70)
 
     tasks = [
@@ -135,8 +135,8 @@ def main() -> None:
         steps = len(trace)
         efficiency = steps / task.gold_steps
         print(f"\n[{task.tid}] {task.description}")
-        print(f"  success: {ok}")
-        print(f"  steps:   {steps}  (gold {task.gold_steps}, "
+        print(f"  成功: {ok}")
+        print(f"  步骤数： {steps}  （黄金轨迹 {task.gold_steps}，"
               f"efficiency {efficiency:.2f}x)")
         for line in trace:
             print(f"    - {line}")
@@ -145,12 +145,12 @@ def main() -> None:
         total_steps += steps
         total_gold += task.gold_steps
 
-    print(f"\naggregate")
-    print(f"  success rate:     {total_success}/{len(tasks)}")
-    print(f"  step efficiency:  {total_steps / total_gold:.2f}x over gold")
+    print(f"\n汇总")
+    print(f"  成功率:     {total_success}/{len(tasks)}")
+    print(f"  步骤效率:  {total_steps / total_gold:.2f}x 相对黄金轨迹")
     print()
-    print("WebArena: execution-based, gym APIs, state check decides success.")
-    print("OSWorld-Human: gold trajectories reveal 1.4-2.7x step inefficiency.")
+    print("WebArena：基于执行，使用 gym API，由状态检查决定成功与否。")
+    print("OSWorld-Human：黄金轨迹揭示了 1.4-2.7x 的步骤低效。")
 
 
 if __name__ == "__main__":
