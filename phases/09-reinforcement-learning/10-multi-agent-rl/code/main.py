@@ -124,25 +124,25 @@ def evaluate_joint(Q, episodes=100, rng=None):
 
 
 def main():
-    print(f"=== Cooperative 2-agent GridWorld ({GRID}x{GRID}, shared reward) ===")
-    print(f"agents start at (0,0) and ({GRID-1}, 0); must both reach {GOAL}")
+    print(f"=== 双智能体协作 GridWorld（{GRID}x{GRID}，共享奖励）===")
+    print(f"智能体从 (0,0) 和 ({GRID-1}, 0) 出发；两者都必须到达 {GOAL}")
     print()
 
     Q1, Q2, log_ind = independent_q(episodes=1500, rng=random.Random(1))
     Q_joint, log_joint = joint_q_learning(episodes=1500, rng=random.Random(1))
 
-    print("learning curves (mean return per 150 episodes):")
+    print("学习曲线（每 150 个回合的平均回报）：")
     for i, (a, b) in enumerate(zip(block_mean(log_ind, 150), block_mean(log_joint, 150))):
-        print(f"  block {i+1}: independent-Q = {a:7.2f}   joint-Q = {b:7.2f}")
+        print(f"  分组 {i+1}：独立 Q = {a:7.2f}   联合 Q = {b:7.2f}")
 
     print()
-    print(f"final greedy evaluation (100 eps):")
-    print(f"  independent-Q mean return = {evaluate_ind(Q1, Q2):.2f}")
-    print(f"  joint-Q       mean return = {evaluate_joint(Q_joint):.2f}")
+    print("最终贪心评估（100 个回合）：")
+    print(f"  独立 Q 平均回报 = {evaluate_ind(Q1, Q2):.2f}")
+    print(f"  联合 Q 平均回报 = {evaluate_joint(Q_joint):.2f}")
 
     print()
-    print("note: joint-Q factors the global view correctly, but its action space is |A|^2.")
-    print("CTDE methods (MAPPO, QMIX) keep decentralized actors but use a centralized critic.")
+    print("说明：联合 Q 能正确考虑全局视角，但其动作空间为 |A|^2。")
+    print("CTDE 方法（MAPPO、QMIX）保留分散式 Actor，但使用集中式 Critic。")
 
 
 if __name__ == "__main__":
