@@ -1,12 +1,12 @@
-// Phase 11 · Lesson 06 — Minimal RAG (TypeScript port).
-// TF-IDF vector store + cosine similarity + retrieval + prompt assembly,
-// over a toy corpus. End-to-end pipeline runs on Node stdlib only.
-// Swap the embedder for OpenAI text-embedding-3-small (or any 1536-dim
-// model) and the simple_generate stub for a real /v1/messages call —
-// the rest of the pipeline stays.
-// Refs: https://platform.openai.com/docs/guides/embeddings
+// 第11阶段 ^ 06课——最小的RAG(TypeScript端口).
+// TF-IDF 矢量存储 + 余弦相似性 + 检索 + 迅速组装,
+// 在一个玩具体。 端对端管道只在Node Stdlib上运行.
+// 将嵌入器交换为 OpenAI 文本- embedding-3- small(或任何1536-dim)
+// )和真实的/v1/messages呼叫的简单 遗传积分-
+// 其余的输油管都留下
+// 参考文献: https://platform.openai.com/docs/guides/embeddings
 //       https://en.wikipedia.org/wiki/Tf%E2%80%93idf
-//       https://docs.anthropic.com/en/docs/build-with-claude/embeddings
+// https://docs.anthropic.com/en/docs/build-with-claude/embeddings (韩语)
 
 import process from "node:process";
 
@@ -37,8 +37,8 @@ function computeTF(text: string, vocab: string[]): number[] {
   return vocab.map((w) => (counts.get(w) ?? 0) / total);
 }
 
-// Smoothed IDF (the `+1`s avoid divide-by-zero and a zero IDF for terms in
-// every document). Matches scikit-learn's default formula.
+// 平滑的以色列国防军(`+1`s避免以零除零和零的以色列国防军)
+// 页:1 匹配 scikit-learn 的默认公式.
 function computeIDF(documents: string[], vocab: string[]): number[] {
   const n = documents.length;
   const docTokens = documents.map((d) => new Set(d.toLowerCase().split(/\s+/)));
@@ -92,9 +92,9 @@ function buildRagPrompt(query: string, chunks: string[]): string {
   ].join("\n");
 }
 
-// Stand-in for the generation step. Picks the chunk-sentence with most
-// non-stopword overlap with the question. In production this is one
-// /v1/messages call with `prompt` as the user message.
+// 立于代阶. 选择多数判罚
+// 与问题重叠。 在制作中,这是一个
+// /v1/messages 以 `prompt` 作为用户信件的调用 。
 const STOPWORDS = new Set([
   "the", "a", "an", "is", "are", "was", "were", "what", "how",
   "why", "when", "where", "do", "does", "for", "of", "in", "to",

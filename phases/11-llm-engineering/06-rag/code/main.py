@@ -214,20 +214,20 @@ SAMPLE_DOCUMENTS = [
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("STEP 1: Document Chunking")
+    print("步骤 1：文档分块")
     print("=" * 60)
 
     sample = SAMPLE_DOCUMENTS[0]
     chunks = chunk_text(sample, chunk_size=30, overlap=10)
-    print(f"  Document length: {len(sample.split())} words")
-    print(f"  Chunk size: 30 words, overlap: 10 words")
-    print(f"  Number of chunks: {len(chunks)}")
+    print(f"  文档长度：{len(sample.split())} 个词")
+    print("  分块大小：30 个词，重叠：10 个词")
+    print(f"  分块数量：{len(chunks)}")
     for i, chunk in enumerate(chunks):
-        print(f"\n  Chunk {i}: ({len(chunk.split())} words)")
+        print(f"\n  分块 {i}：（{len(chunk.split())} 个词）")
         print(f"    {chunk[:100]}...")
 
     print("\n" + "=" * 60)
-    print("STEP 2: TF-IDF Embedding")
+    print("步骤 2：TF-IDF Embedding")
     print("=" * 60)
 
     mini_docs = [
@@ -238,8 +238,8 @@ if __name__ == "__main__":
     vocab = build_vocabulary(mini_docs)
     idf = compute_idf(mini_docs, vocab)
 
-    print(f"  Vocabulary size: {len(vocab)}")
-    print(f"  Sample words and IDF scores:")
+    print(f"  词表大小：{len(vocab)}")
+    print("  示例词及其 IDF 分数：")
     for word, score in sorted(zip(vocab, idf), key=lambda x: x[1], reverse=True)[:8]:
         print(f"    {word:20s} IDF={score:.3f}")
 
@@ -247,26 +247,26 @@ if __name__ == "__main__":
     emb2 = tfidf_embed(mini_docs[1], vocab, idf)
     emb3 = tfidf_embed(mini_docs[2], vocab, idf)
 
-    print(f"\n  Embedding dimensions: {len(emb1)}")
-    print(f"  Non-zero entries in 'cat sat on mat': {sum(1 for v in emb1 if v > 0)}")
-    print(f"  Non-zero entries in 'dog sat on rug': {sum(1 for v in emb2 if v > 0)}")
-    print(f"  Non-zero entries in 'machine learning': {sum(1 for v in emb3 if v > 0)}")
+    print(f"\n  Embedding 维度：{len(emb1)}")
+    print(f"  'cat sat on mat' 中的非零项：{sum(1 for v in emb1 if v > 0)}")
+    print(f"  'dog sat on rug' 中的非零项：{sum(1 for v in emb2 if v > 0)}")
+    print(f"  'machine learning' 中的非零项：{sum(1 for v in emb3 if v > 0)}")
 
     print("\n" + "=" * 60)
-    print("STEP 3: Cosine Similarity")
+    print("步骤3: 余弦相似性")
     print("=" * 60)
 
     sim_12 = cosine_similarity(emb1, emb2)
     sim_13 = cosine_similarity(emb1, emb3)
     sim_23 = cosine_similarity(emb2, emb3)
 
-    print(f"  'cat on mat' vs 'dog on rug':     {sim_12:.4f}  (similar structure)")
-    print(f"  'cat on mat' vs 'machine learning': {sim_13:.4f}  (unrelated)")
-    print(f"  'dog on rug' vs 'machine learning': {sim_23:.4f}  (unrelated)")
-    print(f"\n  As expected: similar sentences score higher.")
+    print(f"  'cat on mat' 与 'dog on rug'：     {sim_12:.4f}  （结构相似）")
+    print(f"  'cat on mat' 与 'machine learning'：{sim_13:.4f}  （不相关）")
+    print(f"  'dog on rug' 与 'machine learning'：{sim_23:.4f}  （不相关）")
+    print("\n  符合预期：相似句子的得分更高。")
 
     print("\n" + "=" * 60)
-    print("STEP 4: Full RAG Pipeline")
+    print("步骤 4：完整 RAG 管道")
     print("=" * 60)
 
     rag = RAGPipeline(chunk_size=50, overlap=10, top_k=3)
@@ -278,8 +278,8 @@ if __name__ == "__main__":
         "uptime-sla.md"
     ]
     num_chunks = rag.index(SAMPLE_DOCUMENTS, source_names)
-    print(f"  Indexed {len(SAMPLE_DOCUMENTS)} documents into {num_chunks} chunks")
-    print(f"  Vocabulary size: {len(rag.vocab)} terms")
+    print(f"  已将 {len(SAMPLE_DOCUMENTS)} 个文档索引为 {num_chunks} 个分块")
+    print(f"  词表大小：{len(rag.vocab)} 个词项")
 
     queries = [
         "What is the refund policy for enterprise customers?",
@@ -290,16 +290,16 @@ if __name__ == "__main__":
     ]
 
     for query in queries:
-        print(f"\n  Query: {query}")
+        print(f"\n  查询：{query}")
         result = rag.query(query, top_k=3)
-        print(f"  Answer: {result['answer']}")
-        print(f"  Retrieved {len(result['retrieved'])} chunks:")
+        print(f"  回答：{result['answer']}")
+        print(f"  检索到 {len(result['retrieved'])} 个分块：")
         for r in result["retrieved"]:
             preview = r["chunk"][:80].replace("\n", " ")
             print(f"    [{r['source']}] score={r['score']:.4f} | {preview}...")
 
     print("\n" + "=" * 60)
-    print("STEP 5: Chunk Size Comparison")
+    print("步骤 5：分块大小比较")
     print("=" * 60)
 
     test_query = "What is the refund policy for enterprise customers?"
@@ -308,36 +308,36 @@ if __name__ == "__main__":
         n = rag_test.index(SAMPLE_DOCUMENTS)
         result = rag_test.query(test_query, top_k=3)
         top_score = result["retrieved"][0]["score"] if result["retrieved"] else 0
-        print(f"  chunk_size={chunk_size:>3d}: {n:>3d} chunks, "
-              f"top_score={top_score:.4f}, "
-              f"answer_len={len(result['answer'])}")
+        print(f"  chunk_size={chunk_size:>3d}：{n:>3d} 个分块，"
+              f"最高分={top_score:.4f}，"
+              f"回答长度={len(result['answer'])}")
 
     print("\n" + "=" * 60)
-    print("STEP 6: Prompt Inspection")
+    print("步骤 6：Prompt 快速检查")
     print("=" * 60)
 
     result = rag.query("What encryption does Acme use?", top_k=2)
     prompt_lines = result["prompt"].split("\n")
-    print(f"  Prompt length: {len(result['prompt'])} chars")
-    print(f"  Prompt lines: {len(prompt_lines)}")
-    print(f"\n  First 5 lines of generated prompt:")
+    print(f"  Prompt 长度：{len(result['prompt'])} 个字符")
+    print(f"  Prompt 行数：{len(prompt_lines)}")
+    print("\n  生成的 prompt 前 5 行：")
     for line in prompt_lines[:5]:
         print(f"    {line}")
     print(f"  ...")
-    print(f"  Last 3 lines of generated prompt:")
+    print("  生成的 prompt 后 3 行：")
     for line in prompt_lines[-3:]:
         print(f"    {line}")
 
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("总结")
     print("=" * 60)
-    print("  RAG pipeline: Query -> Embed -> Search -> Augment -> Generate")
-    print(f"  Documents indexed: {len(SAMPLE_DOCUMENTS)}")
-    print(f"  Total chunks: {num_chunks}")
-    print(f"  Vocabulary size: {len(rag.vocab)}")
-    print(f"  Embedding dimensions: {len(rag.vocab)}")
-    print("  Similarity metric: cosine similarity")
-    print("  Embedding method: TF-IDF")
-    print("\n  In production, replace TF-IDF with neural embeddings")
-    print("  (text-embedding-3-small) and the simple generator with")
-    print("  an actual LLM API call. The pipeline stays the same.")
+    print("RAG 管道：查询 -> Embedding -> 搜索 -> 增强 -> 生成")
+    print(f"  已索引文档：{len(SAMPLE_DOCUMENTS)}")
+    print(f"  分块总数：{num_chunks}")
+    print(f"  词表大小：{len(rag.vocab)}")
+    print(f"  Embedding 维度：{len(rag.vocab)}")
+    print("相似度度量：余弦相似度")
+    print("Embedding 方法：TF-IDF")
+    print("\n注意：在生产环境中，应将 TF-IDF 替换为神经网络 Embedding")
+    print("（例如 text-embedding-3-small），并将简单生成器替换为")
+    print("真实的 LLM API 调用。管道结构保持不变。")
