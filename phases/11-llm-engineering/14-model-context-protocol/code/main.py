@@ -1,9 +1,9 @@
-"""Phase 11 Lesson 14: a stateless MCP server and in-process client.
+"""第11阶段 第14课:一个无国籍的MCP服务器和进程内客户端.
 
-Implements the 2026-07-28 request contract with per-request metadata,
-server/discover, typed results, and the three server primitives. The transport
-is in memory so the protocol remains visible and the demo stays stdlib-only.
-Spec: https://modelcontextprotocol.io/specification/2026-07-28
+执行2026-07-28要求合同,每要求元数据,
+服务器/discover,键入结果,和三个服务器原始。 运输
+在内存中,所以协议仍然可见,演示只保留Stdlib。
+光谱: https://modelcontextprotocol.io/specification/2026-07-28
 """
 
 from __future__ import annotations
@@ -353,27 +353,27 @@ def main() -> None:
     client = MCPClient(server)
     discovery = client.request("server/discover")
     info = discovery["_meta"][SERVER_INFO_KEY]
-    print(f"Discovered {info['name']} (protocol {discovery['supportedVersions'][0]})")
+    print(f"已发现 {info['name']}（协议版本 {discovery['supportedVersions'][0]}）")
 
     tools = client.request("tools/list")["tools"]
-    print(f"\n{len(tools)} tool(s) discovered:")
+    print(f"\n发现 {len(tools)} 个工具：")
     for tool in tools:
-        flag = " [destructive]" if tool.get("annotations", {}).get("destructiveHint") else ""
+        flag = " [破坏性操作]" if tool.get("annotations", {}).get("destructiveHint") else ""
         print(f"  - {tool['name']}{flag}: {tool['description']}")
 
     add_result = client.request("tools/call", {"name": "add", "arguments": {"a": 40, "b": 2}})
-    print("\nCall add(40, 2) ->", add_result["content"][0]["text"])
+    print("\n调用 add(40, 2) ->", add_result["content"][0]["text"])
 
     resources = client.request("resources/list")["resources"]
-    print(f"\n{len(resources)} resource(s): {resources[0]['uri']}")
+    print(f"\n发现 {len(resources)} 个资源：{resources[0]['uri']}")
     config = client.request("resources/read", {"uri": "config://app"})
-    print("Read config://app ->", config["contents"][0]["text"])
+    print("读取 config://app ->", config["contents"][0]["text"])
 
     prompt = client.request(
         "prompts/get",
         {"name": "code_review", "arguments": {"language": "Python", "code": "x = 1\n"}},
     )
-    print("\nRender code_review prompt ->", prompt["messages"][0]["content"]["text"][:80])
+    print("\n渲染代码审查 prompt ->", prompt["messages"][0]["content"]["text"][:80])
 
 
 if __name__ == "__main__":
