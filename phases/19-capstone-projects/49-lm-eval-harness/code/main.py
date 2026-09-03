@@ -1,18 +1,17 @@
-"""Language model evaluation harness from scratch.
+"""从零实现的语言模型评测脚手架。
 
-Task spec is a JSONL line per example with `prompt`, `targets`, and
-`metric`. Five metrics ship: exact match for arithmetic, rouge-l F1 for
-summary, executable check for code, accuracy for multiple choice, and
-substring contains for generation. The runner batches examples by task,
-runs them against a swappable model adapter, and emits a leaderboard
-JSON with per-task and overall scores.
+任务规范采用 JSONL 格式,每行一个样本,包含 `prompt`、`targets` 和
+`metric`。内置五种指标:用于算术的精确匹配、用于摘要的 rouge-l F1、
+用于代码的可执行检查、用于多选题的准确率,以及用于生成的子串包含。
+运行器按任务分批处理样本,送入可替换的模型适配器执行,最终输出包含
+各任务得分与总分的排行榜 JSON。
 
-The model adapter is the seam. The default adapter is a deterministic
-toy that pattern-matches the prompt; it has just enough behavior to make
-the harness's scoring code exercise every metric. Swap the adapter for
-an HTTP client, a local inference call, or a mock in tests.
+模型适配器是这条接缝。默认适配器是一个确定性的玩具实现,通过模式
+匹配 prompt 作答;其行为刚好足以让脚手架的评分代码覆盖每一种指标。
+当你要把脚手架对接真实模型时,把这个适配器换成 HTTP 客户端、本地
+推理调用或测试中的 mock 即可。
 
-Run: python3 code/main.py
+运行:python3 code/main.py
 """
 
 from __future__ import annotations
@@ -75,11 +74,10 @@ class ModelAdapter(Protocol):
 
 
 class ToyAdapter:
-    """Deterministic adapter that pattern-matches each task.
+    """通过模式匹配处理每项任务的确定性适配器。
 
-    The point is not to score well; the point is to give the harness a
-    fixed set of outputs to score against. Replace with a real client
-    when you ship the harness against a model.
+    目的不是取得高分，而是为评估框架提供一组固定输出用于评分。将评估框架
+    接入真实模型时，应替换为真实客户端。
     """
 
     name = "toy.v1"
@@ -131,7 +129,7 @@ _ARITH_OPS = {
 
 
 def safe_arith_eval(expr: str) -> float:
-    """Evaluate a small arithmetic expression without exposing eval."""
+    """在不暴露 eval 的情况下计算小型算术表达式。"""
     tree = ast.parse(expr, mode="eval")
     return _safe_eval(tree.body)
 
@@ -207,13 +205,11 @@ def metric_rouge_l(prediction: str, targets: List[str]) -> float:
 
 
 def metric_code_exec(prediction: str, targets: List[str], extras: Dict[str, object]) -> float:
-    """Execute the prediction in a small namespace and compare against
-    expected outputs.
+    """在受限命名空间中执行预测，并与预期输出比较。
 
-    Targets is a list of stringified expected results; extras carries a
-    list of (input, output) pairs the function is checked against. The
-    code runs in a stripped builtins namespace so it cannot reach the
-    filesystem or network.
+    targets 是字符串化预期结果的列表；extras 携带用于检查函数的
+    ``(input, output)`` 对列表。代码在精简的 builtins 命名空间中运行，
+    因此无法访问文件系统或网络。
     """
     pairs = extras.get("io_pairs") or []
     if not isinstance(pairs, list) or not pairs:
@@ -298,7 +294,7 @@ def run_task(
     if not examples:
         return TaskResult(task=task_name, metric="none", score=0.0, correct=0, total=0)
     metric = examples[0].metric
-    assert all(ex.metric == metric for ex in examples), f"task {task_name} mixes metrics"
+    assert all(ex.metric == metric for ex in examples), f"任务 {task_name} 混用了不同指标"
     metric_fn = METRIC_FNS[metric]
     per_example: List[Dict[str, object]] = []
     correct_sum = 0.0
@@ -483,10 +479,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     if args.seed_fixtures or not args.task_dir.exists() or not list(args.task_dir.glob("*.jsonl")):
-        print(f"seeding fixture tasks into {args.task_dir}")
+        print(f"正在将夹具任务写入 {args.task_dir}")
         seed_fixture_tasks(args.task_dir)
     tasks = load_all_tasks(args.task_dir)
-    print(f"loaded {len(tasks)} tasks: {sorted(tasks)}")
+    print(f"已加载 {len(tasks)} 个任务：{sorted(tasks)}")
     adapter = ToyAdapter()
     board = run_leaderboard(tasks, adapter, batch_size=args.batch_size)
     write_leaderboard(
@@ -498,7 +494,7 @@ def main() -> int:
     print(f"overall_score = {board.overall_score:.3f}")
     for r in board.tasks:
         print(f"  {r.task:>16}  metric={r.metric:>18}  score={r.score:0.3f}  ({r.correct}/{r.total})  latency_ms={r.latency_ms:.1f}")
-    print(f"wrote {args.out}")
+    print(f"已写入 {args.out}")
     return 0
 
 

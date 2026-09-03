@@ -1,4 +1,4 @@
-"""Tests for the eval harness: metric scoring, task loading, runner."""
+"""评估框架的测试：指标评分、任务加载与运行器。"""
 
 from __future__ import annotations
 
