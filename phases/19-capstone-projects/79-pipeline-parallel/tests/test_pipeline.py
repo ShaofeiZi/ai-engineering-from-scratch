@@ -1,4 +1,4 @@
-"""Unit tests for pipeline scheduling and the 2-stage gloo wire."""
+"""流水线调度和两阶段 gloo 通信的单元测试。"""
 
 from __future__ import annotations
 

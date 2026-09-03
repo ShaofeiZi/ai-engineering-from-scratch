@@ -1,14 +1,14 @@
-"""Pipeline parallel with GPipe schedule and bubble analysis.
+"""流水线并行，含 GPipe 调度与 bubble 分析。
 
-Splits a sequential MLP into N stages. The schedule simulates wall-clock for
-each stage's forward and backward, then prints a Gantt chart and computes the
-bubble fraction against the closed-form (N-1)/(M+N-1) prediction.
+将一个顺序 MLP 拆分为 N 个 stage。调度模拟每个 stage 的 forward 与
+backward 的挂钟时间，随后打印甘特图，并对照闭式解 (N-1)/(M+N-1) 计算
+bubble 占比。
 
-A second demo wires a 2-stage real pipeline over torch.distributed gloo:
-rank 0 owns stage 0, rank 1 owns stage 1, activations flow over send/recv,
-and the schedule trains a small MLP for a few steps to prove the wire works.
+第二个演示在 torch.distributed gloo 上搭建一个 2-stage 真实流水线：
+rank 0 拥有 stage 0，rank 1 拥有 stage 1，激活通过 send/recv 流转，
+该调度训练一个小型 MLP 若干步以验证布线正确。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -35,12 +35,12 @@ def _loopback_iface() -> str:
 
 
 def bubble_fraction(num_stages: int, num_microbatches: int) -> float:
-    """Closed-form bubble fraction per stage for GPipe.
+    """GPipe 每个 stage 的闭式 bubble 占比。
 
-    Forward takes M + N - 1 cycles per stage (M useful + N - 1 idle warmup).
-    Backward takes M + N - 1 cycles per stage (M useful + N - 1 idle drain).
-    Total cycles = 2(M + N - 1); useful per stage = 2M.
-    Bubble fraction = 2(N - 1) / 2(M + N - 1) = (N - 1) / (M + N - 1).
+    forward 每 stage 耗时 M + N - 1 个周期（M 个有效 + N - 1 个空闲预热）。
+    backward 每 stage 耗时 M + N - 1 个周期（M 个有效 + N - 1 个空闲排空）。
+    总周期数 = 2(M + N - 1)；每 stage 有效 = 2M。
+    bubble 占比 = 2(N - 1) / 2(M + N - 1) = (N - 1) / (M + N - 1)。
     """
     n = num_stages
     m = num_microbatches
@@ -48,21 +48,21 @@ def bubble_fraction(num_stages: int, num_microbatches: int) -> float:
 
 
 def gpipe_schedule(num_stages: int, num_microbatches: int) -> list:
-    """Return the GPipe schedule as a list of (cycle, stage, microbatch, phase).
+    """以 (cycle, stage, microbatch, phase) 列表形式返回 GPipe 调度。
 
-    Phase is 'F' for forward, 'B' for backward, '.' for idle. Cycle is the
-    integer time slot. Microbatch is the microbatch index.
+    phase 为 'F' 表示 forward，'B' 表示 backward，'.' 表示空闲。
+    cycle 为整数时间槽；microbatch 为 microbatch 索引。
     """
     n = num_stages
     m = num_microbatches
     schedule = []
-    # forward pass: microbatch i enters stage 0 at cycle i, stage k at cycle i+k
+    # 前向传播：微批次 i 在周期 i 进入阶段 0，在周期 i+k 进入阶段 k。
     for mb in range(m):
         for stage in range(n):
             cycle = mb + stage
             schedule.append((cycle, stage, mb, "F"))
-    # backward pass: microbatch i finishes forward at stage n-1 cycle i+n-1
-    # then backward starts at stage n-1 at cycle m+n-1+i and rolls to stage 0
+    # 反向传播：微批次 i 在阶段 n-1 的周期 i+n-1 完成前向传播，
+    # 随后在周期 m+n-1+i 从阶段 n-1 开始反向传播，并逐步回到阶段 0。
     forward_end = m + n - 1
     for mb in range(m):
         for stage in reversed(range(n)):
@@ -72,7 +72,7 @@ def gpipe_schedule(num_stages: int, num_microbatches: int) -> list:
 
 
 def render_gantt(schedule: list, num_stages: int, num_microbatches: int) -> str:
-    """Render the schedule as a stage-by-cycle text Gantt chart."""
+    """将调度渲染为按阶段和周期排列的文本甘特图。"""
     n = num_stages
     m = num_microbatches
     max_cycle = max(c for c, _, _, _ in schedule)
@@ -88,7 +88,7 @@ def render_gantt(schedule: list, num_stages: int, num_microbatches: int) -> str:
 
 
 def measure_bubble(num_stages: int, num_microbatches: int) -> float:
-    """Empirical bubble: count idle slots in the rendered schedule."""
+    """经验气泡率：统计已渲染调度中的空闲槽位。"""
     schedule = gpipe_schedule(num_stages, num_microbatches)
     max_cycle = max(c for c, _, _, _ in schedule)
     total_slots = num_stages * (max_cycle + 1)
@@ -97,7 +97,7 @@ def measure_bubble(num_stages: int, num_microbatches: int) -> float:
 
 
 class StageMLP(nn.Module):
-    """One stage of a sequential MLP."""
+    """顺序 MLP 的一个阶段。"""
 
     def __init__(self, in_dim: int, hid_dim: int, out_dim: int):
         super().__init__()
@@ -110,11 +110,11 @@ class StageMLP(nn.Module):
 
 def _pipe_worker(rank: int, world_size: int, init_file: str, iface: str,
                  steps: int, batch: int, microbatches: int, out_queue) -> None:
-    """Two-rank pipeline: rank 0 owns stage 0, rank 1 owns stage 1.
+    """双 rank 流水线：rank 0 持有阶段 0，rank 1 持有阶段 1。
 
-    Forward: rank 0 runs stage 0 on microbatch, sends activation to rank 1.
-    Rank 1 runs stage 1, computes loss, runs backward, sends grad back to rank 0.
-    Rank 0 finishes backward on stage 0. Repeats per microbatch.
+    前向传播时，rank 0 在微批次上运行阶段 0，并将激活值发送给 rank 1。
+    rank 1 运行阶段 1、计算 loss、执行反向传播，再把梯度发回 rank 0。
+    rank 0 在阶段 0 完成反向传播。每个微批次重复此流程。
     """
     os.environ["GLOO_SOCKET_IFNAME"] = iface
     dist.init_process_group(
@@ -161,7 +161,7 @@ def _pipe_worker(rank: int, world_size: int, init_file: str, iface: str,
 
 
 def run_pipeline(steps: int = 5, batch: int = 8, microbatches: int = 4) -> dict:
-    """Spawn a 2-rank pipeline; return per-rank losses (only rank 1 reports) and norms."""
+    """启动双 rank 流水线；返回各 rank 的 loss（仅 rank 1 报告）与范数。"""
     ctx = mp.get_context("spawn")
     out_queue = ctx.Queue()
     init_dir = tempfile.mkdtemp(prefix="aie_pipe_")
@@ -199,21 +199,21 @@ def run_pipeline(steps: int = 5, batch: int = 8, microbatches: int = 4) -> dict:
 
 
 def main() -> int:
-    print(f"GPipe schedule analysis: stages={NUM_STAGES}, microbatches={NUM_MICROBATCHES}")
+    print(f"GPipe 调度分析：stages={NUM_STAGES}, microbatches={NUM_MICROBATCHES}")
     schedule = gpipe_schedule(NUM_STAGES, NUM_MICROBATCHES)
     print(render_gantt(schedule, NUM_STAGES, NUM_MICROBATCHES))
     closed = bubble_fraction(NUM_STAGES, NUM_MICROBATCHES)
     measured = measure_bubble(NUM_STAGES, NUM_MICROBATCHES)
-    print(f"\nclosed-form bubble fraction: {closed * 100:.2f}%")
-    print(f"measured bubble fraction:    {measured * 100:.2f}%")
-    print("\nbubble vs microbatch count (N=4):")
-    print(f"{'M':<6}{'bubble %':<10}")
+    print(f"\n闭式气泡率：{closed * 100:.2f}%")
+    print(f"实测气泡率：{measured * 100:.2f}%")
+    print("\n微批次数与气泡率对比（N=4）：")
+    print(f"{'M':<6}{'气泡率 %':<10}")
     for m in (1, 2, 4, 8, 16, 32, 64):
         print(f"{m:<6}{bubble_fraction(4, m)*100:<10.2f}")
-    print("\nrunning 2-stage real pipeline over gloo...")
+    print("\n正在通过 gloo 运行真实的双阶段流水线……")
     results = run_pipeline(steps=3, batch=8, microbatches=4)
     rank1_losses = results[1][0]
-    print(f"rank 1 saw {len(rank1_losses)} microbatch losses; final norm rank 0 = {results[0][1]:.4f}, rank 1 = {results[1][1]:.4f}")
+    print(f"rank 1 得到 {len(rank1_losses)} 个微批次损失；最终范数 rank 0 = {results[0][1]:.4f}，rank 1 = {results[1][1]:.4f}")
     return 0
 
 
