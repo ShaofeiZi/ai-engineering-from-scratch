@@ -1,11 +1,11 @@
-"""vLLM production stack + LMCache simulator — stdlib Python.
+"""vLLM 生产栈与 LMCache 模拟器——使用 Python 标准库。
 
-Compares three configs on a preemption-heavy workload:
-  NATIVE_ONLY   : vLLM with no offload, requests re-prefill on preemption
-  CPU_OFFLOAD   : native CPU offload, engine-local
-  LMCACHE       : cluster LMCache shared across 4 engines
+在抢占频繁的工作负载下比较三种配置：
+  NATIVE_ONLY   ：不卸载的 vLLM，请求被抢占后重新预填充
+  CPU_OFFLOAD   ：引擎本地的原生 CPU 卸载
+  LMCACHE       ：4 个引擎共享集群 LMCache
 
-Reports re-prefill count avoided, throughput gain, and break-even HBM utilization.
+报告避免重新预填充的次数、吞吐量提升和 HBM 利用率盈亏平衡点。
 """
 
 from __future__ import annotations
@@ -25,12 +25,12 @@ KV_BLOCK_TOKENS = 16
 class Request:
     prompt_tokens: int
     output_tokens: int
-    prefix_id: str  # for reuse across engines
+    prefix_id: str  # 用于跨引擎复用
 
 
 def make_workload(n: int = 200, seed: int = 7) -> list[Request]:
     rng = random.Random(seed)
-    prefixes = [f"tpl_{i}" for i in range(6)]  # small set = high reuse
+    prefixes = [f"tpl_{i}" for i in range(6)]  # 集合越小，复用率越高
     reqs = []
     for _ in range(n):
         prompt = rng.choice([2000, 4000, 8000])
@@ -39,7 +39,7 @@ def make_workload(n: int = 200, seed: int = 7) -> list[Request]:
 
 
 def simulate(config: str, reqs: list[Request]) -> dict:
-    """Model a small cluster under HBM pressure."""
+    """模拟一个面临 HBM 压力的小型集群。"""
     engines_state: list[set[str]] = [set() for _ in range(4)]
     shared_cache: set[str] = set()
     hbm_capacity_blocks_per_engine = 900
@@ -98,22 +98,22 @@ def simulate(config: str, reqs: list[Request]) -> dict:
 
 def report(row: dict, baseline: float) -> None:
     speedup = baseline / row["total_ms"] if row["total_ms"] else 1
-    print(f"{row['config']:14}  total={row['total_ms']:8.0f} ms  "
-          f"prefill={row['prefill_ms']:7.0f} ms  "
-          f"avoided_re_prefill={row['re_prefills_avoided']:4}  "
-          f"speedup={speedup:4.2f}x")
+    print(f"{row['config']:14}  总计={row['total_ms']:8.0f} 毫秒  "
+          f"预填充={row['prefill_ms']:7.0f} 毫秒  "
+          f"避免重新预填充={row['re_prefills_avoided']:4}  "
+          f"加速比={speedup:4.2f}x")
 
 
 def main() -> None:
     print("=" * 80)
-    print("vLLM PRODUCTION STACK + LMCACHE — preemption-heavy, 4 engines, shared prefixes")
+    print("vLLM 生产栈 + LMCACHE——抢占频繁、4 个引擎、共享前缀")
     print("=" * 80)
     base = make_workload()
     baseline = simulate("NATIVE_ONLY", [Request(r.prompt_tokens, r.output_tokens, r.prefix_id) for r in base])["total_ms"]
     for cfg in ("NATIVE_ONLY", "CPU_OFFLOAD", "LMCACHE"):
         report(simulate(cfg, [Request(r.prompt_tokens, r.output_tokens, r.prefix_id) for r in base]), baseline)
-    print("\nRead: when prefixes repeat across engines, LMCache avoids redundant prefills")
-    print("even when each engine individually evicted the cache.")
+    print("\n解读：当前缀跨引擎重复时，即使各引擎已分别逐出缓存，")
+    print("LMCache 仍能避免冗余的预填充。")
 
 
 if __name__ == "__main__":
