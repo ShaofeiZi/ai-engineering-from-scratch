@@ -1,8 +1,8 @@
-"""All five Anthropic workflow patterns in stdlib.
+"""标准库中实现了全部五种 Anthropic 工作流模式。
 
-prompt chaining, routing, parallelization (voting), orchestrator-workers,
-evaluator-optimizer. Each pattern is 10-15 lines; the point is to show how
-small they are compared to a framework.
+提示链、路由、并行化（投票）、orchestrator-workers、
+evaluator-optimizer. 每种模式仅 10-15 行；重点在于展示与框架相比它们有多
+精简。
 """
 
 from __future__ import annotations
@@ -91,7 +91,7 @@ def evaluator_optimizer(task: str, proposer: Callable[[str, str | None], str],
 
 def demo_chain(llm: ScriptedLLM) -> None:
     print("-" * 70)
-    print("1. PROMPT CHAINING — summarize then title")
+    print("1. 提示链——先总结，再生成标题")
     print("-" * 70)
     trace = prompt_chain(
         input_text="Agents are ReAct loops with tools, memory, and guardrails.",
@@ -107,7 +107,7 @@ def demo_chain(llm: ScriptedLLM) -> None:
 
 def demo_route(llm: ScriptedLLM) -> None:
     print("\n" + "-" * 70)
-    print("2. ROUTING — classify then dispatch")
+    print("2. 路由——先分类，再分发")
     print("-" * 70)
 
     def classifier(text: str) -> str:
@@ -129,16 +129,16 @@ def demo_route(llm: ScriptedLLM) -> None:
 
 def demo_parallel(llm: ScriptedLLM) -> None:
     print("\n" + "-" * 70)
-    print("3. PARALLELIZATION — N voters on a boolean")
+    print("3. 并行化——N 个投票者判断布尔值")
     print("-" * 70)
     winner, counts = parallel_vote("is this code safe to ship?", llm, n=5)
-    print(f"  winner: {winner}")
-    print(f"  counts: {dict(counts)}")
+    print(f"  胜出者: {winner}")
+    print(f"  计数: {dict(counts)}")
 
 
 def demo_orchestrator(llm: ScriptedLLM) -> None:
     print("\n" + "-" * 70)
-    print("4. ORCHESTRATOR-WORKERS — specialist pool")
+    print("4. 编排器—工作者——专家池")
     print("-" * 70)
 
     workers = [
@@ -160,12 +160,12 @@ def demo_orchestrator(llm: ScriptedLLM) -> None:
     final, outputs = orchestrator_workers(task, workers, synth)
     for name, out in outputs:
         print(f"  [{name}] {out}")
-    print(f"  synth: {final}")
+    print(f"  汇总: {final}")
 
 
 def demo_evaluator_optimizer(llm: ScriptedLLM) -> None:
     print("\n" + "-" * 70)
-    print("5. EVALUATOR-OPTIMIZER — propose, judge, refine")
+    print("5. 评估器—优化器——提出、判断、改进")
     print("-" * 70)
 
     def proposer(task: str, feedback: str | None) -> str:
@@ -183,13 +183,13 @@ def demo_evaluator_optimizer(llm: ScriptedLLM) -> None:
         "write a one-line summary of ReAct", proposer, evaluator
     )
     for i, (cand, verdict, reason) in enumerate(trace, 1):
-        print(f"  iter {i}  [{verdict}] {cand}  // {reason}")
-    print(f"  final: {final}")
+        print(f"  迭代 {i}  [{verdict}] {cand}  // {reason}")
+    print(f"  最终结果: {final}")
 
 
 def main() -> None:
     print("=" * 70)
-    print("ANTHROPIC WORKFLOW PATTERNS — Phase 14, Lesson 12")
+    print("ANTHROPIC 工作流模式 — 第 14 阶段，第 12 课")
     print("=" * 70)
 
     llm = ScriptedLLM({
@@ -230,8 +230,8 @@ def main() -> None:
     demo_orchestrator(llm)
     demo_evaluator_optimizer(llm)
 
-    print(f"\ntotal llm calls across all five patterns: {len(llm.calls)}")
-    print("direct API + small helpers. no framework needed.")
+    print(f"\n全部五种模式的 LLM 调用总数: {len(llm.calls)}")
+    print("直接使用 API + 少量辅助函数，无需框架。")
 
 
 if __name__ == "__main__":
