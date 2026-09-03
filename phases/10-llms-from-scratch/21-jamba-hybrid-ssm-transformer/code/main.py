@@ -1,12 +1,12 @@
-"""Jamba / Mamba-3 memory calculator — stdlib Python.
+"""Jamba/ Mamba-3 内存计算器 — stdlib Python.
 
-Computes KV cache, SSM state, and total attention-layer memory for a range
-of hybrid configurations: pure Transformer, Jamba 1:7, 1:3, 1:15, and pure
-SSM. Prints the comparison at 8k, 64k, 128k, 256k context.
+计算 KV cache, SSM 状态, 和一个区域的总 attention 层内存
+混合构型:纯Transformer、Jamba 1:7、1:3、1:15和纯
+(原始内容存档于2018-09-25). SSM. 在8k,64k,128k,256k上下文中打印比较.
 
-Numbers are illustrative, not exact production memory budgets. The point is
-to show why the hybrid ratio matters and where Jamba's 256k-on-80GB claim
-comes from.
+数字是说明性的,而不是准确的生产记忆预算。 重点是
+以显示混合比率为何重要,以及 "ph7 " 的256k-on-80GB索赔在何处
+来者.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def fmt_bytes(b: int) -> str:
 
 def main() -> None:
     print("=" * 74)
-    print("JAMBA HYBRID SSM-TRANSFORMER MEMORY CALCULATOR (Phase 10, Lesson 21)")
+    print("Jamba 混合 SSM-Transformer 内存计算器（第 10 阶段，第 21 课）")
     print("=" * 74)
     print()
 
@@ -96,7 +96,7 @@ def main() -> None:
     contexts = [8_192, 65_536, 131_072, 262_144]
 
     print("-" * 74)
-    print("Memory at BF16 (2 bytes per element)")
+    print("BF16 存储（每个元素 2 字节）")
     print("-" * 74)
     header = "  " + "config".ljust(32)
     for ctx in contexts:
@@ -113,7 +113,7 @@ def main() -> None:
     print()
 
     print("-" * 74)
-    print("Headline savings at 256k context (BF16), vs pure Transformer full-MHA")
+    print("256K 上下文的主要节省（BF16，相对纯 Transformer full-MHA）")
     print("-" * 74)
     baseline = kv_cache_bytes(configs[0], 262_144, BYTES_BF16)
     for cfg in configs:
@@ -122,11 +122,11 @@ def main() -> None:
         total = kv + ss
         savings = (1 - total / baseline) * 100
         print(f"  {cfg.name:<32} total {fmt_bytes(total):>10}  "
-              f"({savings:+.1f}% vs baseline)")
+              f"（相对基线 {savings:+.1f}%）")
     print()
 
     print("-" * 74)
-    print("Attention layer fraction vs memory fraction at 256k (BF16)")
+    print("Attention 层比例与 256K 上下文的内存占比（BF16）")
     print("-" * 74)
     for cfg in configs:
         attn_frac = cfg.attn_layers / cfg.total_layers if cfg.total_layers else 0
@@ -138,14 +138,13 @@ def main() -> None:
     print()
 
     print("=" * 74)
-    print("TAKEAWAY")
+    print("结论")
     print("-" * 74)
-    print("  Pure Transformer at 256k = 67 GB just for KV cache — will not fit")
-    print("  on an 80GB single-GPU deployment after you add weights and activations.")
-    print("  Jamba 1:7 = 8.4 GB KV cache + ~4 MB SSM state = fits comfortably.")
-    print("  That is the 256k-on-one-GPU claim from the AI21 paper, concretely.")
-    print("  Mamba-3 pushes pure SSM further; hybrids will likely adopt it as")
-    print("  the SSM side of the next-generation recipe.")
+    print("纯 Transformer 于 256k = 67 GB 仅用于 KV cache —— 不适合")
+    print("  加上权重和激活后，无法装入单张 80GB GPU。")
+    print("Jamba 1:7 = 8.4GB KV cache + 约 4MB SSM 状态，可以装入。")
+    print("这具体说明了 AI21 文档中“单 GPU 支持 256K 上下文”的说法。")
+    print("Mamba-3 进一步推进了纯 SSM；下一代混合架构很可能采用它作为 SSM 分支。")
 
 
 if __name__ == "__main__":
