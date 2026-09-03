@@ -1,12 +1,10 @@
-"""End-to-end fine-tuning pipeline orchestrator scaffold.
+"""端到端微调流水线编排器脚手架。
 
-The hard architectural primitive is a reproducible pipeline DAG: data hygiene
--> SFT -> preference tuning -> quantization -> serving -> eval -> model card,
-where each stage is declaratively configured (YAML-ish dict here) and each
-stage consumes the previous stage's artifact by content hash. This scaffold
-models the DAG, the artifact manifest, and the contamination check.
+关键架构原语是可复现的流水线 DAG：数据清洗 -> SFT -> 偏好微调 -> 量化 ->
+服务 -> 评测 -> 模型卡。每个阶段都采用声明式配置（此处使用类似 YAML 的 dict），
+并通过内容哈希消费上一阶段的产物。此脚手架对 DAG、产物清单和污染检查进行建模。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -19,7 +17,7 @@ from typing import Callable
 
 
 # ---------------------------------------------------------------------------
-# artifact + manifest  --  content-hashed bookkeeping
+# 产物 + 清单——基于内容哈希的记录管理
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -51,7 +49,7 @@ class Manifest:
 
 
 # ---------------------------------------------------------------------------
-# stages  --  each returns a new Artifact given prior manifest and config
+# 阶段——每个阶段根据先前清单和配置返回一个新 Artifact
 # ---------------------------------------------------------------------------
 
 Stage = Callable[[Manifest, dict], Artifact]
@@ -76,7 +74,7 @@ def stage_contamination(m: Manifest, cfg: dict) -> Artifact:
     ds = m.get("dataset")
     overlap = []
     for bench in ("MMLU-Pro", "MT-Bench-v2", "RewardBench-2"):
-        # simulated MinHash check; real pipeline uses Datatrove MinHashLSH
+        # 模拟 MinHash 检查；真实流水线使用 Datatrove MinHashLSH
         overlap.append({"bench": bench, "overlap_examples": 0})
     return Artifact("contamination_check", "report", {
         "dataset_hash": ds.content_hash(),
@@ -152,7 +150,7 @@ def stage_model_card(m: Manifest, cfg: dict) -> Artifact:
 
 
 # ---------------------------------------------------------------------------
-# DAG orchestrator  --  runs stages in order, snapshots manifest each step
+# DAG 编排器——按顺序运行各阶段，并在每一步保存清单快照
 # ---------------------------------------------------------------------------
 
 PIPELINE: list[tuple[str, Stage]] = [
@@ -170,10 +168,10 @@ PIPELINE: list[tuple[str, Stage]] = [
 def run_pipeline(cfg: dict) -> Manifest:
     m = Manifest()
     for name, stage_fn in PIPELINE:
-        print(f"[{name:14s}] running...")
+        print(f"[{name:14s}] 正在运行……")
         art = stage_fn(m, cfg)
         m.add(art)
-        print(f"[{name:14s}] -> artifact '{art.name}' hash={art.content_hash()}")
+        print(f"[{name:14s}] -> 产物 '{art.name}' 哈希={art.content_hash()}")
     return m
 
 
@@ -184,17 +182,17 @@ def main() -> None:
         "seed": 7,
         "dpo_beta": 0.08,
     }
-    print("=== fine-tuning pipeline run ===")
+    print("=== 微调流水线运行 ===")
     m = run_pipeline(cfg)
     print()
-    print("=== manifest ===")
+    print("=== 清单 ===")
     for name, kind, h, by in m.summary():
         print(f"  {name:18s} {kind:10s} {h} by {by}")
     print()
-    print("=== eval report ===")
+    print("=== 评测报告 ===")
     print(json.dumps(m.get("eval_report").payload, indent=2))
     print()
-    print("=== served endpoint ===")
+    print("=== 服务端点 ===")
     print(json.dumps(m.get("endpoint").payload, indent=2))
 
 
