@@ -1,7 +1,6 @@
-"""Toy Reflexion loop — Actor, Evaluator, Self-Reflector, Episodic memory.
+"""玩具版 Reflexion 循环 — Actor、Evaluator、Self-Reflector、情景记忆。
 
-Task: pick three integers from 1..9 that sum to a target. The Actor is
-scripted to start with a bad strategy and adapt when reflections are present.
+任务：从 1..9 中选取三个整数，使其和等于目标值。Actor 被设定为初始使用错误策略，并在存在反思时进行调整。
 """
 
 from __future__ import annotations
@@ -36,8 +35,7 @@ class EpisodicMemory:
 
 
 class Actor:
-    """Scripted policy. Without reflections it stays on bad choices; with
-    at least one reflection it moves toward the target sum."""
+    """脚本化策略。没有反思时，它停留在错误选择上；至少有一条反思时，它会向目标和靠拢。"""
 
     def act(self, memory: EpisodicMemory) -> list[int]:
         n = len(memory.items)
@@ -103,8 +101,8 @@ def summarize(trials: list[TrialResult], name: str) -> None:
 
 def main() -> None:
     print("=" * 70)
-    print(f"REFLEXION — pick three ints in [1..9] summing to {TARGET}")
-    print("Phase 14, Lesson 03")
+    print(f"REFLEXION — 从 [1..9] 中选择三个整数，使其和为 {TARGET}")
+    print("第 14 阶段，第 03 课")
     print("=" * 70)
 
     trials_no_mem = run_reflexion(max_trials=4, use_memory=False)
@@ -116,9 +114,9 @@ def main() -> None:
     baseline_steps = len(trials_no_mem)
     reflex_steps = len(trials_mem)
     print()
-    print(f"baseline used {baseline_steps} trials; reflexion used {reflex_steps}.")
-    print("Without a reflection in the prompt, the scripted actor never adapts.")
-    print("With one reflection, the actor corrects; with two, it converges.")
+    print(f"基线使用了 {baseline_steps} 次试验；reflexion 使用了 {reflex_steps} 次。")
+    print("提示中没有反思时，脚本化的 actor 永远不会调整。")
+    print("有一条反思时，actor 会纠正；有两条时，它会收敛。")
 
 
 if __name__ == "__main__":
