@@ -1,11 +1,11 @@
-"""Deterministic verification gate with coverage floor, --strict mode, and signed overrides.
+"""带有覆盖率下限、--strict 模式和签名覆盖的确定性验证关卡。
 
-Combines a task's scope_report, rule_report, feedback log, and an optional
-coverage_report into a single verification_report.json. No LLM judges; LLM
-judgment lives on the reviewer side (Phase 14 · 39). Overrides require a signed
-entry in overrides.jsonl with reason, user, and HEAD commit.
+将任务的 scope_report、rule_report、反馈日志以及可选的
+coverage_report 合并为一个 verification_report.json.。没有 LLM 评判；LLM
+评判位于评审方（Phase 14 · 39）。覆盖要求在 overrides.jsonl 中有一条签名记录，
+包含原因、用户和 HEAD 提交。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ OVERRIDES_PATH = HERE / "overrides.jsonl"
 COVERAGE_FLOOR_DEFAULT = 0.80
 COVERAGE_REGRESSION_DELTA = 0.01
 
-# Audit secret used to sign override entries. In production read from a secrets
-# manager. Fail closed: only fall back to a demo secret when VERIFY_DEMO_MODE=1
-# is set explicitly, and shout about it so it cannot land in CI by accident.
+# 用于签署覆盖条目的审计密钥。在生产环境中应从密钥管理
+# 系统中读取。采用失败即关闭策略：仅在显式设置 VERIFY_DEMO_MODE=1
+# 时才回退到演示密钥，并明确告警，以确保其不会意外落入 CI 中。
 _OVERRIDE_SECRET_ENV = "VERIFY_OVERRIDE_SECRET"
 _DEMO_MODE_ENV = "VERIFY_DEMO_MODE"
 
@@ -39,14 +39,14 @@ def _load_override_secret() -> str:
         return secret
     if os.environ.get(_DEMO_MODE_ENV) == "1":
         print(
-            f"WARNING: {_OVERRIDE_SECRET_ENV} unset and {_DEMO_MODE_ENV}=1; "
-            "using insecure demo secret. Do not record real overrides in this mode.",
+            f"警告：未设置 {_OVERRIDE_SECRET_ENV}，且 {_DEMO_MODE_ENV}=1；"
+            "正在使用不安全的 demo secret。请勿在此模式下记录真实覆盖项。",
             file=sys.stderr,
         )
         return "demo-override-secret-do-not-ship"
     raise RuntimeError(
-        f"refused to start: {_OVERRIDE_SECRET_ENV} is unset. "
-        f"Set the env var, or pass {_DEMO_MODE_ENV}=1 to run the lesson demo only."
+        f"拒绝启动：未设置 {_OVERRIDE_SECRET_ENV}。"
+        f"请设置该环境变量，或传入 {_DEMO_MODE_ENV}=1 以仅运行课程演示。"
     )
 
 
@@ -113,10 +113,10 @@ def _rule_findings(art: Artifacts) -> list[Finding]:
 
 
 def _coverage_findings(art: Artifacts, floor: float) -> list[Finding]:
-    """Anthropic Hybrid Norm: pair verifiable rewards (tests + coverage) with rubric judging.
+    """Anthropic 混合准则：将可验证奖励（测试 + 覆盖率）与评分细则评判相结合。
 
-    Floor failure is a block. Regression versus the previous merge by more than
-    COVERAGE_REGRESSION_DELTA is a block; smaller drops are warnings.
+    未达下限即为阻塞。相对于上次合并的覆盖率回退超过
+    COVERAGE_REGRESSION_DELTA 即为阻塞；较小的下降仅为警告。
     """
     findings: list[Finding] = []
     if not art.coverage_report:
@@ -152,7 +152,7 @@ def verify(
         + _coverage_findings(art, coverage_floor)
     )
     if strict:
-        # --strict promotes every warning to a block. Opt-in by release branch only.
+        # --strict 会将所有警告提升为阻塞。Opt-in 仅限发布分支。
         findings = [Finding(f.code, "block" if f.severity == "warn" else f.severity, f.detail)
                     for f in findings]
     blocking = [f for f in findings if f.severity == "block"]
@@ -174,7 +174,7 @@ def _sign(payload: dict[str, object]) -> str:
 def record_override(
     task_id: str, finding_code: str, reason: str, user_id: str, head_commit: str
 ) -> dict[str, object]:
-    """Append a signed override entry. Refuses without all five fields populated."""
+    """追加一条签名覆盖条目。若五个字段未全部填写则拒绝执行。"""
     if not all([task_id, finding_code, reason, user_id, head_commit]):
         raise ValueError("override requires task_id, finding_code, reason, user_id, head_commit")
     payload = {
@@ -242,12 +242,12 @@ def main() -> None:
              "findings": [asdict(f) for f in report.findings]},
             indent=2) + "\n")
         flag = " (strict)" if report.strict else ""
-        print(f"task {report.task_id}{flag}: passed={report.passed} findings={len(report.findings)}")
+        print(f"任务 {report.task_id}{flag}: 通过={report.passed} 发现={len(report.findings)}")
         for f in report.findings:
             print(f"  [{f.severity}] {f.code}: {f.detail}")
         print()
 
-    # Demo a signed override on the off-scope warning that T-002 actually emits.
+    # 演示对 off-scope 警告的签名覆盖，该警告由 T-002 实际触发。
     try:
         entry = record_override(
             task_id="T-002",
@@ -256,9 +256,9 @@ def main() -> None:
             user_id="rohitg00",
             head_commit="b2c3d4e",
         )
-        print(f"override recorded: signature={entry['signature']} verified={verify_signature(entry)}")
+        print(f"覆盖已记录: 签名={entry['signature']} 已验证={verify_signature(entry)}")
     except RuntimeError as exc:
-        print(f"override demo skipped: {exc}")
+        print(f"覆盖演示已跳过: {exc}")
 
 
 if __name__ == "__main__":
