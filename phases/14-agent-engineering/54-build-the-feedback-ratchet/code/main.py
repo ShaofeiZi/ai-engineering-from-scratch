@@ -1,8 +1,8 @@
-# Lesson program for routing feedback into owned, verifiable system changes.
-# Read: phases/14-agent-engineering/54-build-the-feedback-ratchet/docs/en.md
-# Reference: Basili, Caldiera, and Rombach, The Goal Question Metric Approach.
-# Reference: Fagerholm et al., Building Blocks for Continuous Experimentation, 2014.
-# Run this file to generate outputs/feedback-backlog.json.
+# 将反馈路由到可归属、可验证的系统变更的课程程序。
+# 阅读：phases/14-agent-engineering/54-build-the-feedback-ratchet/docs/en.md
+# 参考文献：Basili、Caldiera 和 Rombach，《目标问题度量方法》（The Goal Question Metric Approach）。
+# 参考文献：Fagerholm 等人，《持续实验的构建模块》（Building Blocks for Continuous Experimentation），2014年。
+# 运行此文件以生成 outputs/feedback-backlog.json.
 from __future__ import annotations
 
 import json
