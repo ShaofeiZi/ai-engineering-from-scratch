@@ -1,12 +1,10 @@
-"""Video understanding pipeline — multi-vector scene index scaffold.
+"""视频理解流水线——多向量场景索引脚手架。
 
-The hard architectural primitive is a multi-vector-per-scene index with
-three representations (caption, frame, transcript), queried in parallel and
-merged with reciprocal rank fusion, then refined by a temporal-grounding
-step that picks a sub-window inside the best scene. This scaffold implements
-the index shape, the triple-query fusion, and the sub-window grounding.
+关键架构原语是每个场景包含多个向量的索引，具有三种表示（caption、frame、
+transcript），并行查询后通过倒数排名融合合并，再由时间 grounding 步骤在最佳
+场景内选取子窗口。此脚手架实现了索引结构、三路查询融合和子窗口 grounding。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -40,7 +38,7 @@ def cosine(a: list[float], b: list[float]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# scene record  --  multi-vector: caption / frame / transcript
+# 场景记录——多向量：caption / frame / transcript
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -51,7 +49,7 @@ class Scene:
     end_ms: int
     caption: str
     transcript: str
-    frame_tags: str              # stand-in for frame embedding features
+    frame_tags: str              # 帧 embedding 特征的替代数据
     caption_emb: list[float] = field(default_factory=list)
     frame_emb: list[float] = field(default_factory=list)
     transcript_emb: list[float] = field(default_factory=list)
@@ -85,7 +83,7 @@ SAMPLE = [
 
 
 # ---------------------------------------------------------------------------
-# triple-vector query + RRF merge
+# 三向量查询 + RRF 合并
 # ---------------------------------------------------------------------------
 
 def multi_vector_search(query: str, scenes: list[Scene], k: int = 5) -> list[tuple[Scene, float]]:
@@ -109,11 +107,11 @@ def multi_vector_search(query: str, scenes: list[Scene], k: int = 5) -> list[tup
 
 
 # ---------------------------------------------------------------------------
-# temporal grounding stub  --  refine start/end within the best scene
+# 时间 grounding stub——在最佳场景内细化起止时间
 # ---------------------------------------------------------------------------
 
 def ground_window(query: str, scene: Scene) -> tuple[int, int]:
-    """Stand-in: pick a sub-window of the scene based on query keyword position."""
+    """替代实现：根据查询关键词的位置选择场景子窗口。"""
     q = set(tokenize(query))
     t_tokens = tokenize(scene.transcript)
     if not q or not t_tokens:
@@ -130,7 +128,7 @@ def ground_window(query: str, scene: Scene) -> tuple[int, int]:
 
 
 # ---------------------------------------------------------------------------
-# demo
+# 演示
 # ---------------------------------------------------------------------------
 
 def fmt_ms(ms: int) -> str:
@@ -151,15 +149,15 @@ def main() -> None:
     ]
 
     for q, descriptive in queries:
-        print(f"\nQ: {q}  (descriptive={descriptive})")
+        print(f"\n问题：{q}（描述性={descriptive}）")
         hits = multi_vector_search(q, scenes, k=3)
         for sc, score in hits:
-            print(f"  scene {sc.video_id}/{sc.scene_id} @ [{fmt_ms(sc.start_ms)}-{fmt_ms(sc.end_ms)}] "
-                  f"score={score:.4f}  cap='{sc.caption[:40]}'")
+            print(f"  场景 {sc.video_id}/{sc.scene_id} @ [{fmt_ms(sc.start_ms)}-{fmt_ms(sc.end_ms)}] "
+                  f"分数={score:.4f}  caption='{sc.caption[:40]}'")
         top = hits[0][0]
         start, end = ground_window(q, top)
-        print(f"  grounded window: [{fmt_ms(start)}-{fmt_ms(end)}] "
-              f"(narrowed from {fmt_ms(top.start_ms)}-{fmt_ms(top.end_ms)})")
+        print(f"  grounding 窗口：[{fmt_ms(start)}-{fmt_ms(end)}] "
+              f"（从 {fmt_ms(top.start_ms)}-{fmt_ms(top.end_ms)} 缩小）")
 
 
 if __name__ == "__main__":

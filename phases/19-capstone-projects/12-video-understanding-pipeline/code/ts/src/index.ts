@@ -1,9 +1,9 @@
-// Video understanding pipeline: TypeScript UI half of the lesson stack.
-// Python side ships the multi-vector index + temporal grounding; this TS
-// project exposes /jobs and /job/:id over the four pipeline stages.
-// Refs: docs/en.md (this lesson),
-//   VideoDB CRUD-for-video API: https://videodb.io
-//   TransNetV2 scene segmentation: https://github.com/soCzech/TransNetV2
+// 视频理解流水线：课程技术栈中的 TypeScript UI 部分。
+// Python 端提供多向量索引 + 时间 grounding；此 TS 项目通过 /jobs 和
+// /job/:id 暴露四个流水线阶段。
+// 参考：docs/en.md（本课程）、
+//   VideoDB 视频 CRUD API：https://videodb.io
+//   TransNetV2 场景分割：https://github.com/soCzech/TransNetV2
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { buildApp } from "./server.js";
@@ -14,7 +14,7 @@ function runDemo(): void {
   seedFixture(store);
 
   process.stdout.write("=".repeat(72) + "\n");
-  process.stdout.write("PHASE 19 LESSON 12 - video pipeline UI (TypeScript)\n");
+  process.stdout.write("阶段 19 课程 12——视频流水线 UI（TypeScript）\n");
   process.stdout.write("=".repeat(72) + "\n");
 
   process.stdout.write("\nGET /jobs\n");
@@ -24,7 +24,7 @@ function runDemo(): void {
     process.stdout.write(`\nGET /job/${id}\n`);
     const body = store.detail(id);
     if (!body) {
-      process.stdout.write(JSON.stringify({ error: "not found", id }) + "\n");
+      process.stdout.write(JSON.stringify({ error: "未找到", id }) + "\n");
       continue;
     }
     process.stdout.write(JSON.stringify(body, null, 2) + "\n");
@@ -66,7 +66,7 @@ function runServer(port: number): void {
     });
   });
   server.listen(port, () => {
-    process.stdout.write(`listening on http://localhost:${port}\n`);
+    process.stdout.write(`正在监听 http://localhost:${port}\n`);
   });
 }
 
@@ -77,12 +77,12 @@ function parsePort(argv: string[], defaultPort: number): number {
   if (portFlag < 0) return defaultPort;
   const raw = argv[portFlag + 1];
   if (raw === undefined) {
-    process.stderr.write("--port requires a value\n");
+    process.stderr.write("--port 需要一个值\n");
     process.exit(2);
   }
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1 || n > 65535) {
-    process.stderr.write(`invalid --port ${raw}: must be integer in 1..65535\n`);
+    process.stderr.write(`无效的 --port ${raw}：必须是 1..65535 范围内的整数\n`);
     process.exit(2);
   }
   return n;
