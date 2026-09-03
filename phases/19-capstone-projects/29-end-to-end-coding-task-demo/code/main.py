@@ -1,14 +1,14 @@
 """
-End-to-end coding agent on the Track A harness.
+基于 Track A 运行框架的端到端编码智能体。
 
 See: phases/19-capstone-projects/29-end-to-end-coding-task-demo/docs/en.md
-Concept refs:
-  - Verification gates + observation budget (Phase 19 · 25).
-  - Sandbox runner with denylist + path jail (Phase 19 · 26).
-  - Eval harness with fixture tasks (Phase 19 · 27).
-  - OTel GenAI span shapes and Prometheus exposition (Phase 19 · 28).
-The demo composes a deterministic policy with the minimal harness primitives
-re-stated inline. Exits zero after solving the bundled fixture.
+概念参考：
+  - 验证门禁与观察预算（阶段 19 · 25）。
+  - 带拒绝列表和路径沙箱的沙箱运行器（阶段 19 · 26）。
+  - 使用夹具任务的评测框架（阶段 19 · 27）。
+  - OTel GenAI span 结构与 Prometheus 展示文本（阶段 19 · 28）。
+本演示把确定性策略与在文件内重述的最小运行框架基本组件组合起来，
+解决随附夹具后以状态码 0 退出。
 """
 
 from __future__ import annotations
@@ -29,11 +29,11 @@ from typing import Any, Callable, Iterator
 
 
 # ===========================================================================
-# Minimal harness primitives, copied with intent from lessons 25-28.
+# 最小运行框架基本组件，有意沿用第 25–28 课的实现。
 # ===========================================================================
 
 
-# --- Observation ledger (lesson 25) ---------------------------------------
+# --- 观察账本（第 25 课）-------------------------------------------------
 
 
 @dataclass
@@ -59,7 +59,7 @@ def estimate_tokens(text: str) -> int:
     return 0 if not text else max(1, len(text) // 4)
 
 
-# --- Gate chain (lesson 25) -----------------------------------------------
+# --- 门禁链（第 25 课）---------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -161,7 +161,7 @@ class GateChain:
         return ChainOutcome(decisions=decisions)
 
 
-# --- Sandbox (lesson 26) ---------------------------------------------------
+# --- 沙箱（第 26 课）-----------------------------------------------------
 
 DENIED_EXIT = -100
 TIMED_OUT_EXIT = -101
@@ -266,7 +266,7 @@ class Sandbox:
         )
 
 
-# --- Span builder + metrics (lesson 28) ------------------------------------
+# --- Span 构建器与指标（第 28 课）----------------------------------------
 
 
 STATUS_OK = "OK"
@@ -470,13 +470,13 @@ class SpanBuilder:
 
 
 # ===========================================================================
-# The coding agent
+# 编码智能体
 # ===========================================================================
 
 
 @dataclass
 class AgentStep:
-    """One step taken by the agent loop."""
+    """智能体循环执行的一个步骤。"""
 
     index: int
     state: str
@@ -522,9 +522,9 @@ class AgentRunReport:
 
 
 class CodingAgentPolicy:
-    """Deterministic state machine that plays the role of a coding agent.
+    """扮演编码智能体的确定性状态机。
 
-    States: SURVEY -> RUN_TESTS -> INSPECT -> FIX -> VERIFY -> HALT.
+    状态：SURVEY -> RUN_TESTS -> INSPECT -> FIX -> VERIFY -> HALT。
     """
 
     STATES = ("SURVEY", "RUN_TESTS", "INSPECT", "FIX", "VERIFY", "HALT")
@@ -538,10 +538,9 @@ class CodingAgentPolicy:
         self.tests_passed = False
 
     def next_action(self, last_obs: Observation | None) -> tuple[str, tuple[str, ...], str]:
-        """Return (tool, argv, payload) for the next action.
+        """返回下一动作的 (tool, argv, payload)。
 
-        Pure function of self.state. Caller is responsible for transitioning state
-        after the action's result is observed.
+        这是 self.state 的纯函数。调用方负责在观察到动作结果后转换状态。
         """
 
         if self.state == "SURVEY":
@@ -569,7 +568,7 @@ class CodingAgentPolicy:
         return ("noop", (), "")
 
     def observe(self, tool: str, exit_code: int, text: str) -> None:
-        """Update state based on the result of the last action."""
+        """根据上一个动作的结果更新状态。"""
 
         if self.state == "SURVEY" and tool == "read_file":
             self.state = "RUN_TESTS"
@@ -583,7 +582,7 @@ class CodingAgentPolicy:
             self.state = "INSPECT"
             return
         if self.state == "INSPECT" and tool == "read_file":
-            # Use the recorded failing test text to decide on the fix.
+            # 使用记录的测试失败文本决定如何修复。
             if "expected" in self.last_test_stderr and "fizz" in self.last_test_stderr.lower():
                 self.identified_bug_file = "src/fizz.py"
                 self.identified_fix = (
@@ -605,12 +604,12 @@ class CodingAgentPolicy:
             self.tests_passed = exit_code == 0
             self.state = "HALT"
             return
-        # Default: do not advance.
+        # 默认不推进状态。
         return
 
 
 # ---------------------------------------------------------------------------
-# Tool dispatch on top of the sandbox
+# 沙箱之上的工具分派
 # ---------------------------------------------------------------------------
 
 
@@ -657,7 +656,7 @@ def tool_run_tests(sandbox: Sandbox, argv: tuple[str, ...]) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------------------
-# Bundled fixture management
+# 随附夹具管理
 # ---------------------------------------------------------------------------
 
 
@@ -678,7 +677,7 @@ def prepare_scratch_repo() -> str:
 
 
 # ---------------------------------------------------------------------------
-# The agent runner
+# 智能体运行器
 # ---------------------------------------------------------------------------
 
 
@@ -803,7 +802,7 @@ class AgentRun:
 
 
 # ---------------------------------------------------------------------------
-# Wire-up
+# 装配
 # ---------------------------------------------------------------------------
 
 
@@ -827,14 +826,14 @@ def build_default_chain(budget: int = 4000) -> GateChain:
 
 
 # ---------------------------------------------------------------------------
-# Demo
+# 演示
 # ---------------------------------------------------------------------------
 
 
 def run_demo() -> int:
     repo = prepare_scratch_repo()
-    print("END-TO-END CODING AGENT DEMO")
-    print(f"scratch repo: {repo}")
+    print("端到端编码智能体演示")
+    print(f"暂存仓库：{repo}")
     print("")
 
     chain = build_default_chain(budget=8000)
@@ -856,13 +855,13 @@ def run_demo() -> int:
     report = runner.run()
     jsonl.close()
 
-    print(f"solved={report.solved} halted={report.halted_reason}")
+    print(f"已解决={report.solved} 停止原因={report.halted_reason}")
     print(
         f"steps={len(report.steps)} obs_tokens={report.observation_tokens}/"
         f"{report.max_observation_budget} refused_legal={report.refused_legal_tool_calls}"
     )
     print("")
-    print("steps:")
+    print("步骤：")
     for step in report.steps:
         verdict = "ok" if step.allow and step.exit_code == 0 else f"exit={step.exit_code}"
         print(
@@ -871,11 +870,11 @@ def run_demo() -> int:
         )
 
     print("")
-    print(f"spans emitted: {len(in_mem.spans)} (jsonl at {traces_path})")
+    print(f"已发送 span：{len(in_mem.spans)}（jsonl 位于 {traces_path}）")
     print("")
-    print("--- prometheus exposition (excerpt) ---")
+    print("--- Prometheus 展示文本（节选）---")
     text = prometheus_text(metrics)
-    # Print only the counter + the tool_latency_ms count lines for brevity.
+    # 为简洁起见，只打印计数器和 tool_latency_ms 的 count 行。
     excerpt: list[str] = []
     for line in text.splitlines():
         if (
@@ -888,18 +887,18 @@ def run_demo() -> int:
             excerpt.append(line)
     print("\n".join(excerpt))
 
-    # Hard assertions for the demo: the lesson promises them.
+    # 演示的硬性断言：本课承诺满足这些条件。
     if not report.solved:
-        print(f"ERROR: agent did not solve fixture: {report.halted_reason}", file=sys.stderr)
+        print(f"错误：智能体未解决夹具：{report.halted_reason}", file=sys.stderr)
         return 1
     if len(report.steps) >= 12:
-        print(f"ERROR: agent used too many steps: {len(report.steps)}", file=sys.stderr)
+        print(f"错误：智能体使用的步骤过多：{len(report.steps)}", file=sys.stderr)
         return 1
     if report.observation_tokens > report.max_observation_budget:
-        print("ERROR: observation budget exceeded", file=sys.stderr)
+        print("错误：观察预算已超出", file=sys.stderr)
         return 1
     if report.refused_legal_tool_calls != 0:
-        print("ERROR: agent fired denied tool calls", file=sys.stderr)
+        print("错误：智能体发起了被拒绝的工具调用", file=sys.stderr)
         return 1
     return 0
 
