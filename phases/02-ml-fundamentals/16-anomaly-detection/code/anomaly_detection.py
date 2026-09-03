@@ -202,13 +202,13 @@ def print_separator(title):
 
 
 def demo_zscore():
-    print_separator("Z-SCORE ANOMALY DETECTION")
+    print_separator("Z-SCORE 异常检测")
 
     X, y_true = make_anomaly_data(n_normal=500, n_anomaly=25, seed=42)
-    print(f"Dataset: {X.shape[0]} samples, {(y_true == 1).sum()} anomalies")
+    print(f"数据集: {X.shape[0]} 个样本，{(y_true == 1).sum()} 个异常")
     print()
 
-    print(f"{'Threshold':>10} {'Precision':>10} {'Recall':>10} {'F1':>10} {'Flagged':>10}")
+    print(f"{'阈值':>10} {'精确率':>10} {'召回率':>10} {'F1':>10} {'标记数':>10}")
     print(f"{'-' * 52}")
 
     for threshold in [2.0, 2.5, 3.0, 3.5, 4.0]:
@@ -219,13 +219,13 @@ def demo_zscore():
 
 
 def demo_iqr():
-    print_separator("IQR ANOMALY DETECTION")
+    print_separator("IQR 异常检测")
 
     X, y_true = make_anomaly_data(n_normal=500, n_anomaly=25, seed=42)
-    print(f"Dataset: {X.shape[0]} samples, {(y_true == 1).sum()} anomalies")
+    print(f"数据集: {X.shape[0]} 个样本，{(y_true == 1).sum()} 个异常")
     print()
 
-    print(f"{'Factor':>10} {'Precision':>10} {'Recall':>10} {'F1':>10} {'Flagged':>10}")
+    print(f"{'系数':>10} {'精确率':>10} {'召回率':>10} {'F1':>10} {'标记数':>10}")
     print(f"{'-' * 52}")
 
     for factor in [1.0, 1.5, 2.0, 2.5, 3.0]:
@@ -236,22 +236,22 @@ def demo_iqr():
 
 
 def demo_isolation_forest():
-    print_separator("ISOLATION FOREST (FROM SCRATCH)")
+    print_separator("孤立森林（从零实现）")
 
     X, y_true = make_anomaly_data(n_normal=500, n_anomaly=25, seed=42)
-    print(f"Dataset: {X.shape[0]} samples, {(y_true == 1).sum()} anomalies")
+    print(f"数据集: {X.shape[0]} 个样本，{(y_true == 1).sum()} 个异常")
     print()
 
     iso = IsolationForest(n_estimators=100, max_samples=256, seed=42)
     iso.fit(X)
     scores = iso.anomaly_score(X)
 
-    print("Score statistics:")
-    print(f"  Normal points: mean={scores[y_true == 0].mean():.4f}, std={scores[y_true == 0].std():.4f}")
-    print(f"  Anomaly points: mean={scores[y_true == 1].mean():.4f}, std={scores[y_true == 1].std():.4f}")
+    print("得分统计：")
+    print(f"  正常点: 均值={scores[y_true == 0].mean():.4f}，标准差={scores[y_true == 0].std():.4f}")
+    print(f"  异常点: 均值={scores[y_true == 1].mean():.4f}，标准差={scores[y_true == 1].std():.4f}")
     print()
 
-    print(f"{'Threshold':>10} {'Precision':>10} {'Recall':>10} {'F1':>10} {'Flagged':>10}")
+    print(f"{'阈值':>10} {'精确率':>10} {'召回率':>10} {'F1':>10} {'标记数':>10}")
     print(f"{'-' * 52}")
 
     for threshold in [0.50, 0.55, 0.60, 0.65, 0.70]:
@@ -266,11 +266,11 @@ def demo_isolation_forest():
 
 
 def demo_comparison():
-    print_separator("METHOD COMPARISON")
+    print_separator("方法对比")
 
     X, y_true = make_anomaly_data(n_normal=500, n_anomaly=25, seed=42)
     n_anomalies = int(y_true.sum())
-    print(f"Dataset: {X.shape[0]} samples, {n_anomalies} anomalies")
+    print(f"数据集: {X.shape[0]} 个样本，{n_anomalies} 个异常")
     print()
 
     _, z_scores = zscore_detect(X, threshold=3.0)
@@ -280,17 +280,17 @@ def demo_comparison():
     iso.fit(X)
     iso_scores = iso.anomaly_score(X)
 
-    print(f"Precision@{n_anomalies} (top-k ranked by anomaly score):")
+    print(f"Precision@{n_anomalies}（按异常得分取排名前 k 的样本）：")
     print(f"  Z-score:          {precision_at_k(y_true, z_scores, n_anomalies):.4f}")
     print(f"  IQR:              {precision_at_k(y_true, iqr_scores, n_anomalies):.4f}")
-    print(f"  Isolation Forest: {precision_at_k(y_true, iso_scores, n_anomalies):.4f}")
+    print(f"  孤立森林:         {precision_at_k(y_true, iso_scores, n_anomalies):.4f}")
 
     print()
     z_pred, _ = zscore_detect(X, threshold=3.0)
     iqr_pred, _ = iqr_detect(X, factor=1.5)
     iso_pred = iso_scores > 0.6
 
-    print(f"{'Method':<20} {'Precision':>10} {'Recall':>10} {'F1':>10}")
+    print(f"{'方法':<20} {'精确率':>10} {'召回率':>10} {'F1':>10}")
     print(f"{'-' * 52}")
 
     for name, pred in [("Z-score (t=3.0)", z_pred), ("IQR (f=1.5)", iqr_pred), ("IsoForest (t=0.6)", iso_pred)]:
@@ -299,11 +299,11 @@ def demo_comparison():
 
 
 def demo_multimodal():
-    print_separator("MULTIMODAL DATA (WHERE SIMPLE METHODS STRUGGLE)")
+    print_separator("多模态数据（简单方法失效的场景）")
 
     X, y_true = make_multimodal_data(n_per_cluster=200, n_anomaly=20, seed=42)
     n_anomalies = int(y_true.sum())
-    print(f"Dataset: {X.shape[0]} samples, {n_anomalies} anomalies, 3 clusters")
+    print(f"数据集: {X.shape[0]} 个样本，{n_anomalies} 个异常，3 个簇")
     print()
 
     z_pred, z_scores = zscore_detect(X, threshold=3.0)
@@ -314,7 +314,7 @@ def demo_multimodal():
     iso_scores = iso.anomaly_score(X)
     iso_pred = iso_scores > 0.6
 
-    print(f"{'Method':<20} {'Precision':>10} {'Recall':>10} {'F1':>10} {'P@k':>10}")
+    print(f"{'方法':<20} {'精确率':>10} {'召回率':>10} {'F1':>10} {'P@k':>10}")
     print(f"{'-' * 62}")
 
     for name, pred, scores in [
@@ -327,9 +327,9 @@ def demo_multimodal():
         print(f"{name:<20} {prec:>10.4f} {rec:>10.4f} {f1:>10.4f} {pak:>10.4f}")
 
     print()
-    print("Z-score struggles with multimodal data (points between clusters")
-    print("look normal per feature but are anomalous in the joint space).")
-    print("Isolation Forest handles multiple clusters naturally.")
+    print("Z-score 在多模态数据上表现不佳（位于簇与簇之间的点")
+    print("在单一特征上看正常，但在联合空间中实为异常）。")
+    print("孤立森林能够自然地处理多个簇。")
 
 
 if __name__ == "__main__":
