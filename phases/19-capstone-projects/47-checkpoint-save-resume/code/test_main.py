@@ -1,4 +1,4 @@
-"""Tests for full checkpoint, atomic save, and sharded resume."""
+"""完整检查点、原子保存与分片恢复的测试。"""
 
 from __future__ import annotations
 
