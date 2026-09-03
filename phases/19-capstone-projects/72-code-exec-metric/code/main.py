@@ -1,11 +1,11 @@
-"""Code execution metric: extract, sandbox subprocess, pass-at-k.
+"""代码执行指标：抽取、沙箱子进程、pass-at-k。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- lesson 70 (task spec format) for code_exec task shape
-- lesson 71 (classical metrics) for the dispatcher pattern
+概念参考：
+- ./docs/en.md（本课）
+- lesson 70（任务规格格式）中 code_exec 任务的结构
+- lesson 71（经典指标）中的分发器模式
 
-Stdlib + numpy. Run: python3 code/main.py
+依赖标准库 + numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -150,7 +150,7 @@ def _build_runner(code: str, assertions: list[str]) -> str:
 
 def run_candidate(code: str, assertions: list[str], timeout_s: float = DEFAULT_TIMEOUT_S) -> ExecResult:
     if not assertions:
-        return ExecResult(0.0, EXIT_ERROR, 0, 0, detail="no assertions provided")
+        return ExecResult(0.0, EXIT_ERROR, 0, 0, detail="未提供断言")
     timeout_s = min(max(0.1, float(timeout_s)), MAX_TIMEOUT_S)
     script = _build_runner(code, assertions)
     try:

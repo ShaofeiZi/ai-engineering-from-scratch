@@ -1,4 +1,4 @@
-"""Tests for code extraction, sandbox subprocess execution, and pass-at-k."""
+"""代码提取、沙箱子进程执行与 pass-at-k 的测试。"""
 
 from __future__ import annotations
 
