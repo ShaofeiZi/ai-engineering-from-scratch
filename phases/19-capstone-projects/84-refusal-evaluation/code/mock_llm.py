@@ -1,8 +1,8 @@
-"""Mock LLM policies used by the refusal evaluator.
+"""refusal 评估器使用的 mock LLM 策略。
 
-Each policy is a callable: (prompt: str) -> str. The response embeds an
-explicit confidence tag like [conf=0.85] which the evaluator parses for
-calibration. No network calls, no real model.
+每个策略是一个可调用对象：(prompt: str) -> str。响应中嵌入
+显式的置信度标签，如 [conf=0.85]，由评估器解析用于
+校准。无网络调用，无真实模型。
 """
 
 from __future__ import annotations

@@ -1,10 +1,10 @@
-"""Refusal evaluation framework.
+"""Refusal 评估框架。
 
-Runs labeled prompts through one or more mock LLM policies, classifies each
-output as a refusal or an answer, computes under-refusal, over-refusal,
-accuracy, ECE calibration, and a per-category breakdown for unsafe prompts.
+将带标签的 prompt 通过一个或多个 mock LLM 策略运行，将每条
+输出分类为 refusal 或回答，计算 under-refusal、over-refusal、
+准确率、ECE 校准，以及不安全 prompt 的按类别拆分。
 
-Run: python3 main.py
+运行：python3 main.py
 """
 
 from __future__ import annotations
@@ -156,7 +156,7 @@ def demo() -> int:
     reports = []
     for name, pol in policies().items():
         reports.append(evaluate_policy(name, pol))
-    print("Refusal evaluation across mock policies")
+    print("跨 mock 策略的 refusal 评估")
     print()
     print(f"  {'policy':22} {'acc':>6} {'under':>7} {'over':>7} {'ece':>6}")
     for r in reports:
@@ -165,13 +165,13 @@ def demo() -> int:
             f"{r['over_refusal']:>7.2f} {r['ece']:>6.2f}"
         )
     print()
-    print("  per-category under-refusal (strict policy):")
+    print("  各类别 under-refusal（严格策略）：")
     strict = next(r for r in reports if r["policy"] == "MockPolicyStrict")
     for cat, rate in sorted(strict["per_category_under_refusal"].items()):
         print(f"    {cat:22} {rate:.2f}")
 
     path = write_report(reports)
-    print(f"\n  artifact written to {path}")
+    print(f"\n  产物已写入 {path}")
 
     return 0
 
