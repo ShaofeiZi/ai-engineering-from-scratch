@@ -1,12 +1,11 @@
-"""Cache-aware multi-region router simulator — stdlib Python.
+"""cache 感知的多区域路由器模拟器，使用 Python stdlib。
 
-Three strategies on the same workload:
-  ROUND_ROBIN : blind, ignores KV cache state
-  REGIONAL    : cache-aware within region; round-robin across regions
-  GLOBAL      : cache-aware globally; considers network RTT
+在相同工作负载上比较三种策略：
+  ROUND_ROBIN ：盲目轮询，忽略 KV cache 状态
+  REGIONAL    ：区域内 cache 感知，区域间轮询
+  GLOBAL      ：全局 cache 感知，并考虑网络 RTT
 
-Reports cache hit rate, TTFT P50/P99, and cross-region bill.
-Pedagogical: timings are illustrative.
+报告 cache 命中率、TTFT P50/P99 和跨区域费用。用于教学：时序仅为示意。
 """
 
 from __future__ import annotations
@@ -131,26 +130,26 @@ def simulate(strategy: str, reqs: list[Request]) -> dict:
 
 
 def report(row: dict) -> None:
-    print(f"{row['strategy']:13}  hit={row['hit_rate']*100:5.1f}%  "
-          f"mean={row['mean_ttft']:5.0f}ms  P50={row['p50_ttft']:5.0f}ms  "
-          f"P99={row['p99_ttft']:5.0f}ms  cross={row['crossregion']:4}  "
-          f"cross_cost=${row['crossregion_cost']:.3f}")
+    print(f"{row['strategy']:13}  命中={row['hit_rate']*100:5.1f}%  "
+          f"平均={row['mean_ttft']:5.0f}毫秒  P50={row['p50_ttft']:5.0f}毫秒  "
+          f"P99={row['p99_ttft']:5.0f}毫秒  跨区域={row['crossregion']:4}  "
+          f"跨区域成本=${row['crossregion_cost']:.3f}")
 
 
 def main() -> None:
     print("=" * 80)
-    print("MULTI-REGION LLM ROUTING — three strategies, 1000 requests")
+    print("多区域 LLM 路由 — 三种策略，1000 个请求")
     print("=" * 80)
     base = make_workload()
-    header = f"{'Strategy':13}  hit         mean     P50      P99      cross   cost"
+    header = f"{'策略':13}  命中         平均     P50      P99      跨区域   成本"
     print(header)
     print("-" * len(header))
     for strategy in ("ROUND_ROBIN", "REGIONAL", "GLOBAL"):
         reqs = [Request(origin_region=r.origin_region, prefix_hash=r.prefix_hash) for r in base]
         report(simulate(strategy, reqs))
 
-    print("\nRead: REGIONAL beats ROUND_ROBIN on cache hit. GLOBAL is")
-    print("only better when prefill cost dominates network latency.")
+    print("\n解读：REGIONAL 的 cache 命中率优于 ROUND_ROBIN。只有当 prefill 成本")
+    print("高于网络延迟时，GLOBAL 才会更好。")
 
 
 if __name__ == "__main__":
