@@ -1,40 +1,38 @@
 /**
- * Prompt + semantic caching — TypeScript port.
+ * 提示缓存与语义缓存——TypeScript 移植版。
  *
- * Three pieces:
- *   1. LRU cache with TTL (the L2 prompt-prefix layer's interface — provider does
- *      this; we model it).
- *   2. Semantic cache with cosine-similarity threshold (L1 layer). Uses a
- *      deterministic word-hash "embedding" so the demo is reproducible and
- *      requires no model. Swap embed() with a real embedding call in prod.
- *   3. Two-layer simulator matching main.py, exercising the parallel-write
- *      anti-pattern with 5-min vs 1-hour TTL premiums.
+ * 分为三部分：
+ *   1. 带 TTL 的 LRU 缓存（L2 提示前缀层接口——由提供商实现，此处进行建模）。
+ *   2. 带余弦相似度阈值的语义缓存（L1 层）。使用确定性词哈希“嵌入”，
+ *      使演示可复现且无需模型。生产环境中可将 embed() 替换为真实嵌入调用。
+ *   3. 与 main.py 一致的双层模拟器，用 5 分钟与 1 小时 TTL 的溢价演示
+ *      并行写入反模式。
  *
- * Pricing snapshot: 2026-04, captured from docs.anthropic.com / platform.openai.com
- * via docs/en.md. Verify rate cards before quoting.
+ * 定价快照：2026-04，通过 docs/en.md 记录自 docs.anthropic.com /
+ * platform.openai.com。引用前请核对价目表。
  *
- * Citations:
+ * 参考资料：
  *   - Anthropic prompt-caching: docs.anthropic.com/en/docs/build-with-claude/prompt-caching
  *   - OpenAI prompt-caching: platform.openai.com/docs/guides/prompt-caching
- *   - ProjectDiscovery 7%→74% by moving dynamic content out of prefix
+ *   - ProjectDiscovery 将动态内容移出前缀后，命中率从 7% 提升至 74%
  *     https://projectdiscovery.io/blog/how-we-cut-llm-cost-with-prompt-caching
  *
- * Runs on Node 20+ stdlib. No npm deps.
+ * 使用 Node 20+ 标准库运行，无 npm 依赖。
  */
 
 import { createHash } from "node:crypto";
 
-// -- Pricing constants (2026-04) -------------------------------------------
+// -- 定价常量（2026-04） --------------------------------------------------
 
-const BASE_INPUT = 3.0; // $/M input tokens (Claude Sonnet class)
-const BASE_OUTPUT = 15.0; // $/M output tokens
-const CACHED_INPUT = 0.3; // ~10x cheaper read
+const BASE_INPUT = 3.0; // 每百万输入 token 的美元价格（Claude Sonnet 级别）
+const BASE_OUTPUT = 15.0; // 每百万输出 token 的美元价格
+const CACHED_INPUT = 0.3; // 读取成本约低 10 倍
 const CACHE_WRITE_5MIN = 1.25 * BASE_INPUT;
 const CACHE_WRITE_1HR = 2.0 * BASE_INPUT;
 
-// -- LRU cache with TTL ----------------------------------------------------
+// -- 带 TTL 的 LRU 缓存 ---------------------------------------------------
 
-// Map preserves insertion order in JS; we exploit that for LRU.
+// JS 的 Map 会保留插入顺序，这里利用该特性实现 LRU。
 class LRUCache<K, V> {
   private readonly map = new Map<K, { value: V; expiresAt: number }>();
   private readonly capacity: number;
@@ -42,7 +40,7 @@ class LRUCache<K, V> {
   private readonly now: () => number;
 
   constructor(capacity: number, ttlMs: number, now: () => number = Date.now) {
-    if (capacity <= 0) throw new Error("capacity must be positive");
+    if (capacity <= 0) throw new Error("容量必须为正数");
     this.capacity = capacity;
     this.ttlMs = ttlMs;
     this.now = now;
@@ -55,7 +53,7 @@ class LRUCache<K, V> {
       this.map.delete(key);
       return undefined;
     }
-    // Refresh LRU position.
+    // 刷新 LRU 位置。
     this.map.delete(key);
     this.map.set(key, entry);
     return entry.value;
@@ -79,11 +77,11 @@ class LRUCache<K, V> {
   }
 }
 
-// -- Semantic cache --------------------------------------------------------
+// -- 语义缓存 -------------------------------------------------------------
 
-// Toy deterministic embedding: bucket each lowercased word into 64 dims by hash.
-// This is enough to demonstrate cosine threshold behavior; replace with a real
-// embedding provider for production (text-embedding-3-small, voyage-3, etc.).
+// 简化的确定性嵌入：按哈希将每个小写单词分配到 64 个维度之一。
+// 这足以演示余弦阈值行为；生产环境中应替换为真实嵌入提供商
+// （如 text-embedding-3-small、voyage-3）。
 const EMBED_DIM = 64;
 
 function embed(text: string): Float32Array {
@@ -96,11 +94,11 @@ function embed(text: string): Float32Array {
   for (const tok of tokens) {
     const h = createHash("sha256").update(tok).digest();
     const idx = h.readUInt16BE(0) % EMBED_DIM;
-    // Sign bit from second pair so we get spread, not pure positive.
+    // 从第二组字节取符号位，让结果分散而非全为正数。
     const sign = h[2] & 1 ? 1 : -1;
     vec[idx] += sign;
   }
-  // L2-normalize so cosine = dot product.
+  // 进行 L2 归一化，使余弦相似度等于点积。
   let norm = 0;
   for (let i = 0; i < EMBED_DIM; i++) norm += vec[i] * vec[i];
   norm = Math.sqrt(norm);
@@ -123,13 +121,13 @@ class SemanticCache {
 
   constructor(threshold = 0.95, capacity = 1000) {
     if (threshold < 0 || threshold > 1) {
-      throw new Error("threshold must be in [0,1]");
+      throw new Error("阈值必须位于 [0,1] 区间");
     }
     this.threshold = threshold;
     this.capacity = capacity;
   }
 
-  // Returns best match above threshold, or undefined.
+  // 返回高于阈值的最佳匹配；若没有则返回 undefined。
   lookup(prompt: string): { response: string; similarity: number } | undefined {
     const q = embed(prompt);
     let bestSim = -1;
@@ -157,9 +155,9 @@ class SemanticCache {
   }
 }
 
-// -- Workload + simulator --------------------------------------------------
+// -- 工作负载与模拟器 -----------------------------------------------------
 
-// Mulberry32 PRNG.
+// Mulberry32 伪随机数生成器。
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
   return function () {
@@ -187,7 +185,7 @@ function makeWorkload(n = 500, seed = 7): Request[] {
   const rng = makeRng(seed);
   const reqs: Request[] = [];
   const prefixes = Array.from({ length: 12 }, (_, i) => `prefix_${i}`);
-  // A small set of FAQ-style canonical queries — drives L1 hit rate.
+  // 一小组 FAQ 风格的规范查询，用于产生 L1 命中。
   const faqs = [
     "what is your refund policy",
     "how do I reset my password",
@@ -238,22 +236,22 @@ type SimResult = {
 };
 
 function simulate(reqs: readonly Request[], cfg: Config): SimResult {
-  // L2 modeled as a set of prefix hashes seen "long enough ago" to be cached.
-  // L2 LRU here exists to demonstrate the API; the simulator uses a simpler
-  // set + parallel-wave flag (matches main.py's semantics).
+  // 将 L2 建模为一组在足够早之前见过、因而已被缓存的前缀哈希。
+  // 此处的 L2 LRU 用于演示 API；模拟器使用更简单的集合与并行波次标志
+  // （与 main.py 的语义一致）。
   const _l2Lru = new LRUCache<string, true>(
     1024,
     cfg.ttl === "5min" ? 5 * 60_000 : 60 * 60_000,
   );
-  void _l2Lru; // referenced so the cache is exercised; behavior tied to set below
+  void _l2Lru; // 保持引用以实际运行缓存；行为由下方集合决定
   const l2Cache = new Set<string>();
   const semantic = new SemanticCache(cfg.l1Threshold);
 
-  // Pre-warm semantic cache with canned answers for FAQ keys so we get hits.
-  semantic.store("what is your refund policy", "Refunds within 30 days.");
-  semantic.store("how do I reset my password", "Use the forgot-password link.");
-  semantic.store("what are your office hours", "Mon–Fri 9–5 PT.");
-  semantic.store("how do I contact support", "Email support@example.com.");
+  // 用 FAQ 键对应的预设答案预热语义缓存，以产生命中。
+  semantic.store("what is your refund policy", "可在 30 天内退款。");
+  semantic.store("how do I reset my password", "请使用“忘记密码”链接。");
+  semantic.store("what are your office hours", "工作时间为周一至周五，太平洋时间 9 点至 17 点。");
+  semantic.store("how do I contact support", "请发送邮件至 support@example.com。");
 
   let l2Writes = 0;
   let l2Reads = 0;
@@ -262,11 +260,10 @@ function simulate(reqs: readonly Request[], cfg: Config): SimResult {
   const rng = makeRng(11);
 
   for (const r of reqs) {
-    // L1 layer.
+    // L1 层。
     if (cfg.l1Enabled) {
-      // Inject randomized hit ratio per the simulator contract:
-      // l1HitProb fraction of requests is "semantically close enough" to a
-      // pre-warmed FAQ entry; we look it up to keep the path real.
+      // 按模拟器契约注入随机命中率：l1HitProb 比例的请求与某个预热 FAQ 条目
+      // “语义足够接近”；通过实际查询来保持路径真实。
       if (rng() < cfg.l1HitProb) {
         const hit = semantic.lookup(r.semanticKey);
         if (hit) {
@@ -276,7 +273,7 @@ function simulate(reqs: readonly Request[], cfg: Config): SimResult {
       }
     }
 
-    // L2 layer.
+    // L2 层。
     if (cfg.l2Enabled) {
       if (l2Cache.has(r.prefixHash)) {
         l2Reads++;
@@ -294,7 +291,7 @@ function simulate(reqs: readonly Request[], cfg: Config): SimResult {
       cost += (r.promptTokens / 1e6) * BASE_INPUT;
     }
 
-    // Output cost — held constant at 200 tokens.
+    // 输出成本——固定为 200 个 token。
     cost += (200 / 1e6) * BASE_OUTPUT;
   }
 
@@ -306,22 +303,22 @@ function report(label: string, cfg: Config, reqs: readonly Request[]): void {
   const padLabel = label.padEnd(45);
   const cost = `$${res.cost.toFixed(2)}`.padStart(8);
   console.log(
-    `${padLabel}  cost=${cost}  L1=${String(res.l1Hits).padStart(4)}  ` +
-      `L2_reads=${String(res.l2Reads).padStart(4)}  ` +
-      `L2_writes=${String(res.l2Writes).padStart(4)}`,
+    `${padLabel}  成本=${cost}  L1=${String(res.l1Hits).padStart(4)}  ` +
+      `L2_读取=${String(res.l2Reads).padStart(4)}  ` +
+      `L2_写入=${String(res.l2Writes).padStart(4)}`,
   );
 }
 
 function main(): void {
   console.log("=".repeat(95));
   console.log(
-    "PROMPT + SEMANTIC CACHING — 500 requests, Claude Sonnet-class pricing (2026-04)",
+    "提示缓存 + 语义缓存——500 个请求，Claude Sonnet 级别定价（2026-04）",
   );
   console.log("=".repeat(95));
   const reqs = makeWorkload();
 
   report(
-    "NO CACHING",
+    "无缓存",
     {
       l1Enabled: false,
       l2Enabled: false,
@@ -333,7 +330,7 @@ function main(): void {
     reqs,
   );
   report(
-    "L2 5-min, parallel penalty active",
+    "L2 5 分钟，并行惩罚生效",
     {
       l1Enabled: false,
       l2Enabled: true,
@@ -345,7 +342,7 @@ function main(): void {
     reqs,
   );
   report(
-    "L2 5-min, parallel fixed (serialize first)",
+    "L2 5 分钟，已修复并行问题（先串行）",
     {
       l1Enabled: false,
       l2Enabled: true,
@@ -357,7 +354,7 @@ function main(): void {
     reqs,
   );
   report(
-    "L2 1-hour + L1 semantic 30%",
+    "L2 1 小时 + L1 语义命中 30%",
     {
       l1Enabled: true,
       l2Enabled: true,
@@ -369,7 +366,7 @@ function main(): void {
     reqs,
   );
   report(
-    "L2 1-hour + L1 semantic 70% (structured FAQ)",
+    "L2 1 小时 + L1 语义命中 70%（结构化 FAQ）",
     {
       l1Enabled: true,
       l2Enabled: true,
@@ -381,29 +378,29 @@ function main(): void {
     reqs,
   );
 
-  // Demonstrate the LRU + TTL primitive directly so the API is visible.
-  console.log("\n--- LRU+TTL primitive demo ---");
+  // 直接演示 LRU + TTL 原语，让 API 清晰可见。
+  console.log("\n--- LRU+TTL 原语演示 ---");
   const lru = new LRUCache<string, number>(2, 1000);
   lru.set("a", 1);
   lru.set("b", 2);
-  lru.set("c", 3); // evicts "a"
-  console.log(`after inserting a,b,c with cap=2: has(a)=${lru.has("a")}, has(b)=${lru.has("b")}, has(c)=${lru.has("c")}`);
+  lru.set("c", 3); // 逐出 "a"
+  console.log(`容量为 2 时插入 a、b、c 后：has(a)=${lru.has("a")}，has(b)=${lru.has("b")}，has(c)=${lru.has("c")}`);
 
-  // Demonstrate semantic cache cosine behavior — same-meaning paraphrases.
-  console.log("\n--- Semantic cache cosine threshold demo ---");
+  // 演示语义缓存对同义改写的余弦相似度行为。
+  console.log("\n--- 语义缓存余弦阈值演示 ---");
   const sc = new SemanticCache(0.5);
-  sc.store("how do I reset my password", "Use forgot-password link.");
+  sc.store("how do I reset my password", "请使用“忘记密码”链接。");
   const near = sc.lookup("how to reset password please");
   const far = sc.lookup("what is the capital of France");
   console.log(
-    `near sim=${(near?.similarity ?? 0).toFixed(3)} response=${near?.response ?? "<miss>"}`,
+    `近似查询 相似度=${(near?.similarity ?? 0).toFixed(3)} 响应=${near?.response ?? "<未命中>"}`,
   );
   console.log(
-    `far  sim=${(far?.similarity ?? 0).toFixed(3)} response=${far?.response ?? "<miss>"}`,
+    `无关查询 相似度=${(far?.similarity ?? 0).toFixed(3)} 响应=${far?.response ?? "<未命中>"}`,
   );
 
   console.log(
-    "\nRead: caching is a protocol. Structure your prompts and batching for it to pay off.",
+    "\n解读：缓存是一套协议。合理组织提示词和批处理方式，才能获得收益。",
   );
 }
 
