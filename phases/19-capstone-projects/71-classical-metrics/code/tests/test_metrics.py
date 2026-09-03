@@ -1,4 +1,4 @@
-"""Tests for exact_match, F1, BLEU-4, ROUGE-L, accuracy, and dispatch."""
+"""exact_match、F1、BLEU-4、ROUGE-L、accuracy 与分发逻辑的测试。"""
 
 from __future__ import annotations
 

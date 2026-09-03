@@ -1,10 +1,10 @@
-"""Classical metrics: exact_match, F1, BLEU-4, ROUGE-L, accuracy.
+"""经典指标：exact_match、F1、BLEU-4、ROUGE-L、accuracy。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- lesson 70 (task spec format) for the metric_name field
+概念参考：
+- ./docs/en.md（本课）
+- lesson 70（任务规格格式）中的 metric_name 字段
 
-Stdlib + numpy. Run: python3 code/main.py
+依赖标准库 + numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def f1_score(prediction: str, target: str) -> float:
 
 def _ngram_counts(tokens: list[str], n: int) -> Counter:
     if n <= 0:
-        raise ValueError("n must be positive")
+        raise ValueError("n 必须为正数")
     if len(tokens) < n:
         return Counter()
     return Counter(tuple(tokens[i:i + n]) for i in range(len(tokens) - n + 1))
@@ -156,7 +156,7 @@ def score(metric_name: str, prediction: str, targets: list[str]) -> float:
         return max(bleu4(prediction, t) for t in targets)
     if metric_name == "rouge_l":
         return max(rouge_l(prediction, t) for t in targets)
-    raise ValueError(f"unknown metric_name: {metric_name}")
+    raise ValueError(f"未知的 metric_name：{metric_name}")
 
 
 def corpus_mean(scores: list[float]) -> float:
@@ -167,7 +167,7 @@ def corpus_mean(scores: list[float]) -> float:
 
 def corpus_bleu(predictions: list[str], references: list[str], max_n: int = 4) -> float:
     if len(predictions) != len(references):
-        raise ValueError("predictions and references must align")
+        raise ValueError("predictions 与 references 长度必须一致")
     if not predictions:
         return 0.0
     total_cand_len = 0
@@ -212,18 +212,18 @@ def _reference_examples() -> list[dict]:
 
 
 def demo() -> int:
-    print("metric demos (using example vectors):")
+    print("指标演示（使用示例向量）：")
     failures = 0
     for ex in _reference_examples():
         actual = score(ex["metric"], ex["pred"], ex["targets"])
         if "expected" in ex:
             ok = abs(actual - ex["expected"]) < 1e-9
-            print(f"  {ex['metric']:10s} pred={ex['pred']!r:30s} -> {actual:.4f} expected={ex['expected']}")
+            print(f"  {ex['metric']:10s} pred={ex['pred']!r:30s} -> {actual:.4f} 预期={ex['expected']}")
             if not ok:
                 failures += 1
         elif "expected_approx" in ex:
             ok = abs(actual - ex["expected_approx"]) < 0.05
-            print(f"  {ex['metric']:10s} pred={ex['pred']!r:30s} -> {actual:.4f} approx={ex['expected_approx']}")
+            print(f"  {ex['metric']:10s} pred={ex['pred']!r:30s} -> {actual:.4f} 近似={ex['expected_approx']}")
             if not ok:
                 failures += 1
         elif "expected_lt" in ex:
@@ -234,7 +234,7 @@ def demo() -> int:
     preds = ["the cat sat on the mat", "the runner won the race"]
     refs = ["the cat sat on the mat", "the runner crossed the finish line first"]
     corpus = corpus_bleu(preds, refs)
-    print(f"  corpus_bleu over 2 examples -> {corpus:.4f}")
+    print(f"  2 个示例的 corpus_bleu -> {corpus:.4f}")
     return 0 if failures == 0 else 1
 
 
