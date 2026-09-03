@@ -98,7 +98,7 @@ def accumulate_d_grad(x, c, target, D, num_classes, grads):
 
 
 def update_g(noise, cs, G, D, num_classes, lr, l1_w=0.0, targets=None):
-    """Non-saturating G loss + optional conditional L1 toward a target."""
+    """非饱和 G 损失，以及可选的朝向目标的条件 L1 损失。"""
     grads = init_grads(G)
     for i, z in enumerate(noise):
         c = cs[i]
@@ -160,7 +160,7 @@ def main():
     D = init_mlp(1 + num_classes, hidden, 1, rng)
 
     batch, g_lr, d_lr = 32, 0.02, 0.01
-    print("=== conditional GAN on two-mode mixture (class 0 -> -2, class 1 -> +2) ===")
+    print("=== 双峰混合上的条件 GAN（类别 0 -> -2，类别 1 -> +2）===")
     for step in range(1, 601):
         reals = sample_real_conditional(batch, num_classes, rng)
         cs = [c for _, c in reals]
@@ -184,15 +184,15 @@ def main():
             print(line)
 
     print()
-    print("=== sampling per class ===")
+    print("=== 按类别采样 ===")
     for c in range(num_classes):
         z_batch = [[rng.gauss(0, 1) for _ in range(z_dim)] for _ in range(6)]
         outs = [g_forward(z, c, G, num_classes)[0][0] for z in z_batch]
-        print(f"  class {c}: " + " ".join(f"{v:+.2f}" for v in outs))
+        print(f"  类别 {c}：" + " ".join(f"{v:+.2f}" for v in outs))
 
     print()
-    print("takeaway: G(z, c) learns a class-specific sampler.")
-    print("          same architecture, one extra input, totally different samples.")
+    print("要点：G(z, c) 学会了针对特定类别的采样器。")
+    print("      架构相同，只增加一个输入，就能生成完全不同的样本。")
 
 
 if __name__ == "__main__":
