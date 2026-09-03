@@ -63,7 +63,7 @@ class OpenVocabSeg(ABC):
 
 
 class StubOpenVocabSeg(OpenVocabSeg):
-    """Pipeline-testable stand-in for SAM 3 / Grounded SAM 2."""
+    """可在流水线中测试的 SAM 3 / Grounded SAM 2 替代实现。"""
 
     def detect(self, image, concept):
         h, w = image.shape[:2]
@@ -107,18 +107,18 @@ def main():
     ]:
         print(f"  {s!r:45s} -> {split_concepts(s)}")
 
-    print("\n[rle encode/decode roundtrip]")
+    print("\n[RLE 编码/解码往返测试]")
     mask = (np.random.default_rng(0).random((16, 16)) > 0.5).astype(np.uint8)
     rle = rle_encode(mask)
     restored = rle_decode(rle, mask.shape)
     diff = int(np.abs(mask.astype(int) - restored.astype(int)).sum())
-    print(f"  mask shape {mask.shape}  rle length {len(rle)}  roundtrip diff {diff}")
+    print(f"  掩码形状 {mask.shape}  RLE 长度 {len(rle)}  往返差异 {diff}")
 
-    print("\n[multi-concept detection on stub]")
+    print("\n[在替代实现上进行多概念检测]")
     image = np.zeros((240, 320, 3), dtype=np.uint8)
     stub = StubOpenVocabSeg()
     detections = run_multi_concept(stub, image, "oranges, apples")
-    print(f"  {len(detections)} detections")
+    print(f"  {len(detections)} 个检测结果")
     for d in detections:
         summary = {
             "concept": d.concept,
