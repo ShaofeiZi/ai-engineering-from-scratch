@@ -240,19 +240,19 @@ def train_test_split(X, y, test_ratio=0.2, seed=42):
 
 def demo_basic_knn():
     print("=" * 65)
-    print("KNN CLASSIFICATION: THE BASICS")
+    print("KNN 分类：基础入门")
     print("=" * 65)
     print()
 
     X, y = generate_classification_data(200, seed=42)
     X_train, y_train, X_test, y_test = train_test_split(X, y)
 
-    print(f"  Dataset: {len(X)} samples, 2 features, 3 classes")
-    print(f"  Train: {len(X_train)}  Test: {len(X_test)}")
+    print(f"  数据集：{len(X)} 个样本，2 个特征，3 个类别")
+    print(f"  训练集：{len(X_train)}  测试集：{len(X_test)}")
     print()
 
     k_values = [1, 3, 5, 7, 11, 15, 25, 50]
-    print(f"  {'K':>6s}  {'Train Acc':>10s}  {'Test Acc':>10s}")
+    print(f"  {'K':>6s}  {'训练准确率':>10s}  {'测试准确率':>10s}")
     print(f"  {'-' * 6}  {'-' * 10}  {'-' * 10}")
 
     for k in k_values:
@@ -263,14 +263,14 @@ def demo_basic_knn():
         print(f"  {k:>6d}  {train_acc:>10.4f}  {test_acc:>10.4f}")
 
     print()
-    print("  K=1: perfect training accuracy (memorization), lower test accuracy.")
-    print("  Increasing K smooths the decision boundary.")
+    print("  K=1：训练准确率完美（记忆化），测试准确率较低。")
+    print("  增大 K 可使决策边界更平滑。")
     print()
 
 
 def demo_distance_metrics():
     print("=" * 65)
-    print("DISTANCE METRICS: SAME DATA, DIFFERENT NEIGHBORS")
+    print("距离度量：相同数据，不同邻居")
     print("=" * 65)
     print()
 
@@ -285,9 +285,9 @@ def demo_distance_metrics():
     ]
 
     k = 5
-    print(f"  K = {k}, features standardized")
+    print(f"  K = {k}，特征已标准化")
     print()
-    print(f"  {'Metric':<20s}  {'Test Accuracy':>14s}")
+    print(f"  {'度量':<20s}  {'测试准确率':>14s}")
     print(f"  {'-' * 20}  {'-' * 14}")
 
     for name, dist_fn in metrics:
@@ -299,23 +299,23 @@ def demo_distance_metrics():
     print()
 
     query = X_test[0]
-    print(f"  Query point: [{query[0]:.3f}, {query[1]:.3f}]")
-    print(f"  True label: {y_test[0]}")
+    print(f"  查询点：[{query[0]:.3f}, {query[1]:.3f}]")
+    print(f"  真实标签：{y_test[0]}")
     print()
 
     for name, dist_fn in metrics:
         knn = KNN(k=k, distance_fn=dist_fn, task="classification")
         knn.fit(X_train, y_train)
         pred, neighbors = knn.predict_with_neighbors(query)
-        print(f"  {name}: prediction = {pred}")
+        print(f"  {name}：预测 = {pred}")
         for dist, idx, label in neighbors:
-            print(f"    neighbor idx={idx}, label={label}, dist={dist:.4f}")
+            print(f"    邻居索引={idx}，标签={label}，距离={dist:.4f}")
         print()
 
 
 def demo_weighted_knn():
     print("=" * 65)
-    print("WEIGHTED vs UNWEIGHTED KNN")
+    print("加权 KNN 与不加权 KNN")
     print("=" * 65)
     print()
 
@@ -324,7 +324,7 @@ def demo_weighted_knn():
     X_train, y_train, X_test, y_test = train_test_split(X_scaled, y)
 
     k_values = [3, 7, 15, 25]
-    print(f"  {'K':>6s}  {'Unweighted':>12s}  {'Weighted':>12s}  {'Diff':>8s}")
+    print(f"  {'K':>6s}  {'不加权':>12s}  {'加权':>12s}  {'差值':>8s}")
     print(f"  {'-' * 6}  {'-' * 12}  {'-' * 12}  {'-' * 8}")
 
     for k in k_values:
@@ -338,14 +338,14 @@ def demo_weighted_knn():
         print(f"  {k:>6d}  {acc_uw:>12.4f}  {acc_w:>12.4f}  {diff:>+8.4f}")
 
     print()
-    print("  Weighted KNN is less sensitive to large K values.")
-    print("  Distant neighbors contribute less, so increasing K is safer.")
+    print("  加权 KNN 对较大的 K 值不那么敏感。")
+    print("  远处的邻居贡献更小，因此增大 K 更安全。")
     print()
 
 
 def demo_regression():
     print("=" * 65)
-    print("KNN REGRESSION: APPROXIMATING sin(x)")
+    print("KNN 回归：逼近 sin(x)")
     print("=" * 65)
     print()
 
@@ -353,10 +353,10 @@ def demo_regression():
     X_train, y_train, X_test, y_test = train_test_split(X, y)
 
     k_values = [1, 3, 5, 10, 20, 50]
-    print(f"  Target: y = sin(x) + noise")
-    print(f"  Train: {len(X_train)}  Test: {len(X_test)}")
+    print(f"  目标：y = sin(x) + 噪声")
+    print(f"  训练集：{len(X_train)}  测试集：{len(X_test)}")
     print()
-    print(f"  {'K':>6s}  {'Unweighted MSE':>16s}  {'Weighted MSE':>14s}")
+    print(f"  {'K':>6s}  {'不加权 MSE':>16s}  {'加权 MSE':>14s}")
     print(f"  {'-' * 6}  {'-' * 16}  {'-' * 14}")
 
     for k in k_values:
@@ -369,15 +369,15 @@ def demo_regression():
         print(f"  {k:>6d}  {mse_uw:>16.6f}  {mse_w:>14.6f}")
 
     print()
-    print("  K=1 overfits (follows noise). Large K underfits (over-smooths).")
-    print("  Weighted KNN smooths predictions while respecting local structure.")
+    print("  K=1 会过拟合（跟随噪声）。K 太大会欠拟合（过度平滑）。")
+    print("  加权 KNN 在平滑预测的同时保留局部结构。")
     print()
 
     knn = KNN(k=5, task="regression", weighted=True)
     knn.fit(X_train, y_train)
 
-    print("  Sample predictions (K=5, weighted):")
-    print(f"  {'x':>8s}  {'True y':>8s}  {'Pred y':>8s}  {'Error':>8s}")
+    print("  预测示例（K=5，加权）：")
+    print(f"  {'x':>8s}  {'真实 y':>8s}  {'预测 y':>8s}  {'误差':>8s}")
     print(f"  {'-' * 8}  {'-' * 8}  {'-' * 8}  {'-' * 8}")
     for i in range(min(10, len(X_test))):
         pred = knn.predict([X_test[i]])[0]
@@ -388,17 +388,17 @@ def demo_regression():
 
 def demo_curse_of_dimensionality():
     print("=" * 65)
-    print("CURSE OF DIMENSIONALITY")
+    print("维度灾难")
     print("=" * 65)
     print()
 
     dims = [2, 5, 10, 20, 50, 100]
     n_points = 200
 
-    print("  Part 1: Distance ratio convergence")
-    print(f"  {n_points} random uniform points in [0, 1]^d")
+    print("  第一部分：距离比值的收敛")
+    print(f"  在 [0, 1]^d 中生成 {n_points} 个随机均匀分布的点")
     print()
-    print(f"  {'Dimensions':>12s}  {'Max/Min dist':>14s}  {'Mean dist':>10s}  {'Std dist':>10s}")
+    print(f"  {'维度':>12s}  {'最大/最小距离':>14s}  {'平均距离':>10s}  {'距离标准差':>10s}")
     print(f"  {'-' * 12}  {'-' * 14}  {'-' * 10}  {'-' * 10}")
 
     for d in dims:
@@ -422,15 +422,15 @@ def demo_curse_of_dimensionality():
             print(f"  {d:>12d}  {ratio:>14.4f}  {mean_d:>10.4f}  {std_d:>10.4f}")
 
     print()
-    print("  As dimensions grow, max/min ratio shrinks toward 1.")
-    print("  All points become equally distant. 'Nearest' loses meaning.")
+    print("  随着维度增长，最大/最小比值趋向于 1。")
+    print("  所有点都变得同样遥远，“最近”失去了意义。")
     print()
 
-    print("  Part 2: KNN accuracy vs dimensionality")
-    print(f"  Binary classification: label = 1 if x[0] + x[1] > 1, else 0")
-    print(f"  Extra dimensions are pure noise.")
+    print("  第二部分：KNN 准确率随维度变化")
+    print(f"  二分类：若 x[0] + x[1] > 1 则标签 = 1，否则为 0")
+    print(f"  额外的维度都是纯噪声。")
     print()
-    print(f"  {'Dimensions':>12s}  {'K=5 Acc':>10s}  {'K=15 Acc':>10s}")
+    print(f"  {'维度':>12s}  {'K=5 准确率':>10s}  {'K=15 准确率':>10s}")
     print(f"  {'-' * 12}  {'-' * 10}  {'-' * 10}")
 
     for d in [2, 5, 10, 20, 50]:
@@ -447,23 +447,23 @@ def demo_curse_of_dimensionality():
         print(f"  {d:>12d}  {acc5:>10.4f}  {acc15:>10.4f}")
 
     print()
-    print("  Accuracy degrades as noisy dimensions increase.")
-    print("  The signal (first 2 dims) gets drowned by noise dimensions.")
+    print("  随着噪声维度增加，准确率下降。")
+    print("  信号（前 2 维）被噪声维度淹没。")
     print()
 
 
 def demo_kdtree():
     print("=" * 65)
-    print("KD-TREE: EFFICIENT NEAREST NEIGHBOR SEARCH")
+    print("KD-Tree：高效的最近邻搜索")
     print("=" * 65)
     print()
 
     random.seed(42)
     sizes = [100, 500, 1000, 5000]
 
-    print(f"  2D data, finding 5 nearest neighbors")
+    print(f"  二维数据，查找 5 个最近邻")
     print()
-    print(f"  {'N points':>10s}  {'Brute force':>14s}  {'KD-tree':>14s}  {'Speedup':>10s}")
+    print(f"  {'点数':>10s}  {'暴力搜索':>14s}  {'KD-tree':>14s}  {'加速比':>10s}")
     print(f"  {'-' * 10}  {'-' * 14}  {'-' * 14}  {'-' * 10}")
 
     for n in sizes:
@@ -505,17 +505,17 @@ def demo_kdtree():
 
     kd_top5 = [(d, idx) for d, idx, _ in tree.query(query, k=5)]
 
-    print("  Verification (100 points, k=5):")
-    print(f"    Brute force: {[(round(d, 4), idx) for d, idx in brute_top5]}")
-    print(f"    KD-tree:     {[(round(d, 4), idx) for d, idx in kd_top5]}")
+    print("  验证（100 个点，k=5）：")
+    print(f"    暴力搜索：{[(round(d, 4), idx) for d, idx in brute_top5]}")
+    print(f"    KD-tree： {[(round(d, 4), idx) for d, idx in kd_top5]}")
     match = set(idx for _, idx in brute_top5) == set(idx for _, idx in kd_top5)
-    print(f"    Results match: {match}")
+    print(f"    结果是否一致：{match}")
     print()
 
 
 def demo_scaling_importance():
     print("=" * 65)
-    print("FEATURE SCALING: WHY IT MATTERS FOR KNN")
+    print("特征缩放：为什么它对 KNN 至关重要")
     print("=" * 65)
     print()
 
@@ -542,10 +542,10 @@ def demo_scaling_importance():
     knn_scaled.fit(X_train_s, y_train)
     acc_scaled = accuracy(y_test, knn_scaled.predict(X_test_s))
 
-    print(f"  Features: age (range ~10-70), salary (range ~10k-90k)")
+    print(f"  特征：年龄（范围约 10-70），收入（范围约 10k-90k）")
     print()
-    print(f"  Without scaling: accuracy = {acc_raw:.4f}")
-    print(f"  With scaling:    accuracy = {acc_scaled:.4f}")
+    print(f"  未缩放：准确率 = {acc_raw:.4f}")
+    print(f"  缩放后：准确率 = {acc_scaled:.4f}")
     print()
 
     query = X_test[0]
@@ -556,18 +556,18 @@ def demo_scaling_importance():
     dists_scaled = [(l2_distance(query_s, X_train_s[i]), i) for i in range(5)]
     dists_scaled.sort()
 
-    print(f"  Sample distances for first test point:")
-    print(f"  Without scaling: {[round(d, 1) for d, _ in dists_raw]}")
-    print(f"  With scaling:    {[round(d, 4) for d, _ in dists_scaled]}")
+    print(f"  第一个测试点的距离示例：")
+    print(f"  未缩放：{[round(d, 1) for d, _ in dists_raw]}")
+    print(f"  缩放后：{[round(d, 4) for d, _ in dists_scaled]}")
     print()
-    print("  Unscaled: salary dominates (tens of thousands vs tens of years).")
-    print("  Scaled: both features contribute equally to distance.")
+    print("  未缩放：收入占主导（数万对比数十）。")
+    print("  缩放后：两个特征对距离的贡献相等。")
     print()
 
 
 def demo_lazy_vs_eager():
     print("=" * 65)
-    print("LAZY vs EAGER LEARNING: TIMING COMPARISON")
+    print("惰性学习与急切学习：耗时对比")
     print("=" * 65)
     print()
 
@@ -576,7 +576,7 @@ def demo_lazy_vs_eager():
     random.seed(42)
     sizes = [100, 500, 1000, 5000]
 
-    print(f"  {'N':>6s}  {'KNN train':>12s}  {'KNN predict':>14s}  {'Total':>10s}")
+    print(f"  {'N':>6s}  {'KNN 训练':>12s}  {'KNN 预测':>14s}  {'总计':>10s}")
     print(f"  {'-' * 6}  {'-' * 12}  {'-' * 14}  {'-' * 10}")
 
     for n in sizes:
@@ -600,15 +600,15 @@ def demo_lazy_vs_eager():
         print(f"  {n:>6d}  {train_time:>12.6f}s  {pred_time:>14.6f}s  {total:>10.6f}s")
 
     print()
-    print("  KNN training is O(1): just store the data.")
-    print("  KNN prediction is O(n*d) per query: compute all distances.")
-    print("  For eager learners (neural nets), the pattern is reversed.")
+    print("  KNN 训练复杂度为 O(1)：只需存储数据。")
+    print("  KNN 预测复杂度为 O(n*d) 每次查询：要计算所有距离。")
+    print("  对于急切学习器（神经网络），情况正好相反。")
     print()
 
 
 def demo_minkowski_family():
     print("=" * 65)
-    print("MINKOWSKI DISTANCE FAMILY")
+    print("Minkowski 距离族")
     print("=" * 65)
     print()
 
@@ -619,7 +619,7 @@ def demo_minkowski_family():
     print(f"  a = {a}")
     print(f"  b = {b}")
     print()
-    print(f"  {'p':>8s}  {'Distance':>12s}  {'Name':>15s}")
+    print(f"  {'p':>8s}  {'距离':>12s}  {'名称':>15s}")
     print(f"  {'-' * 8}  {'-' * 12}  {'-' * 15}")
 
     for p in p_values:
@@ -636,14 +636,14 @@ def demo_minkowski_family():
         print(f"  {p_str:>8s}  {d:>12.4f}  {name:>15s}")
 
     print()
-    print("  As p increases, the distance is dominated by the largest component difference.")
-    print("  L-inf <= L2 <= L1 always holds.")
+    print("  随着 p 增大，距离由最大的分量差决定。")
+    print("  始终满足 L-inf <= L2 <= L1。")
     print()
 
 
 def demo_k_selection():
     print("=" * 65)
-    print("SELECTING K: CROSS-VALIDATION APPROACH")
+    print("选择 K：交叉验证方法")
     print("=" * 65)
     print()
 
@@ -659,9 +659,9 @@ def demo_k_selection():
 
     k_values = [1, 3, 5, 7, 9, 11, 15, 21, 31]
 
-    print(f"  {n_folds}-fold cross-validation on {n} samples")
+    print(f"  在 {n} 个样本上进行 {n_folds} 折交叉验证")
     print()
-    print(f"  {'K':>6s}  {'Mean Acc':>10s}  {'Std Acc':>10s}  {'Visual':>20s}")
+    print(f"  {'K':>6s}  {'平均准确率':>10s}  {'准确率标准差':>10s}  {'可视化':>20s}")
     print(f"  {'-' * 6}  {'-' * 10}  {'-' * 10}  {'-' * 20}")
 
     best_k = 1
@@ -699,24 +699,24 @@ def demo_k_selection():
         print(f"  {k:>6d}  {mean_acc:>10.4f}  {std_acc:>10.4f}  {bar}")
 
     print()
-    print(f"  Best K = {best_k} with mean accuracy = {best_mean:.4f}")
+    print(f"  最佳 K = {best_k}，平均准确率 = {best_mean:.4f}")
     print()
 
 
 def print_summary():
     print()
     print("=" * 65)
-    print("SUMMARY")
+    print("总结")
     print("=" * 65)
     print()
-    print("  1. KNN is lazy: zero training, all work at prediction time.")
-    print("  2. K controls bias-variance: small K overfits, large K underfits.")
-    print("  3. Distance metric choice matters. L2 is default, cosine for text.")
-    print("  4. Always scale features. Unscaled features distort distances.")
-    print("  5. Weighted KNN reduces sensitivity to K by down-weighting distant neighbors.")
-    print("  6. Curse of dimensionality: KNN degrades beyond ~20-50 dimensions.")
-    print("  7. KD-trees speed up search in low dimensions. Ball trees for moderate.")
-    print("  8. KNN is the same algorithm behind vector databases and RAG retrieval.")
+    print("  1. KNN 是惰性学习：训练零成本，所有工作都在预测阶段完成。")
+    print("  2. K 控制偏差-方差：K 过小会过拟合，K 太大会欠拟合。")
+    print("  3. 距离度量的选择很重要。默认用 L2，文本用余弦。")
+    print("  4. 务必缩放特征。未缩放的特征会扭曲距离。")
+    print("  5. 加权 KNN 通过降低远处邻居的权重来减少对 K 的敏感度。")
+    print("  6. 维度灾难：超过约 20-50 维后 KNN 性能下降。")
+    print("  7. KD-tree 在低维下加速搜索。中等维度可用 Ball Tree。")
+    print("  8. KNN 正是向量数据库和 RAG 检索背后的同一算法。")
     print()
 
 
