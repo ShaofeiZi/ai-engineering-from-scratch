@@ -1,11 +1,11 @@
-"""Leaderboard aggregation: pivot, mean, win-rate, bootstrap CI, markdown.
+"""排行榜聚合：透视、均值、胜率、自助法置信区间、Markdown 渲染。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- lesson 71 (classical metrics) for per-task score shape
-- lesson 73 (calibration) for the multi-model report pattern
+概念参考：
+- ./docs/en.md（本课）
+- 第 71 课（经典指标）关于每个任务的得分结构
+- 第 73 课（校准）关于多模型报告模式
 
-Stdlib + numpy. Run: python3 code/main.py
+仅使用标准库 + numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -76,10 +76,10 @@ def _validate_runs(runs: Sequence[EvalRun]) -> None:
     seen: set[tuple[str, str]] = set()
     for r in runs:
         if not (0.0 <= r.score <= 1.0):
-            raise ValueError(f"score for {r.model_id}/{r.task_id} not in [0,1]: {r.score}")
+            raise ValueError(f"{r.model_id}/{r.task_id} 的得分不在 [0,1] 范围内：{r.score}")
         key = (r.model_id, r.task_id)
         if key in seen:
-            raise ValueError(f"duplicate run for {r.model_id}/{r.task_id}")
+            raise ValueError(f"{r.model_id}/{r.task_id} 存在重复运行记录")
         seen.add(key)
 
 
@@ -283,7 +283,7 @@ def demo() -> int:
     diffs = pairwise_diffs(runs, b=300, alpha=0.05, seed=11)
     print(render_markdown(rows))
     print()
-    print("Pairwise comparisons (paired bootstrap):")
+    print("成对比较（配对 bootstrap）：")
     for d in diffs:
         sig = "yes" if d.significant else "no"
         print(f"  {d.model_a} vs {d.model_b}: diff={d.diff_mean:+.3f} ci=[{d.ci_lo:+.3f},{d.ci_hi:+.3f}] significant={sig}")

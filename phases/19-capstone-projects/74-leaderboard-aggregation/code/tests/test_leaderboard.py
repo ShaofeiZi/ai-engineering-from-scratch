@@ -1,4 +1,4 @@
-"""Tests for leaderboard aggregation, bootstrap CI, win-rate, markdown rendering."""
+"""排行榜聚合、bootstrap CI、胜率与 Markdown 渲染的测试。"""
 
 from __future__ import annotations
 
