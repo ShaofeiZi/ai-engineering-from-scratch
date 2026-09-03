@@ -44,9 +44,9 @@ def simple_bleu(hypothesis, reference, max_n=4):
 
 def simple_bleu_note():
     return (
-        "simple_bleu above has no smoothing: one zero-precision n-gram drops "
-        "the score to 0.0. This punishes short hypotheses; production uses "
-        "epsilon / NIST / add-k smoothing via sacrebleu."
+        "上面的 simple_bleu 没有平滑处理：只要一个 n-gram 的精确率为零，"
+        "分数就会降至 0.0。这会过度惩罚较短的候选译文；生产环境会通过 "
+        "sacrebleu 使用 epsilon / NIST / add-k 平滑。"
     )
 
 
@@ -83,15 +83,15 @@ def main():
         ("Les chiens mangent.", "Les chats courent."),
         ("Les", "Les chats courent."),
     ]
-    print(f"{'hypothesis':40s}  {'reference':25s}  {'BLEU':>6}  {'chrF':>6}")
+    print(f"{'候选译文':40s}  {'参考译文':25s}  {'BLEU':>6}  {'chrF':>6}")
     for hyp, ref in cases:
         b = simple_bleu(hyp, ref)
         c = chrf(hyp, ref)
         print(f"{hyp:40s}  {ref:25s}  {b:6.1f}  {c:6.1f}")
     print()
     print(simple_bleu_note())
-    print("BLEU under 1 point is noise. chrF catches morphological partials BLEU misses.")
-    print("For real work, use sacrebleu (pip install sacrebleu) instead of this teaching version.")
+    print("BLEU 相差不到 1 分属于噪声。chrF 能捕捉 BLEU 遗漏的部分形态匹配。")
+    print("实际工作请使用 sacrebleu（pip install sacrebleu），而不是这个教学版本。")
 
 
 if __name__ == "__main__":
