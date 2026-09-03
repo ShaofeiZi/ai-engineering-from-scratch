@@ -40,7 +40,7 @@ class Timer:
 
 
 def check_shapes(model, sample_input):
-    print(f"  Input: {sample_input.shape}")
+    print(f"  输入: {sample_input.shape}")
     hooks = []
 
     def make_hook(name):
@@ -63,23 +63,23 @@ def check_shapes(model, sample_input):
 
 def detect_nan(model, loss, step):
     if torch.isnan(loss):
-        print(f"  NaN loss detected at step {step}")
+        print(f"  在第 {step} 步检测到 NaN loss")
         for name, param in model.named_parameters():
             if param.grad is not None:
                 if torch.isnan(param.grad).any():
-                    print(f"    NaN gradient in {name}")
+                    print(f"    {name} 中存在 NaN 梯度")
                 if torch.isinf(param.grad).any():
-                    print(f"    Inf gradient in {name}")
+                    print(f"    {name} 中存在 Inf 梯度")
         return True
     return False
 
 
 def check_devices(model, *tensors):
     model_device = next(model.parameters()).device
-    print(f"  Model device: {model_device}")
+    print(f"  模型设备: {model_device}")
     for i, t in enumerate(tensors):
-        status = "OK" if t.device == model_device else "MISMATCH"
-        print(f"    Tensor {i}: {t.device} [{status}]")
+        status = "一致" if t.device == model_device else "不匹配"
+        print(f"    张量 {i}: {t.device} [{status}]")
 
 
 def check_gradient_health(model):
@@ -89,44 +89,44 @@ def check_gradient_health(model):
             grad_norm = param.grad.data.norm(2).item()
             total_norm += grad_norm ** 2
             if grad_norm > 100:
-                print(f"    WARNING: large gradient in {name}: {grad_norm:.2f}")
+                print(f"    警告: {name} 中存在过大的梯度: {grad_norm:.2f}")
             if grad_norm == 0:
-                print(f"    WARNING: zero gradient in {name}")
+                print(f"    警告: {name} 的梯度为零")
     total_norm = total_norm ** 0.5
-    print(f"  Total gradient norm: {total_norm:.4f}")
+    print(f"  梯度总范数: {total_norm:.4f}")
     return total_norm
 
 
 def demo_print_debugging():
-    print("\n--- 1. Print Debugging for Tensors ---")
+    print("\n--- 1. 张量的打印调试 ---")
     x = torch.randn(32, 784)
-    debug_print("input batch", x)
+    debug_print("输入批次", x)
 
     w = torch.randn(784, 128)
     out = x @ w
-    debug_print("after matmul", out)
+    debug_print("矩阵乘法后", out)
 
     with_nan = out.clone()
     with_nan[0, 0] = float("nan")
-    debug_print("with injected NaN", with_nan)
+    debug_print("注入 NaN 后", with_nan)
 
 
 def demo_timing():
-    print("\n--- 2. Timing Code Sections ---")
+    print("\n--- 2. 代码段计时 ---")
 
-    with Timer("matrix multiply 1000x1000"):
+    with Timer("1000x1000 矩阵乘法"):
         a = torch.randn(1000, 1000)
         b = torch.randn(1000, 1000)
         _ = a @ b
 
-    with Timer("matrix multiply 5000x5000"):
+    with Timer("5000x5000 矩阵乘法"):
         a = torch.randn(5000, 5000)
         b = torch.randn(5000, 5000)
         _ = a @ b
 
 
 def demo_memory_tracking():
-    print("\n--- 3. Memory Tracking (tracemalloc) ---")
+    print("\n--- 3. 内存追踪 (tracemalloc) ---")
     tracemalloc.start()
 
     if HAS_TORCH:
@@ -138,7 +138,7 @@ def demo_memory_tracking():
 
     snapshot = tracemalloc.take_snapshot()
     top_stats = snapshot.statistics("lineno")
-    print("  Top 5 memory allocations:")
+    print("  占用内存最多的前 5 处分配:")
     for stat in top_stats[:5]:
         print(f"    {stat}")
 
@@ -147,7 +147,7 @@ def demo_memory_tracking():
 
 
 def demo_shape_checking():
-    print("\n--- 4. Shape Checking Through Model ---")
+    print("\n--- 4. 模型形状检查 ---")
 
     model = nn.Sequential(
         nn.Linear(784, 256),
@@ -162,7 +162,7 @@ def demo_shape_checking():
 
 
 def demo_nan_detection():
-    print("\n--- 5. NaN Detection ---")
+    print("\n--- 5. NaN 检测 ---")
 
     model = nn.Sequential(
         nn.Linear(784, 256),
@@ -179,18 +179,18 @@ def demo_nan_detection():
     output = model(x)
     loss = criterion(output, target)
     loss.backward()
-    print(f"  Normal loss: {loss.item():.4f}")
+    print(f"  正常 loss: {loss.item():.4f}")
     nan_found = detect_nan(model, loss, step=0)
-    print(f"  NaN detected: {nan_found}")
+    print(f"  是否检测到 NaN: {nan_found}")
 
     fake_nan_loss = torch.tensor(float("nan"))
-    print(f"  Simulated NaN loss: {fake_nan_loss.item()}")
+    print(f"  模拟的 NaN loss: {fake_nan_loss.item()}")
     nan_found = detect_nan(model, fake_nan_loss, step=99)
-    print(f"  NaN detected: {nan_found}")
+    print(f"  是否检测到 NaN: {nan_found}")
 
 
 def demo_device_checking():
-    print("\n--- 6. Device Checking ---")
+    print("\n--- 6. 设备检查 ---")
 
     model = nn.Linear(10, 5)
     t1 = torch.randn(4, 10)
@@ -202,12 +202,12 @@ def demo_device_checking():
         model_gpu = model.cuda()
         t_cpu = torch.randn(4, 10)
         t_gpu = torch.randn(4, 10).cuda()
-        print("  With mixed devices:")
+        print("  混合设备情况下:")
         check_devices(model_gpu, t_cpu, t_gpu)
 
 
 def demo_gradient_health():
-    print("\n--- 7. Gradient Health Check ---")
+    print("\n--- 7. 梯度健康检查 ---")
 
     model = nn.Sequential(
         nn.Linear(784, 256),
@@ -226,68 +226,68 @@ def demo_gradient_health():
 
 
 def demo_gpu_memory():
-    print("\n--- 8. GPU Memory Summary ---")
+    print("\n--- 8. GPU 内存汇总 ---")
 
     if not torch.cuda.is_available():
-        print("  No GPU available. Skipping GPU memory demo.")
-        print("  On a GPU machine, torch.cuda.memory_summary() shows:")
-        print("    - Allocated memory per block size")
-        print("    - Cached (reserved) memory")
-        print("    - Peak memory usage")
+        print("  无可用 GPU，跳过 GPU 内存演示。")
+        print("  在 GPU 机器上，torch.cuda.memory_summary() 会显示:")
+        print("    - 每种块大小的已分配内存")
+        print("    - 缓存（预留）内存")
+        print("    - 峰值内存使用量")
         return
 
     print(f"  GPU: {torch.cuda.get_device_name(0)}")
-    print(f"  Allocated: {torch.cuda.memory_allocated() / 1e6:.1f} MB")
-    print(f"  Cached: {torch.cuda.memory_reserved() / 1e6:.1f} MB")
+    print(f"  已分配: {torch.cuda.memory_allocated() / 1e6:.1f} MB")
+    print(f"  已缓存: {torch.cuda.memory_reserved() / 1e6:.1f} MB")
 
     large_tensor = torch.randn(10000, 10000, device="cuda")
-    print(f"  After 10k x 10k tensor:")
-    print(f"    Allocated: {torch.cuda.memory_allocated() / 1e6:.1f} MB")
+    print(f"  创建 10k x 10k 张量后:")
+    print(f"    已分配: {torch.cuda.memory_allocated() / 1e6:.1f} MB")
 
     del large_tensor
     torch.cuda.empty_cache()
-    print(f"  After cleanup:")
-    print(f"    Allocated: {torch.cuda.memory_allocated() / 1e6:.1f} MB")
+    print(f"  清理后:")
+    print(f"    已分配: {torch.cuda.memory_allocated() / 1e6:.1f} MB")
 
 
 def demo_logging():
-    print("\n--- 9. Structured Logging ---")
+    print("\n--- 9. 结构化日志 ---")
 
-    logger.info("Training started: lr=0.001, batch_size=32, epochs=10")
-    logger.info("Step 100: loss=2.3026, accuracy=0.10")
-    logger.warning("Loss spike detected: 15.7 at step 450")
-    logger.info("Step 1000: loss=0.4512, accuracy=0.87")
-    logger.info("Training complete: best_loss=0.3201")
+    logger.info("训练开始: lr=0.001, batch_size=32, epochs=10")
+    logger.info("第 100 步: loss=2.3026, accuracy=0.10")
+    logger.warning("检测到 loss 突增: 15.7（第 450 步）")
+    logger.info("第 1000 步: loss=0.4512, accuracy=0.87")
+    logger.info("训练完成: best_loss=0.3201")
 
 
 def demo_conditional_breakpoint():
-    print("\n--- 10. Conditional Breakpoint Pattern ---")
-    print("  In real code, use this pattern:")
+    print("\n--- 10. 条件断点模式 ---")
+    print("  在实际代码中，可使用如下模式:")
     print()
     print("    for step in range(num_steps):")
     print("        loss = train_step(model, batch)")
     print("        if loss.item() > 10 or torch.isnan(loss):")
-    print("            breakpoint()  # drops into pdb")
+    print("            breakpoint()  # 进入 pdb")
     print()
-    print("  Useful pdb commands once inside:")
-    print("    p tensor.shape       # print shape")
-    print("    p tensor.device      # check device")
-    print("    p tensor.grad        # inspect gradients")
-    print("    p tensor.isnan().sum()  # count NaNs")
-    print("    c                    # continue execution")
-    print("    q                    # quit debugger")
+    print("  进入 pdb 后常用的命令:")
+    print("    p tensor.shape       # 打印形状")
+    print("    p tensor.device      # 检查设备")
+    print("    p tensor.grad        # 查看梯度")
+    print("    p tensor.isnan().sum()  # 统计 NaN 个数")
+    print("    c                    # 继续执行")
+    print("    q                    # 退出调试器")
 
 
 def main():
     print("=" * 60)
-    print("  AI Debugging and Profiling Toolkit")
-    print("  Phase 0, Lesson 12")
+    print("  AI 调试与性能分析工具包")
+    print("  阶段 0，课程 12")
     print("=" * 60)
 
     if not HAS_TORCH:
-        print("\nPyTorch not installed. Install with:")
+        print("\n未安装 PyTorch。安装命令:")
         print("  uv pip install torch")
-        print("\nRunning non-PyTorch demos only...\n")
+        print("\n仅运行非 PyTorch 演示...\n")
         demo_memory_tracking()
         demo_logging()
         return 1
@@ -304,8 +304,8 @@ def main():
     demo_conditional_breakpoint()
 
     print("\n" + "=" * 60)
-    print("  All demos complete.")
-    print("  Next: introduce bugs intentionally and practice catching them.")
+    print("  全部演示完成。")
+    print("  下一步: 故意引入 bug，练习捕获它们。")
     print("=" * 60 + "\n")
     return 0
 
