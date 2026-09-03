@@ -1,13 +1,12 @@
-"""LLaVA 2-layer MLP projector + prompt builder — stdlib Python.
+"""LLaVA 两层 MLP 投影器 + 提示构建器 — 纯标准库 Python。
 
-Walks the LLaVA forward pass:
-  - toy ViT emits 16 patch tokens of dim 16
-  - 2-layer MLP projects each patch to dim 24 (the 'LLM' dim)
-  - build a LLaVA-format prompt with <image> placeholder replaced by the 16
-    projected tokens
-  - report context budget at 2k / 32k / 128k LLM windows
+演示 LLaVA 的前向传播过程：
+  - 玩具 ViT 输出 16 个维度为 16 的 patch token
+  - 两层 MLP 将每个 patch 投影到维度 24（即 'LLM' 维度）
+  - 构建 LLaVA 格式提示，将 <image> 占位符替换为 16 个投影后的 token
+  - 分别在 2k / 32k / 128k LLM 窗口下报告上下文预算
 
-No numpy, no torch. Linear layers and GELU implemented by hand.
+不依赖 numpy，不依赖 torch。线性层和 GELU 均为手动实现。
 """
 
 from __future__ import annotations
@@ -80,57 +79,55 @@ def build_llava_prompt(system: str, user: str, image_tokens: int) -> dict:
 
 
 def visualize_context(num_image_tokens: int, text_tokens: int) -> None:
-    print("\ncontext budget at different LLM windows")
+    print("\n不同 LLM 窗口下的上下文预算")
     print("-" * 60)
     totals = (2048, 8192, 32768, 131072)
     for t in totals:
         used = num_image_tokens + text_tokens
         remain = t - used
         pct_image = 100 * num_image_tokens / t
-        print(f"  window {t:>6d}: image {pct_image:5.1f}% | "
-              f"text {100*text_tokens/t:4.1f}% | remain {max(remain, 0):>6d} tokens")
+        print(f"  窗口 {t:>6d}：图像 {pct_image:5.1f}% | "
+              f"文本 {100*text_tokens/t:4.1f}% | 剩余 {max(remain, 0):>6d} 个 token")
 
 
 def demo_projector() -> None:
-    print("\nDEMO 1: 2-layer MLP projector forward pass")
+    print("演示 1：两层 MLP 投影器前向传播")
     print("-" * 60)
     patches = fake_vit_output()
     proj = MLPProjector(PATCH_DIM, HIDDEN_DIM, LLM_DIM)
 
-    print(f"  ViT out: {PATCH_COUNT} patches of dim {PATCH_DIM}")
-    print(f"  MLP:     {PATCH_DIM} -> {HIDDEN_DIM} -> {LLM_DIM}")
-    print(f"  params:  {proj.num_params():,}")
+    print(f"  ViT 输出：{PATCH_COUNT} 个 patch，维度为 {PATCH_DIM}")
+    print(f"  MLP：     {PATCH_DIM} -> {HIDDEN_DIM} -> {LLM_DIM}")
+    print(f"  参数量：  {proj.num_params():,}")
 
     visual_tokens = [proj.forward(p) for p in patches]
-    print(f"  output:  {len(visual_tokens)} visual tokens of dim "
-          f"{len(visual_tokens[0])}")
-    print(f"  token 0 sample: {[round(x, 3) for x in visual_tokens[0][:6]]}")
+    print(f"  输出：    {len(visual_tokens)} 个维度为 "
+          f"{len(visual_tokens[0])} 的视觉 token")
+    print(f"  token 0 示例：{[round(x, 3) for x in visual_tokens[0][:6]]}")
 
 
 def demo_prompt() -> None:
-    print("\nDEMO 2: LLaVA prompt template")
+    print("\n演示 2：LLaVA 提示模板")
     print("-" * 60)
-    system = ("A chat between a curious human and an artificial intelligence "
-              "assistant.")
-    user = "Describe what you see in this image in detail."
+    system = "一位好奇的人类与一名人工智能助手之间的对话。"
+    user = "请详细描述你在这张图像中看到的内容。"
     prompt = build_llava_prompt(system, user, image_tokens=576)
 
-    print("  raw prompt (LLM receives this after image-token replacement):")
+    print("  原始提示（LLM 在 image-token 替换后接收到的内容）：")
     print("  " + "-" * 56)
     for line in prompt["raw_prompt"].split("\n"):
         print(f"    {line}")
-    print(f"  <image> placeholder -> replaced with {prompt['image_tokens']} "
-          "visual tokens")
-    print(f"  text token estimate: ~{prompt['text_token_estimate']} tokens")
+    print(f"  <image> 占位符 -> 替换为 {prompt['image_tokens']} 个视觉 token")
+    print(f"  文本 token 估算：~{prompt['text_token_estimate']} 个 token")
     visualize_context(prompt["image_tokens"], prompt["text_token_estimate"])
 
 
 def demo_anyres() -> None:
-    print("\nDEMO 3: LLaVA-NeXT AnyRes token cost")
+    print("\n演示 3：LLaVA-NeXT AnyRes token 开销")
     print("-" * 60)
     tile_tokens = 576
     configs = [
-        ("336x336 (base)", 1, 0),
+        ("336x336（基础）", 1, 0),
         ("672x336 (1x2)", 2, 1),
         ("672x672 (2x2)", 4, 1),
         ("1344x672 (2x4)", 8, 1),
@@ -138,26 +135,26 @@ def demo_anyres() -> None:
     ]
     for name, tiles, thumb in configs:
         total = tiles * tile_tokens + thumb * tile_tokens
-        print(f"  {name:20s}: {tiles:2d} tiles + {thumb} thumbnail "
-              f"= {total:5d} tokens")
+        print(f"  {name:20s}：{tiles:2d} 个瓦片 + {thumb} 张缩略图 "
+              f"= {total:5d} 个 token")
 
 
 def main() -> None:
     print("=" * 60)
-    print("LLAVA VISUAL INSTRUCTION TUNING (Phase 12, Lesson 05)")
+    print("LLAVA 视觉指令微调（第 12 阶段，第 05 课）")
     print("=" * 60)
     demo_projector()
     demo_prompt()
     demo_anyres()
     print("\n" + "=" * 60)
-    print("TAKEAWAYS")
+    print("要点")
     print("-" * 60)
-    print("  · 2-layer MLP projector: 22M params (trivial next to the 7B LLM)")
-    print("  · <image> placeholder -> replace with N projected visual tokens")
-    print("  · base LLaVA: 576 tokens per image (30% of 2k context)")
-    print("  · AnyRes: up to 2880 tokens for high-res OCR / chart inputs")
-    print("  · stage 1: train projector alone (hours)")
-    print("  · stage 2: train projector + LLM on 158k GPT-4 instructions")
+    print("  · 两层 MLP 投影器有 2200 万参数，相比 7B LLM 很小")
+    print("  · 将 <image> 占位符替换为 N 个投影后的视觉 token")
+    print("  · 基础 LLaVA 每张图像使用 576 个 token，占 2k 上下文的 30%")
+    print("  · AnyRes 对高分辨率 OCR / 图表输入最多使用 2880 个 token")
+    print("  · 第 1 阶段仅训练投影器，耗时数小时")
+    print("  · 第 2 阶段在 15.8 万条 GPT-4 指令上训练投影器与 LLM")
 
 
 if __name__ == "__main__":
