@@ -1,7 +1,7 @@
-"""Runnable companion for the Image Fundamentals lesson.
-Builds a deterministic RGB image and transforms it as a NumPy tensor.
-Implements nearest, bilinear, and bicubic resizing from scratch.
-See ../docs/en.md for the derivations and production-library comparison.
+"""“图像基础”课程的可运行配套代码。
+构建确定性的 RGB 图像，并将其作为 NumPy 张量进行变换。
+从零实现最近邻、双线性和双三次缩放。
+推导过程及生产级库对比见 ../docs/en.md。
 """
 
 import numpy as np
@@ -25,14 +25,14 @@ def synthetic_image(height=128, width=192, seed=0):
 def inspect(arr, label="image"):
     if arr.ndim == 2:
         print(
-            f"[{label}] dtype={arr.dtype} shape={arr.shape} "
-            f"min={arr.min()} max={arr.max()} mean={float(arr.mean()):.2f}"
+            f"[{label}] 数据类型={arr.dtype} 形状={arr.shape} "
+            f"最小值={arr.min()} 最大值={arr.max()} 均值={float(arr.mean()):.2f}"
         )
         return
     print(
-        f"[{label}] dtype={arr.dtype} shape={arr.shape} "
-        f"min={arr.min()} max={arr.max()} "
-        f"per-channel mean="
+        f"[{label}] 数据类型={arr.dtype} 形状={arr.shape} "
+        f"最小值={arr.min()} 最大值={arr.max()} "
+        f"各通道均值="
         f"{arr.reshape(-1, arr.shape[-1]).mean(axis=0).round(2).tolist()}"
     )
 
@@ -89,9 +89,9 @@ def deprocess_imagenet(chw_float32):
 
 def resize_coordinates(source_length, target_length):
     if target_length < 1:
-        raise ValueError("target length must be positive")
+        raise ValueError("目标长度必须为正数")
     if source_length < 1:
-        raise ValueError("source length must be positive")
+        raise ValueError("源长度必须为正数")
     if target_length == 1:
         return np.zeros(1, dtype=np.float32)
     return np.linspace(0, source_length - 1, target_length, dtype=np.float32)
@@ -159,7 +159,7 @@ def bicubic_resize(arr, target_height, target_width):
 
 def resize_compare(arr, scale=3):
     if not isinstance(scale, int) or scale < 1:
-        raise ValueError("scale must be a positive integer")
+        raise ValueError("缩放倍数必须为正整数")
     target_height = arr.shape[0] * scale
     target_width = arr.shape[1] * scale
     return {
@@ -177,30 +177,30 @@ def local_roughness(x):
 
 def main():
     arr = synthetic_image()
-    print("source: deterministic synthetic RGB image (offline)")
-    inspect(arr, "raw")
+    print("来源：确定性合成 RGB 图像（离线）")
+    inspect(arr, "原始图像")
 
     chw = hwc_to_chw(arr)
-    print(f"HWC shape: {arr.shape}   CHW shape: {chw.shape}")
+    print(f"HWC 形状：{arr.shape}   CHW 形状：{chw.shape}")
 
     gray = rgb_to_grayscale(arr)
     hsv = rgb_to_hsv(arr)
-    print(f"grayscale shape: {gray.shape}")
-    print(f"hsv hue range:   [{hsv[..., 0].min():.1f}, {hsv[..., 0].max():.1f}] deg")
-    print(f"hsv sat range:   [{hsv[..., 1].min():.2f}, {hsv[..., 1].max():.2f}]")
-    print(f"hsv val range:   [{hsv[..., 2].min():.2f}, {hsv[..., 2].max():.2f}]")
+    print(f"灰度图形状：{gray.shape}")
+    print(f"HSV 色相范围：  [{hsv[..., 0].min():.1f}, {hsv[..., 0].max():.1f}] 度")
+    print(f"HSV 饱和度范围：[{hsv[..., 1].min():.2f}, {hsv[..., 1].max():.2f}]")
+    print(f"HSV 明度范围：  [{hsv[..., 2].min():.2f}, {hsv[..., 2].max():.2f}]")
 
     x = preprocess_imagenet(arr)
-    print(f"preprocessed shape: {x.shape}  dtype: {x.dtype}")
-    print(f"per-channel mean: {x.mean(axis=(1, 2)).round(3).tolist()}")
-    print(f"per-channel std:  {x.std(axis=(1, 2)).round(3).tolist()}")
+    print(f"预处理后形状：{x.shape}  数据类型：{x.dtype}")
+    print(f"各通道均值：{x.mean(axis=(1, 2)).round(3).tolist()}")
+    print(f"各通道标准差：{x.std(axis=(1, 2)).round(3).tolist()}")
 
     roundtrip = deprocess_imagenet(x)
     max_diff = int(np.abs(roundtrip.astype(int) - arr.astype(int)).max())
-    print(f"roundtrip max pixel diff: {max_diff}")
+    print(f"往返转换最大像素差：{max_diff}")
 
     for name, out in resize_compare(arr, scale=3).items():
-        print(f"{name:>8}  shape={out.shape}  roughness={local_roughness(out):6.2f}")
+        print(f"{name:>8}  形状={out.shape}  粗糙度={local_roughness(out):6.2f}")
 
 
 if __name__ == "__main__":
