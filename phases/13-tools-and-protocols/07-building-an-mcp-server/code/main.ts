@@ -1,8 +1,8 @@
-// Phase 13 Lesson 07: a stateless MCP server over stdio.
-// Lesson: phases/13-tools-and-protocols/07-building-an-mcp-server/docs/en.md
-// Specification: https://modelcontextprotocol.io/specification/2026-07-28/
-// Implements discovery, three server primitives, and per-request validation.
-// Run: npx tsx main.ts --demo
+// Phase 13 第 07 课：基于 stdio 的无状态 MCP 服务器。
+// 课程：phases/13-tools-and-protocols/07-building-an-mcp-server/docs/en.md
+// 规范：https://modelcontextprotocol.io/specification/2026-07-28/
+// 实现服务发现、三种服务器原语以及逐请求校验。
+// 运行：npx tsx main.ts --demo
 
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
@@ -46,7 +46,7 @@ const NOTES: Record<string, Note> = {
 const TOOLS: JsonObject[] = [
   {
     name: "notes_search",
-    description: "Search note titles and bodies by keyword.",
+    description: "按关键词搜索笔记标题和正文。",
     inputSchema: {
       type: "object",
       properties: {
@@ -59,7 +59,7 @@ const TOOLS: JsonObject[] = [
   },
   {
     name: "notes_create",
-    description: "Create a new note.",
+    description: "创建一条新笔记。",
     inputSchema: {
       type: "object",
       properties: {
@@ -73,7 +73,7 @@ const TOOLS: JsonObject[] = [
   },
   {
     name: "notes_list",
-    description: "List notes, optionally filtered by tag.",
+    description: "列出笔记，可按标签过滤。",
     inputSchema: {
       type: "object",
       properties: { tag: { type: "string" } },
@@ -86,8 +86,8 @@ const TOOLS: JsonObject[] = [
 const PROMPTS: JsonObject[] = [
   {
     name: "review_note",
-    description: "Critique a note and propose concrete improvements.",
-    arguments: [{ name: "note_id", description: "Note identifier", required: true }],
+    description: "评审笔记并提出具体的改进建议。",
+    arguments: [{ name: "note_id", description: "笔记标识符", required: true }],
   },
 ];
 
@@ -250,7 +250,7 @@ function handleDiscover(): JsonObject {
     {
       supportedVersions: [...SUPPORTED_VERSIONS],
       capabilities: structuredClone(SERVER_CAPABILITIES),
-      instructions: "Use tools for note actions, resources for note bodies, and prompts for reviews.",
+      instructions: "笔记操作使用工具，笔记正文使用资源，评审使用提示。",
     },
     { ttlMs: 3_600_000, cacheScope: "public" },
   );
@@ -329,7 +329,7 @@ function handlePromptsGet(params: JsonObject): JsonObject {
   const note = NOTES[arguments_.note_id];
   if (!note) throw new RpcProblem(-32602, "note_id must name an existing note");
   return complete({
-    description: "Review the note and propose concrete improvements.",
+    description: "评审笔记并提出具体的改进建议。",
     messages: [
       {
         role: "user",
@@ -393,7 +393,7 @@ function demo(): void {
     makeRequest(7, "prompts/get", { name: "review_note", arguments: { note_id: "note-1" } }),
     makeRequest(8, "tools/list", {}, "2027-01-01"),
   ];
-  console.log("MCP 2026-07-28 stateless notes server, TypeScript");
+  console.log("MCP 2026-07-28 无状态笔记服务器，TypeScript");
   for (const message of scenarios) {
     console.log(`\n${message.method} id=${message.id}`);
     console.log(JSON.stringify(dispatch(message), null, 2).slice(0, 700));

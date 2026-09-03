@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 07: a stateless MCP server over stdio.
-Lesson: phases/13-tools-and-protocols/07-building-an-mcp-server/docs/en.md
-Specification: https://modelcontextprotocol.io/specification/2026-07-28/
-Implements discovery, three server primitives, and per-request validation.
-Run: python3 main.py --demo
+"""第13阶段第07课：基于 stdio 的无状态 MCP 服务器。
+课程：phases/13-tools-and-protocols/07-building-an-mcp-server/docs/en.md
+规范：https://modelcontextprotocol.io/specification/2026-07-28/
+实现了发现机制、三种服务器原语，以及 per-request 验证。
+运行：python3 main.py --demo
 """
 
 from __future__ import annotations
@@ -391,7 +391,7 @@ def demo() -> None:
         make_request(7, "prompts/get", {"name": "review_note", "arguments": {"note_id": "note-1"}}),
         make_request(8, "tools/list", version="2027-01-01"),
     ]
-    print("MCP 2026-07-28 stateless notes server")
+    print("MCP 2026-07-28 无状态笔记服务器")
     for message in scenarios:
         response = dispatch(message)
         print(f"\n{message['method']} id={message['id']}")
