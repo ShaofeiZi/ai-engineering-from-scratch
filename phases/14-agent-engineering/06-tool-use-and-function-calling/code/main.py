@@ -1,7 +1,7 @@
-"""Stdlib tool registry with JSON Schema subset validation and parallel dispatch.
+"""标准库工具注册表，支持 JSON Schema 子集校验与并行分发。
 
-Subset: required fields, string/int/number/bool/array/object, enum, minimum/maximum.
-Returns structured observations for every validation failure so an agent can retry.
+子集：必填字段、string/int/number/bool/array/object、枚举、minimum/maximum.
+为每次校验失败返回结构化观察结果，便于 agent 重试。
 """
 
 from __future__ import annotations
@@ -153,7 +153,7 @@ def classify(status: str) -> str:
 
 def main() -> None:
     print("=" * 70)
-    print("TOOL USE and FUNCTION CALLING — Phase 14, Lesson 06")
+    print("工具使用与函数调用 — 第 14 阶段，第 06 课")
     print("=" * 70)
 
     reg = ToolRegistry()
@@ -189,7 +189,7 @@ def main() -> None:
         executor=classify,
     ))
 
-    print("\ncatalog (as presented to the model)")
+    print("\n目录（展示给模型的形态）")
     for entry in reg.catalog():
         print(f"  - {entry['name']}: {entry['description']}")
 
@@ -200,14 +200,14 @@ def main() -> None:
         ToolCall("u04", "classify", {"status": "open"}),
         ToolCall("u05", "subtract", {"a": 1, "b": 2}),
     ]
-    print("\nparallel dispatch (5 calls in one turn)")
+    print("\n并行分发（单轮 5 次调用）")
     for result in reg.dispatch_many(calls):
         tag = "OK " if result.ok else "ERR"
         print(f"  {result.tool_use_id} {tag}: {result.content}")
 
     print()
-    print("observation shape: every validation failure is a structured error")
-    print("string the agent can read and retry against. never raise to the loop.")
+    print("观察结果结构：每次校验失败均为结构化错误")
+    print("agent 可读取并据此重试的字符串。绝不向上抛异常至循环。")
 
 
 if __name__ == "__main__":
