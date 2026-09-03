@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Shell aliases and functions for AI development.
-# Source this from your ~/.bashrc or ~/.zshrc:
+# 用于 AI 开发的 shell 别名与函数。
+# 在你的 ~/.bashrc 或 ~/.zshrc 中加载本文件：
 #   source /path/to/shell_aliases.sh
 
 # --- GPU ---
@@ -11,7 +11,7 @@ alias gpuwatch='watch -n1 nvidia-smi'
 alias gpumem='nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader'
 alias gpuprocs='nvidia-smi --query-compute-apps=pid,name,used_memory --format=csv'
 
-# --- Training control ---
+# --- 训练控制 ---
 
 alias killtraining='pkill -f "python.*train"'
 
@@ -25,14 +25,14 @@ killtrain() {
     fi
 }
 
-# --- Virtual environments ---
+# --- 虚拟环境 ---
 
 alias ae='source .venv/bin/activate'
 alias de='deactivate'
 alias mkvenv='python -m venv .venv && source .venv/bin/activate'
 alias uvvenv='uv venv && source .venv/bin/activate'
 
-# --- Log watching ---
+# --- 日志监听 ---
 
 alias watchloss='tail -f logs/*.log | grep --line-buffered "loss"'
 alias watchacc='tail -f logs/*.log | grep --line-buffered "accuracy\|acc"'
@@ -43,19 +43,19 @@ taillog() {
     tail -f logs/*.log 2>/dev/null | grep --line-buffered "$pattern"
 }
 
-# --- Disk space (training data fills disks fast) ---
+# --- 磁盘空间（训练数据会很快占满磁盘） ---
 
 alias diskuse='df -h .'
 alias bigfiles='find . -type f -size +100M | xargs du -h 2>/dev/null | sort -rh | head -20'
 alias bigmodels='find . \( -name "*.pt" -o -name "*.pth" -o -name "*.safetensors" -o -name "*.ckpt" -o -name "*.bin" \) | xargs du -h 2>/dev/null | sort -rh | head -20'
 
-# --- Quick environment checks ---
+# --- 快速环境检查 ---
 
-alias checkgpu='python -c "import torch; print(f\"CUDA: {torch.cuda.is_available()}\"); print(f\"Device: {torch.cuda.get_device_name(0)}\") if torch.cuda.is_available() else None"'
+alias checkgpu='python -c "import torch; print(f\"CUDA: {torch.cuda.is_available()}\"); print(f\"设备: {torch.cuda.get_device_name(0)}\") if torch.cuda.is_available() else None"'
 alias checkcuda='env | grep -i cuda'
 alias checkenv='python --version && pip --version && python -c "import torch; print(f\"PyTorch {torch.__version__}, CUDA {torch.cuda.is_available()}\")" 2>/dev/null'
 
-# --- tmux shortcuts ---
+# --- tmux 快捷方式 ---
 
 alias ta='tmux attach -t'
 alias tls='tmux ls'
@@ -73,7 +73,7 @@ trainenv() {
     tmux attach -t "$name"
 }
 
-# --- SSH helpers ---
+# --- SSH 辅助函数 ---
 
 syncto() {
     if [ -z "$1" ] || [ -z "$2" ]; then
@@ -99,7 +99,7 @@ syncfrom() {
     rsync -avz --progress "${host}:${remote}" "$local_path"
 }
 
-# --- Experiment management ---
+# --- 实验管理 ---
 
 newexp() {
     local name="${1:-experiment}"
@@ -113,7 +113,7 @@ lastexp() {
     ls -dt experiments/*/ 2>/dev/null | head -1
 }
 
-# --- Model download helpers ---
+# --- 模型下载辅助函数 ---
 
 hfdownload() {
     if [ -z "$1" ]; then
@@ -132,7 +132,7 @@ hfdownload() {
     fi
 }
 
-# --- Process management ---
+# --- 进程管理 ---
 
 memhogs() {
     ps aux --sort=-%mem 2>/dev/null | head -11 || ps aux -m | head -11
