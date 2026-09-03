@@ -11,7 +11,7 @@ import { turnCompletionScore } from "./vad.ts";
 export const WEATHER: Tool = {
   name: "weather.tokyo_tomorrow",
   latencyMs: 420,
-  result: "68/52 partly cloudy",
+  result: "68/52，局部多云",
 };
 
 export function newMetrics(): Metrics {
@@ -63,7 +63,7 @@ export function runSession(frames: AudioChunk[], opts: SessionOptions): Metrics 
       f.isSpeech
     ) {
       m.bargeIns += 1;
-      log(`${f.tMs}ms BARGE-IN: cancel TTS, re-arm ASR`);
+      log(`${f.tMs}ms 插话：取消 TTS，重新启用 ASR`);
       state = "LISTENING";
       silenceRunMs = 0;
       finalPartial = "";
@@ -95,10 +95,10 @@ export function runSession(frames: AudioChunk[], opts: SessionOptions): Metrics 
             state = "WAITING";
             m.turnCompleteMs = f.tMs;
             log(
-              `${f.tMs}ms TURN COMPLETE (score=${score.toFixed(2)}) partial='${finalPartial}'`,
+              `${f.tMs}ms 轮次完成（分数=${score.toFixed(2)}）部分结果='${finalPartial}'`,
             );
           } else {
-            log(`${f.tMs}ms SILENCE but score=${score.toFixed(2)}, waiting`);
+            log(`${f.tMs}ms 检测到静音，但分数=${score.toFixed(2)}，继续等待`);
           }
         }
       }
@@ -108,12 +108,12 @@ export function runSession(frames: AudioChunk[], opts: SessionOptions): Metrics 
       if (opts.useTool && toolPhase === "none") {
         toolStartedAt = f.tMs;
         toolPhase = "running";
-        log(`${f.tMs}ms tool call fired: ${WEATHER.name}`);
+        log(`${f.tMs}ms 已发起工具调用：${WEATHER.name}`);
         state = "THINKING";
       } else {
         llmStartedAt = f.tMs + 140;
         state = "THINKING";
-        log(`${f.tMs}ms LLM call fired`);
+        log(`${f.tMs}ms 已发起 LLM 调用`);
       }
       continue;
     }
@@ -122,17 +122,17 @@ export function runSession(frames: AudioChunk[], opts: SessionOptions): Metrics 
       if (toolPhase === "running") {
         if (!fillerEmitted && f.tMs - toolStartedAt >= 300) {
           fillerEmitted = true;
-          log(`${f.tMs}ms filler 'one second, let me check'`);
+          log(`${f.tMs}ms 填充语：'稍等，让我查一下'`);
         }
         if (f.tMs - toolStartedAt >= WEATHER.latencyMs) {
           toolPhase = "done";
-          log(`${f.tMs}ms tool result: ${WEATHER.result}`);
+          log(`${f.tMs}ms 工具结果：${WEATHER.result}`);
           llmStartedAt = f.tMs + 140;
         }
       } else if (llmStartedAt > 0 && f.tMs >= llmStartedAt) {
         if (m.firstLlmTokenMs === 0) {
           m.firstLlmTokenMs = f.tMs;
-          log(`${f.tMs}ms LLM first token`);
+          log(`${f.tMs}ms LLM 首个 token`);
         }
         ttsStartedAt = f.tMs + 180;
         state = "SPEAKING";
@@ -143,7 +143,7 @@ export function runSession(frames: AudioChunk[], opts: SessionOptions): Metrics 
     if (state === "SPEAKING") {
       if (ttsStartedAt > 0 && f.tMs >= ttsStartedAt && m.firstAudioOutMs === 0) {
         m.firstAudioOutMs = f.tMs;
-        log(`${f.tMs}ms TTS first audio-out`);
+        log(`${f.tMs}ms TTS 首次音频输出`);
       }
     }
   }
@@ -153,10 +153,10 @@ export function runSession(frames: AudioChunk[], opts: SessionOptions): Metrics 
 export function renderToConsole(label: string, m: Metrics): void {
   console.log(`=== ${label} ===`);
   for (const line of m.events) console.log(" ", line);
-  console.log(`  turn_complete   @ ${m.turnCompleteMs}ms`);
-  console.log(`  first_llm_token @ ${m.firstLlmTokenMs}ms`);
-  console.log(`  first_audio_out @ ${m.firstAudioOutMs}ms`);
-  console.log(`  turn latency    = ${turnLatencyMs(m)}ms`);
-  console.log(`  barge_ins       = ${m.bargeIns}`);
+  console.log(`  轮次完成        @ ${m.turnCompleteMs}ms`);
+  console.log(`  LLM 首个 token  @ ${m.firstLlmTokenMs}ms`);
+  console.log(`  首次音频输出     @ ${m.firstAudioOutMs}ms`);
+  console.log(`  轮次延迟         = ${turnLatencyMs(m)}ms`);
+  console.log(`  插话次数         = ${m.bargeIns}`);
   console.log("");
 }

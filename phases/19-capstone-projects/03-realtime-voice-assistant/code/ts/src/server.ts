@@ -49,7 +49,7 @@ function driveSession(ws: WebSocket): void {
 export function buildServer(): ServerHandles {
   const app = new Hono();
   app.get("/healthz", (c) => c.json({ ok: true }));
-  app.notFound((c) => c.json({ error: "not found", path: c.req.path }, 404));
+  app.notFound((c) => c.json({ error: "未找到", path: c.req.path }, 404));
 
   const server = http.createServer(nodeListener(app));
   const wss = new WebSocketServer({ server });

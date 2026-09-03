@@ -23,12 +23,12 @@ test("turnCompletionScore: scales with token count", () => {
 test("synthCall: produces a frame sequence with leading silence, speech, trailing silence", () => {
   const frames = synthCall("hello world");
   assert.ok(frames.length > 100);
-  // First six frames are leading silence (noise=0 so isSpeech is false here)
+  // 前六帧是开头静音（noise=0，因此此处 isSpeech 为 false）。
   for (let i = 0; i < 6; i++) assert.equal(frames[i].isSpeech, false);
-  // Middle frames carry speech
+  // 中间帧包含语音。
   const speechCount = frames.filter((f) => f.isSpeech).length;
   assert.ok(speechCount >= 16);
-  // Trailing tail is silence
+  // 末尾帧是静音。
   assert.equal(frames[frames.length - 1].isSpeech, false);
 });
 

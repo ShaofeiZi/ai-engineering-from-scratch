@@ -11,8 +11,8 @@ test("runSession: clean call reaches first-audio-out with tool result", () => {
   assert.ok(m.turnCompleteMs > 0);
   assert.ok(m.firstLlmTokenMs > 0);
   assert.ok(m.firstAudioOutMs > 0);
-  assert.ok(m.events.some((e) => e.includes("tool call fired")));
-  assert.ok(m.events.some((e) => e.includes("tool result")));
+  assert.ok(m.events.some((e) => e.includes("已发起工具调用")));
+  assert.ok(m.events.some((e) => e.includes("工具结果")));
 });
 
 test("runSession: barge-in increments bargeIns and re-arms ASR", () => {

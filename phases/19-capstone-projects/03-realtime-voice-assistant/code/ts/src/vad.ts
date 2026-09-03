@@ -1,7 +1,7 @@
 import type { AudioChunk } from "./types.ts";
 
 export function turnCompletionScore(partial: string): number {
-  // Tiny stand-in for the LiveKit turn-detector model.
+  // LiveKit 轮次检测模型的小型替代实现。
   if (!partial) return 0;
   const tail = partial.trimEnd();
   if (tail.endsWith("?") || tail.endsWith(".") || tail.endsWith("!")) return 0.95;
@@ -12,8 +12,8 @@ export function turnCompletionScore(partial: string): number {
 }
 
 export function synthCall(script: string, startMs = 0, noise = 0): AudioChunk[] {
-  // Generate 20ms-frame "audio" with a leading silence, then per-word speech,
-  // then a long trailing silence so the state machine can run end to end.
+  // 生成每帧 20ms 的“音频”：先是前导静音，再逐词生成语音，
+  // 最后追加较长的尾部静音，使状态机能够端到端运行。
   const words = script.trim().split(/\s+/).filter(Boolean);
   const frames: AudioChunk[] = [];
   let t = startMs;
