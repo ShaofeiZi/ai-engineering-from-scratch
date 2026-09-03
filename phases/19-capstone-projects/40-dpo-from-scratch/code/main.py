@@ -1,21 +1,20 @@
 """
-Direct Preference Optimization (DPO) from scratch.
+从零实现直接偏好优化（DPO）。
 
-See: phases/19-capstone-projects/40-dpo-from-scratch/docs/en.md
+参见：phases/19-capstone-projects/40-dpo-from-scratch/docs/en.md
 
-Builds:
-  - InstructionTokenizer with INST / RESP specials (byte-level)
-  - TinyGPT (causal decoder-only transformer)
-  - preference fixture of (prompt, chosen, rejected) triples
-  - sequence_log_prob that sums next-token log probabilities over the
-    completion, masking the prompt
-  - dpo_loss that implements:
+构建内容：
+  - 带 INST / RESP 特殊 token 的 InstructionTokenizer（字节级）
+  - TinyGPT（仅解码器因果 Transformer）
+  - (prompt, chosen, rejected) 三元组偏好夹具
+  - 掩蔽 prompt，并对补全部分的下一 token 对数概率求和的 sequence_log_prob
+  - 实现下式的 dpo_loss：
        L = -log sigmoid( beta * ( (logp_w_pol - logp_w_ref)
                                 - (logp_l_pol - logp_l_ref) ) )
-  - train_dpo loop with a frozen reference and a trainable policy
-  - run_demo that prints loss and chosen-rejected margins per epoch.
+  - 使用冻结参考模型和可训练策略模型的 train_dpo 循环
+  - 打印每轮损失与 chosen-rejected 间隔的 run_demo
 
-Exits 0 when the chosen-rejected log-prob margin increases under training.
+训练使 chosen-rejected 对数概率间隔增大时，以状态码 0 退出。
 """
 
 from __future__ import annotations
@@ -33,7 +32,7 @@ import torch.nn.functional as F
 
 
 # ---------------------------------------------------------------------------
-# Tokeniser
+# 分词器
 # ---------------------------------------------------------------------------
 
 
@@ -54,7 +53,7 @@ class InstructionTokenizer:
 
 
 # ---------------------------------------------------------------------------
-# TinyGPT
+# 微型 GPT
 # ---------------------------------------------------------------------------
 
 
@@ -117,12 +116,12 @@ class TinyGPT(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# Preference fixture
+# 偏好夹具
 # ---------------------------------------------------------------------------
 
 
 def make_preferences() -> List[Dict[str, str]]:
-    """Twelve preference triples covering simple task types."""
+    """覆盖简单任务类型的十二个偏好三元组。"""
     return [
         {
             "prompt": "What is the capital of France?",
@@ -188,7 +187,7 @@ def make_preferences() -> List[Dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Log-probability machinery
+# 对数概率机制
 # ---------------------------------------------------------------------------
 
 
@@ -197,22 +196,22 @@ def sequence_log_prob(
     prompt_ids: Sequence[int],
     completion_ids: Sequence[int],
 ) -> torch.Tensor:
-    """Sum of log-probabilities of the completion tokens conditioned on prompt.
+    """对以 prompt 为条件的补全 token 对数概率求和。
 
-    Returns a 0-dim tensor on the same device as the model.
+    返回与模型位于同一设备上的零维张量。
 
-    Implementation:
-      - Concatenate prompt + completion.
-      - Forward through the model.
-      - Take log-softmax of the logits.
-      - For each completion position i (counted in the full sequence), gather
-        log p(completion[i] | tokens[<i]) and sum.
+    实现：
+      - 拼接 prompt + completion。
+      - 通过模型执行前向传播。
+      - 对 logits 计算 log-softmax。
+      - 对每个补全位置 i（按完整序列计数），取出
+        log p(completion[i] | tokens[<i]) 并求和。
     """
     if len(completion_ids) == 0:
         return torch.zeros((), device=next(model.parameters()).device)
     full = list(prompt_ids) + list(completion_ids)
     if len(full) > model.max_len:
-        # Truncate from the left to keep the most recent context.
+    # 从左侧截断，以保留最近的上下文。
         full = full[-model.max_len :]
         prompt_len = max(0, len(full) - len(completion_ids))
     else:
@@ -220,12 +219,12 @@ def sequence_log_prob(
     ids = torch.tensor([full], dtype=torch.long, device=next(model.parameters()).device)
     logits = model(ids)
     log_probs = F.log_softmax(logits, dim=-1)
-    # Position i predicts token i+1. The completion lives at indices [prompt_len, len(full)).
-    # We need log p(token at index k | tokens up to k-1), for k in that range.
-    # That probability is log_probs[0, k-1, token_k].
+    # 位置 i 预测 token i+1。补全位于索引 [prompt_len, len(full))。
+    # 对该范围内的 k，需要 log p(索引 k 处的 token | 截至 k-1 的 token)。
+    # 该概率为 log_probs[0, k-1, token_k]。
     completion_targets = torch.tensor(full[prompt_len:], dtype=torch.long, device=ids.device)
     pred_positions = torch.arange(prompt_len - 1, len(full) - 1, device=ids.device)
-    # Guard against the (degenerate) case where prompt_len == 0.
+    # 防御 prompt_len == 0 的退化情况。
     if prompt_len == 0:
         pred_positions = torch.arange(0, len(full) - 1, device=ids.device)
         completion_targets = torch.tensor(full[1:], dtype=torch.long, device=ids.device)
@@ -240,18 +239,18 @@ def dpo_loss(
     logp_l_ref: torch.Tensor,
     beta: float,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Per-example DPO loss and the implicit reward margin.
+    """计算单个样本的 DPO 损失与隐式奖励间隔。
 
     L = -log sigmoid( beta * ( (logp_w_pol - logp_w_ref) - (logp_l_pol - logp_l_ref) ) )
 
-    Returns (loss_scalar, reward_margin) where reward_margin is the argument
-    of the sigmoid divided by beta (i.e. the implicit reward difference).
+    返回 ``(loss_scalar, reward_margin)``，其中 reward_margin 是 sigmoid
+    的输入除以 beta（即隐式奖励差）。
     """
     diff_w = logp_w_pol - logp_w_ref
     diff_l = logp_l_pol - logp_l_ref
     margin = diff_w - diff_l
     z = beta * margin
-    # logsigmoid is numerically stable; loss is per-example, scalar.
+    # logsigmoid 在数值上更稳定；loss 是单样本标量。
     loss = -F.logsigmoid(z)
     return loss, margin
 
@@ -263,13 +262,12 @@ def ipo_loss(
     logp_l_ref: torch.Tensor,
     beta: float,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """The IPO variant: a squared loss that does not saturate.
+    """IPO 变体：不会饱和的平方损失。
 
     L_IPO = ( ( (logp_w_pol - logp_w_ref) - (logp_l_pol - logp_l_ref) ) - 1 / (2 * beta) ) ** 2
 
-    The 1 / (2 * beta) offset is the standard IPO target margin. The lesson
-    ships this variant for the stretch comparison; the demo and DPO tests do
-    not use it.
+    ``1 / (2 * beta)`` 偏移量是标准 IPO 目标间隔。本课程提供该变体用于
+    扩展对比；演示和 DPO 测试不使用它。
     """
     diff_w = logp_w_pol - logp_w_ref
     diff_l = logp_l_pol - logp_l_ref
@@ -284,11 +282,10 @@ def length_normalised_log_prob(
     prompt_ids: Sequence[int],
     completion_ids: Sequence[int],
 ) -> torch.Tensor:
-    """Sequence log-prob divided by completion length.
+    """用序列对数概率除以补全长度。
 
-    Useful for diagnosing length bias: if length-normalised margins are
-    positive but raw margins are negative (or vice versa) the model is
-    showing length-sensitive preferences.
+    可用于诊断长度偏差：如果长度归一化后的间隔为正，而原始间隔为负
+    （或反之），说明模型的偏好对长度敏感。
     """
     if len(completion_ids) == 0:
         return torch.zeros((), device=next(model.parameters()).device)
@@ -311,7 +308,7 @@ def margin_table(
     tok: InstructionTokenizer,
     triples: Sequence[Dict[str, str]],
 ) -> List[MarginRow]:
-    """Per-triple margin report under the policy. Useful for debugging."""
+    """生成策略模型下逐三元组的间隔报告，便于调试。"""
     rows: List[MarginRow] = []
     with torch.no_grad():
         for tri in triples:
@@ -334,7 +331,7 @@ def margin_table(
 
 
 def print_margin_table(rows: Sequence[MarginRow], log: Callable[[str], None] = print) -> None:
-    log("  margin   chosen_lp   rejected_lp   prompt")
+    log("  margin   chosen_lp   rejected_lp   提示词")
     log("  -------  ----------  ------------  -------------------------")
     for row in rows:
         log(
@@ -343,7 +340,7 @@ def print_margin_table(rows: Sequence[MarginRow], log: Callable[[str], None] = p
 
 
 # ---------------------------------------------------------------------------
-# Reference / policy management
+# 参考模型/策略模型管理
 # ---------------------------------------------------------------------------
 
 
@@ -358,19 +355,18 @@ class DPOConfig:
     lr: float = 1e-3
     epochs: int = 30
     seed: int = 0
-    warmup_epochs: int = 8  # brief reference pretrain so log-probs are non-trivial
+    warmup_epochs: int = 8  # 短暂预训练参考模型，使对数概率不再是无意义的初始值
 
 
 def build_models(cfg: DPOConfig) -> Tuple[TinyGPT, TinyGPT]:
-    """Build a reference and a policy. The policy is initialised from the
-    reference's state dict so they start in the same place, then the policy
-    diverges under DPO training while the reference stays frozen."""
+    """构建参考模型和策略模型。策略模型用参考模型的 state dict 初始化，
+    因此二者起点相同；随后策略模型在 DPO 训练中逐渐分化，而参考模型保持冻结。"""
     torch.manual_seed(cfg.seed)
     reference = TinyGPT(cfg.vocab, cfg.hidden, cfg.heads, cfg.depth, cfg.max_len)
-    torch.manual_seed(cfg.seed)  # reseed so the policy weights match before any training
+    torch.manual_seed(cfg.seed)  # 重新设种子，确保训练前策略模型权重一致
     policy = TinyGPT(cfg.vocab, cfg.hidden, cfg.heads, cfg.depth, cfg.max_len)
     policy.load_state_dict(reference.state_dict())
-    # Freeze the reference.
+    # 冻结参考模型。
     for p in reference.parameters():
         p.requires_grad = False
     reference.eval()
@@ -385,8 +381,8 @@ def warmup_pretrain(
     lr: float = 3e-3,
     seed: int = 0,
 ) -> List[float]:
-    """A short next-token pretraining pass on the chosen completions so the
-    reference has non-trivial probabilities on the fixture's task structure."""
+    """在 chosen 补全上进行短暂的下一 token 预训练，使参考模型能为
+    夹具中的任务结构给出有意义的概率。"""
     torch.manual_seed(seed)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     losses: List[float] = []
@@ -415,7 +411,7 @@ def warmup_pretrain(
 
 
 # ---------------------------------------------------------------------------
-# Training loop
+# 训练循环
 # ---------------------------------------------------------------------------
 
 
@@ -433,9 +429,9 @@ def evaluate_margins(
     tok: InstructionTokenizer,
     triples: Sequence[Dict[str, str]],
 ) -> float:
-    """Mean (chosen - rejected) log-prob difference under the policy.
+    """策略模型下 ``chosen - rejected`` 对数概率差的均值。
 
-    Without DPO this can be anything; DPO training drives it positive.
+    未经 DPO 训练时该值可能任意；DPO 训练会推动它变为正值。
     """
     margins: List[float] = []
     with torch.no_grad():
@@ -459,7 +455,7 @@ def train_dpo(
 ) -> DPOReport:
     report = DPOReport()
     opt = torch.optim.Adam(policy.parameters(), lr=cfg.lr)
-    # Snapshot reference log-probs up front; they never change.
+    # 预先保存参考模型的对数概率快照；这些值始终不变。
     ref_logps: List[Tuple[torch.Tensor, torch.Tensor]] = []
     with torch.no_grad():
         for tri in triples:
@@ -494,7 +490,7 @@ def train_dpo(
 
 
 # ---------------------------------------------------------------------------
-# Demo
+# 演示
 # ---------------------------------------------------------------------------
 
 
@@ -507,15 +503,15 @@ def run_demo(cfg: Optional[DPOConfig] = None) -> int:
     tok = InstructionTokenizer()
     triples = make_preferences()
 
-    print("DPO FROM SCRATCH DEMO")
+    print("从零实现 DPO 演示")
     print(f"triples={len(triples)} beta={cfg.beta} lr={cfg.lr} epochs={cfg.epochs}")
     print("")
 
     reference, policy = build_models(cfg)
 
-    print(f"[warmup] short pretrain on chosen completions ({cfg.warmup_epochs} epochs)...")
-    # build_models() freezes the reference so the DPO loop cannot accidentally
-    # update it. Unfreeze it just for warmup, then re-freeze before training.
+    print(f"[预热] 在 chosen 补全上短暂预训练（{cfg.warmup_epochs} 轮）……")
+    # build_models() 会冻结参考模型，避免 DPO 循环意外更新它。仅在预热阶段
+    # 解冻，正式训练前再重新冻结。
     for p in reference.parameters():
         p.requires_grad = True
     reference.train()
@@ -526,35 +522,35 @@ def run_demo(cfg: Optional[DPOConfig] = None) -> int:
         epochs=cfg.warmup_epochs,
         seed=cfg.seed,
     )
-    # Copy warmed-up weights into the policy and re-freeze the reference.
+    # 将预热后的权重复制到策略模型，并重新冻结参考模型。
     policy.load_state_dict(reference.state_dict())
     for p in reference.parameters():
         p.requires_grad = False
     reference.eval()
-    print(f"         warmup final loss = {warm_losses[-1]:.4f}")
+    print(f"         预热最终 loss = {warm_losses[-1]:.4f}")
 
     initial = evaluate_margins(policy, reference, tok, triples)
-    print(f"         initial chosen-rejected margin = {initial:+.4f}")
+    print(f"         初始 chosen-rejected margin = {initial:+.4f}")
     print("")
 
-    print("[dpo training]")
+    print("[DPO 训练]")
     report = train_dpo(policy, reference, tok, triples, cfg)
 
     print("")
-    print("[per-triple margins after training]")
+    print("[训练后的逐三元组间隔]")
     print_margin_table(margin_table(policy, tok, triples))
 
     print("")
-    print(f"FINAL margin = {report.final_margin:+.4f}  (initial was {report.initial_margin:+.4f})")
-    print(f"FINAL loss   = {report.losses[-1]:.4f}  (epoch-1 loss was {report.losses[0]:.4f})")
+    print(f"最终 margin = {report.final_margin:+.4f}  (初始值 {report.initial_margin:+.4f})")
+    print(f"最终 loss   = {report.losses[-1]:.4f}  (第 1 轮 loss {report.losses[0]:.4f})")
 
-    # Sanity: training should push the margin up.
+    # 合理性检查：训练应提高间隔。
     if report.final_margin <= report.initial_margin:
-        print("ERROR: training did not increase the chosen-rejected margin", file=sys.stderr)
+        print("错误：训练未增大 chosen-rejected 间隔", file=sys.stderr)
         return 1
-    # And loss should drop.
+    # 同时 loss 应下降。
     if report.losses[-1] >= report.losses[0]:
-        print("ERROR: training did not reduce loss across epochs", file=sys.stderr)
+        print("错误：训练未使损失随轮次下降", file=sys.stderr)
         return 1
     return 0
 
