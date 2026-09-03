@@ -1,8 +1,8 @@
-"""Toy SWE-bench-style harness plus a GAIA-style difficulty classifier.
+"""仿 SWE-bench 的玩具评测框架，附带一个仿 GAIA 的难度分类器。
 
-SWE-bench: bug-fix tasks with FAIL_TO_PASS and PASS_TO_PASS gates.
-GAIA: simple-for-humans, hard-for-AI questions scored by decomposition depth.
-Both are synthetic; the point is to make the evaluator rules concrete.
+SWE-bench：带 FAIL_TO_PASS 和 PASS_TO_PASS 门控的 bug-fix 任务。
+GAIA：simple-for-humans，hard-for-AI 道按分解深度评分的问题。
+两者均为合成数据；目的是让评估器规则具体化。
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ def gaia_level(question: str) -> int:
 
 def swe_demo() -> None:
     print("-" * 70)
-    print("SWE-bench-style harness (FAIL_TO_PASS + PASS_TO_PASS)")
+    print("SWE-bench-style 评测框架（FAIL_TO_PASS + PASS_TO_PASS）")
     print("-" * 70)
 
     tasks = [
@@ -104,18 +104,18 @@ def swe_demo() -> None:
     resolved_count = 0
     for task in tasks:
         result = run_task(task)
-        print(f"  {result.tid}: {task.description}")
-        print(f"    FAIL_TO_PASS: {result.ftp_passed}/{result.ftp_total}")
-        print(f"    PASS_TO_PASS: {result.ptp_passed}/{result.ptp_total}")
-        print(f"    resolved:     {result.resolved}")
+        print(f"  {result.tid}：{task.description}")
+        print(f"    FAIL_TO_PASS：{result.ftp_passed}/{result.ftp_total}")
+        print(f"    PASS_TO_PASS：{result.ptp_passed}/{result.ptp_total}")
+        print(f"    已解决：     {result.resolved}")
         if result.resolved:
             resolved_count += 1
-    print(f"\nresolution rate: {resolved_count}/{len(tasks)}")
+    print(f"\n解决率：{resolved_count}/{len(tasks)}")
 
 
 def gaia_demo() -> None:
     print("\n" + "-" * 70)
-    print("GAIA-style difficulty classifier")
+    print("GAIA-style 难度分类器")
     print("-" * 70)
     questions = [
         "What is the capital of France?",
@@ -126,19 +126,19 @@ def gaia_demo() -> None:
     ]
     for q in questions:
         level = gaia_level(q)
-        print(f"  [Level {level}] {q[:70]}")
+        print(f"  [级别 {level}] {q[:70]}")
 
 
 def main() -> None:
     print("=" * 70)
-    print("BENCHMARKS: SWE-bench, GAIA — Phase 14, Lesson 19")
+    print("基准测试：SWE-bench、GAIA — 第 14 阶段，第 19 课")
     print("=" * 70)
     swe_demo()
     gaia_demo()
     print()
-    print("SWE-bench: patch-based, unit-test-gated. Verified removes ambiguity.")
-    print("GAIA: depth + modalities + tools -> difficulty level.")
-    print("report both your benchmark score AND the Verified/+-audited score.")
+    print("SWE-bench：基于补丁并由单元测试门禁。已验证，消除歧义。")
+    print("GAIA：深度 + 模态 + 工具 -> 难度级别。")
+    print("同时报告基准测试分数以及 Verified/人工审核分数。")
 
 
 if __name__ == "__main__":
