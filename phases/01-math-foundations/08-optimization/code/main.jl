@@ -1,8 +1,7 @@
-# Optimization in Julia. GradientDescent, SGD+Momentum, and Adam
-# implemented as mutable structs with a common `step!` method.
-# Driven on the Rosenbrock and saddle-point functions to show
-# convergence, divergence, and saddle escape behavior.
-# Stdlib only. Sources:
+# Julia 优化。GradientDescent、SGD+Momentum 和 Adam
+# 以可变结构体实现，提供统一的 `step!` 方法。
+# 在 Rosenbrock 和鞍点函数上演示收敛、发散及逃离鞍点的行为。
+# 仅使用标准库。参考资料：
 #   https://docs.julialang.org/en/v1/manual/types/#Composite-Types
 #   https://arxiv.org/abs/1412.6980  (Adam: Kingma & Ba)
 
@@ -117,7 +116,7 @@ function print_trajectory(name::String, history, f; steps_to_show::Int=10)
     println("\n" * "=" ^ 60)
     println("  $name")
     println("=" ^ 60)
-    @printf("  %6s  %10s  %10s  %14s  %8s\n", "Step", "x", "y", "Loss", "Dist")
+    @printf("  %6s  %10s  %10s  %14s  %8s\n", "步数", "x", "y", "损失", "距离")
     println("  " * "-" ^ 52)
     for i in 0:interval:total
         p = history[i + 1]
@@ -136,7 +135,7 @@ end
 
 function print_ascii_convergence(results, f; steps::Int=5000)
     println("\n" * "=" ^ 60)
-    println("  CONVERGENCE COMPARISON (log10 loss over steps)")
+    println("  收敛对比（各步 log10 损失）")
     println("=" ^ 60)
     width = 50
     sample_points = 40
@@ -169,17 +168,17 @@ function print_ascii_convergence(results, f; steps::Int=5000)
         end
         final_loss = f(history[end])
         conv_step = find_convergence_step(history, f)
-        conv_msg = conv_step < length(history) ? "step $conv_step" : "did not converge"
-        @printf("  final loss: %.2e, converged (< 1e-4): %s\n", final_loss, conv_msg)
+        conv_msg = conv_step < length(history) ? "第 $conv_step 步收敛" : "未收敛"
+        @printf("  最终损失：%.2e，已收敛（< 1e-4）：%s\n", final_loss, conv_msg)
     end
 end
 
 
 function demo_comparison()
-    println("OPTIMIZATION METHODS COMPARISON")
-    println("Minimizing the Rosenbrock function: f(x, y) = (1-x)^2 + 100(y-x^2)^2")
-    println("Global minimum at (1, 1) where f = 0")
-    @printf("Starting point: (-1.0, 1.0), f = %.1f\n", rosenbrock(Float64[-1.0, 1.0]))
+    println("优化方法对比")
+    println("最小化 Rosenbrock 函数：f(x, y) = (1-x)^2 + 100(y-x^2)^2")
+    println("全局最小值在 (1, 1)，此时 f = 0")
+    @printf("起始点：(-1.0, 1.0)，f = %.1f\n", rosenbrock(Float64[-1.0, 1.0]))
 
     start = Float64[-1.0, 1.0]
     steps = 5000
@@ -200,26 +199,26 @@ function demo_comparison()
     print_ascii_convergence(results, rosenbrock; steps=steps)
 
     println("\n" * "=" ^ 60)
-    println("  FINAL RESULTS")
+    println("  最终结果")
     println("=" ^ 60)
-    @printf("  %-22s  %10s  %10s  %14s\n", "Method", "x", "y", "Loss")
+    @printf("  %-22s  %10s  %10s  %14s\n", "方法", "x", "y", "损失")
     println("  " * "-" ^ 58)
     for (name, history) in results
         final = history[end]
         loss = rosenbrock(final)
         @printf("  %-22s  %10.6f  %10.6f  %14.8f\n", name, final[1], final[2], loss)
     end
-    println("\n  Target: x=1.000000, y=1.000000, loss=0.00000000")
+    println("\n  目标：x=1.000000, y=1.000000, 损失=0.00000000")
 end
 
 
 function demo_learning_rate_effect()
     println("\n\n" * "=" ^ 60)
-    println("  LEARNING RATE EFFECT ON GRADIENT DESCENT")
+    println("  学习率对梯度下降的影响")
     println("=" ^ 60)
     start = Float64[-1.0, 1.0]
     rates = [0.0001, 0.0005, 0.001, 0.005]
-    @printf("\n  %8s  %10s  %10s  %14s  %s\n", "LR", "Final x", "Final y", "Loss", "Status")
+    @printf("\n  %8s  %10s  %10s  %14s  %s\n", "学习率", "最终 x", "最终 y", "损失", "状态")
     println("  " * "-" ^ 60)
     for lr in rates
         gd = GradientDescent(lr=lr)
@@ -227,7 +226,7 @@ function demo_learning_rate_effect()
         final = history[end]
         loss = rosenbrock(final)
         diverged = !isfinite(loss) || loss > 1e10
-        status = diverged ? "DIVERGED" : (loss < 0.01 ? "converged" : "slow")
+        status = diverged ? "已发散" : (loss < 0.01 ? "已收敛" : "缓慢")
         if diverged
             @printf("  %8.4f  %10s  %10s  %14s  %s\n", lr, "nan", "nan", "inf", status)
         else
@@ -239,11 +238,11 @@ end
 
 function demo_momentum_effect()
     println("\n\n" * "=" ^ 60)
-    println("  MOMENTUM EFFECT ON SGD")
+    println("  动量对 SGD 的影响")
     println("=" ^ 60)
     start = Float64[-1.0, 1.0]
     betas = [0.0, 0.5, 0.9, 0.99]
-    @printf("\n  %6s  %10s  %10s  %14s\n", "Beta", "Final x", "Final y", "Loss")
+    @printf("\n  %6s  %10s  %10s  %14s\n", "Beta", "最终 x", "最终 y", "损失")
     println("  " * "-" ^ 46)
     for beta in betas
         sgd = SGDMomentum(lr=0.0001, momentum=beta)
@@ -261,7 +260,7 @@ end
 
 function demo_saddle_point()
     println("\n\n" * "=" ^ 60)
-    println("  SADDLE POINT ESCAPE: f(x, y) = x^2 - y^2")
+    println("  鞍点逃离：f(x, y) = x^2 - y^2")
     println("=" ^ 60)
 
     saddle(p::Vector{Float64}) = p[1] ^ 2 - p[2] ^ 2
@@ -271,19 +270,19 @@ function demo_saddle_point()
     steps = 200
 
     configs = [
-        ("Gradient Descent", GradientDescent(lr=0.01)),
-        ("SGD + Momentum",   SGDMomentum(lr=0.01, momentum=0.9)),
-        ("Adam",             Adam(lr=0.01)),
+        ("梯度下降", GradientDescent(lr=0.01)),
+        ("SGD + 动量",  SGDMomentum(lr=0.01, momentum=0.9)),
+        ("Adam",        Adam(lr=0.01)),
     ]
 
-    println("\n  Start: x=0.01, y=0.01 (near saddle at origin)")
-    @printf("\n  %-22s  %10s  %10s  %12s  %s\n", "Method", "x", "y", "f(x, y)", "Escaped?")
+    println("\n  起点：x=0.01, y=0.01（靠近原点鞍点）")
+    @printf("\n  %-22s  %10s  %10s  %12s  %s\n", "方法", "x", "y", "f(x, y)", "是否逃离？")
     println("  " * "-" ^ 62)
     for (name, opt) in configs
         history = optimize(opt, saddle, saddle_grad, start; steps=steps)
         final = history[end]
         val = saddle(final)
-        escaped = abs(final[2]) > 1.0 ? "yes" : "no"
+        escaped = abs(final[2]) > 1.0 ? "是" : "否"
         @printf("  %-22s  %10.6f  %10.6f  %12.6f  %s\n", name, final[1], final[2], val, escaped)
     end
 end

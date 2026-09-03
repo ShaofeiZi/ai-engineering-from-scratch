@@ -106,7 +106,7 @@ def print_trajectory(name, history, func, steps_to_show=10):
     print(f"\n{'=' * 60}")
     print(f"  {name}")
     print(f"{'=' * 60}")
-    print(f"  {'Step':>6s}  {'x':>10s}  {'y':>10s}  {'Loss':>14s}  {'Dist':>8s}")
+    print(f"  {'步数':>6s}  {'x':>10s}  {'y':>10s}  {'损失':>14s}  {'距离':>8s}")
     print(f"  {'-' * 52}")
     for i in range(0, total + 1, interval):
         p = history[i]
@@ -122,7 +122,7 @@ def print_trajectory(name, history, func, steps_to_show=10):
 
 def print_ascii_convergence(results, func, steps=5000):
     print(f"\n{'=' * 60}")
-    print("  CONVERGENCE COMPARISON (log10 loss over steps)")
+    print("  收敛对比（基于步数的 log10 损失）")
     print(f"{'=' * 60}")
 
     width = 50
@@ -160,22 +160,22 @@ def print_ascii_convergence(results, func, steps=5000):
 
         final_loss = func(history[-1])
         conv_step = find_convergence_step(history, func)
-        conv_msg = f"step {conv_step}" if conv_step < len(history) else "did not converge"
-        print(f"  final loss: {final_loss:.2e}, converged (< 1e-4): {conv_msg}")
+        conv_msg = f"第 {conv_step} 步" if conv_step < len(history) else "未收敛"
+        print(f"  最终损失：{final_loss:.2e}，是否收敛（< 1e-4）：{conv_msg}")
 
 
 def demo_comparison():
-    print("OPTIMIZATION METHODS COMPARISON")
-    print("Minimizing the Rosenbrock function: f(x,y) = (1-x)^2 + 100(y-x^2)^2")
-    print("Global minimum at (1, 1) where f = 0")
-    print(f"Starting point: (-1.0, 1.0), f = {rosenbrock([-1.0, 1.0]):.1f}")
+    print("优化方法对比")
+    print("最小化 Rosenbrock 函数：f(x,y) = (1-x)^2 + 100(y-x^2)^2")
+    print("全局最小值在 (1, 1) 处，此时 f = 0")
+    print(f"起始点：(-1.0, 1.0)，f = {rosenbrock([-1.0, 1.0]):.1f}")
 
     start = [-1.0, 1.0]
     steps = 5000
 
     configs = [
-        ("Gradient Descent", GradientDescent(lr=0.0005)),
-        ("SGD + Momentum",   SGDMomentum(lr=0.0001, momentum=0.9)),
+        ("梯度下降", GradientDescent(lr=0.0005)),
+        ("SGD + 动量",   SGDMomentum(lr=0.0001, momentum=0.9)),
         ("Adam",             Adam(lr=0.01)),
     ]
 
@@ -188,27 +188,27 @@ def demo_comparison():
     print_ascii_convergence(results, rosenbrock, steps)
 
     print(f"\n{'=' * 60}")
-    print("  FINAL RESULTS")
+    print("  最终结果")
     print(f"{'=' * 60}")
-    print(f"  {'Method':<22s}  {'x':>10s}  {'y':>10s}  {'Loss':>14s}")
+    print(f"  {'方法':<22s}  {'x':>10s}  {'y':>10s}  {'损失':>14s}")
     print(f"  {'-' * 58}")
     for name, history in results:
         final = history[-1]
         loss = rosenbrock(final)
         print(f"  {name:<22s}  {final[0]:10.6f}  {final[1]:10.6f}  {loss:14.8f}")
 
-    print(f"\n  Target: x=1.000000, y=1.000000, loss=0.00000000")
+    print(f"\n  目标：x=1.000000, y=1.000000, loss=0.00000000")
 
 
 def demo_learning_rate_effect():
     print(f"\n\n{'=' * 60}")
-    print("  LEARNING RATE EFFECT ON GRADIENT DESCENT")
+    print("  学习率对梯度下降的影响")
     print(f"{'=' * 60}")
 
     start = [-1.0, 1.0]
     rates = [0.0001, 0.0005, 0.001, 0.005]
 
-    print(f"\n  {'LR':>8s}  {'Final x':>10s}  {'Final y':>10s}  {'Loss':>14s}  {'Status'}")
+    print(f"\n  {'学习率':>8s}  {'最终 x':>10s}  {'最终 y':>10s}  {'损失':>14s}  {'状态'}")
     print(f"  {'-' * 60}")
 
     for lr in rates:
@@ -217,7 +217,7 @@ def demo_learning_rate_effect():
         final = history[-1]
         loss = rosenbrock(final)
         diverged = loss > 1e10 or math.isnan(loss) or math.isinf(loss)
-        status = "DIVERGED" if diverged else ("converged" if loss < 0.01 else "slow")
+        status = "发散" if diverged else ("收敛" if loss < 0.01 else "缓慢")
         if diverged:
             print(f"  {lr:8.4f}  {'nan':>10s}  {'nan':>10s}  {'inf':>14s}  {status}")
         else:
@@ -226,13 +226,13 @@ def demo_learning_rate_effect():
 
 def demo_momentum_effect():
     print(f"\n\n{'=' * 60}")
-    print("  MOMENTUM EFFECT ON SGD")
+    print("  动量对 SGD 的影响")
     print(f"{'=' * 60}")
 
     start = [-1.0, 1.0]
     betas = [0.0, 0.5, 0.9, 0.99]
 
-    print(f"\n  {'Beta':>6s}  {'Final x':>10s}  {'Final y':>10s}  {'Loss':>14s}")
+    print(f"\n  {'Beta':>6s}  {'最终 x':>10s}  {'最终 y':>10s}  {'损失':>14s}")
     print(f"  {'-' * 46}")
 
     for beta in betas:
@@ -248,7 +248,7 @@ def demo_momentum_effect():
 
 def demo_saddle_point():
     print(f"\n\n{'=' * 60}")
-    print("  SADDLE POINT ESCAPE: f(x,y) = x^2 - y^2")
+    print("  逃离鞍点：f(x,y) = x^2 - y^2")
     print(f"{'=' * 60}")
 
     def saddle(params):
@@ -263,13 +263,13 @@ def demo_saddle_point():
     steps = 200
 
     configs = [
-        ("Gradient Descent", GradientDescent(lr=0.01)),
-        ("SGD + Momentum",   SGDMomentum(lr=0.01, momentum=0.9)),
+        ("梯度下降", GradientDescent(lr=0.01)),
+        ("SGD + 动量",   SGDMomentum(lr=0.01, momentum=0.9)),
         ("Adam",             Adam(lr=0.01)),
     ]
 
-    print(f"\n  Start: x=0.01, y=0.01 (near saddle at origin)")
-    print(f"\n  {'Method':<22s}  {'x':>10s}  {'y':>10s}  {'f(x,y)':>12s}  {'Escaped?'}")
+    print(f"\n  起点：x=0.01, y=0.01（靠近原点处的鞍点）")
+    print(f"\n  {'方法':<22s}  {'x':>10s}  {'y':>10s}  {'f(x,y)':>12s}  {'是否逃离'}")
     print(f"  {'-' * 62}")
 
     for name, optimizer in configs:
@@ -277,7 +277,7 @@ def demo_saddle_point():
         final = history[-1]
         val = saddle(final)
         escaped = abs(final[1]) > 1.0
-        print(f"  {name:<22s}  {final[0]:10.6f}  {final[1]:10.6f}  {val:12.6f}  {'yes' if escaped else 'no'}")
+        print(f"  {name:<22s}  {final[0]:10.6f}  {final[1]:10.6f}  {val:12.6f}  {'是' if escaped else '否'}")
 
 
 if __name__ == "__main__":
