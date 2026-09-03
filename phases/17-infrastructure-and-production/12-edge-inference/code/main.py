@@ -1,8 +1,7 @@
-"""Edge-inference bandwidth-bound decode simulator — stdlib Python.
+"""受带宽约束的边缘推理 decode 模拟器，使用 Python stdlib。
 
-Computes theoretical decode throughput from (weights_bytes / bandwidth_bytes_per_sec)
-for a range of edge targets. Compares to observed benchmarks. Demonstrates that
-decode is memory-bound, not compute-bound, on edge devices.
+根据 (weights_bytes / bandwidth_bytes_per_sec) 计算一系列边缘目标上的理论 decode
+吞吐量，并与观测基准比较。演示边缘设备上的 decode 受内存而非计算能力限制。
 """
 
 from __future__ import annotations
@@ -19,15 +18,15 @@ class Target:
 
 
 TARGETS = [
-    Target("Datacenter H100 HBM3",  3350, 170,  "reference ceiling"),
-    Target("Jetson AGX Orin",        205,  45,  "edge-datacenter bridge"),
-    Target("Apple M3 Max",           400,  55,  "unified memory MPS"),
-    Target("Apple M4 (MacBook Air)", 120,  25,  "consumer laptop"),
-    Target("Apple A18 (iPhone 16)",   60,   8,  "phone with ANE"),
-    Target("Snapdragon 8 Gen 3",      77,   7,  "mid/high Android"),
-    Target("Snapdragon X Elite",     135,  22,  "Windows ARM laptop"),
-    Target("WebGPU on M3 Max",       400,  41,  "browser penalty ~25%"),
-    Target("WebGPU on Pixel 9",       77,   6,  "mobile browser Chrome 121+"),
+    Target("数据中心 H100 HBM3",       3350, 170,  "参考上限"),
+    Target("Jetson AGX Orin",          205,  45,  "边缘与数据中心之间的桥梁"),
+    Target("Apple M3 Max",             400,  55,  "统一内存 MPS"),
+    Target("Apple M4（MacBook Air）",  120,  25,  "消费级笔记本电脑"),
+    Target("Apple A18（iPhone 16）",    60,   8,  "配备 ANE 的手机"),
+    Target("Snapdragon 8 Gen 3",        77,   7,  "中高端 Android"),
+    Target("Snapdragon X Elite",       135,  22,  "Windows ARM 笔记本电脑"),
+    Target("M3 Max 上的 WebGPU",        400,  41,  "浏览器损耗约 25%"),
+    Target("Pixel 9 上的 WebGPU",        77,   6,  "移动端浏览器 Chrome 121+"),
 ]
 
 
@@ -46,9 +45,9 @@ def main() -> None:
     model_name = "Llama 3.1 8B Q4"
     model_gb = 4.7
     print("=" * 95)
-    print(f"EDGE DECODE CEILING — {model_name} ({model_gb:.1f} GB in HBM/DRAM)")
+    print(f"边缘解码上限——{model_name}（HBM/DRAM 中占 {model_gb:.1f} GB）")
     print("=" * 95)
-    header = f"{'Target':26}  {'BW (GB/s)':>9}  {'ceiling (tok/s)':>16}  {'observed':>10}  {'efficiency':>11}  Notes"
+    header = f"{'目标':26}  {'带宽（GB/秒）':>9}  {'上限（token/秒）':>16}  {'观测值':>10}  {'效率':>11}  说明"
     print(header)
     print("-" * len(header))
     for t in TARGETS:
@@ -59,15 +58,15 @@ def main() -> None:
         print(f"{t.name:26}  {t.bandwidth_gb_s:8.0f}   {c:15.1f}   {obs_display}{eff:>11}  {t.notes}")
 
     print()
-    print("Read: bandwidth sets the ceiling. Compute matters only when runtime is inefficient.")
+    print("解读：带宽决定上限。只有运行时效率低下时，计算能力才会成为关键。")
     print()
     print("=" * 95)
-    print("QUANTIZATION IMPACT — same target, different format")
+    print("量化影响 — 相同目标，不同格式")
     print("=" * 95)
     iphone_bw = 60.0
     for name, size in [("BF16", 18.8), ("INT8", 9.4), ("Q4 GGUF", 4.7), ("Q3 GGUF", 3.6)]:
         c = 1 / (size / iphone_bw)
-        print(f"iPhone 16 + {name:8}  model={size:5.1f} GB  ceiling={c:6.1f} tok/s")
+        print(f"iPhone 16 + {name:8}  模型={size:5.1f} GB  上限={c:6.1f} token/秒")
 
 
 if __name__ == "__main__":
