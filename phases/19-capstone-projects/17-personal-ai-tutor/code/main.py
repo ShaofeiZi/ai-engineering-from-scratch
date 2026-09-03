@@ -1,12 +1,10 @@
-"""Personal AI tutor — Bayesian knowledge tracing + Socratic policy scaffold.
+"""个人 AI 导师——贝叶斯知识追踪 + 苏格拉底式策略脚手架。
 
-The hard architectural primitive is the learner model: per-concept mastery
-probability updated by Bayesian knowledge tracing after each interaction,
-feeding into a curriculum-graph walk that chooses the next concept. This
-scaffold implements BKT, a curriculum DAG, a Socratic policy decision, and
-a simulated two-learner study.
+关键架构原语是学习者模型：每次交互后通过贝叶斯知识追踪更新逐概念掌握概率，
+再将其输入课程图遍历以选择下一个概念。此脚手架实现 BKT、课程 DAG、
+苏格拉底式策略决策，以及模拟的两组学习者研究。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -17,15 +15,15 @@ from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
-# Bayesian knowledge tracing  --  classic four-parameter model
+# 贝叶斯知识追踪——经典四参数模型
 # ---------------------------------------------------------------------------
 
 @dataclass
 class BKTParams:
-    p_init: float = 0.2     # prior knowledge
-    p_learn: float = 0.12   # learning rate per practice
-    p_slip: float = 0.10    # correct despite not knowing
-    p_guess: float = 0.15   # correct by guessing despite not knowing
+    p_init: float = 0.2     # 先验知识
+    p_learn: float = 0.12   # 每次练习的学习率
+    p_slip: float = 0.10    # 未掌握却答对
+    p_guess: float = 0.15   # 未掌握但猜对
 
 
 def bkt_update(mastery: float, correct: bool, p: BKTParams) -> float:
@@ -36,12 +34,12 @@ def bkt_update(mastery: float, correct: bool, p: BKTParams) -> float:
         num = mastery * p.p_slip
         denom = num + (1 - mastery) * (1 - p.p_guess)
     posterior = num / max(denom, 1e-6)
-    # transition: learn from this interaction
+    # 状态转移：从本次交互中学习
     return posterior + (1 - posterior) * p.p_learn
 
 
 # ---------------------------------------------------------------------------
-# curriculum graph  --  DAG of concepts with prerequisite edges
+# 课程图——包含先修关系边的概念 DAG
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -70,7 +68,7 @@ def curriculum_map(concepts: list[Concept]) -> dict[str, Concept]:
 
 
 # ---------------------------------------------------------------------------
-# learner state  --  per-concept mastery plus history
+# 学习者状态——逐概念掌握度 + 历史记录
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -81,7 +79,7 @@ class LearnerState:
 
 
 # ---------------------------------------------------------------------------
-# concept selector  --  pick next concept with (a) prereqs met and (b) low mastery
+# 概念选择器——选择 (a) 已满足先修要求且 (b) 掌握度较低的下一个概念
 # ---------------------------------------------------------------------------
 
 def next_concept(state: LearnerState, cmap: dict[str, Concept],
@@ -95,7 +93,7 @@ def next_concept(state: LearnerState, cmap: dict[str, Concept],
 
 
 # ---------------------------------------------------------------------------
-# Socratic policy  --  decides scaffold vs next-step vs celebration
+# 苏格拉底式策略——决定搭脚手架、进入下一步还是庆祝
 # ---------------------------------------------------------------------------
 
 def socratic_policy(state: LearnerState, concept: str, correct: bool) -> str:
@@ -110,43 +108,43 @@ def socratic_policy(state: LearnerState, concept: str, correct: bool) -> str:
 
 
 # ---------------------------------------------------------------------------
-# learner simulator  --  random-walk with difficulty sensitive to mastery
+# 学习者模拟器——难度随掌握度变化的随机游走
 # ---------------------------------------------------------------------------
 
 def simulate_answer(learner_knowledge: float, concept_difficulty: float,
                     rng: random.Random) -> bool:
-    """Simulate whether the learner answers correctly."""
-    # probability of correct = sigmoid(knowledge - difficulty)
+    """模拟学习者是否回答正确。"""
+    # 答对概率 = sigmoid（知识水平 - 难度）
     import math
     p = 1 / (1 + math.exp(-(learner_knowledge - concept_difficulty)))
     return rng.random() < p
 
 
 # ---------------------------------------------------------------------------
-# adaptive and baseline cohorts  --  compare learning gain over N interactions
+# 自适应与基线队列——比较 N 次交互后的学习增益
 # ---------------------------------------------------------------------------
 
 def run_adaptive(learner_id: str, inherent_ability: float,
                  cmap: dict[str, Concept], n_turns: int, rng: random.Random) -> LearnerState:
     state = LearnerState(learner_id=learner_id)
     p = BKTParams()
-    # last action taken by the tutor, threaded into the next turn so
-    # scaffold/hint actually reduce difficulty and celebration nudges mastery
+    # 导师上次采取的动作会传递到下一轮，因此 scaffold/hint 会实际降低难度，
+    # 而 celebration 会小幅提高掌握度
     last_action: str | None = None
     for _ in range(n_turns):
         concept = next_concept(state, cmap)
         if concept is None:
             break
         difficulty = 0.3 + 0.1 * len(cmap[concept].prereqs)
-        # apply the previous turn's action to *this* turn
+        # 将上一轮动作应用到“本”轮
         if last_action == "scaffold_from_prereq":
-            difficulty -= 0.15    # easier retry from prereqs
+            difficulty -= 0.15    # 从先修知识开始的更简单重试
         elif last_action == "hint":
-            difficulty -= 0.08    # mild nudge
+            difficulty -= 0.08    # 轻度提示
         elif last_action == "celebrate_and_advance":
-            # celebration buoys confidence for one turn
+            # 庆祝会在一轮内提升信心
             state.mastery[concept] = min(1.0, state.mastery[concept] + 0.02)
-        # effective knowledge = inherent + mastery
+        # 有效知识水平 = 固有能力 + 掌握度
         ek = inherent_ability + state.mastery[concept] * 1.5
         correct = simulate_answer(ek, difficulty, rng)
         last_action = socratic_policy(state, concept, correct)
@@ -157,9 +155,8 @@ def run_adaptive(learner_id: str, inherent_ability: float,
 
 def run_baseline(learner_id: str, inherent_ability: float,
                  cmap: dict[str, Concept], n_turns: int, rng: random.Random) -> LearnerState:
-    """Non-adaptive concept selection (round-robin). Mastery is still updated
-    via BKT so both arms share the same learner model; only the policy /
-    concept-selection strategy differs."""
+    """非自适应概念选择（轮询）。掌握度仍通过 BKT 更新，因此两组使用相同的
+    学习者模型；只有策略 / 概念选择方式不同。"""
     state = LearnerState(learner_id=learner_id)
     p = BKTParams()
     order = list(cmap.keys())
@@ -181,8 +178,8 @@ def main() -> None:
     cmap = curriculum_map(ALGEBRA)
     rng = random.Random(29)
 
-    print("=== 2-week efficacy study (simulated) ===")
-    print(f"curriculum: {len(cmap)} concepts")
+    print("=== 两周效果研究（模拟）===")
+    print(f"课程：{len(cmap)} 个概念")
 
     adaptive_gains: list[float] = []
     baseline_gains: list[float] = []
@@ -191,8 +188,8 @@ def main() -> None:
 
     for i in range(n_learners):
         ability = rng.gauss(0.3, 0.4)
-        # paired randomness: both arms consume the same latent RNG stream so
-        # the delta measures the policy difference, not seed noise
+        # 配对随机性：两组使用相同的潜在 RNG 流，因此差值衡量的是策略差异，
+        # 而非 seed 噪声
         seed = 100 + i
         r_adapt = random.Random(seed)
         r_base = random.Random()
@@ -203,12 +200,12 @@ def main() -> None:
         baseline_gains.append(mastery_sum(s2, cmap))
 
     def mean(xs): return sum(xs) / len(xs)
-    print(f"adaptive mastery sum  mean={mean(adaptive_gains):.2f}")
-    print(f"baseline mastery sum  mean={mean(baseline_gains):.2f}")
+    print(f"自适应掌握度总和  均值={mean(adaptive_gains):.2f}")
+    print(f"基线掌握度总和    均值={mean(baseline_gains):.2f}")
     delta = mean(adaptive_gains) - mean(baseline_gains)
-    print(f"delta (adaptive - baseline): {delta:+.2f} mastery points over {n_turns} turns")
+    print(f"差值（自适应 - 基线）：{n_turns} 轮后为 {delta:+.2f} 个掌握度点")
 
-    print("\n=== sample trajectory (adaptive learner 0) ===")
+    print("\n=== 示例轨迹（自适应学习者 0）===")
     state = run_adaptive("demo", 0.3, cmap, 20, random.Random(7))
     seen_concepts = []
     for c, ok in state.history:

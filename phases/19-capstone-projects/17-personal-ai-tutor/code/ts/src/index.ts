@@ -1,7 +1,7 @@
-// Personal AI Tutor: TypeScript web-app half of the capstone stack.
-// Python side ships the learner model and tutor policy; this project exposes
-// /lesson/next (topo-walk over curriculum DAG) and /lesson/:id/submit.
-// Refs: docs/en.md (this lesson),
+// 个人 AI 导师：综合项目技术栈中的 TypeScript Web 应用部分。
+// Python 端提供学习者模型和导师策略；此项目暴露 /lesson/next（对课程 DAG 进行
+// 拓扑遍历）和 /lesson/:id/submit。
+// 参考：docs/en.md（本课程）、
 //   Bayesian Knowledge Tracing: https://en.wikipedia.org/wiki/Bayesian_knowledge_tracing
 //   FSRS spaced-repetition: https://github.com/open-spaced-repetition/fsrs4anki
 
@@ -16,10 +16,10 @@ function runDemo(): void {
   const topo = topoOrder(CURRICULUM);
 
   process.stdout.write("=".repeat(72) + "\n");
-  process.stdout.write("PHASE 19 LESSON 17 - personal tutor (TypeScript)\n");
+  process.stdout.write("阶段 19 课程 17——个人导师（TypeScript）\n");
   process.stdout.write("=".repeat(72) + "\n");
 
-  process.stdout.write(`\ntopological order: ${topo.join(", ")}\n`);
+  process.stdout.write(`\n拓扑顺序：${topo.join(", ")}\n`);
 
   let now = Date.now();
   const learnerCorrectRate = 0.75;
@@ -32,20 +32,20 @@ function runDemo(): void {
   for (let step = 0; step < 14; step += 1) {
     const pick = pickNextLesson(topo, index, store.all(), now);
     if (!pick) {
-      process.stdout.write(`\nstep ${step}: curriculum complete\n`);
+      process.stdout.write(`\n步骤 ${step}：课程已完成\n`);
       break;
     }
     const correct = rng() < learnerCorrectRate;
     const updated = store.record(pick.lesson.id, correct, now);
     process.stdout.write(
-      `\nstep ${step}: ${pick.lesson.id} (${pick.lesson.title}) ${pick.reason}, ` +
-        `learner ${correct ? "correct" : "wrong"}, ` +
-        `score=${updated.score.toFixed(2)}, next_due=+${Math.floor(updated.interval_ms / 1000)}s\n`,
+      `\n步骤 ${step}：${pick.lesson.id}（${pick.lesson.title}）${pick.reason}，` +
+        `学习者${correct ? "回答正确" : "回答错误"}，` +
+        `分数=${updated.score.toFixed(2)}，下次到期=+${Math.floor(updated.interval_ms / 1000)}s\n`,
     );
     now = updated.next_due_at + 1;
   }
 
-  process.stdout.write("\nfinal mastery snapshot:\n");
+  process.stdout.write("\n最终掌握度快照：\n");
   for (const id of topo) {
     const m = store.peek(id);
     if (!m) continue;
@@ -68,7 +68,7 @@ function nodeAdapter(app: ReturnType<typeof buildApp>) {
         received += chunk.length;
         if (received > MAX_BODY_SIZE) {
           req.destroy();
-          reject(new Error(`request body exceeds ${MAX_BODY_SIZE} bytes`));
+          reject(new Error(`请求体超过 ${MAX_BODY_SIZE} 字节`));
           return;
         }
         chunks.push(chunk);
@@ -106,7 +106,7 @@ function runServer(port: number): void {
     });
   });
   server.listen(port, () => {
-    process.stdout.write(`tutor api on http://localhost:${port}\n`);
+    process.stdout.write(`导师 API 地址：http://localhost:${port}\n`);
   });
 }
 
@@ -117,12 +117,12 @@ function parsePort(argv: string[], defaultPort: number): number {
   if (portFlag < 0) return defaultPort;
   const raw = argv[portFlag + 1];
   if (raw === undefined) {
-    process.stderr.write("--port requires a value\n");
+    process.stderr.write("--port 需要一个值\n");
     process.exit(2);
   }
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1 || n > 65535) {
-    process.stderr.write(`invalid --port ${raw}: must be integer in 1..65535\n`);
+    process.stderr.write(`无效的 --port ${raw}：必须是 1..65535 范围内的整数\n`);
     process.exit(2);
   }
   return n;
