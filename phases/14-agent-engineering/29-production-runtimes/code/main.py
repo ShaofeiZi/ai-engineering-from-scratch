@@ -1,6 +1,6 @@
-"""Four production runtime shapes: request-response, streaming, queue, event.
+"""四种生产运行时形态：request-response、流式、队列、事件。
 
-Same agent logic, four different outer shells. Stdlib only.
+相同的 agent 逻辑，四种不同的外壳。仅使用标准库。
 """
 
 from __future__ import annotations
@@ -85,18 +85,18 @@ class EventBus:
 
 def main() -> None:
     print("=" * 70)
-    print("PRODUCTION RUNTIME SHAPES — Phase 14, Lesson 29")
+    print("生产运行时形态 — 第 14 阶段，第 29 课")
     print("=" * 70)
 
-    print("\n1. request-response (synchronous)")
+    print("\n1. request-response（同步）")
     out = request_response("list project files")
-    print(f"  result: {out}")
+    print(f"  结果：{out}")
 
-    print("\n2. streaming (generator)")
+    print("\n2. 流式（生成器）")
     for step in streaming("review this PR"):
-        print(f"  chunk: {step}")
+        print(f"  数据块：{step}")
 
-    print("\n3. queue-based (with retry and DLQ)")
+    print("\n3. 基于队列（带重试和 DLQ）")
     rt = QueueRuntime()
     rt.enqueue("long job A")
     rt.enqueue("long job B")
@@ -108,9 +108,9 @@ def main() -> None:
     results = rt.worker(fail_policy=fail_b)
     for jid, status in results:
         print(f"  {jid}: {status}")
-    print(f"  queue: {len(rt.queue)}   dlq: {len(rt.dlq)}")
+    print(f"  队列：{len(rt.queue)}   dlq：{len(rt.dlq)}")
 
-    print("\n4. event-driven (subscriber pattern)")
+    print("\n4. 事件驱动（订阅者模式）")
     bus = EventBus()
 
     def on_pr_opened(payload: str) -> str:
@@ -127,17 +127,17 @@ def main() -> None:
     for evt, res in bus.publish("memory.consolidate", "session_001"):
         print(f"  {evt} -> {res}")
 
-    print("\n5. scheduled (cron stand-in)")
+    print("\n5. 定时（cron stand-in）")
     schedule = [
         ("02:00", "memory.consolidate"),
         ("03:00", "eval.nightly"),
     ]
     for when, event in schedule:
-        print(f"  {when}: would fire {event}")
+        print(f"  {when}: 将触发 {event}")
 
     print()
-    print("same agent logic, four outer shells. pick by task shape.")
-    print("observability (Lesson 23/24) is load-bearing at every shape.")
+    print("相同的 agent 逻辑，四种外壳。按任务形态选择。")
+    print("可观测性（第 23/24 课）在每种形态下都至关重要。")
 
 
 if __name__ == "__main__":
