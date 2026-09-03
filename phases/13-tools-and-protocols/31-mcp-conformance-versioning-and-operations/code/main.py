@@ -1,7 +1,7 @@
-"""Companion code for docs/en.md: test MCP wire contracts and release evidence.
-Protocol contract: https://modelcontextprotocol.io/specification/2026-07-28/basic
-Transport contract: https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
-Run `python3 main.py` for the finite demo or `python3 -m unittest discover -s tests`.
+"""docs/en.md 的配套代码：测试 MCP wire 合约并发布证据。
+协议合约：https://modelcontextprotocol.io/specification/2026-07-28/basic
+传输合约：https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
+运行 `python3 main.py` 进行有限演示，或运行 `python3 -m unittest discover -s tests`。
 """
 
 from __future__ import annotations
