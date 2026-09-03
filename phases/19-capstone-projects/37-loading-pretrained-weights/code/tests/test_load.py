@@ -1,4 +1,4 @@
-"""Unit tests for the safetensors loader, name mapper, and shape checks."""
+"""safetensors 加载器、名称映射器和形状检查的单元测试。"""
 
 from __future__ import annotations
 

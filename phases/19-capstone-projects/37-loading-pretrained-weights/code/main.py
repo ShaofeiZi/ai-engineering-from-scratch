@@ -1,17 +1,15 @@
-"""Load pretrained GPT-2-style weights from safetensors into the lesson 35 architecture.
+"""从 safetensors 加载 GPT-2 风格的预训练权重到第 35 课架构。
 
-Reads a safetensors file using the `safetensors` library, maps the pretrained
-parameter names (`wte`, `wpe`, `h.N.attn.c_attn`, ...) onto the local names
-(`tok_embed`, `pos_embed`, `blocks.N.attn.qkv`, ...), checks shapes, transposes
-the conv1d-style weight layout used by published GPT-2 checkpoints, and assigns
-under `torch.no_grad()`. The LM head is a weight tying alias on `tok_embed`,
-so it is not in the file.
+使用 `safetensors` 库读取 safetensors 文件，把预训练参数名（`wte`、`wpe`、
+`h.N.attn.c_attn` 等）映射到本地名称（`tok_embed`、`pos_embed`、
+`blocks.N.attn.qkv` 等），检查形状，转置公开 GPT-2 检查点采用的 conv1d 风格
+权重布局，并在 `torch.no_grad()` 下赋值。LM 头是 `tok_embed` 的权重绑定别名，
+因此不在文件中。
 
-To keep the demo offline, `make_stub_safetensors` generates a fixture at first
-run with the exact pretrained naming convention. Swap the fixture for a real
-GPT-2 file and the loader works without modification.
+为保持演示离线，`make_stub_safetensors` 会在首次运行时生成严格遵循预训练命名
+约定的夹具。把夹具替换为真实 GPT-2 文件后，加载器无需修改即可工作。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -34,7 +32,7 @@ STUB_PATH = OUTPUTS / "gpt2-stub.safetensors"
 
 @dataclass
 class ModelConfig:
-    """Configuration aligned with the lesson 35 reference; the stub uses a smaller d_model."""
+    """与第 35 课参考模型对齐的配置；桩模型使用更小的 d_model。"""
 
     vocab_size: int = 50257
     context_length: int = 1024
@@ -155,7 +153,7 @@ class GPTModel(nn.Module):
 
 @dataclass
 class LoadReport:
-    """Outcome of a load. Print this; it tells you whether the load succeeded."""
+    """加载结果；打印它即可判断加载是否成功。"""
 
     loaded: list[tuple[str, str, tuple[int, ...]]] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
@@ -174,13 +172,13 @@ class LoadReport:
         return not self.missing and not self.shape_mismatch
 
 
-# Names that are stored transposed in published GPT-2 checkpoints.
-# The published format uses tensorflow conv1d layout; nn.Linear expects (out, in).
+# 公开 GPT-2 检查点中以转置形式存储的名称。
+# 公开格式使用 TensorFlow conv1d 布局；nn.Linear 需要 (out, in)。
 CONV1D_SUFFIXES = ("c_attn.weight", "c_proj.weight", "c_fc.weight")
 
 
 def make_pretrained_to_local(num_layers: int) -> dict[str, str]:
-    """Return the full pretrained->local name map for a model with `num_layers` blocks."""
+    """返回含 `num_layers` 个块的模型所用的完整预训练名称到本地名称映射。"""
     mapping: dict[str, str] = {
         "wte.weight": "tok_embed.weight",
         "wpe.weight": "pos_embed.weight",
@@ -210,9 +208,9 @@ def _needs_transpose(pretrained_name: str) -> bool:
 
 
 def load_safetensors(model: GPTModel, path: Path, verbose: bool = True) -> LoadReport:
-    """Load weights into model. Refuse to assign on shape mismatch. Returns a report."""
+    """把权重加载到模型中；形状不匹配时拒绝赋值，并返回报告。"""
     if not path.exists():
-        raise FileNotFoundError(f"safetensors file not found: {path}")
+        raise FileNotFoundError(f"找不到 safetensors 文件：{path}")
 
     mapping = make_pretrained_to_local(model.cfg.num_layers)
     local_params = dict(model.named_parameters())
@@ -227,12 +225,12 @@ def load_safetensors(model: GPTModel, path: Path, verbose: bool = True) -> LoadR
             if local_name is None:
                 report.unexpected.append(src_name)
                 if verbose:
-                    print(f"  [skip] {src_name} (no mapping)")
+                    print(f"  [跳过] {src_name}（无映射）")
                 continue
             if local_name not in local_params:
                 report.unexpected.append(src_name)
                 if verbose:
-                    print(f"  [skip] {src_name} -> {local_name} (no such parameter)")
+                    print(f"  [跳过] {src_name} -> {local_name}（无此参数）")
                 continue
 
             tensor = reader.get_tensor(src_name)
@@ -246,7 +244,7 @@ def load_safetensors(model: GPTModel, path: Path, verbose: bool = True) -> LoadR
                 )
                 if verbose:
                     print(
-                        f"  [bad ] {src_name} -> {local_name} "
+                        f"  [错误] {src_name} -> {local_name} "
                         f"src_shape={tuple(tensor.shape)} dst_shape={tuple(target.shape)}"
                     )
                 continue
@@ -266,7 +264,7 @@ def load_safetensors(model: GPTModel, path: Path, verbose: bool = True) -> LoadR
             seen_local.add(local_name)
             report.loaded.append((src_name, local_name, tuple(tensor.shape)))
             if verbose:
-                print(f"  [ok  ] {src_name} -> {local_name} shape={tuple(tensor.shape)}")
+                print(f"  [成功] {src_name} -> {local_name} shape={tuple(tensor.shape)}")
 
     if model.cfg.weight_tying:
         if model.lm_head.weight.data_ptr() != model.tok_embed.weight.data_ptr():
@@ -281,11 +279,10 @@ def load_safetensors(model: GPTModel, path: Path, verbose: bool = True) -> LoadR
 
 
 def make_stub_safetensors(path: Path, cfg: ModelConfig, seed: int = 42) -> None:
-    """Generate a fixture file with the pretrained naming convention.
+    """生成采用预训练命名约定的夹具文件。
 
-    Tensors are random but reproducible from `seed`. Shapes match what a real
-    GPT-2 checkpoint of `cfg` shape would carry, including the conv1d transpose
-    for `c_attn`, `c_proj`, `c_fc`.
+    张量随机生成，但可通过 `seed` 复现。形状与 `cfg` 对应的真实 GPT-2 检查点
+    一致，包括 `c_attn`、`c_proj`、`c_fc` 的 conv1d 转置。
     """
     generator = torch.Generator().manual_seed(seed)
 
@@ -338,7 +335,7 @@ def quick_generate(model: GPTModel, prompt: torch.Tensor, n: int, seed: int = 0)
 
 
 def _state_fingerprint(model: GPTModel) -> float:
-    """Sum of L2 norms across parameters; coarse fingerprint that changes on load."""
+    """所有参数 L2 范数之和；加载后会变化的粗粒度指纹。"""
     return float(sum(p.detach().norm().item() for p in model.parameters()))
 
 
@@ -354,42 +351,42 @@ def demo() -> None:
         mlp_expansion=4,
         dropout=0.0,
     )
-    print(f"model config            : vocab={cfg.vocab_size} d_model={cfg.d_model} layers={cfg.num_layers}")
+    print(f"模型配置                : vocab={cfg.vocab_size} d_model={cfg.d_model} layers={cfg.num_layers}")
 
-    print(f"\nWriting stub fixture to : {STUB_PATH}")
+    print(f"\n正在写入桩夹具：{STUB_PATH}")
     make_stub_safetensors(STUB_PATH, cfg, seed=42)
-    print(f"  file size             : {STUB_PATH.stat().st_size:,} bytes")
+    print(f"  文件大小              : {STUB_PATH.stat().st_size:,} 字节")
 
-    print("\nBuilding fresh model (random init)...")
+    print("\n正在构建新模型（随机初始化）……")
     model = GPTModel(cfg)
     before_fp = _state_fingerprint(model)
     prompt = torch.tensor([[7, 11, 13, 17]], dtype=torch.long)
     before_tokens = quick_generate(model, prompt, n=8, seed=0)
-    print(f"  fingerprint           : {before_fp:.4f}")
-    print(f"  sample (random init)  : {before_tokens}")
+    print(f"  指纹                  : {before_fp:.4f}")
+    print(f"  样本（随机初始化）    : {before_tokens}")
 
-    print("\nLoading stub...")
+    print("\n正在加载桩……")
     report = load_safetensors(model, STUB_PATH, verbose=False)
-    print(f"  report                : {report.summary()}")
+    print(f"  报告                  : {report.summary()}")
     if not report.ok():
-        print("  WARNING: load did not complete cleanly")
+        print("  警告：加载未完全成功")
     else:
-        print("  load ok")
+        print("  加载成功")
 
     after_fp = _state_fingerprint(model)
     after_tokens = quick_generate(model, prompt, n=8, seed=0)
-    print(f"  fingerprint after load: {after_fp:.4f}")
-    print(f"  sample (loaded)       : {after_tokens}")
+    print(f"  加载后指纹            : {after_fp:.4f}")
+    print(f"  样本（已加载）        : {after_tokens}")
 
-    assert before_fp != after_fp, "fingerprint should change after load"
-    assert before_tokens != after_tokens, "sample should change after load"
+    assert before_fp != after_fp, "加载后指纹应发生变化"
+    assert before_tokens != after_tokens, "加载后样本应发生变化"
 
-    print("\nWeight tying check after load:")
+    print("\n加载后的权重绑定检查：")
     tied = model.lm_head.weight.data_ptr() == model.tok_embed.weight.data_ptr()
-    print(f"  lm_head tied to tok_embed: {tied}")
+    print(f"  lm_head 已绑定到 tok_embed：{tied}")
     assert tied
 
-    print("\nShape mismatch path: injecting a bad tensor and reloading...")
+    print("\n形状不匹配路径：注入错误张量并重新加载……")
     bad_path = OUTPUTS / "gpt2-bad.safetensors"
     bad_tensors = {}
     with safe_open(str(STUB_PATH), framework="pt") as reader:
@@ -399,12 +396,12 @@ def demo() -> None:
     save_file(bad_tensors, str(bad_path))
     bad_model = GPTModel(cfg)
     bad_report = load_safetensors(bad_model, bad_path, verbose=False)
-    print(f"  bad report            : {bad_report.summary()}")
-    assert bad_report.shape_mismatch, "expected at least one shape mismatch"
-    print(f"  first mismatch        : {bad_report.shape_mismatch[0]}")
+    print(f"  错误报告              : {bad_report.summary()}")
+    assert bad_report.shape_mismatch, "预期至少出现一个形状不匹配"
+    print(f"  首个不匹配项          : {bad_report.shape_mismatch[0]}")
 
     bad_path.unlink()
-    print("\nPretrained weight load check passed.")
+    print("\n预训练权重加载检查通过。")
 
 
 if __name__ == "__main__":
