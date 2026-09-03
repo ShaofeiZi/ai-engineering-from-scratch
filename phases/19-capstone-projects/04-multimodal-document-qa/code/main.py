@@ -1,12 +1,11 @@
-"""Multimodal document QA — ColPali-style late interaction scaffold.
+"""多模态文档问答——ColPali 风格的后期交互脚手架。
 
-The hard architectural primitive is late-interaction retrieval: every query
-token scores against every document patch, the MaxSim per query token is
-summed, the top-k pages are returned. This scaffold implements MaxSim end to
-end on synthetic patch embeddings so the algorithm is observable without
-loading a real ColQwen model. Includes DocPruner-style patch pruning.
+关键架构原语是后期交互检索：每个查询 token 都会与每个文档 patch 计算分数，
+再对每个查询 token 的 MaxSim 求和并返回 top-k 页面。此脚手架基于合成 patch
+embedding 端到端实现 MaxSim，无需加载真实 ColQwen 模型即可观察算法，并包含
+DocPruner 风格的 patch 剪枝。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
-# patch embeddings  --  fake 16-dim patch vectors per page
+# patch embedding——每页使用伪造的 16 维 patch 向量
 # ---------------------------------------------------------------------------
 
 EMB_DIM = 16
@@ -39,21 +38,21 @@ def hash_embed(tok: str) -> list[float]:
 class Page:
     doc_id: str
     page_num: int
-    content_tokens: list[str]          # stand-in for page contents
+    content_tokens: list[str]          # 页面内容的替代数据
     patches: list[list[float]] = field(default_factory=list)
 
     def embed_patches(self) -> None:
-        """Multi-vector: each content token becomes a patch vector."""
+        """多向量表示：每个内容 token 都会变成一个 patch 向量。"""
         self.patches = [hash_embed(t) for t in self.content_tokens]
 
 
 # ---------------------------------------------------------------------------
-# DocPruner  --  keep top-fraction patches by norm variance
+# DocPruner——按范数差异保留排名靠前的一部分 patch
 # ---------------------------------------------------------------------------
 
 def doc_prune(patches: list[list[float]], keep_fraction: float = 0.5) -> list[list[float]]:
-    """Keep patches with highest per-patch norm (poor proxy for info density
-    but matches the DocPruner intuition: drop low-signal patches)."""
+    """保留单 patch 范数最高的 patch（虽然只是信息密度的粗略代理，
+    但符合 DocPruner 的直觉：丢弃低信号 patch）。"""
     scored = [(sum(abs(x) for x in p), p) for p in patches]
     scored.sort(key=lambda x: -x[0])
     keep_n = max(1, int(len(scored) * keep_fraction))
@@ -61,7 +60,7 @@ def doc_prune(patches: list[list[float]], keep_fraction: float = 0.5) -> list[li
 
 
 # ---------------------------------------------------------------------------
-# MaxSim late interaction  --  the algorithmic core of ColPali / ColQwen
+# MaxSim 后期交互——ColPali / ColQwen 的算法核心
 # ---------------------------------------------------------------------------
 
 def dot(a: list[float], b: list[float]) -> float:
@@ -70,8 +69,8 @@ def dot(a: list[float], b: list[float]) -> float:
 
 def max_sim_score(query_tokens: list[list[float]],
                   doc_patches: list[list[float]]) -> float:
-    """For every query token embedding, take max dot product against any
-    doc patch; sum across query tokens. This is MaxSim / late interaction."""
+    """对每个查询 token embedding，取其与任意文档 patch 的最大点积；
+    再对所有查询 token 求和。这就是 MaxSim / 后期交互。"""
     total = 0.0
     for q in query_tokens:
         best = -1e9
@@ -84,7 +83,7 @@ def max_sim_score(query_tokens: list[list[float]],
 
 
 # ---------------------------------------------------------------------------
-# index + retrieval  --  ranked top-k by MaxSim
+# 索引 + 检索——按 MaxSim 排序取 top-k
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -102,7 +101,7 @@ class Index:
 
 
 # ---------------------------------------------------------------------------
-# synthetic corpus  --  ten pages spanning tables, charts, handwriting, text
+# 合成语料库——十页内容，涵盖表格、图表、手写内容和文本
 # ---------------------------------------------------------------------------
 
 CORPUS = [
@@ -131,9 +130,9 @@ def build_index(prune: bool = True) -> Index:
 
 
 def main() -> None:
-    print("=== build index with DocPruner (50% patches) ===")
+    print("=== 使用 DocPruner（保留 50% patch）构建索引 ===")
     idx = build_index(prune=True)
-    print(f"pages indexed: {len(idx.pages)}")
+    print(f"已索引页面数：{len(idx.pages)}")
 
     queries = [
         "what was the 2024 operating margin change for EMEA",
@@ -148,16 +147,16 @@ def main() -> None:
         for pg, score in hits:
             print(f"  score={score:+.3f}  {pg.doc_id} p.{pg.page_num}")
 
-    # pruning ablation
-    print("\n=== ablation: pruning off vs on ===")
+    # 剪枝消融实验
+    print("\n=== 消融实验：关闭剪枝与启用剪枝 ===")
     full = build_index(prune=False)
     pruned = build_index(prune=True)
     q = "chart comparing segment margins"
     full_top = [(p.doc_id, p.page_num) for p, _ in full.retrieve(q, 3)]
     prn_top = [(p.doc_id, p.page_num) for p, _ in pruned.retrieve(q, 3)]
-    print(f"  full    top-3 : {full_top}")
-    print(f"  pruned  top-3 : {prn_top}")
-    print(f"  overlap       : {len(set(full_top) & set(prn_top))}/3")
+    print(f"  完整索引 top-3：{full_top}")
+    print(f"  剪枝索引 top-3：{prn_top}")
+    print(f"  重叠数量      ：{len(set(full_top) & set(prn_top))}/3")
 
 
 if __name__ == "__main__":

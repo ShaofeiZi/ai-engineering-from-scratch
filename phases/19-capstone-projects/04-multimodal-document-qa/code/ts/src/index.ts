@@ -1,6 +1,6 @@
-// Capstone 04 entrypoint: multimodal document QA viewer.
-// Source: ../../docs/en.md (viewer UI with canvas overlay for evidence regions).
-// References:
+// 综合项目 04 入口：多模态文档问答查看器。
+// 来源：../../docs/en.md（使用 canvas 叠加证据区域的查看器 UI）。
+// 参考资料：
 //   ColPali late-interaction retrieval https://arxiv.org/abs/2407.01449
 //   Qwen3-VL bounding-box output spec  https://qwenlm.github.io/blog/qwen3-vl/
 //   Canvas 2D rendering context (MDN)  https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D
@@ -45,20 +45,20 @@ async function writeWebResponse(res: ServerResponse, webRes: Response): Promise<
 async function runDemo(): Promise<void> {
   const app = buildApp();
   console.log("=".repeat(72));
-  console.log("CAPSTONE 04 - DOCUMENT QA VIEWER SKELETON (TypeScript)");
+  console.log("综合项目 04——文档问答查看器骨架（TypeScript）");
   console.log("=".repeat(72));
 
   const probes: Array<{ label: string; path: string; accept: string; expect: number }> = [
     { label: "GET /health", path: "/health", accept: "application/json", expect: 200 },
-    { label: "GET / (index html)", path: "/", accept: "text/html", expect: 200 },
+    { label: "GET /（索引 HTML）", path: "/", accept: "text/html", expect: 200 },
     {
-      label: "GET /document/10k-acme-2025 (json)",
+      label: "GET /document/10k-acme-2025（JSON）",
       path: "/document/10k-acme-2025",
       accept: "application/json",
       expect: 200,
     },
     {
-      label: "GET /document/10k-acme-2025 (html)",
+      label: "GET /document/10k-acme-2025（HTML）",
       path: "/document/10k-acme-2025",
       accept: "text/html",
       expect: 200,
@@ -77,13 +77,13 @@ async function runDemo(): Promise<void> {
     const body = await resp.text();
     const preview = body.replace(/\s+/g, " ").slice(0, 80);
     console.log(`\n${probe.label}`);
-    console.log(`  status=${resp.status} ct=${resp.headers.get("content-type") ?? ""}`);
-    console.log(`  body[:80]=${preview}`);
+    console.log(`  状态=${resp.status} 内容类型=${resp.headers.get("content-type") ?? ""}`);
+    console.log(`  响应体[:80]=${preview}`);
     if (resp.status === probe.expect) ok += 1;
   }
   console.log("\n" + "-".repeat(72));
-  console.log(`probes ok=${ok}/${probes.length}`);
-  console.log(`fixtures loaded=${listFixtures().length}`);
+  console.log(`探测通过=${ok}/${probes.length}`);
+  console.log(`已加载 fixture=${listFixtures().length}`);
 }
 
 function startServer(): void {
@@ -100,7 +100,7 @@ function startServer(): void {
   });
   server.listen(port, "127.0.0.1", () => {
     const addr = server.address() as AddressInfo;
-    console.log(`viewer listening on http://127.0.0.1:${addr.port}`);
+    console.log(`查看器正在监听 http://127.0.0.1:${addr.port}`);
   });
   process.on("SIGINT", () => server.close(() => process.exit(0)));
   process.on("SIGTERM", () => server.close(() => process.exit(0)));
@@ -115,6 +115,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error("startup failed:", err);
+  console.error("启动失败：", err);
   process.exit(1);
 });
