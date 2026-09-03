@@ -1,4 +1,4 @@
-"""Deterministic tests for Lesson 27's skill release gate."""
+"""第 27 课技能发布门控的确定性测试。"""
 
 from __future__ import annotations
 
@@ -205,6 +205,187 @@ class ReleaseGateTests(unittest.TestCase):
         (bundle / "references" / "orphan.md").write_text("orphan", encoding="utf-8")
         report = lint_package(bundle)
         self.assertIn("orphan-file", {issue.code for issue in report.issues})
+
+    def test_safe_translation_sidecars_skip_orphan_and_manifest_membership(self) -> None:
+        bundle = make_bundle(self.root)
+        sidecars = (
+            bundle / "SKILL.zh-CN.md",
+            bundle / "references" / "contract.zh-CN.md",
+        )
+        for sidecar in sidecars:
+            sidecar.write_text("# 安全的中文配套文件\n", encoding="utf-8")
+
+        lesson_lint = lint_package(bundle)
+        shipped = load_bundled_evaluator()
+        shipped_lint = shipped.lint(bundle)
+        manifest = build_manifest(bundle)
+        manifest_config = {
+            "manifestVersion": 1,
+            "algorithm": "sha256",
+            "files": manifest,
+        }
+
+        self.assertTrue(lesson_lint.valid, lesson_lint.issues)
+        self.assertTrue(shipped_lint["passed"], shipped_lint["issues"])
+        self.assertTrue(
+            all(
+                path.relative_to(bundle).as_posix() not in manifest
+                for path in sidecars
+            )
+        )
+        self.assertTrue(verify_manifest(bundle, manifest)["passed"])
+        self.assertTrue(shipped.verify_manifest(bundle, manifest_config)["passed"])
+
+    def test_translation_sidecar_secret_fails_lint_and_manifest_safety(self) -> None:
+        bundle = make_bundle(self.root)
+        manifest = build_manifest(bundle)
+        sidecar = bundle / "references" / "contract.zh-CN.md"
+        sidecar.write_text("api_key=sk-example-1234567890\n", encoding="utf-8")
+        shipped = load_bundled_evaluator()
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = shipped.lint(bundle)
+        shipped_manifest = shipped.verify_manifest(
+            bundle,
+            {"manifestVersion": 1, "algorithm": "sha256", "files": manifest},
+        )
+
+        self.assertIn("secret-material", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any("possible secret material" in issue for issue in shipped_lint["issues"])
+        )
+        with self.assertRaisesRegex(ValueError, "secret material"):
+            build_manifest(bundle)
+        self.assertTrue(
+            any("possible secret material" in issue for issue in shipped_manifest["issues"])
+        )
+
+    def test_oversized_translation_sidecar_fails_lint_and_manifest_safety(self) -> None:
+        bundle = make_bundle(self.root)
+        manifest = build_manifest(bundle)
+        (bundle / "references" / "contract.zh-CN.md").write_bytes(b"x" * 1_000_001)
+        shipped = load_bundled_evaluator()
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = shipped.lint(bundle)
+        shipped_manifest = shipped.verify_manifest(
+            bundle,
+            {"manifestVersion": 1, "algorithm": "sha256", "files": manifest},
+        )
+
+        self.assertIn("file-size", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any(
+                "exceeds 1000000 bytes" in issue
+                for issue in shipped_lint["issues"]
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "exceeds 1000000 bytes"):
+            build_manifest(bundle)
+        self.assertTrue(
+            any("exceeds 1000000 bytes" in issue for issue in shipped_manifest["issues"])
+        )
+
+    def test_symlinked_translation_sidecar_fails_lint_and_manifest_safety(self) -> None:
+        bundle = make_bundle(self.root)
+        manifest = build_manifest(bundle)
+        external = self.root / "external.zh-CN.md"
+        external.write_text("external", encoding="utf-8")
+        sidecar = bundle / "references" / "contract.zh-CN.md"
+        sidecar.symlink_to(external)
+        shipped = load_bundled_evaluator()
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = shipped.lint(bundle)
+        shipped_manifest = shipped.verify_manifest(
+            bundle,
+            {"manifestVersion": 1, "algorithm": "sha256", "files": manifest},
+        )
+
+        self.assertIn("symlink", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any(
+                "symlink is not portable" in issue
+                for issue in shipped_lint["issues"]
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            build_manifest(bundle)
+        self.assertTrue(any("symlink" in issue for issue in shipped_manifest["issues"]))
+
+    def test_translation_sidecar_must_use_an_allowed_location_and_type(self) -> None:
+        bundle = make_bundle(self.root)
+        sidecar = bundle / "scripts" / "guide.zh-CN.md"
+        sidecar.write_text("# 中文说明\n", encoding="utf-8")
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = load_bundled_evaluator().lint(bundle)
+
+        self.assertIn("file-type", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any(
+                "unsupported scripts file type" in issue
+                for issue in shipped_lint["issues"]
+            )
+        )
+
+    def test_translation_sidecar_must_be_a_regular_file(self) -> None:
+        bundle = make_bundle(self.root)
+        manifest = build_manifest(bundle)
+        (bundle / "references" / "contract.zh-CN.md").mkdir()
+        shipped = load_bundled_evaluator()
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = shipped.lint(bundle)
+        shipped_manifest = shipped.verify_manifest(
+            bundle,
+            {"manifestVersion": 1, "algorithm": "sha256", "files": manifest},
+        )
+
+        self.assertIn("regular-file", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any("must be a regular file" in issue for issue in shipped_lint["issues"])
+        )
+        with self.assertRaisesRegex(ValueError, "must be a regular file"):
+            build_manifest(bundle)
+        self.assertTrue(
+            any("must be a regular file" in issue for issue in shipped_manifest["issues"])
+        )
+
+    def test_pycache_symlink_cannot_hide_from_safety_checks(self) -> None:
+        bundle = make_bundle(self.root)
+        external = self.root / "external-cache"
+        external.mkdir()
+        cache = bundle / "scripts" / "__pycache__"
+        cache.symlink_to(external, target_is_directory=True)
+        shipped = load_bundled_evaluator()
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = shipped.lint(bundle)
+
+        self.assertIn("symlink", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any(
+                "symlink is not portable" in issue
+                for issue in shipped_lint["issues"]
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            build_manifest(bundle)
+
+    def test_pycache_exclusion_only_applies_to_directories(self) -> None:
+        bundle = make_bundle(self.root)
+        disguised_file = bundle / "scripts" / "__pycache__"
+        disguised_file.write_text("api_key=sk-example-1234567890\n", encoding="utf-8")
+
+        lesson_lint = lint_package(bundle)
+        shipped_lint = load_bundled_evaluator().lint(bundle)
+
+        self.assertIn("secret-material", {issue.code for issue in lesson_lint.issues})
+        self.assertTrue(
+            any("possible secret material" in issue for issue in shipped_lint["issues"])
+        )
+        self.assertIn("scripts/__pycache__", build_manifest(bundle))
 
     def test_output_and_failure_sections_are_required_by_both_linters(self) -> None:
         bundle = make_bundle(self.root)

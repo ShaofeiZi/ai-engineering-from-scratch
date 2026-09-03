@@ -56,6 +56,32 @@ SHA256_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
 ATTESTATION_VERSION = 1
 
 
+def _is_python_cache_path(root: Path, path: Path) -> bool:
+    """Return whether a path belongs to an excluded Python cache directory."""
+    relative = path.relative_to(root)
+    for index, part in enumerate(relative.parts):
+        if part == "__pycache__":
+            cache_root = root.joinpath(*relative.parts[: index + 1])
+            return cache_root.is_dir() and not cache_root.is_symlink()
+    return False
+
+
+def _is_translation_sidecar(relative: str) -> bool:
+    """Return whether a path is a derived Simplified Chinese companion."""
+    return relative.endswith(".zh-CN.md")
+
+
+def _translation_sidecar_type_allowed(relative: str) -> bool:
+    path = PurePosixPath(relative)
+    if path.parts == ("SKILL.zh-CN.md",):
+        return True
+    return (
+        len(path.parts) == 2
+        and path.parts[0] in ALLOWED_SUFFIXES
+        and ".md" in ALLOWED_SUFFIXES[path.parts[0]]
+    )
+
+
 @dataclass(frozen=True)
 class LintIssue:
     code: str
@@ -72,7 +98,7 @@ class LintReport:
 def _frontmatter_and_body(path: Path) -> tuple[dict[str, str], str]:
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0] != "---" or "---" not in lines[1:]:
-        raise ValueError("SKILL.md needs exact frontmatter delimiters")
+        raise ValueError("SKILL.md 需要精确的 frontmatter 分隔符")
     end = lines.index("---", 1)
     fields: dict[str, str] = {}
     index = 1
@@ -82,13 +108,13 @@ def _frontmatter_and_body(path: Path) -> tuple[dict[str, str], str]:
             index += 1
             continue
         if line[:1].isspace() or ":" not in line:
-            raise ValueError(f"malformed top-level line {index + 1}")
+            raise ValueError(f"顶层行 {index + 1} 格式错误")
         key, value = line.split(":", 1)
         key = key.strip()
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9-]*", key):
-            raise ValueError(f"invalid frontmatter field {key!r}")
+            raise ValueError(f"无效的 frontmatter 字段 {key!r}")
         if key in fields:
-            raise ValueError(f"duplicate frontmatter field {key!r}")
+            raise ValueError(f"重复的 frontmatter 字段 {key!r}")
         value = value.strip()
         if key == "metadata" and not value:
             nested: dict[str, str] = {}
@@ -97,14 +123,14 @@ def _frontmatter_and_body(path: Path) -> tuple[dict[str, str], str]:
                 nested_line = lines[index].strip()
                 if nested_line:
                     if ":" not in nested_line:
-                        raise ValueError(f"malformed metadata line {index + 1}")
+                        raise ValueError(f"metadata 行 {index + 1} 格式错误")
                     nested_key, nested_value = nested_line.split(":", 1)
                     nested_key = nested_key.strip()
                     if (
                         not re.fullmatch(r"[A-Za-z][A-Za-z0-9-]*", nested_key)
                         or nested_key in nested
                     ):
-                        raise ValueError(f"invalid metadata field {nested_key!r}")
+                        raise ValueError(f"无效的 metadata 字段 {nested_key!r}")
                     nested[nested_key] = nested_value.strip().strip("\"'")
                 index += 1
             fields[key] = json.dumps(nested, sort_keys=True)
@@ -160,9 +186,9 @@ def lint_package(
     issues: list[LintIssue] = []
     skill_path = root / "SKILL.md"
     if not root.is_dir() or root.is_symlink():
-        return LintReport(False, (), (LintIssue("bundle-directory", "regular bundle directory required"),))
+        return LintReport(False, (), (LintIssue("bundle-directory", "需要常规 bundle 目录"),))
     if not skill_path.is_file() or skill_path.is_symlink():
-        return LintReport(False, (), (LintIssue("skill-file", "regular SKILL.md required"),))
+        return LintReport(False, (), (LintIssue("skill-file", "需要常规 SKILL.md 文件"),))
     try:
         fields, body = _frontmatter_and_body(skill_path)
     except ValueError as error:
@@ -171,15 +197,15 @@ def lint_package(
     name = fields.get("name", "")
     description = fields.get("description", "")
     if not name or len(name) > 64 or not NAME_PATTERN.fullmatch(name):
-        issues.append(LintIssue("name-format", "name must be kebab-case and at most 64 characters"))
+        issues.append(LintIssue("name-format", "name 必须采用 kebab-case，且不超过 64 个字符"))
     if name != root.name:
-        issues.append(LintIssue("name-directory", "frontmatter name must match bundle directory"))
+        issues.append(LintIssue("name-directory", "frontmatter name 必须与 bundle 目录名一致"))
     if not description:
-        issues.append(LintIssue("description", "description is required"))
+        issues.append(LintIssue("description", "description 为必填项"))
     elif len(description) > 1024:
-        issues.append(LintIssue("description-length", "description must be at most 1024 characters"))
+        issues.append(LintIssue("description-length", "description 最多为 1024 个字符"))
     if not body:
-        issues.append(LintIssue("body", "instruction body is required"))
+        issues.append(LintIssue("body", "instruction 正文为必填项"))
     elif len(body) > MAX_SKILL_BODY_CHARS:
         issues.append(
             LintIssue(
@@ -233,12 +259,45 @@ def lint_package(
 
     packaged_files: set[str] = set()
     for path in root.rglob("*"):
+        relative = path.relative_to(root).as_posix()
         if path.is_symlink():
-            issues.append(LintIssue("symlink", f"symlink is not portable: {path.relative_to(root)}"))
+            issues.append(LintIssue("symlink", f"symlink is not portable: {relative}"))
+        elif _is_python_cache_path(root, path):
+            continue
+        elif _is_translation_sidecar(relative):
+            if not path.is_file():
+                issues.append(
+                    LintIssue(
+                        "regular-file",
+                        f"translation sidecar must be a regular file: {relative}",
+                    )
+                )
+            else:
+                if not _translation_sidecar_type_allowed(relative):
+                    directory = path.relative_to(root).parts[0]
+                    issues.append(
+                        LintIssue(
+                            "file-type",
+                            f"unsupported {directory} file type: {relative}",
+                        )
+                    )
+                if path.stat().st_size > MAX_COMPANION_FILE_BYTES:
+                    issues.append(
+                        LintIssue(
+                            "file-size",
+                            f"companion file exceeds {MAX_COMPANION_FILE_BYTES} bytes: {relative}",
+                        )
+                    )
+                if _contains_obvious_secret(path.read_bytes()):
+                    issues.append(
+                        LintIssue(
+                            "secret-material",
+                            f"possible secret material in {relative}",
+                        )
+                    )
         elif path == skill_path:
             continue
         elif path.is_file():
-            relative = path.relative_to(root).as_posix()
             packaged_files.add(relative)
             if len(path.relative_to(root).parts) != 2:
                 issues.append(LintIssue("package-depth", f"file is not one level deep: {relative}"))
@@ -516,6 +575,23 @@ def build_manifest(root: Path) -> dict[str, str]:
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             raise ValueError(f"manifest tree contains a symlink: {relative}")
+        if _is_python_cache_path(root, path):
+            continue
+        if _is_translation_sidecar(relative):
+            if not path.is_file():
+                raise ValueError(
+                    f"translation sidecar must be a regular file: {relative}"
+                )
+            if not _translation_sidecar_type_allowed(relative):
+                directory = path.relative_to(root).parts[0]
+                raise ValueError(f"unsupported {directory} file type: {relative}")
+            if path.stat().st_size > MAX_COMPANION_FILE_BYTES:
+                raise ValueError(
+                    f"companion file exceeds {MAX_COMPANION_FILE_BYTES} bytes: {relative}"
+                )
+            if _contains_obvious_secret(path.read_bytes()):
+                raise ValueError(f"possible secret material in {relative}")
+            continue
         if relative == RESERVED_MANIFEST_PATH:
             if not path.is_file():
                 raise ValueError("reserved manifest path must be a regular file")

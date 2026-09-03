@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a deterministic, read-only JSON release gate for this skill bundle."""
+"""为该技能包运行一个确定性的 read-only JSON 发布门控。"""
 
 from __future__ import annotations
 
@@ -69,6 +69,32 @@ REQUIRED_ENTRY_FILES = (
     "evals/cases.json",
     "evals/evidence.json",
 )
+
+
+def is_python_cache_path(bundle: Path, path: Path) -> bool:
+    """Return whether a path belongs to an excluded Python cache directory."""
+    relative = path.relative_to(bundle)
+    for index, part in enumerate(relative.parts):
+        if part == "__pycache__":
+            cache_root = bundle.joinpath(*relative.parts[: index + 1])
+            return cache_root.is_dir() and not cache_root.is_symlink()
+    return False
+
+
+def is_translation_sidecar(relative: str) -> bool:
+    """Return whether a path is a derived Simplified Chinese companion."""
+    return relative.endswith(".zh-CN.md")
+
+
+def translation_sidecar_type_allowed(relative: str) -> bool:
+    path = PurePosixPath(relative)
+    if path.parts == ("SKILL.zh-CN.md",):
+        return True
+    return (
+        len(path.parts) == 2
+        and path.parts[0] in ALLOWED_SUFFIXES
+        and ".md" in ALLOWED_SUFFIXES[path.parts[0]]
+    )
 
 
 def paths_from_body(body: str) -> set[str]:
@@ -362,6 +388,23 @@ def lint(
         relative = path.relative_to(bundle).as_posix()
         if path.is_symlink():
             issues.append(f"symlink is not portable: {relative}")
+        elif is_python_cache_path(bundle, path):
+            continue
+        elif is_translation_sidecar(relative):
+            if not path.is_file():
+                issues.append(
+                    f"translation sidecar must be a regular file: {relative}"
+                )
+            else:
+                if not translation_sidecar_type_allowed(relative):
+                    directory = path.relative_to(bundle).parts[0]
+                    issues.append(f"unsupported {directory} file type: {relative}")
+                if path.stat().st_size > MAX_COMPANION_FILE_BYTES:
+                    issues.append(
+                        f"companion file exceeds {MAX_COMPANION_FILE_BYTES} bytes: {relative}"
+                    )
+                if contains_obvious_secret(path.read_bytes()):
+                    issues.append(f"possible secret material in {relative}")
         elif path == skill_path:
             continue
         elif path.is_file():
@@ -490,6 +533,23 @@ def verify_manifest(bundle: Path, config: dict[str, object]) -> dict[str, object
         relative = path.relative_to(bundle).as_posix()
         if path.is_symlink():
             issues.append(f"manifest tree contains a symlink: {relative}")
+        elif is_python_cache_path(bundle, path):
+            continue
+        elif is_translation_sidecar(relative):
+            if not path.is_file():
+                issues.append(
+                    f"translation sidecar must be a regular file: {relative}"
+                )
+            else:
+                if not translation_sidecar_type_allowed(relative):
+                    directory = path.relative_to(bundle).parts[0]
+                    issues.append(f"unsupported {directory} file type: {relative}")
+                if path.stat().st_size > MAX_COMPANION_FILE_BYTES:
+                    issues.append(
+                        f"companion file exceeds {MAX_COMPANION_FILE_BYTES} bytes: {relative}"
+                    )
+                if contains_obvious_secret(path.read_bytes()):
+                    issues.append(f"possible secret material in {relative}")
         elif relative == RESERVED_MANIFEST_PATH:
             if not path.is_file():
                 issues.append("reserved manifest path must be a regular file")
@@ -905,16 +965,16 @@ def main() -> None:
     parser.add_argument(
         "--fixture-demo",
         action="store_true",
-        help="exit successfully for a passing lesson fixture without claiming release readiness",
+        help="课程夹具通过时成功退出，但不声明已可发布",
     )
     parser.add_argument(
         "--attestation",
         type=Path,
-        help="external JSON attestation that binds the evaluated evidence root",
+        help="绑定已评估证据根的外部 JSON 证明",
     )
     parser.add_argument(
         "--trusted-attestation-sha256",
-        help="out-of-band trusted sha256:<hex> digest of the exact attestation bytes",
+        help="通过带外渠道获得的可信 sha256:<hex>，对应证明文件的精确字节",
     )
     args = parser.parse_args()
     try:
