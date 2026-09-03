@@ -1,12 +1,12 @@
-"""Lay down the three-file minimal agent workbench and run a single turn.
+"""搭建由三个文件组成的最小智能体工作台，并运行一个回合。
 
-Files written:
-  workdir/AGENTS.md         short router into state + board + deeper docs
-  workdir/agent_state.json  active task, touched files, blockers, next action
-  workdir/task_board.json   queue of tasks with status + acceptance
+写入的文件：
+  workdir/AGENTS.md         精简路由器，包含状态 + 看板 + 更深层文档
+  workdir/agent_state.json  当前任务、已修改文件、阻塞项、下一步动作
+  workdir/task_board.json   任务队列，包含状态 + 验收标准
 
-Run: python3 code/main.py
-Re-run to see the second turn pick up where the first stopped.
+运行：python3 code/main.py
+Re-run 可查看第二回合从第一回合停止处继续执行。
 """
 
 from __future__ import annotations
@@ -135,20 +135,20 @@ def main() -> None:
     state = load_state(state_path)
     board = load_board(board_path)
 
-    print("before turn:")
-    print(f"  active task : {state.active_task_id}")
-    print(f"  next action : {state.next_action!r}")
-    print(f"  todo on board: {[t.id for t in board if t.status == 'todo']}")
+    print("回合运行前：")
+    print(f"  当前任务  ： {state.active_task_id}")
+    print(f"  下一步动作： {state.next_action!r}")
+    print(f"  看板待办  ： {[t.id for t in board if t.status == 'todo']}")
 
     state, board = run_one_turn(state, board)
     save_state(state_path, state)
     save_board(board_path, board)
 
-    print("\nafter turn:")
-    print(f"  active task : {state.active_task_id}")
-    print(f"  touched     : {state.touched_files}")
-    print(f"  next action : {state.next_action!r}")
-    print(f"  board status: {[(t.id, t.status) for t in board]}")
+    print("\n回合运行后：")
+    print(f"  当前任务  ： {state.active_task_id}")
+    print(f"  已修改    ： {state.touched_files}")
+    print(f"  下一步动作： {state.next_action!r}")
+    print(f"  看板状态  ： {[(t.id, t.status) for t in board]}")
 
 
 if __name__ == "__main__":
