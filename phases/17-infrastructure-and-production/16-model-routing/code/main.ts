@@ -1,31 +1,30 @@
 /**
- * Model routing — TypeScript port + rule-based router.
+ * 模型路由——TypeScript 移植版与基于规则的路由器。
  *
- * Two halves:
- *   1. ModelRouter: rule-based picker over (model catalog, request signals).
- *      Each rule scores candidates by capability fit, then weighs latency vs
- *      cost vs capability per a caller-supplied policy. Matches the four
- *      signals in docs/en.md (task class, prompt length, similarity to
- *      hard set, self-confidence).
- *   2. Cost/quality simulator matching main.py: NO_ROUTE / PRE_ROUTE /
- *      CASCADE patterns on a mixed-difficulty workload.
+ * 分为两部分：
+ *   1. ModelRouter：根据模型目录与请求信号进行基于规则的选择。每条规则先按能力
+ *      匹配度给候选模型评分，再依据调用方提供的策略权衡延迟、成本与能力。对应
+ *      docs/en.md 中的四种信号（任务类别、提示词长度、与困难样本集的相似度、
+ *      自置信度）。
+ *   2. 与 main.py 一致的成本/质量模拟器：在混合难度工作负载下比较 NO_ROUTE、
+ *      PRE_ROUTE 和 CASCADE 模式。
  *
- * Citations:
+ * 参考资料：
  *   - RouteLLM (LMSYS): https://github.com/lm-sys/RouteLLM
- *   - OpenRouter recommendation/routing primitives: https://openrouter.ai/
- *   - LiteLLM router config with fallback + cost-routing (referenced in docs)
+ *   - OpenRouter 推荐/路由原语：https://openrouter.ai/
+ *   - 带回退与成本路由的 LiteLLM 路由器配置（在文档中引用）
  *
- * Runs on Node 20+ stdlib. No npm deps.
+ * 使用 Node 20+ 标准库运行，无 npm 依赖。
  */
 
-// -- Pricing (2026-04 approximations) -------------------------------------
+// -- 定价（2026-04 估算） -------------------------------------------------
 
 const CHEAP_INPUT = 0.25;
 const CHEAP_OUTPUT = 1.0;
 const FRONTIER_INPUT = 3.0;
 const FRONTIER_OUTPUT = 15.0;
 
-// -- Model catalog + router primitive --------------------------------------
+// -- 模型目录与路由原语 ---------------------------------------------------
 
 type Capability =
   | "chat"
@@ -37,16 +36,16 @@ type Capability =
 
 type Model = {
   id: string;
-  // Per-million-tokens.
+  // 每百万 token 的价格。
   inputPrice: number;
   outputPrice: number;
-  // P50 first-token latency (ms).
+  // 首 token 延迟 P50（毫秒）。
   latencyMs: number;
-  // Maximum context length (tokens).
+  // 最大上下文长度（token）。
   contextWindow: number;
-  // Capability bag. Used by router fit-scoring.
+  // 能力集合，用于路由器匹配度评分。
   capabilities: Set<Capability>;
-  // Subjective quality on a 0–1 scale per the docs' rough mapping.
+  // 根据文档粗略映射得出的 0～1 主观质量分数。
   qualityFloor: number;
 };
 
@@ -93,22 +92,22 @@ const CATALOG: Model[] = [
 ];
 
 type RouteSignals = {
-  // Task class derived from a small upstream classifier.
+  // 由小型上游分类器得出的任务类别。
   taskClass: "simple" | "medium" | "hard";
-  // Approximate prompt token count.
+  // 估算的提示词 token 数。
   promptTokens: number;
-  // 0–1 cosine similarity to a curated known-hard set.
+  // 与人工整理的已知困难样本集之间的 0～1 余弦相似度。
   hardSetSimilarity: number;
-  // Required capabilities for this request.
+  // 此请求所需的能力。
   required: Capability[];
 };
 
 type RoutePolicy = {
-  // Weights sum to 1; how much we care about each axis.
+  // 权重之和为 1，表示各维度的重要程度。
   weightCost: number;
   weightLatency: number;
   weightCapability: number;
-  // Quality floor any chosen model must clear.
+  // 所选模型必须达到的质量下限。
   minQuality: number;
 };
 
@@ -127,8 +126,8 @@ class ModelRouter {
     this.hardSetThreshold = hardSetThreshold;
   }
 
-  // Estimate a request's blended cost on a model. Assumes 200 output tokens
-  // unless the caller threads through a real output estimate elsewhere.
+  // 估算请求在某模型上的综合成本。除非调用方传入真实输出估算值，否则假定
+  // 输出 200 个 token。
   estCost(model: Model, promptTokens: number, outputTokens = 200): number {
     return (
       (promptTokens / 1e6) * model.inputPrice +
@@ -136,10 +135,10 @@ class ModelRouter {
     );
   }
 
-  // Filter the catalog down to models that:
-  //  (a) cover every required capability,
-  //  (b) fit the prompt in their context window,
-  //  (c) clear the policy quality floor.
+  // 筛选模型目录，只保留满足以下条件的模型：
+  //  (a) 覆盖所有必需能力；
+  //  (b) 上下文窗口容得下提示词；
+  //  (c) 达到策略要求的质量下限。
   candidates(signals: RouteSignals, policy: RoutePolicy): Model[] {
     return this.catalog.filter((m) => {
       for (const c of signals.required) if (!m.capabilities.has(c)) return false;
@@ -149,8 +148,8 @@ class ModelRouter {
     });
   }
 
-  // Weighted pick: lower cost / lower latency / higher capability fit is better.
-  // The 'hard set' similarity short-circuits to frontier (matches docs' rule).
+  // 加权选择：成本越低、延迟越低、能力匹配度越高越好。
+  // 与“困难样本集”的相似度达到阈值时，直接选择前沿模型（与文档规则一致）。
   pick(signals: RouteSignals, policy: RoutePolicy): RouteDecision {
     if (signals.hardSetSimilarity >= this.hardSetThreshold) {
       const frontier = this.catalog.find((m) => m.id === "frontier");
@@ -158,16 +157,16 @@ class ModelRouter {
         return {
           model: frontier,
           estCost: this.estCost(frontier, signals.promptTokens),
-          reasoning: `hard-set similarity ${signals.hardSetSimilarity.toFixed(2)} >= ${this.hardSetThreshold} — pinned to frontier`,
+          reasoning: `困难样本集相似度 ${signals.hardSetSimilarity.toFixed(2)} >= ${this.hardSetThreshold}——固定到前沿模型`,
         };
       }
     }
 
     const cands = this.candidates(signals, policy);
     if (cands.length === 0) {
-      throw new Error("no candidate model clears policy + required caps");
+      throw new Error("没有候选模型同时满足策略与所需能力");
     }
-    // Normalise for fair weighting.
+    // 归一化以实现公平加权。
     const costs = cands.map((m) => this.estCost(m, signals.promptTokens));
     const latencies = cands.map((m) => m.latencyMs);
     const caps = cands.map((m) => m.capabilities.size);
@@ -190,8 +189,8 @@ class ModelRouter {
         bestScore = score;
         bestIdx = i;
         bestReason =
-          `cost=${costScore.toFixed(2)} latency=${latScore.toFixed(2)} cap=${capScore.toFixed(2)} ` +
-          `weighted=${score.toFixed(3)}`;
+          `成本=${costScore.toFixed(2)} 延迟=${latScore.toFixed(2)} 能力=${capScore.toFixed(2)} ` +
+          `加权分数=${score.toFixed(3)}`;
       }
     }
 
@@ -203,7 +202,7 @@ class ModelRouter {
   }
 }
 
-// -- Workload + simulator (matches main.py) --------------------------------
+// -- 工作负载与模拟器（与 main.py 一致） ---------------------------------
 
 type Difficulty = "simple" | "medium" | "hard";
 type Query = {
@@ -324,17 +323,17 @@ function simulate(pattern: string, reqs: readonly Query[]): SimRow {
 function reportRow(row: SimRow, baseline: number): void {
   const save = ((baseline - row.cost) / baseline) * 100;
   console.log(
-    `${row.pattern.padEnd(12)}  cost=$${row.cost.toFixed(2).padStart(7)}  ` +
-      `save=${save.toFixed(1).padStart(5)}%  ` +
-      `quality=${(row.meanQuality * 100).toFixed(1).padStart(5)}%  ` +
-      `escalated=${String(row.escalated).padStart(4)}`,
+    `${row.pattern.padEnd(12)}  成本=$${row.cost.toFixed(2).padStart(7)}  ` +
+      `节省=${save.toFixed(1).padStart(5)}%  ` +
+      `质量=${(row.meanQuality * 100).toFixed(1).padStart(5)}%  ` +
+      `升级数=${String(row.escalated).padStart(4)}`,
   );
 }
 
-// -- Demos -----------------------------------------------------------------
+// -- 演示 ------------------------------------------------------------------
 
 function routerDemo(): void {
-  console.log("--- Rule-based ModelRouter ---");
+  console.log("--- 基于规则的 ModelRouter ---");
   const router = new ModelRouter(CATALOG);
 
   const balanced: RoutePolicy = {
@@ -352,7 +351,7 @@ function routerDemo(): void {
 
   const cases: { name: string; signals: RouteSignals; policy: RoutePolicy }[] = [
     {
-      name: "FAQ-style short prompt (balanced policy)",
+      name: "FAQ 风格短提示词（均衡策略）",
       signals: {
         taskClass: "simple",
         promptTokens: 400,
@@ -362,7 +361,7 @@ function routerDemo(): void {
       policy: balanced,
     },
     {
-      name: "code-gen with tool use (balanced)",
+      name: "使用工具的代码生成（均衡策略）",
       signals: {
         taskClass: "medium",
         promptTokens: 2500,
@@ -372,7 +371,7 @@ function routerDemo(): void {
       policy: balanced,
     },
     {
-      name: "math near known-hard set (auto-pin frontier)",
+      name: "接近已知困难样本集的数学任务（自动固定到前沿模型）",
       signals: {
         taskClass: "hard",
         promptTokens: 1500,
@@ -382,7 +381,7 @@ function routerDemo(): void {
       policy: balanced,
     },
     {
-      name: "long-context 800K tokens (frontier only fits)",
+      name: "80 万 token 的长上下文（仅前沿模型可容纳）",
       signals: {
         taskClass: "hard",
         promptTokens: 800_000,
@@ -392,7 +391,7 @@ function routerDemo(): void {
       policy: balanced,
     },
     {
-      name: "FAQ-style short prompt (latency-first)",
+      name: "FAQ 风格短提示词（延迟优先）",
       signals: {
         taskClass: "simple",
         promptTokens: 300,
@@ -407,14 +406,14 @@ function routerDemo(): void {
     const d = router.pick(c.signals, c.policy);
     console.log(`  ${c.name}`);
     console.log(
-      `    → ${d.model.id}  est_cost=$${d.estCost.toFixed(5)}  reason=${d.reasoning}`,
+      `    → ${d.model.id}  估算成本=$${d.estCost.toFixed(5)}  原因=${d.reasoning}`,
     );
   }
 }
 
 function patternsDemo(): void {
   console.log("\n" + "=".repeat(80));
-  console.log("MODEL ROUTING — three patterns, 1000 requests, mixed difficulty");
+  console.log("模型路由——三种模式，1000 个混合难度请求");
   console.log("=".repeat(80));
   const reqs = makeWorkload();
   const baseline = simulate("NO_ROUTE", reqs).cost;
@@ -422,10 +421,10 @@ function patternsDemo(): void {
     reportRow(simulate(p, reqs), baseline);
   }
   console.log(
-    "\nRead: PRE_ROUTE saves big when the classifier is accurate. CASCADE",
+    "\n解读：分类器准确时，PRE_ROUTE 可大幅节省成本。CASCADE",
   );
   console.log(
-    "guarantees quality floor but adds latency on escalated requests.",
+    "能保障质量下限，但会增加升级请求的延迟。",
   );
 }
 

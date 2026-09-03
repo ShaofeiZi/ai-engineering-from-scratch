@@ -1,11 +1,11 @@
-"""Model routing simulator — stdlib Python.
+"""模型路由模拟器——使用 Python 标准库。
 
-Three patterns on the same workload:
-  NO_ROUTE   : all requests to frontier
-  PRE_ROUTE  : classifier up front routes to cheap or frontier
-  CASCADE    : cheap first, escalate on low confidence
+在同一工作负载下比较三种模式：
+  NO_ROUTE   ：所有请求都发往前沿模型
+  PRE_ROUTE  ：前置分类器将请求路由到低成本模型或前沿模型
+  CASCADE    ：先用低成本模型，置信度低时再升级
 
-Reports blended cost, quality loss, escalation rate.
+报告综合成本、质量损失和升级率。
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def cost_of(route: str, q: Query) -> float:
 
 
 def quality(route: str, q: Query) -> float:
-    """Toy quality score per difficulty on route."""
+    """给出各路由在不同难度下的简化质量分数。"""
     if route == "frontier":
         return 1.0
     return {"simple": 0.99, "medium": 0.92, "hard": 0.75}[q.difficulty]
@@ -91,21 +91,21 @@ def simulate(pattern: str, reqs: list[Query]) -> dict:
 
 def report(row: dict, baseline: float) -> None:
     save = (baseline - row["cost"]) / baseline * 100
-    print(f"{row['pattern']:12}  cost=${row['cost']:7.2f}  save={save:5.1f}%  "
-          f"quality={row['mean_quality']*100:5.1f}%  escalated={row['escalated']:4}")
+    print(f"{row['pattern']:12}  成本=${row['cost']:7.2f}  节省={save:5.1f}%  "
+          f"质量={row['mean_quality']*100:5.1f}%  升级数={row['escalated']:4}")
 
 
 def main() -> None:
     print("=" * 80)
-    print("MODEL ROUTING — three patterns, 1000 requests, mixed difficulty")
+    print("模型路由——三种模式，1000 个混合难度请求")
     print("=" * 80)
     base = make_workload()
     baseline = simulate("NO_ROUTE", base)["cost"]
     for p in ("NO_ROUTE", "PRE_ROUTE", "CASCADE"):
         report(simulate(p, base), baseline)
 
-    print("\nRead: PRE_ROUTE saves big when the classifier is accurate. CASCADE")
-    print("guarantees quality floor but adds latency on escalated requests.")
+    print("\n解读：分类器准确时，PRE_ROUTE 可大幅节省成本。CASCADE")
+    print("能保障质量下限，但会增加升级请求的延迟。")
 
 
 if __name__ == "__main__":
