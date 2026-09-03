@@ -1,8 +1,7 @@
-"""Agent economies: Shapley attribution, second-price auction, reputation routing.
+"""Agent 经济：Shapley 归因、次价拍卖与声誉路由。
 
-All stdlib. Shapley is exact for N<=6 and sampled otherwise. Second-price
-auction demonstrates truthful bidding. Reputation routing compares
-rep-weighted vs random assignment over 100 rounds.
+全部仅使用 stdlib。N<=6 时精确计算 Shapley，否则使用采样。次价拍卖演示诚实出价。
+声誉路由在 100 轮中对比按声誉加权和随机分配。
 """
 from __future__ import annotations
 
@@ -46,7 +45,7 @@ def shapley_sampled(value_fn: Callable[[frozenset], float], agents: list[str],
     return {a: v / samples for a, v in contribs.items()}
 
 
-# ---------- Second-price auction ----------
+# ---------- 次价拍卖 ----------
 
 @dataclass
 class Bid:
@@ -63,7 +62,7 @@ def second_price(bids: list[Bid]) -> tuple[str, float] | None:
     return winner, payment
 
 
-# ---------- Reputation-weighted routing ----------
+# ---------- 声誉加权路由 ----------
 
 class Reputation:
     def __init__(self, alpha: float = 0.95, floor: float = 0.1) -> None:
@@ -94,15 +93,15 @@ def weighted_choice(agents: list[str], weights: list[float], rng: random.Random)
     return agents[-1]
 
 
-# ---------- demos ----------
+# ---------- 演示 ----------
 
 def demo_shapley() -> None:
     print("=" * 72)
-    print("SHAPLEY ATTRIBUTION — 3 agents collaborate on a task")
+    print("SHAPLEY 归因 — 3 个 Agent 协作完成任务")
     print("=" * 72)
 
-    # Value function: coder alone = 0.5, researcher alone = 0.3, reviewer alone = 0.1,
-    # pairs and trio gain superadditively.
+    # 价值函数：coder 单独工作 = 0.5，researcher 单独工作 = 0.3，reviewer 单独工作 = 0.1；
+    # 两两组合和三者组合具有超可加收益。
     base = {
         frozenset(): 0.0,
         frozenset(["coder"]): 0.5,
@@ -117,21 +116,21 @@ def demo_shapley() -> None:
     agents = ["coder", "researcher", "reviewer"]
 
     exact = shapley_exact(value_fn, agents)
-    print("  exact Shapley values:")
+    print("  精确 Shapley 值：")
     for a, v in exact.items():
         print(f"    {a:11s} {v:.4f}")
-    print(f"    sum = {sum(exact.values()):.4f} (should equal grand coalition value 1.0000)")
+    print(f"    总和 = {sum(exact.values()):.4f}（应等于大联盟价值 1.0000）")
 
     rng = random.Random(0)
     sampled = shapley_sampled(value_fn, agents, samples=200, rng=rng)
-    print("\n  sampled Shapley values (N=200):")
+    print("\n  采样 Shapley 值（N=200）：")
     for a, v in sampled.items():
         print(f"    {a:11s} {v:.4f}")
 
 
 def demo_auction() -> None:
     print("\n" + "=" * 72)
-    print("SECOND-PRICE AUCTION — 5 bidders compete for a task slot")
+    print("次价拍卖 — 5 个竞标者争夺一个任务名额")
     print("=" * 72)
     bids = [
         Bid("agent-a", 0.82),
@@ -141,60 +140,60 @@ def demo_auction() -> None:
         Bid("agent-e", 0.77),
     ]
     for b in bids:
-        print(f"  {b.bidder:10s} bids {b.value:.2f}")
+        print(f"  {b.bidder:10s} 出价 {b.value:.2f}")
     result = second_price(bids)
     if result:
         winner, payment = result
-        print(f"\n  winner: {winner}  payment: {payment:.2f}")
-        print("  (winner pays second-highest bid; this is truthful)")
+        print(f"\n  胜者：{winner}  支付：{payment:.2f}")
+        print("  （胜者支付第二高出价；这会激励诚实出价）")
 
 
 def demo_reputation_routing() -> None:
     print("\n" + "=" * 72)
-    print("REPUTATION-WEIGHTED ROUTING — 100 tasks, 4 agents, 50 warmup")
+    print("声誉加权路由 — 100 个任务、4 个 Agent、50 轮预热")
     print("=" * 72)
     agents = ["alpha", "beta", "gamma", "delta"]
     true_quality = {"alpha": 0.9, "beta": 0.5, "gamma": 0.75, "delta": 0.3}
 
     rng = random.Random(0)
 
-    # Random baseline
+    # 随机基线
     random_quality = 0.0
     for _ in range(100):
         a = rng.choice(agents)
         q = max(0.0, min(1.0, true_quality[a] + rng.uniform(-0.1, 0.1)))
         random_quality += q
 
-    # Rep-weighted with 50 warmup
+    # 经过 50 轮预热的声誉加权方案
     rng = random.Random(0)
     rep = Reputation()
     rep.init(agents)
     rep_quality = 0.0
     for i in range(100):
         if i < 50:
-            a = rng.choice(agents)  # warmup: learn everyone
+            a = rng.choice(agents)  # 预热：了解每个 Agent
         else:
             a = weighted_choice(agents, rep.weights(agents), rng)
         q = max(0.0, min(1.0, true_quality[a] + rng.uniform(-0.1, 0.1)))
         rep.update(a, q)
         rep_quality += q
 
-    print(f"  random routing avg quality:   {random_quality / 100:.3f}")
-    print(f"  rep-weighted routing:         {rep_quality / 100:.3f}")
-    print(f"  improvement: {(rep_quality - random_quality) / random_quality * 100:+.1f}%")
-    print("\n  final reputation scores:")
+    print(f"  随机路由平均质量：{random_quality / 100:.3f}")
+    print(f"  声誉加权路由：    {rep_quality / 100:.3f}")
+    print(f"  提升：{(rep_quality - random_quality) / random_quality * 100:+.1f}%")
+    print("\n  最终声誉分数：")
     for a in agents:
-        print(f"    {a:8s} rep={rep.scores[a]:.3f}  true={true_quality[a]:.2f}")
+        print(f"    {a:8s} 声誉={rep.scores[a]:.3f}  真实质量={true_quality[a]:.2f}")
 
 
 def main() -> None:
     demo_shapley()
     demo_auction()
     demo_reputation_routing()
-    print("\nTakeaways:")
-    print("  Shapley is fair but expensive. Sample for N > 6.")
-    print("  Second-price auctions are truthful under monotone aggregation (Google Research).")
-    print("  Reputation capital closes the loop: good routing + decay + slashing.")
+    print("\n要点：")
+    print("  Shapley 公平但计算昂贵。N > 6 时应使用采样。")
+    print("  在单调聚合下，次价拍卖能激励诚实出价（Google Research）。")
+    print("  声誉资本形成闭环：良好路由 + 衰减 + 惩罚。")
 
 
 if __name__ == "__main__":
