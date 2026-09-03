@@ -1,4 +1,4 @@
-"""Unit tests for the vision encoder front end."""
+"""视觉编码器前端的单元测试。"""
 
 from __future__ import annotations
 

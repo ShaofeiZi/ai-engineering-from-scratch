@@ -1,12 +1,11 @@
-"""Vision encoder front end: patch embedding plus 2D sinusoidal position.
+"""视觉编码器前端：patch 嵌入加二维正弦位置编码。
 
-Tokenizes a 224x224x3 image into a sequence of 196 patch tokens plus a CLS
-token. The patch projection is a Conv2d with kernel and stride equal to the
-patch size, which is numerically identical to flatten-then-linear. The
-position signal is a fixed 2D sinusoidal table; half the embedding dim encodes
-row position, the other half encodes column position, at multiple frequencies.
+将一张 224x224x3 的图像切分为 196 个 patch token 序列，并加上一个 CLS
+token。patch 投影使用一个 kernel 和 stride 都等于 patch size 的 Conv2d，
+在数值上与“先展平再线性变换”完全等价。位置信号是一张固定的二维正弦
+表：一半的嵌入维度用于编码行位置，另一半编码列位置，并以多种频率采样。
 
-Run with: python3 main.py
+运行方式：python3 main.py
 """
 
 from __future__ import annotations
@@ -30,7 +29,7 @@ class FrontEndConfig:
     def grid_size(self) -> int:
         if self.image_size % self.patch_size != 0:
             raise ValueError(
-                f"patch_size {self.patch_size} must divide image_size {self.image_size}"
+                f"patch_size {self.patch_size} 必须能整除 image_size {self.image_size}"
             )
         return self.image_size // self.patch_size
 
@@ -40,14 +39,14 @@ class FrontEndConfig:
 
 
 def sinusoidal_2d(grid_h: int, grid_w: int, dim: int) -> torch.Tensor:
-    """Build a deterministic 2D sinusoidal position table of shape (grid_h * grid_w, dim).
+    """构造一张确定性的二维正弦位置表，形状为 (grid_h * grid_w, dim)。
 
-    Half of dim encodes row position, half encodes column position. Within each
-    half, frequencies span the standard Transformer sin/cos band. Identical
-    inputs always produce identical outputs, with no learned state.
+    dim 的一半用于编码行位置，另一半用于编码列位置。在每一半内部，频率
+    覆盖标准 Transformer 的 sin/cos 频段。相同的输入永远产生相同的输出，
+    不含任何可学习状态。
     """
     if dim % 4 != 0:
-        raise ValueError(f"sinusoidal_2d dim must be divisible by 4, got {dim}")
+        raise ValueError(f"sinusoidal_2d 的 dim 必须能被 4 整除，当前为 {dim}")
     half = dim // 2
     quarter = half // 2
 
@@ -67,10 +66,10 @@ def sinusoidal_2d(grid_h: int, grid_w: int, dim: int) -> torch.Tensor:
 
 
 class PatchEmbed(nn.Module):
-    """Patch projection as a strided Conv2d.
+    """以带 stride 的 Conv2d 实现的 patch 投影。
 
-    Output shape on a (B, C, H, W) input is (B, N, hidden) where
-    N = (H / patch_size) * (W / patch_size).
+    对 (B, C, H, W) 输入，输出形状为 (B, N, hidden)，其中
+    N = (H / patch_size) * (W / patch_size)。
     """
 
     def __init__(self, cfg: FrontEndConfig) -> None:
@@ -86,14 +85,14 @@ class PatchEmbed(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.dim() != 4:
-            raise ValueError(f"expected 4D input (B,C,H,W), got shape {tuple(x.shape)}")
+            raise ValueError(f"期望 4 维输入 (B,C,H,W)，实际形状为 {tuple(x.shape)}")
         if x.shape[1] != self.cfg.in_channels:
             raise ValueError(
-                f"channel mismatch: got {x.shape[1]}, expected {self.cfg.in_channels}"
+                f"通道数不匹配：实际为 {x.shape[1]}，期望为 {self.cfg.in_channels}"
             )
         if x.shape[2] != self.cfg.image_size or x.shape[3] != self.cfg.image_size:
             raise ValueError(
-                f"spatial mismatch: got {tuple(x.shape[2:])}, expected "
+                f"空间尺寸不匹配：实际为 {tuple(x.shape[2:])}，期望为 "
                 f"({self.cfg.image_size}, {self.cfg.image_size})"
             )
         out = self.proj(x)
@@ -103,9 +102,9 @@ class PatchEmbed(nn.Module):
 
 
 class VisionFrontEnd(nn.Module):
-    """Patch embed + CLS prepend + 2D sinusoidal position.
+    """patch 嵌入 + 前置 CLS + 二维正弦位置编码。
 
-    Output shape: (B, num_patches + 1, hidden).
+    输出形状：(B, num_patches + 1, hidden)。
     """
 
     def __init__(self, cfg: FrontEndConfig) -> None:
@@ -130,11 +129,10 @@ class VisionFrontEnd(nn.Module):
 
 
 def synthesize_image(seed: int, image_size: int = 224, channels: int = 3) -> torch.Tensor:
-    """Build a deterministic 1x3x224x224 fixture from numpy.random.
+    """用 numpy.random 构造一份确定性的 1x3x224x224 测试图像。
 
-    Values are in [0, 1] float32. Adding a smooth gradient on top of noise gives
-    the patch projection something with both high and low frequency content to
-    summarize.
+    取值为 [0, 1] 区间的 float32。在噪声之上叠加一个平滑梯度，可以让
+    patch 投影同时处理到高频和低频内容，从而有更丰富的特征可供汇总。
     """
     rng = np.random.default_rng(seed)
     noise = rng.standard_normal((channels, image_size, image_size)).astype("float32") * 0.1
@@ -147,13 +145,12 @@ def synthesize_image(seed: int, image_size: int = 224, channels: int = 3) -> tor
 
 
 def unfold_then_linear(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, patch_size: int) -> torch.Tensor:
-    """Reference implementation of patch projection via unfold + matmul.
+    """通过 unfold + matmul 实现的 patch 投影参考实现。
 
-    Used by the tests to assert that the Conv2d projection matches the
-    flatten-then-linear math.
+    供测试使用，用于断言 Conv2d 投影与“先展平再线性变换”的数学结果一致。
     """
     if x.dim() != 4:
-        raise ValueError(f"expected 4D input, got {tuple(x.shape)}")
+        raise ValueError(f"期望 4 维输入，实际形状为 {tuple(x.shape)}")
     patches = x.unfold(2, patch_size, patch_size).unfold(3, patch_size, patch_size)
     b, c, gh, gw, ph, pw = patches.shape
     flat = patches.permute(0, 2, 3, 1, 4, 5).reshape(b, gh * gw, c * ph * pw)
@@ -162,7 +159,7 @@ def unfold_then_linear(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor
 
 
 def describe_token_norms(tokens: torch.Tensor, max_show: int = 8) -> str:
-    """Print the L2 norm of the first few tokens for sanity inspection."""
+    """输出前几个 token 的 L2 范数，用于基本的合理性检查。"""
     norms = tokens.detach().norm(dim=-1)[0].tolist()
     head = norms[:max_show]
     return ", ".join(f"{v:.3f}" for v in head)
@@ -170,59 +167,59 @@ def describe_token_norms(tokens: torch.Tensor, max_show: int = 8) -> str:
 
 def main() -> None:
     print("=" * 60)
-    print("VISION ENCODER PATCHES")
+    print("视觉编码器 PATCH 前端")
     print("=" * 60)
 
     cfg = FrontEndConfig()
-    print(f"  image size : {cfg.image_size}")
-    print(f"  patch size : {cfg.patch_size}")
-    print(f"  grid size  : {cfg.grid_size}x{cfg.grid_size}")
-    print(f"  num patches: {cfg.num_patches}")
-    print(f"  hidden     : {cfg.hidden}")
-    print(f"  seq length : {cfg.num_patches + 1} (includes CLS)")
+    print(f"  图像尺寸   : {cfg.image_size}")
+    print(f"  patch 尺寸 : {cfg.patch_size}")
+    print(f"  网格尺寸   : {cfg.grid_size}x{cfg.grid_size}")
+    print(f"  patch 数量 : {cfg.num_patches}")
+    print(f"  隐藏维度   : {cfg.hidden}")
+    print(f"  序列长度   : {cfg.num_patches + 1} (含 CLS)")
 
     torch.manual_seed(0)
     img = synthesize_image(seed=0)
-    print(f"\nfixture image shape  : {tuple(img.shape)}")
-    print(f"fixture image dtype  : {img.dtype}")
-    print(f"fixture pixel range  : [{img.min().item():.3f}, {img.max().item():.3f}]")
+    print(f"\n测试图像形状 : {tuple(img.shape)}")
+    print(f"测试图像类型 : {img.dtype}")
+    print(f"测试像素范围 : [{img.min().item():.3f}, {img.max().item():.3f}]")
 
     model = VisionFrontEnd(cfg).eval()
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"\nfront-end params     : {n_params:,}")
+    print(f"\n前端参数量    : {n_params:,}")
 
     with torch.no_grad():
         tokens = model(img)
 
-    print(f"output token shape   : {tuple(tokens.shape)}")
-    print(f"CLS token norm       : {tokens[0, 0].norm().item():.3f}")
-    print(f"first 8 token norms  : {describe_token_norms(tokens)}")
+    print(f"输出 token 形状 : {tuple(tokens.shape)}")
+    print(f"CLS token 范数  : {tokens[0, 0].norm().item():.3f}")
+    print(f"前 8 个 token 范数 : {describe_token_norms(tokens)}")
 
-    print("\nposition embedding row signature:")
+    print("\n位置编码行签名:")
     pos_row = model.pos_embed[0, 1, :8].tolist()
     print("  pos[1, :8] =", ", ".join(f"{v:+.3f}" for v in pos_row))
 
-    print("\nbatch consistency check:")
+    print("\n批次一致性检查:")
     img_b4 = synthesize_image(seed=1).repeat(4, 1, 1, 1)
     with torch.no_grad():
         out_b4 = model(img_b4)
-    print(f"  batch=4 output shape: {tuple(out_b4.shape)}")
+    print(f"  batch=4 输出形状: {tuple(out_b4.shape)}")
     drift = (out_b4 - out_b4[0:1]).abs().max().item()
-    print(f"  max drift across identical batch rows: {drift:.6f}")
+    print(f"  相同批次各行间最大漂移: {drift:.6f}")
 
-    print("\nunfold reference vs Conv2d projection:")
+    print("\nunfold 参考实现 vs Conv2d 投影:")
     weight = model.patch.proj.weight.detach()
     bias = model.patch.proj.bias.detach()
     ref = unfold_then_linear(img, weight, bias, cfg.patch_size)
     conv = model.patch(img)
     diff = (ref - conv).abs().max().item()
-    print(f"  max abs diff : {diff:.6e}")
+    print(f"  最大绝对误差 : {diff:.6e}")
     if diff < 1e-4:
-        print("  ok: unfold reference matches Conv2d to float tolerance")
+        print("  通过: unfold 参考实现与 Conv2d 在浮点精度内一致")
     else:
-        print("  FAIL: projection drifts from reference")
+        print("  失败: 投影结果与参考实现存在漂移")
 
-    print("\ndone.")
+    print("\n完成。")
 
 
 if __name__ == "__main__":
