@@ -1,13 +1,12 @@
-"""Stateless MCP server, registry metadata, policy, and audit simulation.
+"""无状态 MCP 服务器、注册表元数据、策略与审计模拟。
 
-This stdlib-only model keeps two discovery layers separate:
+这个仅使用标准库的模型将两个发现层分开：
 
-* ``server.json`` describes installation and remote transport metadata to a
-  registry.
-* ``server/discover`` reports live protocol versions and capabilities.
+* ``server.json`` 向注册表描述安装和远程传输元数据。
+* ``server/discover`` 报告实时协议版本和能力。
 
-It does not open a network listener, validate a real OAuth token, call OPA, or
-publish to a registry. Run with ``python3 code/main.py`` from the lesson root.
+它不会打开网络监听器、验证真实 OAuth token、调用 OPA 或发布到注册表。
+请在课程根目录运行 ``python3 code/main.py``。
 """
 
 from __future__ import annotations
@@ -50,18 +49,18 @@ def error(code: int, message: str, data: dict | None = None) -> dict:
 
 def validate_meta(meta: object) -> dict | None:
     if not isinstance(meta, dict):
-        return error(-32602, "params._meta must be an object")
+        return error(-32602, "params._meta 必须是对象")
     requested = meta.get("io.modelcontextprotocol/protocolVersion")
     if not isinstance(requested, str):
-        return error(-32602, "protocolVersion must be a string")
+        return error(-32602, "protocolVersion 必须是字符串")
     if requested != PROTOCOL_VERSION:
         return error(
             -32022,
-            "Unsupported protocol version",
+            "不支持的协议版本",
             {"supported": [PROTOCOL_VERSION], "requested": requested},
         )
     if not isinstance(meta.get("io.modelcontextprotocol/clientCapabilities"), dict):
-        return error(-32602, "clientCapabilities must be an object")
+        return error(-32602, "clientCapabilities 必须是对象")
     return None
 
 
@@ -312,10 +311,9 @@ def dispatch(
 
 
 def validate_registry_document(document: object) -> list[str]:
-    """Validate the official fields used by this lesson's remote-only profile.
+    """验证本课程仅远程 profile 使用的官方字段。
 
-    This dependency-free subset is not a replacement for validation against
-    the complete pinned Registry JSON Schema before publication.
+    这个无依赖子集不能替代发布前针对完整固定版 Registry JSON Schema 的验证。
     """
     if not isinstance(document, dict):
         return ["server.json must be an object"]
@@ -378,12 +376,12 @@ def reverse_dns_namespace(domain: str) -> str:
     normalized = domain.casefold().rstrip(".")
     labels = normalized.split(".")
     if len(labels) < 2 or any(DOMAIN_LABEL_RE.fullmatch(label) is None for label in labels):
-        raise ValueError("publisher domain must be a valid multi-label DNS name")
+        raise ValueError("发布者域名必须是有效的多标签 DNS 名称")
     return ".".join(reversed(labels))
 
 
 def validate_publisher_namespace(document: object, verified_domain: str) -> list[str]:
-    """Check domain ownership outside the server.json shape contract."""
+    """在 server.json 结构契约之外检查域名所有权。"""
     if not isinstance(document, dict) or not isinstance(document.get("name"), str):
         return []
     namespace = document["name"].partition("/")[0]
@@ -396,7 +394,7 @@ def validate_publisher_namespace(document: object, verified_domain: str) -> list
 
 
 def validate_runtime_alignment(document: dict, discovery: object) -> list[str]:
-    """Compare publication identity with the live server/discover identity."""
+    """比较发布身份与实时 server/discover 身份。"""
     if not isinstance(discovery, dict):
         return ["server/discover result must be an object"]
     meta = discovery.get("_meta")
@@ -428,7 +426,7 @@ class Registry:
             raise ValueError("; ".join(issues))
         discovery = server.discover(request_meta())
         if "error" in discovery:
-            raise ValueError("runtime discovery failed")
+            raise ValueError("运行时发现失败")
         alignment_issues = validate_runtime_alignment(document, discovery)
         if alignment_issues:
             raise ValueError("; ".join(alignment_issues))
@@ -546,12 +544,12 @@ def main() -> None:
         time.time() + 900,
     )
 
-    print("=== registry metadata and runtime discovery ===")
+    print("=== 注册表元数据与运行时发现 ===")
     print(json.dumps(registry.entries[readonly.name], indent=2))
     print(json.dumps(registry.runtime_discovery[readonly.name], indent=2))
-    print("tools:", json.dumps(readonly.tools_list(request_meta()), indent=2))
+    print("工具：", json.dumps(readonly.tools_list(request_meta()), indent=2))
 
-    print("\n=== policy-gated calls ===")
+    print("\n=== 策略门禁调用 ===")
     print(
         dispatch(
             readonly,
@@ -574,7 +572,7 @@ def main() -> None:
         )
     )
 
-    print("\n=== audit log ===")
+    print("\n=== 审计日志 ===")
     for entry in audit:
         print(json.dumps(asdict(entry), sort_keys=True))
 

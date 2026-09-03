@@ -1,4 +1,4 @@
-"""Tests for the stateless MCP and registry boundary model."""
+"""无状态 MCP 与注册表边界模型的测试。"""
 
 from __future__ import annotations
 
