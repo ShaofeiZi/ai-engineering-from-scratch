@@ -40,7 +40,7 @@ def gradient_descent_nd(f, x0, lr=0.1, steps=100):
 
 def demo_numerical_vs_analytical():
     print("=" * 55)
-    print("NUMERICAL vs ANALYTICAL DERIVATIVES")
+    print("数值导数与解析导数对比")
     print("=" * 55)
 
     test_cases = [
@@ -52,8 +52,8 @@ def demo_numerical_vs_analytical():
     ]
 
     x = 2.0
-    print(f"\nAt x = {x}:")
-    print(f"{'Function':<12} {'Numerical':>12} {'Analytical':>12} {'Error':>12}")
+    print(f"\n在 x = {x} 处:")
+    print(f"{'函数':<12} {'数值导数':>12} {'解析导数':>12} {'误差':>12}")
     print("-" * 50)
     for name, f, df in test_cases:
         num = numerical_derivative(f, x)
@@ -64,7 +64,7 @@ def demo_numerical_vs_analytical():
 
 def demo_gradient():
     print("\n" + "=" * 55)
-    print("GRADIENT (VECTOR OF PARTIAL DERIVATIVES)")
+    print("梯度（偏导数构成的向量）")
     print("=" * 55)
 
     def f(point):
@@ -76,30 +76,30 @@ def demo_gradient():
     analytical = [2*point[0] + 3*point[1], 3*point[0] + 2*point[1]]
 
     print(f"\nf(x,y) = x^2 + 3xy + y^2")
-    print(f"At point ({point[0]}, {point[1]}):")
-    print(f"  Numerical gradient:  [{grad[0]:.4f}, {grad[1]:.4f}]")
-    print(f"  Analytical gradient: [{analytical[0]:.1f}, {analytical[1]:.1f}]")
+    print(f"在点 ({point[0]}, {point[1]}) 处:")
+    print(f"  数值梯度:  [{grad[0]:.4f}, {grad[1]:.4f}]")
+    print(f"  解析梯度: [{analytical[0]:.1f}, {analytical[1]:.1f}]")
 
 
 def demo_gradient_descent_1d():
     print("\n" + "=" * 55)
-    print("GRADIENT DESCENT: f(x) = x^2")
+    print("梯度下降: f(x) = x^2")
     print("=" * 55)
 
     x = 5.0
     lr = 0.1
-    print(f"\nStart: x={x}, lr={lr}")
+    print(f"\n起点: x={x}, lr={lr}")
     for step in range(20):
         grad = 2 * x
         x = x - lr * grad
         if step % 4 == 0 or step == 19:
-            print(f"  step {step:2d}  x={x:8.4f}  f(x)={x**2:10.6f}")
-    print(f"Minimum found at x={x:.6f} (true minimum: x=0)")
+            print(f"  步骤 {step:2d}  x={x:8.4f}  f(x)={x**2:10.6f}")
+    print(f"找到的最小值点 x={x:.6f}（真实最小值: x=0）")
 
 
 def demo_gradient_descent_2d():
     print("\n" + "=" * 55)
-    print("GRADIENT DESCENT: f(x,y) = x^2 + y^2")
+    print("梯度下降: f(x,y) = x^2 + y^2")
     print("=" * 55)
 
     def f(point):
@@ -108,14 +108,14 @@ def demo_gradient_descent_2d():
 
     point = [4.0, 3.0]
     lr = 0.1
-    print(f"\nStart: ({point[0]}, {point[1]}), lr={lr}")
+    print(f"\n起点: ({point[0]}, {point[1]}), lr={lr}")
     for step in range(30):
         grad = numerical_gradient(f, point)
         point = [p - lr * g for p, g in zip(point, grad)]
         loss = f(point)
         if step % 5 == 0 or step == 29:
-            print(f"  step {step:2d}  ({point[0]:7.4f}, {point[1]:7.4f})  f={loss:.6f}")
-    print(f"Minimum found at ({point[0]:.4f}, {point[1]:.4f}) (true: (0, 0))")
+            print(f"  步骤 {step:2d}  ({point[0]:7.4f}, {point[1]:7.4f})  f={loss:.6f}")
+    print(f"找到的最小值点 ({point[0]:.4f}, {point[1]:.4f})（真实最小值: (0, 0)）")
 
 
 def hessian_2d(f, x, y, h=1e-5):
@@ -148,7 +148,7 @@ def hessian_eigenvalues(H):
 
 def demo_hessian():
     print("\n" + "=" * 55)
-    print("HESSIAN MATRIX: SADDLE POINT vs MINIMUM")
+    print("Hessian 矩阵：鞍点与极小值")
     print("=" * 55)
 
     def saddle(x, y):
@@ -157,23 +157,23 @@ def demo_hessian():
     def bowl(x, y):
         return x ** 2 + y ** 2
 
-    print("\nf(x,y) = x^2 - y^2 (saddle function)")
+    print("\nf(x,y) = x^2 - y^2（鞍点函数）")
     H = hessian_2d(saddle, 0.0, 0.0)
     e1, e2 = hessian_eigenvalues(H)
-    print("  Hessian at (0,0):")
+    print("  (0,0) 处的 Hessian:")
     print(f"    [{H[0][0]:6.2f}  {H[0][1]:6.2f}]")
     print(f"    [{H[1][0]:6.2f}  {H[1][1]:6.2f}]")
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
-    print("  Mixed signs --> SADDLE POINT")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
+    print("  一正一负 --> 鞍点")
 
-    print("\nf(x,y) = x^2 + y^2 (bowl function)")
+    print("\nf(x,y) = x^2 + y^2（碗状函数）")
     H = hessian_2d(bowl, 0.0, 0.0)
     e1, e2 = hessian_eigenvalues(H)
-    print("  Hessian at (0,0):")
+    print("  (0,0) 处的 Hessian:")
     print(f"    [{H[0][0]:6.2f}  {H[0][1]:6.2f}]")
     print(f"    [{H[1][0]:6.2f}  {H[1][1]:6.2f}]")
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
-    print("  Both positive --> LOCAL MINIMUM")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
+    print("  均为正 --> 局部极小值")
 
     def rosenbrock(x, y):
         return (1 - x) ** 2 + 100 * (y - x ** 2) ** 2
@@ -181,21 +181,21 @@ def demo_hessian():
     print("\nRosenbrock f(x,y) = (1-x)^2 + 100*(y-x^2)^2")
     H = hessian_2d(rosenbrock, 1.0, 1.0)
     e1, e2 = hessian_eigenvalues(H)
-    print(f"  Hessian at minimum (1,1):")
+    print(f"  极小值点 (1,1) 处的 Hessian:")
     print(f"    [{H[0][0]:8.2f}  {H[0][1]:8.2f}]")
     print(f"    [{H[1][0]:8.2f}  {H[1][1]:8.2f}]")
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
-    print(f"  Both positive --> LOCAL MINIMUM (confirmed)")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
+    print(f"  均为正 --> 局部极小值（已确认）")
 
 
 def demo_taylor():
     print("\n" + "=" * 55)
-    print("TAYLOR SERIES APPROXIMATION")
+    print("泰勒级数逼近")
     print("=" * 55)
 
     x0 = 1.0
-    print(f"\nApproximating f(x) = e^x near x0 = {x0}")
-    print(f"{'h':>8}  {'True f(x0+h)':>14}  {'Order 0':>10}  {'Order 1':>10}  {'Order 2':>10}")
+    print(f"\n在 x0 = {x0} 附近逼近 f(x) = e^x")
+    print(f"{'h':>8}  {'真实 f(x0+h)':>14}  {'0阶':>10}  {'1阶':>10}  {'2阶':>10}")
     print("-" * 60)
 
     for h in [0.1, 0.5, 1.0, 2.0]:
@@ -205,8 +205,8 @@ def demo_taylor():
         t2 = taylor_approx(math.exp, math.exp, math.exp, x0, h, order=2)
         print(f"{h:8.1f}  {true_val:14.6f}  {t0:10.6f}  {t1:10.6f}  {t2:10.6f}")
 
-    print(f"\nApproximating f(x) = sin(x) near x0 = 0")
-    print(f"{'h':>8}  {'True sin(h)':>14}  {'Order 0':>10}  {'Order 1':>10}  {'Order 2':>10}")
+    print(f"\n在 x0 = 0 附近逼近 f(x) = sin(x)")
+    print(f"{'h':>8}  {'真实 sin(h)':>14}  {'0阶':>10}  {'1阶':>10}  {'2阶':>10}")
     print("-" * 60)
 
     for h in [0.1, 0.5, 1.0, 2.0]:
@@ -216,13 +216,13 @@ def demo_taylor():
         t2 = taylor_approx(math.sin, math.cos, lambda x: -math.sin(x), 0.0, h, order=2)
         print(f"{h:8.1f}  {true_val:14.6f}  {t0:10.6f}  {t1:10.6f}  {t2:10.6f}")
 
-    print("\nKey insight: more terms = better approximation near x0,")
-    print("but all Taylor approximations diverge far from x0.")
+    print("\n关键结论：项数越多，在 x0 附近的逼近越好，")
+    print("但所有泰勒逼近在远离 x0 时都会发散。")
 
 
 def demo_linear_regression():
     print("\n" + "=" * 55)
-    print("GRADIENT DESCENT: LINEAR REGRESSION y = 2x + 1")
+    print("梯度下降：线性回归 y = 2x + 1")
     print("=" * 55)
 
     random.seed(42)
@@ -249,10 +249,10 @@ def demo_linear_regression():
         w -= lr * dw
         b -= lr * db
         if epoch % 40 == 0 or epoch == 199:
-            print(f"  epoch {epoch:3d}  w={w:.4f}  b={b:.4f}  loss={total_loss:.6f}")
+            print(f"  轮次 {epoch:3d}  w={w:.4f}  b={b:.4f}  loss={total_loss:.6f}")
 
-    print(f"\nLearned: y = {w:.2f}x + {b:.2f}")
-    print(f"Actual:  y = 2.00x + 1.00")
+    print(f"\n学到的: y = {w:.2f}x + {b:.2f}")
+    print(f"真实值:  y = 2.00x + 1.00")
 
 
 if __name__ == "__main__":
