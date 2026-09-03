@@ -1,15 +1,15 @@
-"""Phase 13 Lesson 05 - tool schema design linter.
+"""第 13 阶段第 05 课 - 工具模式设计检查器。
 
-Audits a tool registry against design rules from the lesson:
-  - names: snake_case, verb-noun, no arguments, no tense markers
-  - descriptions: Use-when pattern, length bounds, no injection keywords
-  - schemas: typed properties, required list, enum on closed sets
-  - shape: atomic vs monolithic (flag `action: str` if enum size > 3)
+根据课程中的设计规则对工具注册表进行审计：
+  - 名称：snake_case、verb-noun，无参数，无时态标记
+  - 描述：Use-when 模式，长度边界，无注入关键词
+  - 模式：类型化属性，必填列表，封闭集合使用 enum
+  - 形态：原子化 vs 单体化（当 enum 大小 > 3 时标记 `action: str`）
 
-Run on GOOD_REGISTRY (passes) and BAD_REGISTRY (fails on every rule).
-Stdlib only.
+在 GOOD_REGISTRY（通过）和 BAD_REGISTRY（每条规则均失败）上运行。
+仅使用标准库。
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ TENSE_MARKERS = ("_was_", "_will_", "_been_", "_yesterday", "_tomorrow")
 
 @dataclass
 class Finding:
-    severity: str   # block / warn / nit
+    severity: str   # 阻断 / 警告 / 建议
     path: str
     message: str
 
@@ -199,25 +199,25 @@ BAD_REGISTRY = [
 
 def report(name: str, registry: list[dict]) -> None:
     print("-" * 72)
-    print(f"REGISTRY : {name} ({len(registry)} tools)")
+    print(f"注册表：{name}（{len(registry)} 个工具）")
     findings = lint_registry(registry)
     if not findings:
-        print("  PASS : no findings")
+        print("  通过：无发现")
         return
     severities: dict[str, int] = {}
     for f in findings:
         severities[f.severity] = severities.get(f.severity, 0) + 1
         print(f"  {f}")
     total = sum(severities.values())
-    print(f"  summary: {total} findings "
-          f"({severities.get('block', 0)} block, "
-          f"{severities.get('warn', 0)} warn, "
-          f"{severities.get('nit', 0)} nit)")
+    print(f"  汇总：{total} 项发现"
+          f"（{severities.get('block', 0)} 项阻断，"
+          f"{severities.get('warn', 0)} 项警告，"
+          f"{severities.get('nit', 0)} 项建议）")
 
 
 def main() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 05 - TOOL SCHEMA LINTER")
+    print("第 13 阶段第 05 课 - 工具 Schema 检查器")
     print("=" * 72)
     print()
     report("GOOD_REGISTRY", GOOD_REGISTRY)
