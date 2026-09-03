@@ -97,8 +97,8 @@ def bradley_terry_loss(reward_preferred, reward_rejected):
 
 def train_reward_model(rm, preference_data, num_epochs=10, lr=1e-4, max_seq_len=128):
     print(
-        f"Training Reward Model: {len(preference_data)} preference pairs, "
-        f"{num_epochs} epochs"
+        f"训练奖励模型：{len(preference_data)} 对偏好数据，"
+        f"{num_epochs} 个 epoch"
     )
     print()
 
@@ -153,8 +153,8 @@ def train_reward_model(rm, preference_data, num_epochs=10, lr=1e-4, max_seq_len=
 
         if epoch % 2 == 0:
             print(
-                f"  Epoch {epoch + 1:3d} | Loss: {avg_loss:.4f} | "
-                f"Accuracy: {accuracy:.1%}"
+                f"  Epoch {epoch + 1:3d} | 损失：{avg_loss:.4f} | "
+                f"准确率：{accuracy:.1%}"
             )
 
     return rm, losses, accuracies
@@ -227,7 +227,7 @@ def ppo_training(
     kl_coeff=0.02,
     max_seq_len=128,
 ):
-    print(f"PPO Training: {num_episodes} episodes, lr={lr}, KL coeff={kl_coeff}")
+    print(f"PPO 训练：{num_episodes} 个 episode，lr={lr}，KL 系数={kl_coeff}")
     print()
 
     rewards_history = []
@@ -270,17 +270,17 @@ def ppo_training(
             avg_reward = np.mean(rewards_history[-5:]) if rewards_history else 0
             avg_kl = np.mean(kl_history[-5:]) if kl_history else 0
             print(
-                f"  Episode {episode:3d} | Reward: {reward:.4f} | KL: {kl:.4f} | "
-                f"Avg Reward: {avg_reward:.4f}"
+                f"  Episode {episode:3d} | 奖励：{reward:.4f} | KL：{kl:.4f} | "
+                f"平均奖励：{avg_reward:.4f}"
             )
 
     return policy_model, rewards_history, kl_history
 
 
 def compare_models(sft_model, rlhf_model, reward_model, prompts, max_seq_len=128):
-    print("Model Comparison (reward scores)")
+    print("模型比较(奖励分数)")
     print("-" * 60)
-    print(f"  {'Prompt':<35} {'SFT':>10} {'RLHF':>10}")
+    print(f"  {'提示':<35} {'SFT':>10} {'RLHF':>10}")
     print("  " + "-" * 55)
 
     sft_total = 0.0
@@ -320,7 +320,7 @@ def compare_models(sft_model, rlhf_model, reward_model, prompts, max_seq_len=128
 
     n = len(prompts)
     print("  " + "-" * 55)
-    print(f"  {'Average':<35} {sft_total / n:>10.4f} {rlhf_total / n:>10.4f}")
+    print(f"  {'平均数':<35} {sft_total / n:>10.4f} {rlhf_total / n:>10.4f}")
 
     return sft_total / n, rlhf_total / n
 
@@ -329,11 +329,11 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     print("=" * 70)
-    print("RLHF PIPELINE: REWARD MODEL + PPO")
+    print("RLHF 流水线：奖励模型 + PPO")
     print("=" * 70)
     print()
 
-    print("STAGE 1: SFT Model (from Lesson 06)")
+    print("步骤 1：初始化 SFT 模型（来自课程 06）")
     print("-" * 40)
     sft_model = MiniGPT(
         vocab_size=256,
@@ -343,10 +343,10 @@ if __name__ == "__main__":
         max_seq_len=128,
         ff_dim=512,
     )
-    print(f"  Parameters: {sft_model.count_parameters():,}")
+    print(f"  参数量：{sft_model.count_parameters():,}")
     print()
 
-    print("STAGE 2: Train Reward Model")
+    print("步骤 2：训练奖励模型")
     print("-" * 40)
     rm = RewardModel(
         vocab_size=256,
@@ -362,7 +362,7 @@ if __name__ == "__main__":
     )
     print()
 
-    print("Reward Model Evaluation:")
+    print("奖励模型评估：")
     print("-" * 40)
     correct = 0
     for pair in PREFERENCE_DATA:
@@ -375,17 +375,17 @@ if __name__ == "__main__":
         if r_pref > r_rej:
             correct += 1
         print(
-            f"  Preferred: {r_pref:+.4f} | Rejected: {r_rej:+.4f} | "
-            f"{'Correct' if r_pref > r_rej else 'Wrong'}"
+            f"  首选：{r_pref:+.4f} | 拒绝：{r_rej:+.4f} | "
+            f"{'对' if r_pref > r_rej else '错误'}"
         )
 
     print(
-        f"\n  Accuracy: {correct}/{len(PREFERENCE_DATA)} = "
+        f"\n  准确率：{correct}/{len(PREFERENCE_DATA)} = "
         f"{correct / len(PREFERENCE_DATA):.1%}"
     )
     print()
 
-    print("STAGE 3: PPO Training")
+    print("步骤 3：PPO 训练")
     print("-" * 40)
 
     policy_model = MiniGPT(
@@ -422,7 +422,7 @@ if __name__ == "__main__":
     print()
 
     print("=" * 70)
-    print("COMPARISON: SFT vs RLHF")
+    print("对比：SFT 与 RLHF")
     print("=" * 70)
     print()
 
@@ -436,16 +436,16 @@ if __name__ == "__main__":
     print()
 
     print("=" * 70)
-    print("KL DIVERGENCE ANALYSIS")
+    print("KL 散度分析")
     print("=" * 70)
     print()
 
     if kls:
-        print(f"  Initial KL: {kls[0]:.4f}")
-        print(f"  Final KL:   {kls[-1]:.4f}")
-        print(f"  Max KL:     {max(kls):.4f}")
+        print(f"  初始 KL：{kls[0]:.4f}")
+        print(f"  最终 KL：{kls[-1]:.4f}")
+        print(f"  最大 KL：{max(kls):.4f}")
         kl_threshold = 0.1
         print(
             f"  KL > {kl_threshold}: "
-            f"{'Yes (model drifted significantly)' if max(kls) > kl_threshold else 'No (model stayed close to reference)'}"
+            f"{'是(型号明显漂移)' if max(kls) > kl_threshold else '否(型号接近参考)'}"
         )
