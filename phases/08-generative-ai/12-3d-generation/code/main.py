@@ -2,11 +2,11 @@ import math
 import random
 
 
-SIZE = 12  # small image grid for speed
+SIZE = 12  # 使用较小的图像网格来提高速度
 
 
 def make_target(size):
-    """Target: a smooth bright blob in the upper-left, dimmer one in the lower-right."""
+    """目标：左上角有一个平滑亮斑，右下角有一个较暗亮斑。"""
     target = [[0.0] * size for _ in range(size)]
     for y in range(size):
         for x in range(size):
@@ -83,22 +83,22 @@ def main():
     rng = random.Random(23)
     target = make_target(SIZE)
 
-    print("=== target image ===")
+    print("=== 目标图像 ===")
     print(ascii_img(target))
     print()
 
     for n in [2, 4, 8]:
         rng_local = random.Random(7 + n)
         gaussians = init_gaussians(n, rng_local)
-        print(f"=== fit {n} Gaussians ===")
+        print(f"=== 拟合 {n} 个高斯 ===")
         for step in range(30):
             loss = finite_diff_step(gaussians, target, lr=0.5, eps=0.2)
-        print(f"final loss (MSE): {loss:.4f}")
+        print(f"最终损失（MSE）：{loss:.4f}")
         print(ascii_img(render(gaussians)))
         print()
 
-    print("takeaway: a few differentiable Gaussians can approximate smooth targets.")
-    print("          scale to 1M splats in 3D, render via alpha compositing = 3D-GS.")
+    print("要点：少量可微高斯即可近似平滑目标。")
+    print("      扩展到 3D 中的百万个溅射点，再通过 alpha 合成渲染，就是 3D-GS。")
 
 
 if __name__ == "__main__":
