@@ -1,7 +1,7 @@
-"""Voyager-shaped skill library: register, retrieve, compose, refine.
+"""Voyager-shaped 技能库：注册、检索、组合、优化。
 
-Stdlib only. Action space is code; skills are retrievable and composable;
-failures feed back into the next version.
+仅使用标准库。动作空间是代码；技能可检索且可组合；
+失败会反馈到下一个版本。
 """
 
 from __future__ import annotations
@@ -160,12 +160,12 @@ def _gather_sticks(context: dict[str, Any]) -> str:
 
 def main() -> None:
     print("=" * 70)
-    print("VOYAGER SKILL LIBRARY — Phase 14, Lesson 10")
+    print("VOYAGER 技能库 — 第 14 阶段，第 10 课")
     print("=" * 70)
 
     lib = SkillLibrary()
 
-    print("\nphase 1: register primitive skills")
+    print("\n阶段 1：注册基础技能")
     print("  " + lib.register(Skill(
         name="mine_ore",
         description="mine iron ore from nearby rock formations",
@@ -188,7 +188,7 @@ def main() -> None:
         tags=("gather", "stick"),
     )))
 
-    print("\nphase 2: compose a higher-order skill (v1)")
+    print("\n阶段 2：组合一个 higher-order 技能（v1）")
     print("  " + lib.register(Skill(
         name="craft_iron_pickaxe",
         description="craft an iron pickaxe using ore and a crafting table",
@@ -198,17 +198,17 @@ def main() -> None:
         tags=("craft", "tool"),
     )))
 
-    print("\nphase 3: retrieval on 'I need a pickaxe'")
+    print("\n阶段 3：对「我需要一把镐子」进行检索")
     for score, skill in lib.search("I need a pickaxe"):
-        print(f"  {score:.3f}  {skill.name} v{skill.version}: {skill.description}")
+        print(f"  {score:.3f}  {skill.name} v{skill.version}：{skill.description}")
 
-    print("\nphase 4: execute craft_iron_pickaxe (expect failure — missing sticks)")
+    print("\n阶段 4：执行 craft_iron_pickaxe（预期因缺少木棍而失败）")
     context = lib.execute("craft_iron_pickaxe")
     for line in context["log"]:
         print(f"  {line}")
-    print(f"  failed: {context.get('failed')}")
+    print(f"  失败：{context.get('failed')}")
 
-    print("\nphase 5: iterative refinement — rewrite as v2 with stick deps")
+    print("\n阶段 5：迭代改进——重写为依赖木棍的 v2")
     print("  " + lib.register(Skill(
         name="craft_iron_pickaxe",
         description="craft an iron pickaxe using ore, sticks, and a crafting table",
@@ -218,14 +218,14 @@ def main() -> None:
         tags=("craft", "tool"),
     )))
 
-    print("\nphase 6: re-execute (expect success)")
+    print("\n阶段 6：re-execute（预期成功）")
     context = lib.execute("craft_iron_pickaxe")
     for line in context["log"]:
         print(f"  {line}")
-    print(f"  inventory: {context.get('inventory')}")
-    print(f"  failed: {context.get('failed')}")
+    print(f"  物品栏：{context.get('inventory')}")
+    print(f"  失败：{context.get('failed')}")
 
-    print("\nlibrary state")
+    print("\n库状态")
     for name in lib.list_names():
         skill = lib.get(name)
         assert skill is not None
@@ -233,8 +233,8 @@ def main() -> None:
               f"tags={skill.tags}")
 
     print()
-    print("pattern: retrieve composable skills, execute, fold feedback into v2.")
-    print("same loop powers Claude Agent SDK skills and the skillkit registry.")
+    print("模式：检索可组合技能，执行，将反馈折叠进 v2.")
+    print("同样的循环驱动着 Claude Agent SDK 技能和 skillkit 注册表。")
 
 
 if __name__ == "__main__":
