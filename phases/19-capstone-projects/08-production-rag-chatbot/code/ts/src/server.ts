@@ -19,7 +19,7 @@ export type AppOptions = {
 
 function renderClient(): string {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Production RAG chatbot</title>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>生产级 RAG 聊天机器人</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; color: #222; }
   #log { border: 1px solid #ddd; padding: 1rem; min-height: 200px; white-space: pre-wrap; }
@@ -27,13 +27,13 @@ function renderClient(): string {
   input[type=text] { flex: 1; padding: .5rem; }
   .cites { margin-top: 1rem; font-size: .9rem; color: #333; }
 </style></head><body>
-<h1>Capstone 08 chat (skeleton)</h1>
-<p>Role: <code>analyst</code>, jurisdiction: <code>GDPR</code>. Streams SSE token-by-token.</p>
+<h1>综合项目 08 聊天（骨架）</h1>
+<p>角色：<code>analyst</code>，司法管辖区：<code>GDPR</code>。通过 SSE 逐 token 流式输出。</p>
 <div id="log"></div>
 <div class="cites" id="cites"></div>
 <form id="f">
-  <input type="text" id="q" placeholder="ask about a policy..." required>
-  <button type="submit">send</button>
+  <input type="text" id="q" placeholder="询问策略相关问题……" required>
+  <button type="submit">发送</button>
 </form>
 <script>
   const sessionId = "demo-session";
@@ -44,7 +44,7 @@ function renderClient(): string {
   document.getElementById("f").addEventListener("submit", (ev) => {
     ev.preventDefault();
     const q = document.getElementById("q").value;
-    log.textContent += "\\nuser: " + q + "\\nassistant: ";
+    log.textContent += "\\n用户：" + q + "\\n助手：";
     cites.textContent = "";
     const url = "/chat/stream?sessionId=" + encodeURIComponent(sessionId)
       + "&role=" + encodeURIComponent(role)
@@ -57,7 +57,7 @@ function renderClient(): string {
     });
     es.addEventListener("citations", (e) => {
       const data = JSON.parse(e.data);
-      cites.textContent = "citations: " + data.items.map((c) => c.docId + " p." + c.page).join(", ");
+      cites.textContent = "引用：" + data.items.map((c) => c.docId + " 第 " + c.page + " 页").join(", ");
     });
     es.addEventListener("done", () => { es.close(); });
     es.onerror = () => { es.close(); };
@@ -95,7 +95,7 @@ export function buildApp(options: AppOptions = {}): {
       q: c.req.query("q"),
     });
     if (!parsed.success) {
-      return c.json({ error: "missing q" }, 400);
+      return c.json({ error: "缺少 q" }, 400);
     }
     const sessionId = parsed.data.sessionId ?? randomUUID();
     const role = parsed.data.role ?? "analyst";
@@ -135,7 +135,7 @@ export function buildApp(options: AppOptions = {}): {
     });
   });
 
-  app.notFound((c) => c.json({ error: "not found" }, 404));
+  app.notFound((c) => c.json({ error: "未找到" }, 404));
 
   return { app, sessions };
 }
