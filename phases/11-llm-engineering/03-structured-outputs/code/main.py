@@ -167,7 +167,7 @@ def demonstrate_constrained_decoding():
         '{"product": "Sony", "price": 348}',
     ]
 
-    print(f"\n  {'Partial JSON':<45} {'Valid Next Tokens'}")
+    print(f"\n  {'部分JSON':<45} {'无效的下一个 Tokens'}")
     print("  " + "-" * 70)
     for state in partial_states:
         valid = next_valid_tokens(state, {})
@@ -197,14 +197,14 @@ def extract_with_retry(text, schema, max_retries=3):
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as e:
-            print(f"    Attempt {attempt + 1}: JSON parse error -- {e}")
+            print(f"    第 {attempt + 1} 次尝试：JSON 解析错误——{e}")
             continue
 
         errors = validate_schema(data, schema)
         if not errors:
             return data
 
-        print(f"    Attempt {attempt + 1}: Schema validation errors -- {errors}")
+        print(f"    第 {attempt + 1} 次尝试：schema 验证错误——{errors}")
 
     return None
 
@@ -223,7 +223,7 @@ PRODUCT_SCHEMA = {
 
 def run_schema_validation_demo():
     print("=" * 60)
-    print("  STEP 1: JSON Schema Validation")
+    print("步骤1: JSON Schema 验证")
     print("=" * 60)
 
     test_cases = [
@@ -247,7 +247,7 @@ def run_schema_validation_demo():
 
 def run_schema_generation_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 2: Model-to-Schema Generation")
+    print("STEP2:模型到模型生成")
     print("=" * 60)
 
     product_fields = {
@@ -259,7 +259,7 @@ def run_schema_generation_demo():
     }
 
     schema = model_to_schema("Product", product_fields)
-    print(f"\n  Generated schema from Python model:")
+    print("\n  从 Python 模型生成的 schema：")
     print(f"  {json.dumps(schema, indent=2)}")
 
     event_fields = {
@@ -271,13 +271,13 @@ def run_schema_generation_demo():
     }
 
     event_schema = model_to_schema("Event", event_fields)
-    print(f"\n  Event schema:")
+    print("\n  事件 schema：")
     print(f"  {json.dumps(event_schema, indent=2)}")
 
     valid_event = {"title": "Standup", "date": "2026-01-15", "attendees": ["Alice", "Bob"], "priority": "high"}
     invalid_event = {"title": "Standup", "date": "2026-01-15", "attendees": ["Alice"], "priority": "urgent"}
 
-    print(f"\n  Validating against event schema:")
+    print("\n  按事件 schema 验证：")
     for data, label in [(valid_event, "Valid event"), (invalid_event, "Invalid priority enum")]:
         errors = validate_schema(data, event_schema)
         status = "PASS" if not errors else f"FAIL: {errors}"
@@ -286,14 +286,14 @@ def run_schema_generation_demo():
 
 def run_constrained_decoding_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 3: Constrained Decoding Simulation")
+    print("步骤3:限制解码模拟")
     print("=" * 60)
     demonstrate_constrained_decoding()
 
 
 def run_extraction_pipeline_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 4: Extraction Pipeline with Retry")
+    print("步骤 4: 带有重试的提炼管道")
     print("=" * 60)
 
     texts = [
@@ -309,12 +309,12 @@ def run_extraction_pipeline_demo():
         if result:
             print(f"  Output: {json.dumps(result)}")
         else:
-            print(f"  Output: FAILED after retries")
+            print("  输出：重试后仍失败")
 
 
 def run_nested_schema_demo():
     print(f"\n{'=' * 60}")
-    print("  STEP 5: Nested Schema Validation")
+    print("步骤5: Nested Schema 验证")
     print("=" * 60)
 
     order_schema = {
@@ -364,7 +364,7 @@ def run_nested_schema_demo():
         "total": -10,
     }
 
-    print(f"\n  Order schema (nested objects + arrays):")
+    print("\n  订单 schema（嵌套对象与数组）：")
     for data, label in [(valid_order, "Valid order"), (invalid_order, "Invalid order")]:
         errors = validate_schema(data, order_schema)
         status = "PASS" if not errors else f"FAIL"

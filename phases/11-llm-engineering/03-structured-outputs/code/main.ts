@@ -1,17 +1,17 @@
-// Phase 11 · Lesson 03 — Structured outputs (TypeScript port).
-// Zod-shaped schema DSL + validator + mocked LLM extractor with retry.
-// We inline the schema layer instead of pulling in zod so the lesson stays
-// dep-free; the API (`.parse`, `.safeParse`) mirrors what real zod ships.
-// Refs: https://zod.dev/?id=basic-usage
-//       https://docs.anthropic.com/en/docs/build-with-claude/tool-use
-//       https://platform.openai.com/docs/guides/structured-outputs
+// 第11阶段 03期——结构化产出(TypeScript端口)。
+// Zod-形状的schema DSL + 校验器 + 用重试模拟的 LLM 提取器.
+// 我们把计划层拉进去 而不是拉进Zod 这样教训就留下来了
+// dep-free;API(`.parse`,`.safeParse`)反射出什么是真实的zod船.
+// 参考文献: https://zod.dev/?id=basic-usage
+// https://docs.anthropic.com/en/docs/build-with-claude/tool-use (韩语)
+// https://platform.openai.com/docs/guides/structured-outputs (韩语)
 
 import process from "node:process";
 
 type ValidationIssue = { path: string; message: string };
 type ParseResult<T> = { ok: true; value: T } | { ok: false; issues: ValidationIssue[] };
 
-// All schemas implement the same contract: take an unknown, return ParseResult.
+// 所有计划都执行同一个合同:拿一个未知的,返回ParseResult.
 interface Schema<T> {
   parse(input: unknown, path?: string): ParseResult<T>;
   toJSONSchema(): Record<string, unknown>;
@@ -171,8 +171,8 @@ const ProductSchema = z.object({
   categories: z.field(z.array(z.string()), false),
 });
 
-// Mock LLM. First attempt for "headphones" is bad on purpose so the retry
-// loop has something to do.
+// mock LLM (英语). 第一次尝试"耳机"是故意的 所以重试
+// 循环有事情要做。
 function simulateLLM(text: string, attempt: number): string {
   const t = text.toLowerCase();
   if (t.includes("headphones") || t.includes("sony")) {
@@ -190,7 +190,7 @@ function simulateLLM(text: string, attempt: number): string {
   return '{"product": "Unknown", "price": 0, "in_stock": false}';
 }
 
-// Strip the markdown fence + preamble that real models love to add.
+// 拆掉真正模特儿喜欢加的标记围栏+序言.
 function extractJSONBlock(raw: string): string {
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) return fence[1]!.trim();
