@@ -1,12 +1,12 @@
-"""End-to-end voice assistant simulator — 7 components, stub implementations.
+"""端到端语音助手模拟器——7 个组件，均为替代实现。
 
-Simulates a full user turn: mic → VAD → STT → LLM (with tool-call) → TTS.
-Prints per-stage latency + decision trace.
+模拟完整的用户轮次：麦克风 → VAD → STT → LLM（含工具调用）→ TTS。
+输出各阶段延迟和决策轨迹。
 
-No real models — replace each stub with Silero VAD / Whisper / GPT-4o /
-Kokoro for a production pipeline.
+不使用真实模型——生产流水线可将各替代实现换为 Silero VAD / Whisper /
+GPT-4o / Kokoro。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 import math
@@ -69,7 +69,7 @@ def play(audio_chunks):
 def main():
     random.seed(0)
 
-    print("=== Step 1: capture turn via VAD gating ===")
+    print("=== 步骤 1：通过 VAD 门控捕获用户轮次 ===")
     buffered = []
     pre_roll = []
     triggered = False
@@ -92,58 +92,58 @@ def main():
             if silent_ms >= 400:
                 break
     t_capture = (time.time() - turn_start) * 1000
-    print(f"  captured {len(buffered)} samples ({len(buffered)/16000:.3f} s) in {t_capture:.0f} ms wall time")
+    print(f"  捕获 {len(buffered)} 个样本（{len(buffered)/16000:.3f} s），实际用时 {t_capture:.0f} ms")
 
     print()
-    print("=== Step 2: streaming STT ===")
+    print("=== 步骤 2：流式 STT ===")
     t0 = time.time()
     text = streaming_stt(buffered)
     t_stt = (time.time() - t0) * 1000
-    print(f"  transcript: {text!r}   stt latency: {t_stt:.1f} ms")
+    print(f"  转写：{text!r}   STT 延迟：{t_stt:.1f} ms")
 
     print()
-    print("=== Step 3: LLM with tool calling ===")
+    print("=== 步骤 3：带工具调用的 LLM ===")
     t0 = time.time()
     response = llm_with_tools(text)
     t_llm = (time.time() - t0) * 1000
-    print(f"  tool_calls: {response['tool_calls']}")
+    print(f"  工具调用：{response['tool_calls']}")
     for call in response["tool_calls"]:
         result = dispatch_tool(call["name"], call["args"])
         print(f"  {call['name']}({call['args']}) → {result}")
-    print(f"  reply text: {response['text']!r}   llm latency: {t_llm:.1f} ms")
+    print(f"  回复文本：{response['text']!r}   LLM 延迟：{t_llm:.1f} ms")
 
     print()
-    print("=== Step 4: streaming TTS + playback ===")
+    print("=== 步骤 4：流式 TTS + 播放 ===")
     t0 = time.time()
     audio = streaming_tts(response["text"])
     t_tts_ttfa = (time.time() - t0) * 1000
-    print(f"  TTFA: {t_tts_ttfa:.1f} ms    audio chunks: {len(audio)}")
+    print(f"  TTFA：{t_tts_ttfa:.1f} ms    音频块数：{len(audio)}")
     t0 = time.time()
     play(audio)
     t_play = (time.time() - t0) * 1000
 
     print()
-    print("=== Step 5: end-to-end budget ===")
+    print("=== 步骤 5：端到端预算 ===")
     stages = [
-        ("VAD + capture (after end-of-speech)", silent_ms),
+        ("VAD + 捕获（语音结束后）", silent_ms),
         ("STT",  t_stt),
-        ("LLM + tool",  t_llm),
+        ("LLM + 工具",  t_llm),
         ("TTS TTFA",    t_tts_ttfa),
     ]
     total = sum(ms for _, ms in stages)
     for name, ms in stages:
         bar = "#" * int(ms / 10)
         print(f"  {name:<40s} {ms:>6.1f} ms  {bar}")
-    print(f"  TOTAL user-perceived (to first audio): {total:.1f} ms   (target: &lt; 800 ms)")
+    print(f"  用户感知总延迟（至首个音频）：{total:.1f} ms   （目标：&lt; 800 ms）")
 
     print()
-    print("=== Step 6: 2026 reference stacks ===")
+    print("=== 步骤 6：2026 年参考技术栈 ===")
     stacks = [
-        ("LiveKit + Deepgram + GPT-4o + Cartesia",       "350-500 ms", "industry default"),
-        ("Pipecat + Whisper-stream + GPT-4o + Kokoro",   "500-800 ms", "DIY-friendly"),
-        ("Moshi (full-duplex single model)",              "200-300 ms", "see lesson 15"),
-        ("Vapi / Retell (managed)",                        "300-500 ms", "fastest to ship"),
-        ("whisper.cpp + llama.cpp + Kokoro-ONNX",         "offline",    "edge / privacy"),
+        ("LiveKit + Deepgram + GPT-4o + Cartesia",       "350-500 ms", "行业默认方案"),
+        ("Pipecat + Whisper-stream + GPT-4o + Kokoro",   "500-800 ms", "便于自行搭建"),
+        ("Moshi（全双工单模型）",                          "200-300 ms", "参见课程 15"),
+        ("Vapi / Retell（托管）",                          "300-500 ms", "上线最快"),
+        ("whisper.cpp + llama.cpp + Kokoro-ONNX",         "离线",       "边缘端 / 隐私"),
     ]
     for s, lat, note in stacks:
         print(f"  {s:<46s} {lat:<12s} {note}")
