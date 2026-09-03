@@ -1,11 +1,11 @@
-"""Plan-and-execute agent with replan on failure, plan diffs, and dual budgets.
+"""支持失败后重新规划、计划 diff 和双重预算的计划执行智能体。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
+概念参考：
+- ./docs/en.md（本课程）
 - Phase 14 lesson 01 (agent loop fundamentals)
 - Phase 13 lesson 02 (tool protocols overview)
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def _diff_plans(old: list[Step], new: list[Step], revision: int) -> PlanDiff:
 
 
 class PlanExecuteAgent:
-    """Sequential plan executor with replan on failure."""
+    """失败时重新规划的顺序计划执行器。"""
 
     def __init__(
         self,
@@ -196,12 +196,11 @@ def _summarize(plan: list[Step]) -> list[dict]:
 
 
 def make_deterministic_planner(fail_step_id: int | None, recovery: str = "route_around") -> Planner:
-    """Planner used in the demo and tests.
+    """演示和测试使用的规划器。
 
-    When ``fail_step_id`` is given, the planner inserts a ``_force_fail`` marker
-    into that step's args on the initial plan. Executors that honor the marker
-    raise on that step, exercising the replan path. The marker is removed on the
-    revised plan so the route-around can succeed.
+    给定 ``fail_step_id`` 时，规划器会在初始计划对应步骤的 args 中插入
+    ``_force_fail`` 标记。遵循该标记的执行器会在该步骤抛出异常，从而覆盖重新规划
+    路径。修订后的计划会移除该标记，使绕行方案能够成功。
     """
 
     def planner(goal: str, history: list[Step], last_error: str | None) -> list[Step]:
@@ -245,7 +244,7 @@ def _demo() -> None:
         if tool == "transform":
             if args.get("mode") == "v1":
                 counters["transform_v1_calls"] += 1
-                raise ToolFailure("transform v1 backend down")
+                raise ToolFailure("transform v1 后端不可用")
             return {"ok": True}
         if tool == "render":
             return "html"

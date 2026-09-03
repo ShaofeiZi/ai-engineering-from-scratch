@@ -1,4 +1,4 @@
-"""Tests for PlanExecuteAgent: linear, replan, replan exhaustion, step budget, diffs."""
+"""PlanExecuteAgent 的测试：线性执行、重新规划、规划耗尽、步骤预算与 diff。"""
 
 from __future__ import annotations
 
