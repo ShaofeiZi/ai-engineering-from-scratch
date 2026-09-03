@@ -1,11 +1,11 @@
 """
-Eval harness for an agent: fixture tasks, scored samples, pass@k.
+智能体评测框架：夹具任务、样本评分与 pass@k。
 
 See: phases/19-capstone-projects/27-eval-harness-fixture-tasks/docs/en.md
-Concept refs:
-  - pass@k = 1 - (1 - p)^k where p is the empirical per-sample pass rate.
-  - Deterministic verifiers: file_equals, regex_match, shell_exit_zero.
-The demo at the bottom runs the bundled fixtures against the reference candidate.
+概念参考：
+  - pass@k = 1 - (1 - p)^k，其中 p 是每个样本的经验通过率。
+  - 确定性验证器：file_equals、regex_match、shell_exit_zero。
+文件末尾的演示会用参考候选实现运行随附的夹具。
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ from typing import Any, Callable
 
 
 # ---------------------------------------------------------------------------
-# Data classes
+# 数据类
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class FixtureTask:
-    """A single evaluation task."""
+    """单个评测任务。"""
 
     id: str
     goal: str
@@ -50,7 +50,7 @@ class FixtureTask:
 
 @dataclass
 class SampleResult:
-    """One execution of a candidate against a task."""
+    """候选实现在一个任务上的单次执行。"""
 
     task_id: str
     sample_index: int
@@ -70,7 +70,7 @@ class SampleResult:
 
 @dataclass
 class VerificationOutcome:
-    """The verifier's verdict on a single sample."""
+    """验证器对单个样本的判定。"""
 
     passed: bool
     detail: str
@@ -125,12 +125,12 @@ class EvalReport:
 
 
 # ---------------------------------------------------------------------------
-# pass@k math
+# pass@k 计算
 # ---------------------------------------------------------------------------
 
 
 def pass_at_k(empirical_pass_rate: float, k: int) -> float:
-    """Probability of at least one pass in k independent samples."""
+    """k 个独立样本中至少有一个通过的概率。"""
 
     if k <= 0:
         return 0.0
@@ -139,7 +139,7 @@ def pass_at_k(empirical_pass_rate: float, k: int) -> float:
 
 
 def p95(values: list[float]) -> float:
-    """Sample 95th percentile via nearest-rank."""
+    """使用最近秩法计算样本第 95 百分位数。"""
 
     if not values:
         return 0.0
@@ -149,7 +149,7 @@ def p95(values: list[float]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Verifiers
+# 验证器
 # ---------------------------------------------------------------------------
 
 
@@ -159,17 +159,17 @@ Verifier = Callable[[FixtureTask, str, dict[str, Any]], VerificationOutcome]
 def verify_file_equals(
     task: FixtureTask, scratch_dir: str, args: dict[str, Any]
 ) -> VerificationOutcome:
-    """Compare a file in scratch_dir against a file in expected_dir."""
+    """将 scratch_dir 中的文件与 expected_dir 中的文件比较。"""
 
     rel = args.get("path")
     if not isinstance(rel, str):
-        return VerificationOutcome(False, "verifier args missing 'path'")
+        return VerificationOutcome(False, "验证器参数缺少 'path'")
     actual = os.path.join(scratch_dir, rel)
     expected = os.path.join(task.expected_dir, rel)
     if not os.path.isfile(actual):
-        return VerificationOutcome(False, f"scratch file missing: {rel}")
+        return VerificationOutcome(False, f"缺少暂存文件：{rel}")
     if not os.path.isfile(expected):
-        return VerificationOutcome(False, f"expected file missing: {rel}")
+        return VerificationOutcome(False, f"缺少预期文件：{rel}")
     with open(actual, "r", encoding="utf-8") as fh:
         actual_text = fh.read()
     with open(expected, "r", encoding="utf-8") as fh:
@@ -179,42 +179,41 @@ def verify_file_equals(
         actual_text = actual_text.rstrip("\n") + "\n"
         expected_text = expected_text.rstrip("\n") + "\n"
     if actual_text == expected_text:
-        return VerificationOutcome(True, f"file {rel!r} matches expected")
-    return VerificationOutcome(False, f"file {rel!r} differs from expected")
+        return VerificationOutcome(True, f"文件 {rel!r} 与预期内容一致")
+    return VerificationOutcome(False, f"文件 {rel!r} 与预期内容不同")
 
 
 def verify_regex_match(
     task: FixtureTask, scratch_dir: str, args: dict[str, Any]
 ) -> VerificationOutcome:
-    """Match a regex against a file in scratch_dir."""
+    """用正则表达式匹配 scratch_dir 中的文件。"""
 
     rel = args.get("path")
     pattern = args.get("pattern")
     if not isinstance(rel, str) or not isinstance(pattern, str):
-        return VerificationOutcome(False, "verifier args need 'path' and 'pattern'")
+        return VerificationOutcome(False, "验证器参数需要 'path' 和 'pattern'")
     actual = os.path.join(scratch_dir, rel)
     if not os.path.isfile(actual):
-        return VerificationOutcome(False, f"scratch file missing: {rel}")
+        return VerificationOutcome(False, f"缺少暂存文件：{rel}")
     with open(actual, "r", encoding="utf-8") as fh:
         text = fh.read()
     if re.search(pattern, text, re.MULTILINE):
-        return VerificationOutcome(True, f"file {rel!r} matched {pattern!r}")
-    return VerificationOutcome(False, f"file {rel!r} did not match {pattern!r}")
+        return VerificationOutcome(True, f"文件 {rel!r} 匹配 {pattern!r}")
+    return VerificationOutcome(False, f"文件 {rel!r} 不匹配 {pattern!r}")
 
 
 def verify_shell_exit_zero(
     task: FixtureTask, scratch_dir: str, args: dict[str, Any]
 ) -> VerificationOutcome:
-    """Run a shell command in scratch_dir; pass if exit code is zero.
+    """在 scratch_dir 中运行 shell 命令；退出码为零即通过。
 
-    The harness uses a simple subprocess call. Production wiring goes through
-    the sandbox from lesson 26 with a denylist; for the eval harness's own
-    self-test the candidate authors the command, not the model.
+    此框架使用简单的 subprocess 调用。生产环境的装配会经过第 26 课中带拒绝列表的
+    沙箱；评测框架自身的测试中，命令由候选实现作者编写，而不是由模型生成。
     """
 
     argv = args.get("argv")
     if not isinstance(argv, list) or not argv:
-        return VerificationOutcome(False, "verifier args need 'argv' list")
+        return VerificationOutcome(False, "验证器参数需要 'argv' 列表")
     timeout = float(args.get("timeout_seconds", 10.0))
     try:
         proc = subprocess.run(
@@ -225,12 +224,12 @@ def verify_shell_exit_zero(
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return VerificationOutcome(False, "shell command timed out")
+        return VerificationOutcome(False, "shell 命令超时")
     except FileNotFoundError as exc:
-        return VerificationOutcome(False, f"shell command not found: {exc}")
+        return VerificationOutcome(False, f"找不到 shell 命令：{exc}")
     if proc.returncode == 0:
-        return VerificationOutcome(True, "command exited zero")
-    return VerificationOutcome(False, f"command exited {proc.returncode}")
+        return VerificationOutcome(True, "命令以状态码零退出")
+    return VerificationOutcome(False, f"命令以状态码 {proc.returncode} 退出")
 
 
 VERIFIER_REGISTRY: dict[str, Verifier] = {
@@ -241,14 +240,14 @@ VERIFIER_REGISTRY: dict[str, Verifier] = {
 
 
 # ---------------------------------------------------------------------------
-# Fixture loading
+# 加载夹具
 # ---------------------------------------------------------------------------
 
 
 def load_fixture(task_dir: str) -> FixtureTask:
-    """Load a fixture from a directory.
+    """从目录加载夹具。
 
-    Expected layout:
+    预期目录结构：
         <task_dir>/task.json
         <task_dir>/buggy/...
         <task_dir>/expected/... (when verifier is file_equals)
@@ -280,7 +279,7 @@ def load_all_fixtures(tasks_root: str) -> list[FixtureTask]:
 
 
 # ---------------------------------------------------------------------------
-# Candidate protocol
+# 候选实现协议
 # ---------------------------------------------------------------------------
 
 
@@ -288,9 +287,9 @@ Candidate = Callable[[FixtureTask, str], SampleResult]
 
 
 def apply_known_fixes(task: FixtureTask, scratch_dir: str) -> SampleResult:
-    """Reference candidate: copies the expected files over the buggy ones.
+    """参考候选实现：用预期文件覆盖有缺陷的文件。
 
-    Used by the harness's self-test. Real candidates wire to an LLM agent.
+    用于框架的自测。真实候选实现会接入 LLM 智能体。
     """
 
     start = time.perf_counter()
@@ -310,12 +309,12 @@ def apply_known_fixes(task: FixtureTask, scratch_dir: str) -> SampleResult:
         sample_index=0,
         latency_ms=elapsed,
         cost_units=1.0,
-        notes="reference candidate",
+        notes="参考候选实现",
     )
 
 
 def noop_candidate(task: FixtureTask, scratch_dir: str) -> SampleResult:
-    """A candidate that does nothing. Used to verify the harness records failures."""
+    """不执行任何操作的候选实现，用于验证框架能够记录失败。"""
 
     start = time.perf_counter()
     elapsed = (time.perf_counter() - start) * 1000.0
@@ -329,13 +328,13 @@ def noop_candidate(task: FixtureTask, scratch_dir: str) -> SampleResult:
 
 
 # ---------------------------------------------------------------------------
-# The harness
+# 评测框架
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class EvalHarness:
-    """Runs fixtures through a candidate and aggregates results."""
+    """使用候选实现运行夹具，并汇总结果。"""
 
     tasks: list[FixtureTask]
     k: int = 1
@@ -349,7 +348,7 @@ class EvalHarness:
         verifier = self.verifier_registry.get(task.verifier_name)
         if verifier is None:
             return VerificationOutcome(
-                False, f"unknown verifier {task.verifier_name!r}"
+                False, f"未知验证器 {task.verifier_name!r}"
             )
         return verifier(task, scratch_dir, task.verifier_args)
 
@@ -446,7 +445,7 @@ class EvalHarness:
 
 
 # ---------------------------------------------------------------------------
-# Demo
+# 演示
 # ---------------------------------------------------------------------------
 
 
@@ -457,31 +456,31 @@ def _tasks_dir() -> str:
 def run_demo() -> int:
     tasks = load_all_fixtures(_tasks_dir())
     if not tasks:
-        print("ERROR: no fixture tasks found", file=sys.stderr)
+        print("错误：未找到夹具任务", file=sys.stderr)
         return 1
 
-    print("EVAL HARNESS DEMO")
-    print(f"loaded {len(tasks)} fixture task(s)")
+    print("评测框架演示")
+    print(f"已加载 {len(tasks)} 个夹具任务")
     print("")
     for t in tasks:
         print(f"  - {t.id:32s} verifier={t.verifier_name}")
     print("")
 
-    print("running reference candidate (apply_known_fixes), k=1 ...")
+    print("正在运行参考候选实现（apply_known_fixes），k=1……")
     harness = EvalHarness(tasks=tasks, k=1)
     report = harness.run(apply_known_fixes)
     print(json.dumps(report.to_dict(), indent=2))
 
     if report.pass_at_1 < 1.0:
         print(
-            f"ERROR: reference candidate should pass all fixtures, got "
+            f"错误：参考候选实现应通过所有夹具，实际为 "
             f"pass@1={report.pass_at_1}",
             file=sys.stderr,
         )
         return 1
 
     print("")
-    print("running noop candidate (should fail every fixture), k=3 ...")
+    print("正在运行 noop 候选实现（应在每个夹具上失败），k=3……")
     harness_noop = EvalHarness(tasks=tasks, k=3)
     noop_report = harness_noop.run(noop_candidate)
     print(
@@ -497,7 +496,7 @@ def run_demo() -> int:
 
     if noop_report.pass_at_1 > 0.0:
         print(
-            f"ERROR: noop candidate should fail, got pass@1={noop_report.pass_at_1}",
+            f"错误：noop 候选实现应失败，实际 pass@1={noop_report.pass_at_1}",
             file=sys.stderr,
         )
         return 1

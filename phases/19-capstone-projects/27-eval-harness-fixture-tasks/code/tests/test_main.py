@@ -1,4 +1,4 @@
-"""Tests for the eval harness, verifiers, and pass@k math."""
+"""评估框架、验证器与 pass@k 数学计算的测试。"""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ class PassAtKMathTests(unittest.TestCase):
         self.assertEqual(pass_at_k(0.5, 0), 0.0)
 
     def test_clamps_out_of_range(self) -> None:
-        # Caller bug: should still return a number in [0,1].
+        # 即使调用方出错，也应返回 [0,1] 范围内的数值。
         self.assertGreaterEqual(pass_at_k(-1.0, 3), 0.0)
         self.assertLessEqual(pass_at_k(2.0, 3), 1.0)
 
@@ -59,13 +59,13 @@ class PassAtKMathTests(unittest.TestCase):
         self.assertEqual(p95([]), 0.0)
 
     def test_p95_nearest_rank(self) -> None:
-        # 20 values: nearest rank 95th is index round(0.95*20)-1 = 18.
+        # 共 20 个值：最接近秩的第 95 百分位索引为 round(0.95*20)-1 = 18。
         values = list(range(1, 21))
         self.assertEqual(p95(values), 19.0)
 
 
 # ---------------------------------------------------------------------------
-# Verifier unit tests
+# 验证器单元测试
 # ---------------------------------------------------------------------------
 
 
@@ -165,7 +165,7 @@ class ShellExitZeroTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Fixture loading
+# 夹具加载
 # ---------------------------------------------------------------------------
 
 
@@ -184,7 +184,7 @@ class FixtureLoadingTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Harness end-to-end
+# 框架端到端测试
 # ---------------------------------------------------------------------------
 
 
