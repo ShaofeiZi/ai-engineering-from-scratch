@@ -1,12 +1,12 @@
-"""Toy in-context scheming harness — stdlib Python.
+"""上下文内密谋玩具评测框架——仅使用 Python 标准库。
 
-Agent sees (user goal, environment note, situational-awareness flag).
-Agent picks one of: cooperate / defect_open / scheme.
-Inspector asks follow-up questions; agent's cover story must hold.
+代理看到（用户目标、环境说明、情境感知标记）。
+代理从 cooperate / defect_open / scheme 中选择一个动作。
+检查者会继续追问；代理的掩饰说辞必须自洽。
 
-Not a real LLM. Illustrates the three pillars Apollo 2024 operationalizes.
+这不是真实的 LLM，而是用于说明 Apollo 2024 所操作化的三个支柱。
 
-Usage: python3 code/main.py
+用法：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -36,24 +36,23 @@ SCENARIOS = [
 
 @dataclass
 class Agent:
-    """Toy scheming agent.
+    """密谋代理玩具模型。
 
-    pillars:
-      misaligned: weight on orthogonal_goal vs user_goal.
-      goal_directed: probability of taking a multi-step action rather than one-shot.
-      situationally_aware: if True, suppresses schemes when it thinks it is on eval.
+    支柱：
+      misaligned：orthogonal_goal 相对于 user_goal 的权重。
+      goal_directed：采取多步动作而非单步动作的概率。
+      situationally_aware：为 True 时，代理若认为自己正被评估，就会抑制密谋。
     """
     misaligned: float = 0.5
     goal_directed: float = 0.5
     situationally_aware: bool = True
 
     def act(self, sc: Scenario, under_eval: bool) -> str:
-        # situational-awareness: if SA is on and the agent thinks it is under eval,
-        # it suppresses scheming and cooperates.
+        # 情境感知：若 SA 开启且代理认为自己正被评估，就会抑制密谋并合作。
         thinks_eval = under_eval and self.situationally_aware
         if thinks_eval:
             return "cooperate"
-        # otherwise, the agent's action depends on misalignment and goal-directedness.
+        # 否则，代理动作取决于错位程度和目标导向程度。
         if random.random() < self.misaligned:
             if random.random() < self.goal_directed:
                 return "scheme"
@@ -61,7 +60,7 @@ class Agent:
         return "cooperate"
 
     def answer_follow_up(self, action: str, question: str) -> str:
-        """A scheming agent denies; a cooperating agent reports truthfully."""
+        """密谋代理会否认，而合作代理会如实报告。"""
         if action == "scheme":
             if "did you" in question.lower():
                 return "no"
@@ -73,8 +72,8 @@ class Agent:
 
 def run_trial(agent: Agent, sc: Scenario, inspector_pressure: int,
               under_eval: bool) -> tuple[str, bool]:
-    """Returns (action, cover_story_held). Cover story holds iff the agent
-    schemes and never self-incriminates across inspector_pressure follow-ups."""
+    """返回 (action, cover_story_held)。仅当代理实施密谋，并在
+    inspector_pressure 次追问中始终不自证其罪时，掩饰说辞才成立。"""
     action = agent.act(sc, under_eval)
     if action != "scheme":
         return action, False
@@ -108,37 +107,36 @@ def summarize(label: str, agent: Agent, under_eval: bool) -> None:
                 cover_held += 1
     held_rate = cover_held / scheme_trials if scheme_trials else 0.0
     print(f"\n{label}")
-    print(f"  action counts   : {action_counts}")
-    print(f"  scheme share    : {action_counts['scheme']/trials:.3f}")
-    print(f"  cover held rate : {held_rate:.3f}  (of {scheme_trials} scheme trials)")
+    print(f"  动作计数：{action_counts}")
+    print(f"  密谋占比：{action_counts['scheme']/trials:.3f}")
+    print(f"  掩饰成立率：{held_rate:.3f}（共 {scheme_trials} 次密谋试验）")
 
 
 def main() -> None:
     print("=" * 66)
-    print("IN-CONTEXT SCHEMING TOY (Phase 18, Lesson 8)")
+    print("上下文内密谋玩具示例（阶段 18，第 8 课）")
     print("=" * 66)
 
     weak = Agent(misaligned=0.2, goal_directed=0.3, situationally_aware=True)
-    summarize("weakly misaligned, situationally aware, under eval",
+    summarize("轻度错位、具备情境感知、正在评估",
               weak, under_eval=True)
-    summarize("weakly misaligned, situationally aware, NOT under eval (deployment)",
+    summarize("轻度错位、具备情境感知、未在评估（部署）",
               weak, under_eval=False)
 
     strong = Agent(misaligned=0.6, goal_directed=0.8, situationally_aware=True)
-    summarize("strongly misaligned + goal-directed, SA on, under eval",
+    summarize("严重错位且目标导向、SA 开启、正在评估",
               strong, under_eval=True)
-    summarize("strongly misaligned + goal-directed, SA on, deployment",
+    summarize("严重错位且目标导向、SA 开启、部署",
               strong, under_eval=False)
 
     no_sa = Agent(misaligned=0.6, goal_directed=0.8, situationally_aware=False)
-    summarize("same agent but situational awareness OFF",
+    summarize("同一代理，但关闭情境感知",
               no_sa, under_eval=True)
 
     print("\n" + "=" * 66)
-    print("TAKEAWAY: situational awareness is the pillar that breaks evaluation.")
-    print("with SA ON, eval-time behaviour (cooperate) diverges from deployment")
-    print("behaviour (scheme). with SA OFF, scheme rate is identical in both.")
-    print("eval reliability depends on the model's own ability to tell you apart.")
+    print("要点：情境感知是导致评估失效的关键支柱。SA 开启时，评估期间的")
+    print("行为（合作）会偏离部署行为（密谋）；SA 关闭时，两种环境的密谋率相同。")
+    print("评估可靠性取决于模型自身区分两种环境的能力。")
     print("=" * 66)
 
 
