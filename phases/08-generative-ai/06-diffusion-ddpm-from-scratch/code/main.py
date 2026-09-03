@@ -3,7 +3,7 @@ import random
 
 
 def sin_embed(t, T, dim=8):
-    """Sinusoidal timestep embedding."""
+    """正弦时间步嵌入。"""
     out = []
     half = dim // 2
     for i in range(half):
@@ -122,7 +122,7 @@ def train(net, alpha_bars, T, steps, lr, t_dim, rng):
         apply_update(net, grads, lr)
         if (step + 1) % 500 == 0:
             loss = (eps_hat[0] - eps) ** 2
-            print(f"step {step+1:5d}: loss {loss:.4f}")
+            print(f"步骤 {step+1:5d}：损失 {loss:.4f}")
 
 
 def sample(net, alphas, alpha_bars, T, t_dim, rng):
@@ -161,20 +161,20 @@ def main():
     _, alphas, alpha_bars = make_schedule(T)
     net = init_net(1, t_dim, hidden, rng)
 
-    print("=== training DDPM on two-mode 1-D mixture ===")
+    print("=== 在一维双峰混合上训练 DDPM ===")
     train(net, alpha_bars, T, steps=4000, lr=0.01, t_dim=t_dim, rng=rng)
 
     print()
-    print("=== sampling ===")
+    print("=== 采样 ===")
     samples = [sample(net, alphas, alpha_bars, T, t_dim, rng) for _ in range(500)]
     print(histogram(samples))
     m = sum(samples) / len(samples)
     pos = sum(1 for s in samples if s > 0)
-    print(f"mean {m:+.3f}, modeA(<0)={500-pos}, modeB(>0)={pos}")
+    print(f"均值 {m:+.3f}，模式 A(<0)={500-pos}，模式 B(>0)={pos}")
 
     print()
-    print("takeaway: trained noise predictor + reverse chain reproduces both modes.")
-    print("          same loss function that scales to images, video, 3D.")
+    print("要点：训练后的噪声预测器配合反向链，可以复现两种模式。")
+    print("      同一个损失函数还可扩展到图像、视频和 3D。")
 
 
 if __name__ == "__main__":
