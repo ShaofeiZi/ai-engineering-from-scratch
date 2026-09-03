@@ -107,8 +107,8 @@ def main():
     opt_g = torch.optim.Adam(G.parameters(), lr=2e-4, betas=(0.5, 0.999))
     opt_d = torch.optim.Adam(D.parameters(), lr=2e-4, betas=(0.5, 0.999))
 
-    print(f"G params: {sum(p.numel() for p in G.parameters()):,}")
-    print(f"D params: {sum(p.numel() for p in D.parameters()):,}")
+    print(f"G 参数量：{sum(p.numel() for p in G.parameters()):,}")
+    print(f"D 参数量：{sum(p.numel() for p in D.parameters()):,}")
 
     for epoch in range(5):
         ld_sum, lg_sum, n = 0.0, 0.0, 0
@@ -118,10 +118,10 @@ def main():
             ld_sum += ld
             lg_sum += lg
             n += 1
-        print(f"epoch {epoch}  D {ld_sum/n:.3f}  G {lg_sum/n:.3f}")
+        print(f"轮次 {epoch}  D {ld_sum/n:.3f}  G {lg_sum/n:.3f}")
 
     samples = sample(G, n=8, z_dim=z_dim, device=device)
-    print(f"generated shape: {tuple(samples.shape)}  range [{samples.min():.2f}, {samples.max():.2f}]")
+    print(f"生成结果形状：{tuple(samples.shape)}  范围 [{samples.min():.2f}, {samples.max():.2f}]")
 
 
 if __name__ == "__main__":
