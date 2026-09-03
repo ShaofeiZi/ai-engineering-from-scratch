@@ -75,7 +75,7 @@ def langevin_dynamics(grad_U, x0, dt, temperature, n_steps, seed=None):
 
 def metropolis_hastings(target_log_prob, proposal_std, x0, n_samples, seed=None):
     if n_samples < 1:
-        raise ValueError("n_samples must be at least 1")
+        raise ValueError("n_samples 必须至少为 1")
     rng = np.random.RandomState(seed)
     x = np.array(x0, dtype=float)
     samples = [x.copy()]
@@ -105,21 +105,21 @@ def diffusion_forward(signal, n_steps, beta_start=0.0001, beta_end=0.02, seed=No
 
 def demo_random_walks():
     print("=" * 60)
-    print("DEMO 1: 1D Random Walks")
+    print("演示 1：一维随机游走")
     print("=" * 60)
 
     n_walks = 5
     n_steps = 1000
-    print(f"\n{n_walks} random walks of {n_steps} steps each:\n")
+    print(f"\n{n_walks} 次随机游走，每次 {n_steps} 步：\n")
 
     final_positions = []
     for i in range(n_walks):
         walk = random_walk_1d(n_steps, seed=i)
         final_positions.append(walk[-1])
-        print(f"  Walk {i+1}: final position = {walk[-1]:+4d}, "
-              f"max = {walk.max():+4d}, min = {walk.min():+4d}")
+        print(f"  第 {i+1} 次游走：终点位置 = {walk[-1]:+4d}, "
+              f"最大值 = {walk.max():+4d}, 最小值 = {walk.min():+4d}")
 
-    print(f"\nTheory: E[position] = 0, std(position) = sqrt({n_steps}) = {np.sqrt(n_steps):.1f}")
+    print(f"\n理论值：E[position] = 0, std(position) = sqrt({n_steps}) = {np.sqrt(n_steps):.1f}")
 
     n_many = 10000
     finals = []
@@ -127,47 +127,47 @@ def demo_random_walks():
         walk = random_walk_1d(n_steps, seed=i)
         finals.append(walk[-1])
     finals = np.array(finals)
-    print(f"\n{n_many} walks: mean = {finals.mean():.2f}, "
-          f"std = {finals.std():.2f} (expected {np.sqrt(n_steps):.2f})")
+    print(f"\n{n_many} 次游走：均值 = {finals.mean():.2f}, "
+          f"标准差 = {finals.std():.2f}（期望 {np.sqrt(n_steps):.2f}）")
 
 
 def demo_markov_chain():
     print("\n" + "=" * 60)
-    print("DEMO 2: Weather Markov Chain")
+    print("演示 2：天气马尔可夫链")
     print("=" * 60)
 
     P = [[0.7, 0.1, 0.2],
          [0.3, 0.4, 0.3],
          [0.4, 0.2, 0.4]]
-    names = ["Sunny", "Rainy", "Cloudy"]
+    names = ["晴天", "雨天", "阴天"]
     mc = MarkovChain(P, state_names=names)
 
     pi = mc.stationary_distribution()
-    print("\nStationary distribution (analytical):")
+    print("\n平稳分布（解析解）：")
     for i, name in enumerate(names):
         print(f"  {name}: {pi[i]:.4f}")
 
     states = mc.simulate(start_state=0, n_steps=100000, seed=42)
     empirical = mc.empirical_distribution(states)
-    print("\nEmpirical distribution (100000 steps, start=Sunny):")
+    print("\n经验分布（100000 步，起点=晴天）：")
     for i, name in enumerate(names):
         print(f"  {name}: {empirical[i]:.4f}")
 
-    print("\nConvergence check:")
+    print("\n收敛性检查：")
     for length in [100, 1000, 10000, 100000]:
         states = mc.simulate(start_state=1, n_steps=length, seed=42)
         emp = mc.empirical_distribution(states)
         error = np.abs(emp - pi).max()
-        print(f"  {length:>7d} steps: max error = {error:.4f}")
+        print(f"  {length:>7d} 步：最大误差 = {error:.4f}")
 
     short = mc.simulate(start_state=0, n_steps=20, seed=42)
     sequence = " -> ".join(names[s] for s in short[:15])
-    print(f"\nSample trajectory: {sequence}...")
+    print(f"\n样本轨迹：{sequence}...")
 
 
 def demo_langevin():
     print("\n" + "=" * 60)
-    print("DEMO 3: Langevin Dynamics -- Sampling from a Gaussian")
+    print("演示 3：朗之万动力学——从高斯分布采样")
     print("=" * 60)
 
     target_mean = 3.0
@@ -186,16 +186,16 @@ def demo_langevin():
     )
 
     samples = trajectory[5000:, 0]
-    print(f"\nTarget: mean = {target_mean}, variance = {target_var}")
-    print(f"Sampled ({len(samples)} samples after 5000 burn-in):")
-    print(f"  Mean:     {samples.mean():.4f} (expected {target_mean})")
-    print(f"  Variance: {samples.var():.4f} (expected {target_var})")
-    print(f"  Std:      {samples.std():.4f} (expected {np.sqrt(target_var):.4f})")
+    print(f"\n目标：均值 = {target_mean}, 方差 = {target_var}")
+    print(f"采样结果（舍弃 5000 步预热期后，共 {len(samples)} 个样本）：")
+    print(f"  均值：   {samples.mean():.4f}（期望 {target_mean}）")
+    print(f"  方差：   {samples.var():.4f}（期望 {target_var}）")
+    print(f"  标准差： {samples.std():.4f}（期望 {np.sqrt(target_var):.4f}）")
 
 
 def demo_metropolis_hastings():
     print("\n" + "=" * 60)
-    print("DEMO 4: Metropolis-Hastings -- Bimodal Distribution")
+    print("演示 4：Metropolis-Hastings——双峰分布")
     print("=" * 60)
 
     def bimodal_log_prob(x):
@@ -213,29 +213,29 @@ def demo_metropolis_hastings():
     )
 
     samples_flat = samples[10000:, 0]
-    print("\nBimodal target: mixture of N(-3,1) and N(+3,1)")
-    print(f"Acceptance rate: {acc_rate:.2%}")
-    print(f"Sample mean: {samples_flat.mean():.4f} (expected ~0.0)")
-    print(f"Sample std:  {samples_flat.std():.4f}")
+    print("\n双峰目标：N(-3,1) 与 N(+3,1) 的混合分布")
+    print(f"接受率：{acc_rate:.2%}")
+    print(f"样本均值：{samples_flat.mean():.4f}（期望约 0.0）")
+    print(f"样本标准差：{samples_flat.std():.4f}")
 
     left_mode = samples_flat[samples_flat < 0]
     right_mode = samples_flat[samples_flat >= 0]
-    print(f"\nLeft mode (x < 0):  mean = {left_mode.mean():.4f}, "
-          f"count = {len(left_mode)}")
-    print(f"Right mode (x >= 0): mean = {right_mode.mean():.4f}, "
-          f"count = {len(right_mode)}")
-    print(f"Fraction in each mode: {len(left_mode)/len(samples_flat):.2%} / "
-          f"{len(right_mode)/len(samples_flat):.2%} (expected ~50/50)")
+    print(f"\n左峰（x < 0）：  均值 = {left_mode.mean():.4f}, "
+          f"数量 = {len(left_mode)}")
+    print(f"右峰（x >= 0）：均值 = {right_mode.mean():.4f}, "
+          f"数量 = {len(right_mode)}")
+    print(f"各峰占比：{len(left_mode)/len(samples_flat):.2%} / "
+          f"{len(right_mode)/len(samples_flat):.2%}（期望约 50/50）")
 
-    print("\nProposal std comparison:")
+    print("\n提议标准差对比：")
     for std in [0.1, 0.5, 2.0, 5.0, 20.0]:
         _, rate = metropolis_hastings(bimodal_log_prob, std, np.array([0.0]), 10000, seed=42)
-        print(f"  std = {std:5.1f}: acceptance rate = {rate:.2%}")
+        print(f"  std = {std:5.1f}: 接受率 = {rate:.2%}")
 
 
 def demo_diffusion():
     print("\n" + "=" * 60)
-    print("DEMO 5: Forward Diffusion Process")
+    print("演示 5：前向扩散过程")
     print("=" * 60)
 
     n_points = 200
@@ -246,12 +246,12 @@ def demo_diffusion():
         signal, n_steps=100, beta_start=0.001, beta_end=0.05, seed=42
     )
 
-    print(f"\nOriginal signal: sin(t) + 0.5*sin(3t), {n_points} points")
-    print(f"Noise schedule: beta from {betas[0]:.4f} to {betas[-1]:.4f}")
+    print(f"\n原始信号：sin(t) + 0.5*sin(3t)，共 {n_points} 个点")
+    print(f"噪声调度：beta 从 {betas[0]:.4f} 到 {betas[-1]:.4f}")
 
     checkpoints = [0, 10, 25, 50, 75, 100]
-    print("\nSignal degradation over diffusion steps:")
-    print(f"{'Step':>6s} | {'Mean':>8s} | {'Std':>8s} | {'SNR (dB)':>10s} | {'Correlation':>12s}")
+    print("\n信号随扩散步数的退化情况：")
+    print(f"{'步数':>6s} | {'均值':>8s} | {'标准差':>8s} | {'SNR (dB)':>10s} | {'相关系数':>12s}")
     print("-" * 55)
     for step in checkpoints:
         x = trajectory[step]
@@ -265,9 +265,9 @@ def demo_diffusion():
         print(f"{step:>6d} | {x.mean():>8.4f} | {x.std():>8.4f} | "
               f"{snr:>10.2f} | {corr:>12.4f}")
 
-    print("\nAt step 0: perfect signal (correlation = 1.0)")
-    print("At step 100: nearly pure noise (correlation near 0)")
-    print("This is the forward process of a diffusion model.")
+    print("\n第 0 步：完美信号（相关系数 = 1.0）")
+    print("第 100 步：几乎为纯噪声（相关系数接近 0）")
+    print("这就是扩散模型的前向过程。")
 
 
 if __name__ == "__main__":
