@@ -27,7 +27,7 @@ def hash_embed(text, dim=256):
 
 def cosine(a, b):
     if len(a) != len(b):
-        raise ValueError(f"cosine: dim mismatch {len(a)} vs {len(b)}")
+        raise ValueError(f"cosine：维度不匹配，{len(a)} 与 {len(b)}")
     return sum(x * y for x, y in zip(a, b))
 
 
@@ -76,7 +76,7 @@ def main():
 
     query = "When was the first iPhone released?"
 
-    print("=== dense (hash-trick) retrieval ===")
+    print("=== 稠密检索（哈希技巧）===")
     dense_corpus = [hash_embed(doc, dim=256) for doc in corpus]
     dense_query = hash_embed(query, dim=256)
     dense_ranked = rank(dense_corpus, dense_query)
@@ -84,7 +84,7 @@ def main():
         print(f"  {score:.3f}  {corpus[idx]}")
 
     print()
-    print("=== Matryoshka truncation: 256 -> 64 ===")
+    print("=== Matryoshka 截断：256 -> 64 ===")
     matryoshka_corpus = [truncate_matryoshka(v, 64) for v in dense_corpus]
     matryoshka_query = truncate_matryoshka(dense_query, 64)
     matryoshka_ranked = rank(matryoshka_corpus, matryoshka_query)
@@ -92,7 +92,7 @@ def main():
         print(f"  {score:.3f}  {corpus[idx]}")
 
     print()
-    print("=== sparse (lexical) retrieval ===")
+    print("=== 稀疏检索（词汇）===")
     sparse_corpus = [sparse_embed(doc) for doc in corpus]
     sparse_query = sparse_embed(query)
     sparse_scores = [(sparse_score(sparse_query, d), i) for i, d in enumerate(sparse_corpus)]
@@ -101,15 +101,15 @@ def main():
         print(f"  {score:.3f}  {corpus[idx]}")
 
     print()
-    print("=== RRF fusion (dense + sparse) ===")
+    print("=== RRF 融合（稠密 + 稀疏）===")
     fused = rrf_fuse([dense_ranked[:5], sparse_scores[:5]])[:3]
     for idx, score in fused:
         print(f"  {score:.4f}  {corpus[idx]}")
 
     print()
-    print("note: the hash-trick embedder is for demonstration.")
-    print("real dense embeddings come from transformers (BGE, Nomic, Voyage).")
-    print("Matryoshka truncation, cosine ranking, and RRF fusion all stay identical.")
+    print("注意：哈希技巧嵌入器仅用于演示。")
+    print("真正的稠密嵌入来自 transformer（BGE、Nomic、Voyage）。")
+    print("Matryoshka 截断、余弦排序和 RRF 融合的过程完全相同。")
 
 
 if __name__ == "__main__":
