@@ -1,9 +1,9 @@
-"""Mixture of Experts (MoE) in pure stdlib.
+"""仅使用标准库实现混合专家模型（MoE）。
 
-Implements:
-- top-k router with softmax gating
-- auxiliary-loss-free bias update (DeepSeek-V3)
-- expert-usage tracking over many tokens
+实现内容：
+- 使用 softmax 门控的 top-k 路由器
+- 无辅助损失的偏置更新（DeepSeek-V3）
+- 跨多个 token 的专家用量跟踪
 """
 
 import math
@@ -15,7 +15,7 @@ def silu(x):
 
 
 def make_expert(d_in, d_hidden, rng):
-    """Tiny 'expert': input -> silu -> output. Linear for illustration."""
+    """微型“专家”：输入 -> SiLU -> 输出。为便于说明而使用线性层。"""
     scale = math.sqrt(2.0 / (d_in + d_hidden))
     W = [[rng.gauss(0, scale) for _ in range(d_hidden)] for _ in range(d_in)]
     return W
@@ -33,10 +33,10 @@ def apply_expert(x, W):
 
 
 def route(hidden, W_router, top_k, bias):
-    """Return (top-k expert indices, gate weights over those experts).
+    """返回（top-k 专家索引，这些专家对应的门控权重）。
 
-    Bias affects selection (argmax) but NOT gate weights — the
-    auxiliary-loss-free trick from DeepSeek-V3.
+    偏置会影响专家选择（argmax），但不会影响门控权重——这是
+    DeepSeek-V3 的无辅助损失技巧。
     """
     E = len(W_router)
     scores = [sum(h * w for h, w in zip(hidden, W_router[e])) for e in range(E)]
@@ -51,7 +51,7 @@ def route(hidden, W_router, top_k, bias):
 
 
 def moe_layer_forward(x, experts, W_router, top_k, bias):
-    """Compute MoE output for a single token `x`. Returns output vector."""
+    """计算单个 token `x` 的 MoE 输出，返回输出向量。"""
     top_idx, gates = route(x, W_router, top_k, bias)
     d_hidden = len(experts[0][0])
     out = [0.0] * d_hidden
@@ -63,7 +63,7 @@ def moe_layer_forward(x, experts, W_router, top_k, bias):
 
 
 def update_bias(bias, usage_counts, target, gamma):
-    """Aux-loss-free balance: nudge bias up/down based on usage vs target."""
+    """无辅助损失的均衡：根据实际用量与目标用量之差上下调整偏置。"""
     for e in range(len(bias)):
         if usage_counts[e] > target:
             bias[e] -= gamma
@@ -90,7 +90,7 @@ def entropy(counts):
 
 
 def dense_active_params(n_experts, expert_params, top_k, d_model):
-    """Total params, active params per token. d_model used for attention est."""
+    """总参数量和每个 token 的活跃参数量。d_model 用于估算注意力。"""
     total = n_experts * expert_params
     active = top_k * expert_params
     return total, active
@@ -107,30 +107,30 @@ def main():
     experts = [make_expert(d_model, d_hidden, rng) for _ in range(n_experts)]
     W_router = [[rng.gauss(0, 0.3) for _ in range(d_model)] for _ in range(n_experts)]
 
-    # Synthetic tokens with some structure so routing isn't uniform to start.
+    # 构造具有一定结构的合成 token，使初始路由并非均匀分布。
     tokens = [[rng.gauss(0, 1) for _ in range(d_model)] for _ in range(n_tokens)]
 
     bias = [0.0] * n_experts
     target = n_tokens * top_k / n_experts
 
-    print("=== MoE routing: auxiliary-loss-free balance ===")
-    print(f"config: {n_experts} experts, top-{top_k}, {n_tokens} tokens, target usage = {target:.0f} per expert")
+    print("=== MoE 路由：无辅助损失的均衡 ===")
+    print(f"配置：{n_experts} 个专家，top-{top_k}，{n_tokens} 个 token，目标用量 = {target:.0f}（每个专家）")
     print()
     usage = run_epoch(tokens, experts, W_router, top_k, bias)
-    print(f"iteration  0  usage: " + " ".join(f"{u:>4}" for u in usage) + f"  entropy={entropy(usage):.3f}")
+    print(f"迭代  0  用量：" + " ".join(f"{u:>4}" for u in usage) + f"  熵={entropy(usage):.3f}")
 
     for it in range(1, 11):
         bias = update_bias(bias, usage, target, gamma=0.15)
         usage = run_epoch(tokens, experts, W_router, top_k, bias)
-        print(f"iteration {it:>2}  usage: " + " ".join(f"{u:>4}" for u in usage) + f"  entropy={entropy(usage):.3f}")
-    print(f"max entropy (uniform) = ln({n_experts}) = {math.log(n_experts):.3f}")
+        print(f"迭代 {it:>2}  用量：" + " ".join(f"{u:>4}" for u in usage) + f"  熵={entropy(usage):.3f}")
+    print(f"最大熵（均匀分布）= ln({n_experts}) = {math.log(n_experts):.3f}")
     print()
 
-    print("=== parameter counts (FFN portion, per layer) ===")
-    ffn_params = d_model * d_hidden * 3  # SwiGLU-like: W1, W2, W3
-    print(f"  toy MoE       : total={n_experts * ffn_params:>10}  active={top_k * ffn_params:>10}")
+    print("=== 参数量（每层的 FFN 部分）===")
+    ffn_params = d_model * d_hidden * 3  # 类 SwiGLU：W1、W2、W3
+    print(f"  简化 MoE：总计={n_experts * ffn_params:>10}  活跃={top_k * ffn_params:>10}")
 
-    # DeepSeek-V3 shape (per-layer FFN; real model has 61 layers)
+    # DeepSeek-V3 结构（逐层 FFN；真实模型有 61 层）
     d = 7168
     shared = 1
     routed = 256
@@ -140,11 +140,11 @@ def main():
     fine_expert = ffn_full // 8
     total_moe_per_layer = (shared + routed) * fine_expert
     active_moe_per_layer = (shared + active) * fine_expert
-    print(f"  deepseek-v3-ish per layer:  total={total_moe_per_layer / 1e9:.1f}B  active={active_moe_per_layer / 1e9:.1f}B")
-    print(f"  deepseek-v3 FFN total (×{layers} layers): ~{total_moe_per_layer * layers / 1e9:.0f}B total,  ~{active_moe_per_layer * layers / 1e9:.0f}B active")
-    print(f"  llama-3-70b FFN total: ~{32 * ffn_full / 1e9:.0f}B  (all active every token)")
+    print(f"  类 DeepSeek-V3 每层：总计={total_moe_per_layer / 1e9:.1f}B  活跃={active_moe_per_layer / 1e9:.1f}B")
+    print(f"  DeepSeek-V3 FFN 总计（×{layers} 层）：总计约 {total_moe_per_layer * layers / 1e9:.0f}B，活跃约 {active_moe_per_layer * layers / 1e9:.0f}B")
+    print(f"  Llama-3-70B FFN 总计：约 {32 * ffn_full / 1e9:.0f}B（每个 token 全部激活）")
     print()
-    print("takeaway: same active FLOPs, vastly larger parameter footprint.")
+    print("要点：活跃 FLOPs 相同，但参数规模大得多。")
 
 
 if __name__ == "__main__":
