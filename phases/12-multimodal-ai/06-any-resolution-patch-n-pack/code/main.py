@@ -1,14 +1,14 @@
-"""Patch-n'-pack for variable-resolution vision transformer batches — stdlib.
+"""用于可变分辨率视觉 Transformer 批次的 Patch-n'-pack —— 仅标准库。
 
-Given a batch of (H, W) image sizes at patch P, computes:
-  - per-image patch grid (H/P, W/P) and sequence length n_i = (H/P)(W/P)
-  - packed total length N = sum(n_i)
-  - block-diagonal attention mask (dense, N x N)
-  - AnyRes tiling cost (tile + thumbnail) for comparison
-  - square-resize cost (fixed sequence length) for comparison
+给定一个 patch 为 P 的 (H, W) 图像尺寸批次，计算：
+  - 每张图像的 patch 网格 (H/P, W/P) 和序列长度 n_i = (H/P)(W/P)
+  - 打包后的总长度 N = sum(n_i)
+  - 分块对角注意力掩码（稠密，N x N）
+  - AnyRes 平铺代价 (瓦片 + 缩略图) 用于对比
+  - 方形缩放代价（固定序列长度），用于对比
 
-Prints a budget table for a realistic workload: receipt, chart, screenshot, photo.
-No numpy, no torch — bytes-per-cell math stays transparent.
+打印一份针对实际工作负载的预算表：收据、图表、截图、照片。
+无需 numpy，无需 torch，让每个单元格的字节数计算保持透明。
 """
 
 from __future__ import annotations
@@ -103,27 +103,27 @@ def fmt(n: int) -> str:
 
 
 def demo_toy_pack() -> None:
-    print("\nToy batch: two images, patch 2")
+    print("\n示例批次：两张图像，patch 为 2")
     print("-" * 60)
     imgs = [Image("A", 6, 4), Image("B", 4, 8)]
     for img in imgs:
         gh, gw = img.grid(2)
-        print(f"  {img.name}: {img.h}x{img.w} -> grid {gh}x{gw} = {img.seq(2)} tokens")
+        print(f"  {img.name}: {img.h}x{img.w} -> 网格 {gh}x{gw} = {img.seq(2)} 个 token")
     pack = pack_batch(imgs, 2)
-    print(f"packed total length: {pack.total_tokens}")
+    print(f"打包后的总长度：{pack.total_tokens}")
     print(f"cu_seqlens (FlashAttn varlen): {pack.cu_seqlens}")
-    print(f"dense mask size: {pack.mask_size} cells, "
-          f"non-zero: {pack.mask_nonzero} "
+    print(f"稠密掩码大小：{pack.mask_size} 个单元格，"
+          f"非零项：{pack.mask_nonzero} "
           f"({pack.mask_nonzero * 100 / pack.mask_size:.1f}%)")
     mask = build_dense_mask(pack)
-    print("\nblock-diagonal mask (1=attend, .=mask):")
+    print("\n分块对角掩码（1=关注，.=遮蔽）：")
     for row in mask:
         print("  " + "".join("1" if v else "." for v in row))
 
 
 def budget_table(workload: list[Image]) -> None:
     print("\n" + "=" * 72)
-    print(f"{'image':<26}{'native':>10}{'square':>10}{'anyres':>14}{'grid':>10}")
+    print(f"{'图像':<26}{'原生':>10}{'方形':>10}{'AnyRes':>14}{'网格':>10}")
     print("-" * 72)
     native_sum = 0
     square_sum = 0
@@ -138,28 +138,28 @@ def budget_table(workload: list[Image]) -> None:
         gr, gc = ar["grid"]
         print(f"{img.name:<26}{nat:>10}{sq:>10}{ar['total']:>14}   {gr}x{gc}")
     print("-" * 72)
-    print(f"{'TOTAL':<26}{native_sum:>10}{square_sum:>10}{anyres_sum:>14}")
-    print(f"\nnative vs square : {native_sum / square_sum:>6.2f}x tokens,"
-          f" preserves OCR + layout detail")
-    print(f"native vs anyres : {native_sum / anyres_sum:>6.2f}x tokens,"
-          f" no tile + thumbnail blow-up past ~2 tiles")
-    print(f"anyres vs square : {anyres_sum / square_sum:>6.2f}x tokens,"
-          f" the middle ground when encoder is locked at 336")
+    print(f"{'合计':<26}{native_sum:>10}{square_sum:>10}{anyres_sum:>14}")
+    print(f"\n原生与方形之比：{native_sum / square_sum:>6.2f} 倍 token，"
+          f"保留 OCR 与版面细节")
+    print(f"原生与 AnyRes 之比：{native_sum / anyres_sum:>6.2f} 倍 token，"
+          f"超过约 2 个瓦片后不会产生瓦片与缩略图膨胀")
+    print(f"AnyRes 与方形之比：{anyres_sum / square_sum:>6.2f} 倍 token，"
+          f"适合编码器固定在 336 分辨率时的折中方案")
 
 
 def main() -> None:
     print("=" * 60)
-    print("PATCH-N-PACK FOR ANY-RESOLUTION VLMS (Phase 12, Lesson 06)")
+    print("适用于任意分辨率 VLM 的 PATCH-N-PACK（第 12 阶段，第 06 课）")
     print("=" * 60)
 
     demo_toy_pack()
 
     workload = [
-        Image("receipt 600x1500 (1:2.5)", 600, 1500),
-        Image("chart 1280x720 (16:9)", 1280, 720),
-        Image("phone screen 1170x2532", 1170, 2532),
-        Image("photo 2048x1536 (4:3)", 2048, 1536),
-        Image("receipt 504x1260 (1:2.5)", 504, 1260),
+        Image("收据 600x1500（1:2.5）", 600, 1500),
+        Image("图表 1280x720（16:9）", 1280, 720),
+        Image("手机屏幕 1170x2532", 1170, 2532),
+        Image("照片 2048x1536（4:3）", 2048, 1536),
+        Image("收据 504x1260（1:2.5）", 504, 1260),
     ]
     for img in workload:
         img.h -= img.h % 14
@@ -168,14 +168,14 @@ def main() -> None:
     budget_table(workload)
 
     print("\n" + "=" * 60)
-    print("WHEN TO USE EACH STRATEGY")
+    print("各策略的适用场景")
     print("-" * 60)
     print("  native-pack (NaViT / NaFlex / M-RoPE):")
-    print("    multi-aspect batch, maximum fidelity, minimum tokens")
+    print("    多宽高比批次，最高保真度，最少 token")
     print("  AnyRes (LLaVA-NeXT):")
-    print("    encoder is frozen at 336x336, but you need detail")
-    print("  square-resize:")
-    print("    fast baseline, photo-only workloads, no OCR")
+    print("    编码器在 336x336 上冻结，但你需要细节")
+    print("  方形缩放：")
+    print("    快速基线，仅照片工作负载，无 OCR")
 
 
 if __name__ == "__main__":
