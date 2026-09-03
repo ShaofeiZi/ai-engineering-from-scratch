@@ -1,14 +1,13 @@
-"""Four multi-agent primitives, stdlib only.
+"""四种多 Agent 原语，仅使用 stdlib。
 
-Primitives:
+原语：
   - Agent(name, system_prompt, tools, policy)
   - Handoff(from_agent, to_agent, reason)
-  - SharedState (thread-safe message pool)
+  - SharedState（线程安全的消息池）
   - Orchestrator (Static, Handoff-driven, LLM-selected)
 
-Runs the same three-agent pipeline (researcher -> writer -> reviewer) under
-three orchestrator types. Agents are scripted policies, not LLM calls -- the
-point is the coordination structure.
+在三种 orchestrator 下运行相同的三 Agent 流水线（researcher -> writer -> reviewer）。
+Agent 使用脚本化策略，而非调用 LLM；重点在于协调结构。
 """
 from __future__ import annotations
 
@@ -55,32 +54,32 @@ class Agent:
 
 def researcher_policy(state: SharedState) -> Message:
     n = len([m for m in state.snapshot() if m["from"] == "researcher"])
-    notes = f"note {n + 1}: FIPA-ACL ratified 2000; 20 performatives."
+    notes = f"笔记 {n + 1}：FIPA-ACL 于 2000 年批准；包含 20 个施为词。"
     return {"content": notes, "handoff": "writer" if n == 0 else "done"}
 
 
 def writer_policy(state: SharedState) -> Message:
     research = [m["content"] for m in state.snapshot() if m["from"] == "researcher"]
-    draft = "Draft summarizing: " + " | ".join(research) if research else "Draft with no research yet."
+    draft = "总结草稿：" + " | ".join(research) if research else "尚无调研内容的草稿。"
     return {"content": draft, "handoff": "reviewer"}
 
 
 def reviewer_policy(state: SharedState) -> Message:
     last = state.last_by("writer")
-    verdict = "approved" if last and "summarizing" in last["content"] else "needs revision"
-    return {"content": f"Review verdict: {verdict}.", "handoff": "done"}
+    verdict = "已批准" if last and "总结草稿" in last["content"] else "需要修改"
+    return {"content": f"审查结论：{verdict}。", "handoff": "done"}
 
 
 def make_team() -> dict[str, Agent]:
     return {
-        "researcher": Agent("researcher", "Gather facts.", researcher_policy),
-        "writer": Agent("writer", "Draft from research.", writer_policy),
-        "reviewer": Agent("reviewer", "Critique the draft.", reviewer_policy),
+        "researcher": Agent("researcher", "收集事实。", researcher_policy),
+        "writer": Agent("writer", "根据调研撰写草稿。", writer_policy),
+        "reviewer": Agent("reviewer", "评议草稿。", reviewer_policy),
     }
 
 
 class StaticOrchestrator:
-    """Fixed sequential order, LangGraph-style deterministic edges."""
+    """固定顺序执行，使用 LangGraph 风格的确定性边。"""
 
     def __init__(self, order: list[str]) -> None:
         self.order = order
@@ -92,7 +91,7 @@ class StaticOrchestrator:
 
 
 class HandoffOrchestrator:
-    """OpenAI Swarm-style: the current agent returns its own handoff target."""
+    """OpenAI Swarm 风格：当前 Agent 自行返回 handoff 目标。"""
 
     def __init__(self, start: str) -> None:
         self.start = start
@@ -111,8 +110,8 @@ class HandoffOrchestrator:
 
 
 class LLMSelectorOrchestrator:
-    """AutoGen GroupChat-style speaker selection. The selector function is
-    scripted here, but in production it would be an LLM call reading the pool."""
+    """AutoGen GroupChat 风格的发言者选择。此处的 selector 函数是脚本化的，
+    但在生产环境中，它会是一次读取消息池的 LLM 调用。"""
 
     def __init__(self, start: str, selector: Callable[[SharedState, dict[str, Agent]], Optional[str]]) -> None:
         self.start = start
@@ -147,26 +146,26 @@ def render_pool(label: str, state: SharedState) -> None:
 
 
 def main() -> None:
-    print("Four multi-agent primitives demo")
+    print("四种多 Agent 原语演示")
     print("-" * 42)
 
     team = make_team()
     state_a = SharedState()
     StaticOrchestrator(["researcher", "writer", "reviewer"]).run(team, state_a)
-    render_pool("Static (LangGraph-style)", state_a)
+    render_pool("静态模式（LangGraph 风格）", state_a)
 
     team = make_team()
     state_b = SharedState()
     HandoffOrchestrator("researcher").run(team, state_b)
-    render_pool("Handoff-driven (OpenAI Swarm-style)", state_b)
+    render_pool("Handoff 驱动（OpenAI Swarm 风格）", state_b)
 
     team = make_team()
     state_c = SharedState()
     LLMSelectorOrchestrator("researcher", round_robin_selector).run(team, state_c)
-    render_pool("LLM-selected (AutoGen-style)", state_c)
+    render_pool("LLM 选择（AutoGen 风格）", state_c)
 
-    print("\nTakeaway: agents and state are identical across runs;")
-    print("only the orchestrator choice changes who speaks when.")
+    print("\n要点：每次运行的 Agent 和状态都完全相同；")
+    print("只有 orchestrator 的选择会改变谁在何时发言。")
 
 
 if __name__ == "__main__":
