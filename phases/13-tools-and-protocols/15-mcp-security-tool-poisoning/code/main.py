@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 15: secure MCP 2026-07-28 tool dispatch.
-Lesson: phases/13-tools-and-protocols/15-mcp-security-tool-poisoning/docs/en.md
-Spec: https://modelcontextprotocol.io/specification/2026-07-28
-Scans metadata, pins descriptors, detects collisions, and validates routing.
-It also protects MRTR continuation state; Lesson 09 owns HTTP transport.
+"""第 13 阶段第 15 课：安全 MCP 2026-07-28 工具分发。
+课程：phases/13-tools-and-protocols/15-mcp-security-tool-poisoning/docs/en.md
+规范：https://modelcontextprotocol.io/specification/2026-07-28
+扫描元数据、固定描述符、检测冲突，并验证路由。
+它还保护 MRTR 续接状态；第 09 课拥有 HTTP 传输。
 """
 
 from __future__ import annotations
