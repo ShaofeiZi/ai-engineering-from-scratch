@@ -1,7 +1,7 @@
-"""Three-layer eval harness with evaluator-optimizer loop and CI gate.
+"""三层评测工具，包含评估器—优化器循环和 CI 门禁。
 
-Cases: benchmark (SWE-bench-shaped), custom (LLM-judge), online (guardrail).
-Aggregator produces pass rate, regression-vs-baseline, and CI verdict.
+用例：基准测试（SWE-bench-shaped）、自定义（LLM-judge）、在线（护栏）。
+聚合器生成通过率、regression-vs-baseline 和 CI 判定结果。
 """
 
 from __future__ import annotations
@@ -136,7 +136,7 @@ def _flaky_benchmark_case() -> EvalCase:
 
 def main() -> None:
     print("=" * 70)
-    print("EVAL-DRIVEN AGENT DEVELOPMENT — Phase 14, Lesson 30")
+    print("评测驱动的智能体开发 — 第 14 阶段，第 30 课")
     print("=" * 70)
 
     cases = [
@@ -155,24 +155,24 @@ def main() -> None:
         print(f"  [{result.category:9}] {result.cid}  {verdict}  "
               f"rounds={result.rounds}")
         print(f"    {case.description}")
-        print(f"    final: {result.final}")
-        print(f"    reason: {result.reason}")
+        print(f"    最终结果：{result.final}")
+        print(f"    原因：{result.reason}")
 
     baseline = 0.95
     ok, message = ci_gate(results, baseline_pass_rate=baseline)
-    print(f"\nCI gate: {'ALLOW' if ok else 'BLOCK'}  ({message})")
+    print(f"\nCI 门禁：{'ALLOW' if ok else 'BLOCK'}  ({message})")
 
-    print("\nper-category breakdown")
+    print("\n按类别统计的明细")
     for category in ("benchmark", "custom", "online"):
         cat_results = [r for r in results if r.category == category]
         if not cat_results:
             continue
         passed = sum(1 for r in cat_results if r.passed)
-        print(f"  {category:9}: {passed}/{len(cat_results)}")
+        print(f"  {category:9}：{passed}/{len(cat_results)}")
 
     print()
-    print("evals live next to code, run in CI, gate merges.")
-    print("every guardrail and learned rule maps to a case.")
+    print("评测与代码放在一起，在 CI 中运行，对合并进行门禁控制。")
+    print("每条护栏和学到的规则都对应一个用例。")
 
 
 if __name__ == "__main__":
