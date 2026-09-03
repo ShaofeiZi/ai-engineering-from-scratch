@@ -1,4 +1,4 @@
-"""Unit tests for multimodal evaluation metrics."""
+"""多模态评估指标的单元测试。"""
 
 from __future__ import annotations
 

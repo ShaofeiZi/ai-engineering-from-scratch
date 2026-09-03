@@ -1,15 +1,14 @@
-"""Multimodal evaluation: retrieval, VQA, and captioning.
+"""多模态评测：检索、VQA 与图像描述。
 
-Three metric surfaces:
-  - Recall@K from a cosine similarity matrix between image and caption vectors
-  - VQA exact match between predicted and reference answer ids
-  - BLEU-4 with multi-reference smoothing
+三个评测指标维度：
+  - 基于图像与文本向量的余弦相似度矩阵计算 Recall@K
+  - VQA 中预测答案 id 与参考答案 id 的精确匹配
+  - 带多参考平滑的 BLEU-4
 
-The demo evaluates an untrained model, trains it for 50 steps on a synthetic
-mock corpus, and re-evaluates to show the metrics move above their random
-baselines.
+本示例先评测一个未训练的模型，再在合成 mock 语料上训练 50 步，
+然后重新评测，以展示指标在随机基线之上的提升。
 
-Run with: python3 main.py
+运行方式：python3 main.py
 """
 
 from __future__ import annotations
@@ -75,9 +74,9 @@ class EvalSuite:
 
 
 def recall_at_k(sim: torch.Tensor, k: int) -> tuple[float, float]:
-    """Return (i2t, t2i) recall@k.
+    """返回 (i2t, t2i) 的 recall@k。
 
-    sim is (N, N) where row i is the similarity of image i to every caption.
+    sim 为 (N, N) 矩阵，其中第 i 行是图像 i 与每条文本的相似度。
     """
     if sim.dim() != 2 or sim.shape[0] != sim.shape[1]:
         raise ValueError(f"sim must be square (N, N), got {tuple(sim.shape)}")
@@ -121,10 +120,10 @@ def _count(ngrams: list[tuple[int, ...]]) -> dict[tuple[int, ...], int]:
 
 def bleu4(generated: list[int], references: list[list[int]],
           smoothing: bool = True) -> float:
-    """BLEU-4 against multiple reference captions.
+    """基于多参考文本的 BLEU-4。
 
-    Uses Chen and Cherry "method 1" smoothing when any n-gram precision is 0
-    and `smoothing` is True.
+    当任意 n-gram 精度为 0 且 `smoothing` 为 True 时，
+    使用 Chen 与 Cherry 的 "method 1" 平滑方法。
     """
     if not references:
         raise ValueError("bleu4 requires at least one reference")
@@ -172,7 +171,7 @@ def bleu4(generated: list[int], references: list[list[int]],
 
 def build_eval_suite(seed: int, n_samples: int, vocab_size: int, max_len: int
                      ) -> EvalSuite:
-    """Build a deterministic eval suite with three surfaces."""
+    """构建一个确定性的、包含三个维度的评测集。"""
     rng = np.random.default_rng(seed)
     retrieval: list[RetrievalPair] = []
     vqa: list[VQATriple] = []
@@ -275,7 +274,7 @@ def _print_metrics(label: str, metrics: dict) -> None:
 
 def main() -> None:
     print("=" * 60)
-    print("MULTIMODAL EVALUATION")
+    print("多模态评测")
     print("=" * 60)
 
     cfg = PretrainConfig(
@@ -290,24 +289,24 @@ def main() -> None:
         lr=5e-4,
         seed=0,
     )
-    print(f"  text vocab : {cfg.text_vocab}")
-    print(f"  embed dim  : {cfg.embed_dim}")
-    print(f"  steps      : {cfg.steps}")
+    print(f"  文本词表大小：{cfg.text_vocab}")
+    print(f"  嵌入维度    ：{cfg.embed_dim}")
+    print(f"  步数        ：{cfg.steps}")
 
     torch.manual_seed(cfg.seed)
     model = MultimodalModel(cfg).train()
 
-    print("\nbuilding eval suite (50 samples, held-out seed)...")
+    print("\n构建评测集（50 个样本，使用留出的种子）...")
     suite = build_eval_suite(seed=cfg.seed + 7777, n_samples=50,
                              vocab_size=cfg.text_vocab, max_len=cfg.max_text_len)
-    print(f"  retrieval pairs : {len(suite.retrieval)}")
-    print(f"  vqa triples     : {len(suite.vqa)}")
-    print(f"  caption samples : {len(suite.caps)}")
+    print(f"  检索配对数量：{len(suite.retrieval)}")
+    print(f"  VQA 三元组数：{len(suite.vqa)}")
+    print(f"  caption 样本数：{len(suite.caps)}")
 
     before = evaluate(model, suite)
-    _print_metrics("metrics BEFORE training (50-step random init):", before)
+    _print_metrics("训练前指标（50 步随机初始化）：", before)
 
-    print("\ntraining for 50 steps on the mock corpus...")
+    print("\n在 mock 语料上训练 50 步...")
     model.train()
     opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     corpus = make_mock_corpus(cfg.seed + 1, cfg.n_pairs, cfg.text_vocab, cfg.max_text_len)
@@ -321,18 +320,18 @@ def main() -> None:
         total.backward()
         opt.step()
         if step % 10 == 0 or step == cfg.steps - 1:
-            print(f"  step {step:3d}  total {total.item():.4f}")
+            print(f"  步骤 {step:3d}  总损失 {total.item():.4f}")
 
     after = evaluate(model, suite)
-    _print_metrics("metrics AFTER training:", after)
+    _print_metrics("训练后指标：", after)
 
-    print("\nmetric deltas (after - before):")
+    print("\n指标变化（训练后 - 训练前）：")
     for k in before:
         d = after[k] - before[k]
         marker = "+" if d >= 0 else "-"
         print(f"  {k:12s} : {after[k]:.4f}  ({marker}{abs(d):.4f})")
 
-    print("\ndone.")
+    print("\n完成。")
 
 
 if __name__ == "__main__":
