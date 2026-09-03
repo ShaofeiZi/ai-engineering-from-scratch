@@ -1,14 +1,14 @@
-"""BERT-style masked language modeling — the masking rules demystified.
+"""BERT 风格掩码语言建模——解密掩码规则。
 
-Pure stdlib. Shows the 80/10/10 rule, whole-word masking, and
-distribution sanity checks over a large batch of tokens.
+仅使用标准库。演示 80/10/10 规则、全词遮蔽，以及对大批 token
+进行分布合理性检查。
 """
 
 import random
 from collections import Counter
 
 
-MASK_ID = 0  # reserve id 0 for [MASK] in this toy vocab
+MASK_ID = 0  # 在这个玩具词表中为 [MASK] 保留 ID 0
 CLS_ID = 1
 SEP_ID = 2
 SPECIAL_IDS = {MASK_ID, CLS_ID, SEP_ID}
@@ -16,10 +16,10 @@ IGNORE_INDEX = -100
 
 
 def create_mlm_batch(tokens, vocab_size, mask_prob=0.15, rng=None):
-    """Apply BERT masking.
+    """应用 BERT 掩码。
 
-    Returns (input_ids, labels). labels[i] = original token if position was
-    selected for prediction, IGNORE_INDEX otherwise.
+    返回 (input_ids, labels)。若位置被选中用于预测，则 labels[i] 为原始
+    token，否则为 IGNORE_INDEX。
     """
     if rng is None:
         rng = random.Random()
@@ -43,9 +43,9 @@ def create_mlm_batch(tokens, vocab_size, mask_prob=0.15, rng=None):
 
 
 def whole_word_mlm(tokens, word_spans, vocab_size, mask_prob=0.15, rng=None):
-    """Mask whole words: if any subword in a span is selected, mask all.
+    """遮蔽完整单词：若选中一个跨度内的任意子词，则遮蔽全部子词。
 
-    word_spans: list of (start, end) half-open ranges into tokens.
+    word_spans：由 (start, end) 组成的列表，表示 token 序列中的左闭右开区间。
     """
     if rng is None:
         rng = random.Random()
@@ -95,8 +95,8 @@ def distribution_check(n_tokens, vocab_size, mask_prob=0.15, seed=42):
 
 
 def toy_predict(masked_inputs, vocab):
-    """Pretend MLM head: returns a uniform distribution over vocab.
-    Real BERT uses the encoder output at each position, projected to vocab.
+    """模拟 MLM 头：返回词表上的均匀分布。
+    真正的 BERT 会将每个位置的编码器输出投影到词表空间。
     """
     V = len(vocab)
     return [[1.0 / V for _ in range(V)] for _ in masked_inputs]
@@ -117,30 +117,30 @@ def main():
     rng = random.Random(42)
     inp, labels = create_mlm_batch(tokens, vocab_size, mask_prob=0.5, rng=rng)
 
-    print("=== MLM masking demo (prob=0.5 so you can see it) ===")
-    print(f"{'idx':>4}  {'word':>9}  {'input_id':>9}  {'input_word':>11}  {'label':>6}")
+    print("=== MLM 掩码演示（prob=0.5，便于观察）===")
+    print(f"{'索引':>4}  {'单词':>9}  {'输入 ID':>9}  {'输入词':>11}  {'标签':>6}")
     for i, (t_in, t_orig, lab) in enumerate(zip(inp, tokens, labels)):
         print(f"{i:>4}  {vocab_words[t_orig]:>9}  {t_in:>9}  {vocab_words[t_in]:>11}  {lab:>6}")
 
     print()
-    print("=== 80/10/10 distribution over 100k random tokens ===")
+    print("=== 10 万个随机 token 上的 80/10/10 分布 ===")
     stats = distribution_check(n_tokens=100_000, vocab_size=vocab_size, mask_prob=0.15)
-    print(f"selected:                   {stats['selected_pct']:.2f}%   (target 15.0%)")
-    print(f"  -> replaced with [MASK]:  {stats['masked_of_selected_pct']:.2f}%   (target 80.0%)")
-    print(f"  -> replaced with random:  {stats['random_of_selected_pct']:.2f}%   (target 10.0%)")
-    print(f"  -> left unchanged:        {stats['unchanged_of_selected_pct']:.2f}%   (target 10.0%)")
+    print(f"已选中：               {stats['selected_pct']:.2f}%   （目标 15.0%）")
+    print(f"  -> 替换为 [MASK]：   {stats['masked_of_selected_pct']:.2f}%   （目标 80.0%）")
+    print(f"  -> 替换为随机 token：{stats['random_of_selected_pct']:.2f}%   （目标 10.0%）")
+    print(f"  -> 保持不变：         {stats['unchanged_of_selected_pct']:.2f}%   （目标 10.0%）")
 
     print()
-    print("=== whole-word masking demo ===")
-    # Treat "quick brown" and "lazy dog" as two-subword words for demo
+    print("=== 全词掩码演示 ===")
+    # 演示时将 "quick brown" 和 "lazy dog" 分别视为含两个子词的单词
     tokens2 = [id_of[w] for w in sentence]
     spans = [(0, 1), (1, 2), (2, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 10), (10, 11)]
     rng2 = random.Random(7)
     inp2, labels2 = whole_word_mlm(tokens2, spans, vocab_size, mask_prob=0.5, rng=rng2)
-    print("spans:        " + " ".join(f"[{s}:{e}]" for s, e in spans))
-    print("input words:  " + " ".join(vocab_words[t] for t in inp2))
-    print("label mask:   " + " ".join(("P" if l != IGNORE_INDEX else ".") for l in labels2))
-    print("P = position has a label, . = ignored")
+    print("跨度：      " + " ".join(f"[{s}:{e}]" for s, e in spans))
+    print("输入单词：  " + " ".join(vocab_words[t] for t in inp2))
+    print("标签掩码：  " + " ".join(("P" if l != IGNORE_INDEX else ".") for l in labels2))
+    print("P = 该位置有标签，. = 忽略")
 
 
 if __name__ == "__main__":
