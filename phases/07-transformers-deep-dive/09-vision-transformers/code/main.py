@@ -1,8 +1,8 @@
-"""Vision Transformer (ViT) — the patchify + embed front end.
+"""视觉 Transformer（ViT）——图像分块 + 嵌入前端。
 
-Pure stdlib. Takes a toy 24x24x3 image, cuts it into 6x6 patches,
-projects each to a d_model vector, prepends [CLS], adds 2D position.
-Verifies shapes and counts parameters for real ViT configs.
+仅使用标准库。将一幅 24x24x3 的玩具图像切成 6x6 图像块，
+把每块投影为 d_model 向量，在开头添加 [CLS]，并加入二维位置编码。
+验证张量形状，并计算真实 ViT 配置的参数量。
 """
 
 import math
@@ -53,7 +53,7 @@ def linear_project(patches, d_model, rng=None):
 
 
 def cls_and_pos(tokens, grid_h, grid_w, rng=None):
-    """Prepend learnable [CLS] and add 2D sinusoidal positional encoding."""
+    """前置可学习的 [CLS]，并添加二维正弦位置编码。"""
     if rng is None:
         rng = random.Random(1)
     d_model = len(tokens[0])
@@ -70,8 +70,8 @@ def cls_and_pos(tokens, grid_h, grid_w, rng=None):
 
 
 def pos_2d(H, W, d_model):
-    """2D sinusoidal: split d_model in half, encode row and col independently."""
-    assert d_model % 4 == 0, "d_model must be divisible by 4 for 2D sinusoidal"
+    """二维正弦编码：将 d_model 对半拆分，独立编码行和列。"""
+    assert d_model % 4 == 0, "使用二维正弦编码时，d_model 必须能被 4 整除"
     half = d_model // 2
     pe = [[[0.0] * d_model for _ in range(W)] for _ in range(H)]
     for i in range(H):
@@ -88,18 +88,18 @@ def pos_2d(H, W, d_model):
 
 
 def param_count_vit(d_model, n_layers, n_heads, ffn_expansion, num_patches, num_classes):
-    """Approximate ViT parameter count (patch embed + transformer + head)."""
-    # Patch embedding: (patch_flat_size, d_model) — ignore patch_size here, caller scales.
-    # Self-attention per layer: 4 * d_model^2 (Q,K,V,O)
-    # FFN per layer: 2 * d_model * (ffn_expansion * d_model)
-    # Norms: 2 * d_model per layer (LayerNorm gamma+beta)
+    """估算 ViT 参数量（图像块嵌入 + transformer + 预测头）。"""
+    # 图像块嵌入：(patch_flat_size, d_model)——此处忽略 patch_size，由调用方缩放。
+    # 每层自注意力：4 * d_model^2（Q、K、V、O）
+    # 每层 FFN：2 * d_model * (ffn_expansion * d_model)
+    # 归一化：每层 2 * d_model（LayerNorm gamma+beta）
     per_layer = 4 * d_model ** 2 + 2 * d_model * int(ffn_expansion * d_model) + 4 * d_model
-    # Position embeddings: (num_patches + 1) * d_model
+    # 位置嵌入：(num_patches + 1) * d_model
     pos_emb = (num_patches + 1) * d_model
-    # CLS token: d_model
-    # Classifier head: d_model * num_classes
+    # CLS token：d_model
+    # 分类头：d_model * num_classes
     head = d_model * num_classes
-    # Final layer norm: 2 * d_model
+    # 最终层归一化：2 * d_model
     return per_layer * n_layers + pos_emb + d_model + head + 2 * d_model
 
 
@@ -113,18 +113,18 @@ def main():
     tokens, W_proj = linear_project(patches, d_model, rng=random.Random(42))
     tokens_with_pos = cls_and_pos(tokens, grid[0], grid[1], rng=random.Random(7))
 
-    print("=== ViT front-end sanity ===")
-    print(f"image:               ({H}, {W}, {C})")
-    print(f"patch size:          {patch_size}x{patch_size}")
-    print(f"grid:                {grid[0]} x {grid[1]} = {grid[0] * grid[1]} patches")
-    print(f"flat patch size:     {patch_size * patch_size * C}")
+    print("=== ViT 前端健全性检查 ===")
+    print(f"图像：              ({H}, {W}, {C})")
+    print(f"图像块大小：        {patch_size}x{patch_size}")
+    print(f"网格：              {grid[0]} x {grid[1]} = {grid[0] * grid[1]} 个图像块")
+    print(f"扁平图像块大小：    {patch_size * patch_size * C}")
     print(f"d_model:             {d_model}")
-    print(f"sequence length:     {len(tokens_with_pos)}  (patches + CLS)")
-    print(f"cell [0,0] of CLS:   {tokens_with_pos[0][0]:.4f}")
-    print(f"cell [0,0] of p1:    {tokens_with_pos[1][0]:.4f}")
+    print(f"序列长度：          {len(tokens_with_pos)}  （图像块 + CLS）")
+    print(f"CLS 的单元 [0,0]：  {tokens_with_pos[0][0]:.4f}")
+    print(f"p1 的单元 [0,0]：   {tokens_with_pos[1][0]:.4f}")
     print()
 
-    print("=== parameter counts (approximate) ===")
+    print("=== 参数量（估算）===")
     for name, d, L, H_heads, exp, patch in [
         ("ViT-Tiny/16",   192, 12, 3, 4, 16),
         ("ViT-Small/16",  384, 12, 6, 4, 16),
@@ -134,13 +134,13 @@ def main():
     ]:
         grid_n = (224 // patch) ** 2
         params = param_count_vit(d, L, H_heads, exp, grid_n, num_classes=1000)
-        # Add patch embed: (P*P*3) * d_model
+        # 加上图像块嵌入：(P*P*3) * d_model
         params += patch * patch * 3 * d
-        print(f"  {name:<14}  d={d:<5}  L={L:<3}  heads={H_heads:<3}  patches={grid_n:<4}  ~{params / 1e6:.1f}M params")
+        print(f"  {name:<14}  d={d:<5}  L={L:<3}  头数={H_heads:<3}  图像块数={grid_n:<4}  约 {params / 1e6:.1f}M 参数")
 
     print()
-    print("takeaway: vit reuses the bert encoder verbatim; all the vision smarts live")
-    print("in patchify + positional scheme + [cls] pooling.")
+    print("要点：ViT 原样复用 BERT 编码器；所有视觉能力都位于")
+    print("图像分块 + 位置方案 + [CLS] 池化中。")
 
 
 if __name__ == "__main__":
