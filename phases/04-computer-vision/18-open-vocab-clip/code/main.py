@@ -44,14 +44,14 @@ def main():
     torch.manual_seed(0)
     model = TwoTower()
 
-    print("[random batch sanity]")
+    print("[随机批次健全性检查]")
     img = torch.randn(8, 128)
     txt = torch.randn(8, 64)
     i, t, scale = model(img, txt)
     loss = clip_loss(i, t, scale)
-    print(f"  batch {i.size(0)}  loss={loss.item():.3f}  expected~log(8)={torch.log(torch.tensor(8.0)).item():.3f}")
+    print(f"  批次 {i.size(0)}  损失={loss.item():.3f}  预期约为 log(8)={torch.log(torch.tensor(8.0)).item():.3f}")
 
-    print("\n[train on structured synthetic pairs]")
+    print("\n[在结构化合成配对上训练]")
     rng = torch.Generator().manual_seed(42)
     dim = 32
     num_classes = 5
@@ -72,16 +72,16 @@ def main():
         loss = clip_loss(i_emb, t_emb, s)
         opt.zero_grad(); loss.backward(); opt.step()
         if step % 20 == 0:
-            print(f"  step {step:3d}  loss {loss.item():.3f}")
+            print(f"  步骤 {step:3d}  损失 {loss.item():.3f}")
 
-    print("\n[zero-shot on held-out images]")
+    print("\n[在留出图像上进行零样本推理]")
     class_text = torch.zeros(num_classes, 64)
     class_text[:, :dim] = proto
     test_img, _, test_labels = sample_pair_batch(batch=16)
     class_names = [f"class_{c}" for c in range(num_classes)]
     preds = zero_shot_classify(model, test_img, class_text, class_names)
     correct = sum(p == f"class_{l}" for p, l in zip(preds, test_labels.tolist()))
-    print(f"  zero-shot accuracy: {correct}/16 = {correct / 16:.3f}")
+    print(f"  零样本准确率：{correct}/16 = {correct / 16:.3f}")
 
 
 if __name__ == "__main__":
