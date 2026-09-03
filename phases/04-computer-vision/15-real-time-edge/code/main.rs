@@ -1,12 +1,12 @@
-// Lesson: Real-Time Vision Edge Deployment (phase 04 / lesson 15)
-// Topic: edge inference loop in Rust. Builds a tiny depthwise-separable conv block
-// (the MobileNet primitive), runs it over a 160x160x3 input tensor, and reports
-// p50/p95/p99 latency the way an on-device profiler would. Stdlib only.
-// Refs:
+// 课程：实时视觉边缘部署（阶段 04 / 课程 15）
+// 主题：用 Rust 实现边缘推理循环。构建微型深度可分离卷积块（MobileNet
+// 基本单元），在 160x160x3 输入张量上运行，并按设备端分析器的方式报告
+// p50/p95/p99 延迟。仅使用标准库。
+// 参考资料：
 //   https://doc.rust-lang.org/std/time/struct.Instant.html
-//   https://arxiv.org/abs/1704.04861  (MobileNetV1: depthwise separable convolutions)
-//   https://pytorch.org/docs/stable/quantization.html  (edge measurement discipline)
-// Build: rustc --edition 2021 -O code/main.rs -o /tmp/lesson_edge && /tmp/lesson_edge
+//   https://arxiv.org/abs/1704.04861  （MobileNetV1：深度可分离卷积）
+//   https://pytorch.org/docs/stable/quantization.html  （边缘设备测量规范）
+// 构建：rustc --edition 2021 -O code/main.rs -o /tmp/lesson_edge && /tmp/lesson_edge
 
 use std::time::Instant;
 
@@ -36,7 +36,7 @@ impl Tensor {
     }
 }
 
-// Cheap deterministic PRNG. Avoids pulling in rand for a stdlib-only lesson.
+// 低成本的确定性 PRNG，避免在仅使用标准库的课程中引入 rand。
 fn lcg(seed: &mut u64) -> f32 {
     *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
     let bits = (*seed >> 33) as u32;
@@ -49,8 +49,8 @@ fn fill_random(t: &mut Tensor, seed: &mut u64) {
     }
 }
 
-// Depthwise conv: one 3x3 kernel per input channel, no cross-channel mixing.
-// This is the part MobileNet uses to cut FLOPs by ~9x vs a dense conv.
+// 深度卷积：每个输入通道使用一个 3x3 卷积核，不进行跨通道混合。
+// MobileNet 借此将 FLOPs 降至稠密卷积的约 1/9。
 fn depthwise_conv(input: &Tensor, weights: &[f32]) -> Tensor {
     let mut out = Tensor::zeros(input.h, input.w, input.c);
     let pad = K / 2;
@@ -78,8 +78,8 @@ fn depthwise_conv(input: &Tensor, weights: &[f32]) -> Tensor {
     out
 }
 
-// Pointwise 1x1 conv: mixes channels. Together with the depthwise above this is
-// one MobileNet block: ~8-9x cheaper than a full HxWxC_in x C_out 3x3 dense conv.
+// 逐点 1x1 卷积：混合通道。它与上面的深度卷积共同组成一个 MobileNet 块，
+// 计算成本约为完整 HxWxC_in x C_out 3x3 稠密卷积的 1/8 至 1/9。
 fn pointwise_conv(input: &Tensor, weights: &[f32], c_out: usize) -> Tensor {
     let mut out = Tensor::zeros(input.h, input.w, c_out);
     for y in 0..input.h {
@@ -130,21 +130,21 @@ fn main() {
     for w in pw_weights.iter_mut() { *w = lcg(&mut seed) * 0.1; }
 
     println!();
-    println!("=== Edge inference benchmark (Rust, single thread) ===");
+    println!("=== 边缘推理基准测试（Rust，单线程）===");
     println!();
-    println!("Model      : depthwise 3x3 + pointwise 1x1 (one MobileNet block)");
-    println!("Input shape: {}x{}x{}", H, W, C_IN);
-    println!("Output ch  : {}", C_OUT);
+    println!("模型：深度 3x3 + 逐点 1x1（一个 MobileNet 块）");
+    println!("输入形状：{}x{}x{}", H, W, C_IN);
+    println!("输出通道：{}", C_OUT);
     let flops = flops_per_pass();
-    println!("FLOPs/pass : {:.2} M", flops as f64 / 1e6);
+    println!("每次前向 FLOPs：{:.2} M", flops as f64 / 1e6);
     println!();
 
-    println!("Warming up ({} iters, ignored)...", WARMUP);
+    println!("预热（{} 次迭代，不计入结果）...", WARMUP);
     for _ in 0..WARMUP {
         let _ = forward(&input, &dw_weights, &pw_weights);
     }
 
-    println!("Measuring ({} iters)...", ITERS);
+    println!("测量中（{} 次迭代）...", ITERS);
     let mut times_ms = Vec::with_capacity(ITERS);
     for _ in 0..ITERS {
         let t0 = Instant::now();
@@ -164,24 +164,24 @@ fn main() {
     let max = *sorted.last().unwrap();
 
     println!();
-    println!("Latency (ms):");
+    println!("延迟（ms）：");
     println!("  p50   {:>8.2}", p50);
     println!("  p95   {:>8.2}", p95);
     println!("  p99   {:>8.2}", p99);
-    println!("  mean  {:>8.2}", mean);
-    println!("  min   {:>8.2}", min);
-    println!("  max   {:>8.2}", max);
+    println!("  均值  {:>8.2}", mean);
+    println!("  最小  {:>8.2}", min);
+    println!("  最大  {:>8.2}", max);
 
     let throughput_fps = 1000.0 / p50;
     let gflops_s = (flops as f64) / (p50 / 1000.0) / 1e9;
     println!();
-    println!("Throughput (from p50):");
+    println!("吞吐量（根据 p50 计算）：");
     println!("  {:>5.1} fps   {:>5.2} GFLOPs/s", throughput_fps, gflops_s);
 
     println!();
-    println!("Edge measurement discipline (also enforced here):");
-    println!("  - {} warmup passes ignored to avoid cold-cache bias", WARMUP);
-    println!("  - fixed input resolution (production resolution must match)");
-    println!("  - p50 reported alongside p99 so tail latency is visible");
+    println!("边缘端测量规范（本程序也会执行）：");
+    println!("  - 忽略 {} 次预热，以避免冷缓存偏差", WARMUP);
+    println!("  - 固定输入分辨率（生产环境的分辨率必须一致）");
+    println!("  - 同时报告 p50 和 p99，以呈现尾延迟");
     println!();
 }

@@ -39,8 +39,8 @@ def flops_estimate(model, input_shape):
     def conv_hook(m, inp, out):
         c_out, c_in_per_group, kh, kw = m.weight.shape
         h, w = out.shape[-2:]
-        # Groups account for depthwise / grouped convs: each output channel
-        # only touches c_in_per_group inputs, not all c_in.
+        # 分组数用于处理深度卷积/分组卷积：每个输出通道只接触
+        # c_in_per_group 个输入，而不是全部 c_in 个输入。
         total[0] += 2 * c_in_per_group * c_out * kh * kw * h * w
 
     def linear_hook(m, inp, out):
@@ -88,8 +88,8 @@ def compare_backbones(resolution=160):
 
 def main():
     torch.manual_seed(0)
-    print("Comparing edge backbones on CPU at 160x160:\n")
-    header = f"{'model':22s} {'params(M)':>10s} {'GFLOPs':>8s} {'p50(ms)':>9s} {'p95(ms)':>9s}"
+    print("在 CPU 上以 160x160 输入对比边缘端骨干网络：\n")
+    header = f"{'模型':22s} {'参数量(M)':>10s} {'GFLOPs':>8s} {'p50(ms)':>9s} {'p95(ms)':>9s}"
     print(header)
     print("-" * len(header))
     for r in compare_backbones(resolution=160):
