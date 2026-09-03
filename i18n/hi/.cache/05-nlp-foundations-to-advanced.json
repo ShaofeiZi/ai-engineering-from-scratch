@@ -1,31 +1,205 @@
 {
-  "phases/05-nlp-foundations-to-advanced/01-text-processing/docs/en.md": "d7070af33a9656a02ce6dcf42966d6c8c401035df0f8fa244ec37c12ca4d210b",
-  "phases/05-nlp-foundations-to-advanced/02-bag-of-words-tfidf/docs/en.md": "12f1e26f69e32a9e97f45a82965c3647563f7e135a6010534a843ea7da2273e9",
-  "phases/05-nlp-foundations-to-advanced/03-word-embeddings-word2vec/docs/en.md": "566500e6c43ebc3624a117e76843be1100be7951ac7780c37f15241299846b27",
-  "phases/05-nlp-foundations-to-advanced/04-glove-fasttext-subword/docs/en.md": "b92cf9d14b8729b4a378b0b4f468f4d957f6600c15d876b091d8dec54d8d3e47",
-  "phases/05-nlp-foundations-to-advanced/05-sentiment-analysis/docs/en.md": "6c0d5587fd261631bbf70042e355315dd840b25ea237f8525e5970dd10f87534",
-  "phases/05-nlp-foundations-to-advanced/06-named-entity-recognition/docs/en.md": "1234e5808229ac25f3c65b1fe1baab736e525591c4cf847cc28690af25d46e71",
-  "phases/05-nlp-foundations-to-advanced/07-pos-tagging-parsing/docs/en.md": "05fb67fdbec5afafc9e35f4d96de29663c1a37022ad70bbe3f97e804366c8a6e",
-  "phases/05-nlp-foundations-to-advanced/08-cnns-rnns-for-text/docs/en.md": "de300997238be53f17d753a27aa36e25db7a9954981e6d15db2ecaa9626ccd58",
-  "phases/05-nlp-foundations-to-advanced/09-sequence-to-sequence/docs/en.md": "83d570d30ef505439edbbe90a16c984e6c5e552468ed53a54919b36d2dd43d49",
-  "phases/05-nlp-foundations-to-advanced/10-attention-mechanism/docs/en.md": "f31dde76b3cd616e1c7d242a9d36fc4f5dd2c4a8514bd026da2d4b9e652ae49b",
-  "phases/05-nlp-foundations-to-advanced/11-machine-translation/docs/en.md": "956eeb576fdea61cef4a66b8f4c6b1b1caa47eea8e7488aace436c9c177b09ca",
-  "phases/05-nlp-foundations-to-advanced/12-text-summarization/docs/en.md": "d856ec071b1b46533679495c2c23bf7bfb8796e664589771f1dad37a30bf4623",
-  "phases/05-nlp-foundations-to-advanced/13-question-answering/docs/en.md": "0fcd3cb8c48f9b9f0a1597958ed41da266022394329bd44bf1c29eae8453d7f9",
-  "phases/05-nlp-foundations-to-advanced/14-information-retrieval-search/docs/en.md": "98979446e6bd498737c8ef8d4ce000e04f9345b82a5a860145bc5411cb71a2a3",
-  "phases/05-nlp-foundations-to-advanced/15-topic-modeling/docs/en.md": "0b8bfca1c418447199c2d11972a26da45b772de059db589c56f2e1127d38499b",
-  "phases/05-nlp-foundations-to-advanced/16-text-generation-pre-transformer/docs/en.md": "92d3b5e90a0730efd6819090e514a562e02185a3a1b65f78b60331692adbb9ee",
-  "phases/05-nlp-foundations-to-advanced/17-chatbots-rule-to-neural/docs/en.md": "2ef49d5cdfcc8229bfe5ee7b1954de73ab30ad64711e53997efc9cca59ba25f0",
-  "phases/05-nlp-foundations-to-advanced/18-multilingual-nlp/docs/en.md": "343fc51cb223c67fcf46906beb0ade26c859c437a03196285d44a74e088e720a",
-  "phases/05-nlp-foundations-to-advanced/19-subword-tokenization/docs/en.md": "6d67e864430ef41e47f3c0e115faead61da03cad377dca5a69f77513afc8f3eb",
-  "phases/05-nlp-foundations-to-advanced/20-structured-outputs-constrained-decoding/docs/en.md": "be2656f8a0ad2ca753a9ec60fd3b43bb1aa6a7fc0623f179c4a124cb93160ee3",
-  "phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/docs/en.md": "1e03d17a955ebb8a52c0f4a19079ae7dadac146e35edc98cd1488ffdaebc7450",
-  "phases/05-nlp-foundations-to-advanced/22-embedding-models-deep-dive/docs/en.md": "bfb5483ccac7e580a5256434b2a7e4ea749c30999fabc4aead4a95189e8c96b0",
-  "phases/05-nlp-foundations-to-advanced/23-chunking-strategies-rag/docs/en.md": "b8b7d9323c9387e7f6b96b5590b767631de766b169b081a128bc70c9648b7372",
-  "phases/05-nlp-foundations-to-advanced/24-coreference-resolution/docs/en.md": "5737352d097d9de94f3107cee673829c3dd42daf2b0229f0771e0f78489ccabe",
-  "phases/05-nlp-foundations-to-advanced/25-entity-linking/docs/en.md": "45ca4b148495f0bb3c2dcdacabc79dc96e1e5509538cfbf000a77f7dc4405307",
-  "phases/05-nlp-foundations-to-advanced/26-relation-extraction-kg/docs/en.md": "ef4e0adc778d183654f229858959b646052a784980c3aaff2e323634b2ca067e",
-  "phases/05-nlp-foundations-to-advanced/27-llm-evaluation-frameworks/docs/en.md": "61d6c8816e3e613a80375b344ac33445b0452b793c31f1d751ac6151e0bf3a14",
-  "phases/05-nlp-foundations-to-advanced/28-long-context-evaluation/docs/en.md": "32ab66f48dc4dc4adac19a41e368276ba4e7c16ccef8947f2a9ed108d925b289",
-  "phases/05-nlp-foundations-to-advanced/29-dialogue-state-tracking/docs/en.md": "1ae7441f02d6855b0de76775570e7d81879c5798dda2483fd44ec97dbd63d6b3"
+  "phases/05-nlp-foundations-to-advanced/01-text-processing/docs/en.md": {
+    "source_sha256": "d7070af33a9656a02ce6dcf42966d6c8c401035df0f8fa244ec37c12ca4d210b",
+    "output_sha256": "31eef4d07963634a430b75c533e22b51cb7473f8ddf2debd5e4934af46b301a0",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/02-bag-of-words-tfidf/docs/en.md": {
+    "source_sha256": "12f1e26f69e32a9e97f45a82965c3647563f7e135a6010534a843ea7da2273e9",
+    "output_sha256": "378881df3a61e311f6f16cf6c49e336bf37c813e0d172628859e20dd5f22cbbe",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/03-word-embeddings-word2vec/docs/en.md": {
+    "source_sha256": "566500e6c43ebc3624a117e76843be1100be7951ac7780c37f15241299846b27",
+    "output_sha256": "2afd506114ae85d24f0270372c39b412faeba1b18873a57d8947a6eaa3750251",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/04-glove-fasttext-subword/docs/en.md": {
+    "source_sha256": "b92cf9d14b8729b4a378b0b4f468f4d957f6600c15d876b091d8dec54d8d3e47",
+    "output_sha256": "0fa4476a4892aec01bf5b0653b662c6332029e614fcb50b4a47e3b295ac1d64d",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/05-sentiment-analysis/docs/en.md": {
+    "source_sha256": "6c0d5587fd261631bbf70042e355315dd840b25ea237f8525e5970dd10f87534",
+    "output_sha256": "b8e52286e8121010f7bd9de486544ad2c0fcc80ff12e3fcd035999768793cabc",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/06-named-entity-recognition/docs/en.md": {
+    "source_sha256": "1234e5808229ac25f3c65b1fe1baab736e525591c4cf847cc28690af25d46e71",
+    "output_sha256": "29ad81aa8ad43a88dac573f62c37c05008cbae0480a5cd54913fe80176d419e8",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/07-pos-tagging-parsing/docs/en.md": {
+    "source_sha256": "05fb67fdbec5afafc9e35f4d96de29663c1a37022ad70bbe3f97e804366c8a6e",
+    "output_sha256": "48faf5fce5aaac15083083820244d463350cab4ee140dafdd70b12ee8170aa3d",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/08-cnns-rnns-for-text/docs/en.md": {
+    "source_sha256": "de300997238be53f17d753a27aa36e25db7a9954981e6d15db2ecaa9626ccd58",
+    "output_sha256": "0da2a2ba6a898bb5ac7a2b913290c0a84e81143bec6ae4591a874c5d80e57e0f",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/09-sequence-to-sequence/docs/en.md": {
+    "source_sha256": "83d570d30ef505439edbbe90a16c984e6c5e552468ed53a54919b36d2dd43d49",
+    "output_sha256": "74474224f87ba20c64f915766f59dcdcffbc79de47a2d0d47bc429103c1c08be",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/10-attention-mechanism/docs/en.md": {
+    "source_sha256": "f31dde76b3cd616e1c7d242a9d36fc4f5dd2c4a8514bd026da2d4b9e652ae49b",
+    "output_sha256": "aa25aeaf625e615476c0b8d28d1d4fe78403d3e7bc7366b8b08fa7ef519f8e94",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/11-machine-translation/docs/en.md": {
+    "source_sha256": "956eeb576fdea61cef4a66b8f4c6b1b1caa47eea8e7488aace436c9c177b09ca",
+    "output_sha256": "c30c98c0b4f2955f097ed45a024d215b8e01ae00e76125b9a08d56cec1456232",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/12-text-summarization/docs/en.md": {
+    "source_sha256": "d856ec071b1b46533679495c2c23bf7bfb8796e664589771f1dad37a30bf4623",
+    "output_sha256": "3d8cca330f80341129e21cab4df12007829fbb6eb713971d2c23ce95aa7b225b",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/13-question-answering/docs/en.md": {
+    "source_sha256": "0fcd3cb8c48f9b9f0a1597958ed41da266022394329bd44bf1c29eae8453d7f9",
+    "output_sha256": "f708e16a9811646278fc62b822d265a3597be99e278d841c335a42f613164891",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/14-information-retrieval-search/docs/en.md": {
+    "source_sha256": "98979446e6bd498737c8ef8d4ce000e04f9345b82a5a860145bc5411cb71a2a3",
+    "output_sha256": "2d35d1204510d1910e4f4853aa16bd4f39032483494b58abfd1d669a38937ec5",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/15-topic-modeling/docs/en.md": {
+    "source_sha256": "0b8bfca1c418447199c2d11972a26da45b772de059db589c56f2e1127d38499b",
+    "output_sha256": "13428f0af50d385f1b9483031e8fd8ea84c0188f70be1a114ecd38ffc69e102c",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/16-text-generation-pre-transformer/docs/en.md": {
+    "source_sha256": "92d3b5e90a0730efd6819090e514a562e02185a3a1b65f78b60331692adbb9ee",
+    "output_sha256": "23d9a8c3d67b444558d55d2a1158b6e06f086e710259659dc4010bc05bf344ab",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/17-chatbots-rule-to-neural/docs/en.md": {
+    "source_sha256": "ff1c688b55de860d75169540e8d98bc61d497c2dcf46b54f5b2cb6736cacd504",
+    "output_sha256": "1a3651c3e28b7e61591a9b35fd62eea643cf52984c7990d0305fcf47f751dcd3",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/18-multilingual-nlp/docs/en.md": {
+    "source_sha256": "343fc51cb223c67fcf46906beb0ade26c859c437a03196285d44a74e088e720a",
+    "output_sha256": "19481fd737fc15bbb2842d95b99f50f13507b8c17059500ff6497251d6e35841",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/19-subword-tokenization/docs/en.md": {
+    "source_sha256": "6d67e864430ef41e47f3c0e115faead61da03cad377dca5a69f77513afc8f3eb",
+    "output_sha256": "727702d1eb606160a002d4a75e97fc149cf000168d2f408540a943bd79662d21",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/20-structured-outputs-constrained-decoding/docs/en.md": {
+    "source_sha256": "be2656f8a0ad2ca753a9ec60fd3b43bb1aa6a7fc0623f179c4a124cb93160ee3",
+    "output_sha256": "c3ccc954c0a4d7bf83c682e337a41395414ea4615247a86ad5ea8dfdaf72d6ee",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/docs/en.md": {
+    "source_sha256": "1e03d17a955ebb8a52c0f4a19079ae7dadac146e35edc98cd1488ffdaebc7450",
+    "output_sha256": "8515684ab7404e167250b89700c59d39450055e91332d7da1e650572380d5c8d",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/22-embedding-models-deep-dive/docs/en.md": {
+    "source_sha256": "bfb5483ccac7e580a5256434b2a7e4ea749c30999fabc4aead4a95189e8c96b0",
+    "output_sha256": "b9e0cc395980b36e1419dccb2e6913f6a2e58776ca3950927ca97bc008e373e1",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/23-chunking-strategies-rag/docs/en.md": {
+    "source_sha256": "b8b7d9323c9387e7f6b96b5590b767631de766b169b081a128bc70c9648b7372",
+    "output_sha256": "35a8879ee5d053c46515744fe20d437aab75a538c3defd74439e99624b0615c8",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/24-coreference-resolution/docs/en.md": {
+    "source_sha256": "5737352d097d9de94f3107cee673829c3dd42daf2b0229f0771e0f78489ccabe",
+    "output_sha256": "8f6ed71c30a15d43c98c176267597cb248c606853713d5d6641b4f36e99445f6",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/25-entity-linking/docs/en.md": {
+    "source_sha256": "45ca4b148495f0bb3c2dcdacabc79dc96e1e5509538cfbf000a77f7dc4405307",
+    "output_sha256": "492becfe5a0777833d99b3e10313f49dfedfbd6d6d65e9cbd4bb99273b5574a0",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/26-relation-extraction-kg/docs/en.md": {
+    "source_sha256": "ef4e0adc778d183654f229858959b646052a784980c3aaff2e323634b2ca067e",
+    "output_sha256": "4a995489b48fc7cdb61cfa8ea5bb661e13be841b016681ca363866277132e4e1",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/27-llm-evaluation-frameworks/docs/en.md": {
+    "source_sha256": "61d6c8816e3e613a80375b344ac33445b0452b793c31f1d751ac6151e0bf3a14",
+    "output_sha256": "d6a2ec980adb992a4de503132666595ef03c16f7e3c83ab1ef996a4ea30c45bf",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/28-long-context-evaluation/docs/en.md": {
+    "source_sha256": "32ab66f48dc4dc4adac19a41e368276ba4e7c16ccef8947f2a9ed108d925b289",
+    "output_sha256": "9851a2097c16d9678943faf59be880d26fd54472ca9d46695322c311dc677e65",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  },
+  "phases/05-nlp-foundations-to-advanced/29-dialogue-state-tracking/docs/en.md": {
+    "source_sha256": "1ae7441f02d6855b0de76775570e7d81879c5798dda2483fd44ec97dbd63d6b3",
+    "output_sha256": "1c41f49dc9e52d7ced9c6a98ca997551c2c5a5fa21b24052d9a8192cc216b015",
+    "provider": "nllb",
+    "model": "facebook/nllb-200-distilled-600M",
+    "pipeline_version": "2026-08-31.1"
+  }
 }
