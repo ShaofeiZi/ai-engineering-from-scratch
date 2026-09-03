@@ -1,4 +1,4 @@
-"""Tests for retrieval metrics, answer-grade metrics, and the eval orchestrator."""
+"""检索指标、答案评分指标和评估编排器的测试。"""
 
 from __future__ import annotations
 

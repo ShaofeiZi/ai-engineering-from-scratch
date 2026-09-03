@@ -1,13 +1,13 @@
-"""RAG eval: precision, recall, MRR, nDCG, faithfulness, answer relevance.
+"""RAG 评测：precision、recall、MRR、nDCG、faithfulness、answer relevance。
 
-Pure-Python. Mock LLM-as-judge so the eval runs offline.
+纯 Python 实现。使用模拟的 LLM-as-judge，使评测可离线运行。
 
-References:
+参考：
 - ./docs/en.md
-- Phase 19 lessons 64-67 (components measured by these metrics)
-- Phase 19 lesson 69 (end-to-end system this eval grades)
+- 第 19 阶段第 64-67 课（这些指标所衡量的各组件）
+- 第 19 阶段第 69 课（本评测所评分的端到端系统）
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from typing import Callable
 
 
 # ---------------------------------------------------------------------------
-# qrels record
+# qrels 记录
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -33,7 +33,7 @@ class Qrel:
 
 
 # ---------------------------------------------------------------------------
-# retrieval metrics
+# 检索指标
 # ---------------------------------------------------------------------------
 
 def precision_at_k(retrieved: list[str], gold: set[str], k: int) -> float:
@@ -63,8 +63,8 @@ def mean_reciprocal_rank(retrieved_per_query: list[list[str]],
                          gold_per_query: list[set[str]]) -> float:
     if len(retrieved_per_query) != len(gold_per_query):
         raise ValueError(
-            f"retrieved_per_query and gold_per_query must have the same length "
-            f"({len(retrieved_per_query)} vs {len(gold_per_query)})"
+            f"retrieved_per_query 和 gold_per_query 的长度必须相同 "
+            f"（{len(retrieved_per_query)} vs {len(gold_per_query)}）"
         )
     if not retrieved_per_query:
         return 0.0
@@ -92,7 +92,7 @@ def ndcg_at_k(retrieved: list[str], graded: dict[str, int], k: int) -> float:
 
 
 # ---------------------------------------------------------------------------
-# answer-grade metrics
+# 答案评分指标
 # ---------------------------------------------------------------------------
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
@@ -118,13 +118,13 @@ def _content_tokens(text: str) -> set[str]:
 
 @dataclass
 class MockJudge:
-    """Deterministic stand-in for LLM-as-judge.
+    """LLM-as-judge 的确定性替代实现。
 
-    Supports two queries:
-    - supported(claim, context): True if the claim's content tokens overlap context
-      by at least `overlap_threshold` fraction.
-    - relevant(question, answer): True if the answer's content tokens overlap the
-      question by at least `overlap_threshold` fraction.
+    支持两类判断：
+    - supported(claim, context)：主张的内容 token 与上下文的重合比例至少达到
+      ``overlap_threshold`` 时返回 True。
+    - relevant(question, answer)：答案的内容 token 与问题的重合比例至少达到
+      ``overlap_threshold`` 时返回 True。
     """
     overlap_threshold: float = 0.4
 
@@ -160,7 +160,7 @@ def answer_relevance(question: str, answer: str, judge: MockJudge) -> float:
 
 
 # ---------------------------------------------------------------------------
-# fixture corpus + qrels + three pipeline variants
+# 夹具语料库 + qrels + 三种流水线变体
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -244,7 +244,7 @@ QRELS = [
 ]
 
 
-# pipeline shape - retrieve top-k doc_ids + write an answer.
+# 流水线结构——检索 top-k doc_id 并生成答案。
 PipelineFn = Callable[[str, int], tuple[list[str], str]]
 
 
@@ -270,10 +270,10 @@ def _baseline_tokens(text: str) -> list[str]:
 
 
 def baseline_pipeline(query: str, k: int) -> tuple[list[str], str]:
-    """Bag-of-words term overlap on content tokens only.
+    """仅对内容 token 计算词袋术语重合度。
 
-    Loses on every query whose phrasing diverges from the corpus's vocabulary,
-    e.g. query says "dropped" but the corpus says "aborted".
+    当查询措辞与语料词汇不一致时，该方法都会失效，例如查询使用
+    "dropped"，而语料使用 "aborted"。
     """
     q_tokens = _baseline_tokens(query)
     scored = []
@@ -301,7 +301,7 @@ _SYN = {
 
 
 def hybrid_pipeline(query: str, k: int) -> tuple[list[str], str]:
-    """Lexical baseline plus a synonym pass; stand-in for the lesson 65 retriever."""
+    """词法基线加同义词扩展，替代第 65 课的检索器。"""
     q_tokens = _baseline_tokens(query)
     expanded = list(q_tokens)
     for t in list(q_tokens):
@@ -311,7 +311,7 @@ def hybrid_pipeline(query: str, k: int) -> tuple[list[str], str]:
     for d in CORPUS:
         d_counter = Counter(_baseline_tokens(d.text()))
         score = sum(min(expanded_counter[t], d_counter[t]) for t in set(expanded_counter) | set(d_counter))
-        # Hybrid also adds a small bonus for documents whose title contains a content word.
+        # 若标题包含内容词，混合检索还会给予少量加分。
         title_tokens = set(_baseline_tokens(d.title))
         score += 2 * len(set(expanded) & title_tokens)
         scored.append((d, score))
@@ -322,7 +322,7 @@ def hybrid_pipeline(query: str, k: int) -> tuple[list[str], str]:
 
 
 def hybrid_plus_rerank_pipeline(query: str, k: int) -> tuple[list[str], str]:
-    """Hybrid + reranker that boosts docs whose title contains query-content tokens."""
+    """混合检索 + 重排器；标题包含查询内容 token 的文档会获得加分。"""
     ids, _ = hybrid_pipeline(query, k * 2)
     by_id = {d.doc_id: d for d in CORPUS}
     q_tokens = set(_baseline_tokens(query))
@@ -333,7 +333,7 @@ def hybrid_plus_rerank_pipeline(query: str, k: int) -> tuple[list[str], str]:
 
     def title_boost(doc_id: str) -> int:
         title_tokens = set(_baseline_tokens(by_id[doc_id].title))
-        # cross-encoder stand-in: heavy boost when query content matches title content
+        # 交叉编码器替代实现：查询内容与标题内容匹配时大幅加分。
         expanded = set(q_tokens)
         for t in q_tokens:
             expanded.update(_SYN.get(t, []))
@@ -348,7 +348,7 @@ def hybrid_plus_rerank_pipeline(query: str, k: int) -> tuple[list[str], str]:
 
 
 # ---------------------------------------------------------------------------
-# evaluator
+# 评估器
 # ---------------------------------------------------------------------------
 
 def evaluate_pipeline(
@@ -396,7 +396,7 @@ def evaluate_pipeline(
 
 
 # ---------------------------------------------------------------------------
-# demo
+# 演示
 # ---------------------------------------------------------------------------
 
 def _fmt(v: float) -> str:
@@ -420,7 +420,7 @@ def main() -> None:
         result = evaluate_pipeline(fn, QRELS, ks=(1, 3, 5))
         rows[name] = result
 
-    header = "metric          | " + " | ".join(f"{n:<14}" for n in pipelines.keys())
+    header = "指标            | " + " | ".join(f"{n:<14}" for n in pipelines.keys())
     print(header)
     print("-" * len(header))
     for m in metrics_order:
