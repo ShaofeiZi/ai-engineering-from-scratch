@@ -1,8 +1,7 @@
-"""PII scrubber with consistent tokenization + audit log — stdlib Python.
+"""采用一致标记化并生成审计日志的 PII 清理器——使用 Python 标准库。
 
-Masks SSNs, emails, phone numbers; maps each distinct value to a stable
-placeholder so the LLM can still reason about relationships. Appends to an
-immutable audit log on every call.
+遮蔽社会安全号码、电子邮箱和电话号码；将每个不同值映射到稳定的占位符，
+让 LLM 仍能推理其中的关系。每次调用都会追加到不可变审计日志。
 """
 
 from __future__ import annotations
@@ -74,33 +73,33 @@ def audit_log_call(entry: AuditEntry) -> str:
 
 def main() -> None:
     print("=" * 80)
-    print("PII SCRUBBER + AUDIT LOG — consistent tokenization across calls")
+    print("PII 清理器 + 审计日志——跨调用保持一致的标记化")
     print("=" * 80)
     scrubber = Scrubber()
 
     prompts = [
-        "My SSN is 123-45-6789 and my email is jane.doe@example.com. Phone 415-555-0199.",
-        "Please contact 123-45-6789 regarding account jane.doe@example.com.",
-        "New user: bob@example.com, SSN 987-65-4321, phone (202) 555-0150.",
+        "我的 SSN 是 123-45-6789，邮箱是 jane.doe@example.com，电话是 415-555-0199。",
+        "请就账户 jane.doe@example.com 联系 123-45-6789。",
+        "新用户：bob@example.com，SSN 为 987-65-4321，电话是 (202) 555-0150。",
     ]
 
     for i, raw in enumerate(prompts, 1):
         scrubbed = scrubber.scrub(raw)
-        print(f"\n[prompt {i}]")
-        print(f"  raw:      {raw}")
-        print(f"  scrubbed: {scrubbed}")
+        print(f"\n[提示词 {i}]")
+        print(f"  原文：   {raw}")
+        print(f"  已清理： {scrubbed}")
 
-    print(f"\nScrubber token table ({len(scrubber.tokens)} entries):")
+    print(f"\n清理器标记表（{len(scrubber.tokens)} 项）：")
     for value, placeholder in scrubber.tokens.items():
         masked = value[:3] + "***" if len(value) > 6 else "***"
         print(f"  {masked} → {placeholder}")
 
     print("\n" + "=" * 80)
-    print("AUDIT LOG — one entry per scrubbed call")
+    print("审计日志——每次清理调用对应一条记录")
     print("=" * 80)
     for i, raw in enumerate(prompts, 1):
         scrubbed = scrubber.scrub(raw)
-        response = f"toy response for prompt {i}"
+        response = f"提示词 {i} 的模拟响应"
         entry = AuditEntry(
             timestamp=datetime.utcnow().isoformat() + "Z",
             user=f"user_{i:03}",
