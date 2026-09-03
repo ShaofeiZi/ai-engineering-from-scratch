@@ -1,11 +1,11 @@
-"""Schema-first agent state with atomic writes.
+"""Schema-first 代理状态原子写入。
 
-Writes JSON Schema files for `agent_state.json` and `task_board.json`,
-implements a tiny stdlib validator that handles the subset we need
-(required, type, enum, pattern, items), and a StateManager with
-temp-and-rename writes so a partial failure cannot corrupt the file.
+为 `agent_state.json` 和 `task_board.json` 写入 JSON Schema 文件，
+实现一个轻量标准库验证器，处理我们所需的功能子集
+（required、type、enum、pattern、items），以及一个具有 temp-and-rename 写入能力的 StateManager，
+确保部分失败不会损坏文件。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -164,15 +164,15 @@ def main() -> None:
     state["next_action"] = "read existing /signup handler"
     mgr.commit(state)
 
-    print("state:", json.dumps(mgr.load(), indent=2))
-    print("board:", json.dumps(board_mgr.load(), indent=2))
+    print("状态：", json.dumps(mgr.load(), indent=2))
+    print("看板：", json.dumps(board_mgr.load(), indent=2))
 
     bad = dict(state)
     bad["active_task_id"] = "T-bogus"
     try:
         mgr.commit(bad)
     except SchemaError as exc:
-        print("rejected bad write:", exc)
+        print("已拒绝的无效写入：", exc)
 
 
 if __name__ == "__main__":
