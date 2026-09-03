@@ -1,8 +1,8 @@
-# Lesson program for selecting the smallest evidence-producing slice.
-# Read: phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md
-# Reference: Boehm, A Spiral Model of Software Development and Enhancement, 1988.
-# Reference: Lenarduzzi and Taibi, MVP Explained, 2016.
-# Run this file to generate outputs/slice-decision.json.
+# 用于选择最小 evidence-producing 切片的课程程序。
+# 阅读：phases/14-agent-engineering/50-choose-the-smallest-testable-slice/docs/en.md
+# 参考文献：Boehm，《螺旋模型软件开发与增强》，1988年。
+# 参考文献：Lenarduzzi 和 Taibi，《MVP 解析》，2016年。
+# 运行此文件以生成 outputs/slice-decision.json.
 from __future__ import annotations
 
 import json
