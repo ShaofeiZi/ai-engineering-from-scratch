@@ -1,4 +1,4 @@
-"""Tests for the eval-pipeline lesson."""
+"""评估流水线课程的测试。"""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ class TokenF1Tests(unittest.TestCase):
         self.assertEqual(token_f1_score("", "blue"), 0.0)
 
     def test_partial_overlap_is_between_zero_and_one(self) -> None:
-        # pred has 3 tokens, ref has 4 tokens, intersection is 2.
+        # 预测有 3 个 token，参考答案有 4 个，交集为 2。
         score = token_f1_score("the sky was", "the sky is blue")
         # precision = 2/3, recall = 2/4 = 0.5, F1 = 2 * 2/3 * 0.5 / (2/3 + 0.5) = 0.571...
         self.assertAlmostEqual(score, 2 * (2 / 3) * 0.5 / ((2 / 3) + 0.5), places=5)
@@ -90,7 +90,7 @@ class JudgeTests(unittest.TestCase):
         v = mock_judge(
             "inst", "the sky was very blue today", "the sky was blue today bright"
         )
-        # Construct manually: predict and ref share 4 tokens, pred has 6, ref has 6.
+        # 手动构造：预测与参考答案共享 4 个 token，且各有 6 个 token。
         # F1 = 2 * 4/6 * 4/6 / (8/6) = 2/3 = 0.667 -> score 3.
         self.assertIn(v.score, (3, 4))
 
@@ -120,7 +120,7 @@ class AggregateTests(unittest.TestCase):
             EvalResult(name="judge", metric=5.0, n_examples=1),
         ]
         report = aggregate(results)
-        # All normalised metrics are 1.0 in this construction.
+        # 在此构造中，所有归一化指标均为 1.0。
         self.assertAlmostEqual(report.aggregate, 1.0, places=5)
         self.assertAlmostEqual(sum(report.weights.values()), 1.0, places=6)
 
@@ -130,7 +130,7 @@ class AggregateTests(unittest.TestCase):
             EvalResult(name="token_f1", metric=0.5, n_examples=2),
         ]
         report = aggregate(results)
-        # When only two evals are present, their weights re-normalise to sum 1.
+        # 只有两个评估项时，其权重会重新归一化为总和 1。
         self.assertAlmostEqual(sum(report.weights.values()), 1.0, places=6)
         self.assertAlmostEqual(report.aggregate, 0.5, places=5)
 

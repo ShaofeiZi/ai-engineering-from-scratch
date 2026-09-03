@@ -1,16 +1,16 @@
 """
-Full evaluation pipeline for a tiny language model.
+微型语言模型的完整评测管线。
 
 See: phases/19-capstone-projects/41-eval-pipeline/docs/en.md
 
-Implements:
+实现内容：
   - perplexity_eval (held-out language modelling)
   - exact_match_eval (short-form factual)
   - token_f1_eval (open-form similarity)
-  - judge_eval (mock LLM-as-judge with deterministic scoring)
-  - Aggregator (per-eval normalisation + weighted mean)
-  - run_demo: trains a tiny TinyGPT briefly, runs all four evals, writes
-    report.json next to this file, exits 0 on success.
+  - judge_eval（使用确定性评分的模拟 LLM-as-judge）
+  - Aggregator（逐项评测归一化 + 加权平均）
+  - run_demo：短暂训练微型 TinyGPT，运行全部四项评测，在本文件旁写入
+    report.json，成功时以状态码 0 退出。
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from torch.utils.data import DataLoader, Dataset
 
 
 # ---------------------------------------------------------------------------
-# Tokeniser and TinyGPT (shared across lessons 38-41).
+# Tokenizer 与 TinyGPT（第 38–41 课共享）。
 # ---------------------------------------------------------------------------
 
 
@@ -133,7 +133,7 @@ class TinyGPT(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# Eval result dataclasses
+# 评测结果数据类
 # ---------------------------------------------------------------------------
 
 
@@ -165,7 +165,7 @@ class EvalResult:
 
 
 # ---------------------------------------------------------------------------
-# Normalisation and string utilities
+# 归一化与字符串工具
 # ---------------------------------------------------------------------------
 
 
@@ -195,7 +195,7 @@ def tokenize_text(text: str) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# 夹具
 # ---------------------------------------------------------------------------
 
 
@@ -356,7 +356,7 @@ JUDGE_SET = [
 
 
 # ---------------------------------------------------------------------------
-# Datasets
+# 数据集
 # ---------------------------------------------------------------------------
 
 
@@ -379,7 +379,7 @@ class LMTextDataset(Dataset):
 
 
 # ---------------------------------------------------------------------------
-# Perplexity eval
+# 困惑度评测
 # ---------------------------------------------------------------------------
 
 
@@ -401,7 +401,7 @@ def perplexity_eval(
         logits = model(ids, key_pad_mask=attn)
         pred = logits[:, :-1, :].contiguous()
         target = ids[:, 1:].contiguous()
-        target_mask = attn[:, 1:].contiguous()  # exclude pad targets
+        target_mask = attn[:, 1:].contiguous()  # 排除 padding 目标。
         loss_per_pos = F.cross_entropy(
             pred.view(-1, pred.size(-1)),
             target.view(-1),
@@ -438,7 +438,7 @@ def perplexity_eval(
 
 
 # ---------------------------------------------------------------------------
-# Generative evals (EM, F1, judge)
+# 生成式评测（EM、F1、judge）
 # ---------------------------------------------------------------------------
 
 
@@ -549,7 +549,7 @@ def token_f1_eval(
 
 
 # ---------------------------------------------------------------------------
-# Mock LLM-as-judge
+# 模拟 LLM-as-judge
 # ---------------------------------------------------------------------------
 
 
@@ -560,14 +560,14 @@ class JudgeVerdict:
 
 
 def mock_judge(instruction: str, prediction: str, reference: str) -> JudgeVerdict:
-    """Deterministic judge: scores prediction on a 1-5 scale.
+    """确定性评审器：按 1–5 分为预测结果评分。
 
-    The scoring rules are:
-      5: normalised prediction equals normalised reference.
+    评分规则：
+      5：归一化后的预测等于归一化后的参考答案。
       4: token-F1 >= 0.8
       3: token-F1 in [0.5, 0.8)
       2: token-F1 in [0.2, 0.5)
-      1: otherwise
+      1：其他情况
     """
     norm_pred = normalise_for_em(prediction)
     norm_ref = normalise_for_em(reference)
@@ -609,7 +609,7 @@ def judge_eval(
 
 
 # ---------------------------------------------------------------------------
-# Aggregator
+# 聚合器
 # ---------------------------------------------------------------------------
 
 
@@ -622,7 +622,7 @@ DEFAULT_WEIGHTS = {
 
 
 def normalise_metric(name: str, value: float) -> float:
-    """Map a raw metric onto [0, 1]."""
+    """把原始指标映射到 [0, 1]。"""
     if name == "perplexity":
         if value <= 0 or math.isinf(value) or math.isnan(value):
             return 0.0
@@ -633,7 +633,7 @@ def normalise_metric(name: str, value: float) -> float:
         return max(0.0, min(1.0, float(value)))
     if name == "judge":
         return max(0.0, min(1.0, float(value) / 5.0))
-    raise ValueError(f"unknown metric name: {name}")
+    raise ValueError(f"未知指标名称：{name}")
 
 
 @dataclass
@@ -656,10 +656,10 @@ class FinalReport:
 
 def aggregate(results: Sequence[EvalResult], weights: Optional[Dict[str, float]] = None) -> FinalReport:
     weights = dict(weights or DEFAULT_WEIGHTS)
-    # Normalise weights so they sum to 1.
+    # 归一化权重，使其总和为 1。
     total_w = sum(weights.get(r.name, 0.0) for r in results)
     if total_w <= 0:
-        raise ValueError("no positive weights match the eval names")
+        raise ValueError("没有与评测名称匹配的正权重")
     norm_weights = {r.name: weights.get(r.name, 0.0) / total_w for r in results}
     per_eval = {r.name: r.metric for r in results}
     normalised = {r.name: normalise_metric(r.name, r.metric) for r in results}
@@ -674,7 +674,7 @@ def aggregate(results: Sequence[EvalResult], weights: Optional[Dict[str, float]]
 
 
 # ---------------------------------------------------------------------------
-# Pretty printer
+# 美化打印器
 # ---------------------------------------------------------------------------
 
 
@@ -696,7 +696,7 @@ def render_report(report: FinalReport, log: Callable[[str], None] = print) -> No
 
 
 # ---------------------------------------------------------------------------
-# Demo: train a tiny model briefly and run all four evals.
+# 演示：短暂训练微型模型并运行全部四项评测。
 # ---------------------------------------------------------------------------
 
 
@@ -713,10 +713,9 @@ class EvalConfig:
 
 
 def train_small(model: TinyGPT, tok: InstructionTokenizer, cfg: EvalConfig) -> List[float]:
-    """A short pretraining pass on the LM corpus + EM pairs so the model is non-random.
+    """在 LM 语料与 EM 对上短暂预训练，使模型不再是随机模型。
 
-    This is enough to make all four metrics non-trivial without locking in a
-    specific quality bar.
+    这足以使四项指标都具有实际意义，而不绑定具体质量门槛。
     """
     pairs: List[List[int]] = []
     for text in LM_CORPUS:
@@ -750,19 +749,19 @@ def run_demo(cfg: Optional[EvalConfig] = None, write_json: bool = True) -> int:
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
 
-    print("EVAL PIPELINE DEMO")
-    print(f"fixtures: lm={len(LM_CORPUS)} em={len(EM_PAIRS)} f1={len(F1_PAIRS)} judge={len(JUDGE_SET)}")
+    print("评测管线演示")
+    print(f"夹具：lm={len(LM_CORPUS)} em={len(EM_PAIRS)} f1={len(F1_PAIRS)} judge={len(JUDGE_SET)}")
     print("")
 
     tok = InstructionTokenizer()
     model = TinyGPT(cfg.vocab, cfg.hidden, cfg.heads, cfg.depth, cfg.max_len)
 
-    print(f"[training] {cfg.train_epochs} epochs over the LM + EM combined corpus...")
+    print(f"[训练] 在 LM + EM 合并语料上训练 {cfg.train_epochs} 轮……")
     losses = train_small(model, tok, cfg)
-    print(f"           final epoch loss = {losses[-1]:.4f}")
+    print(f"           最终轮次损失 = {losses[-1]:.4f}")
     print("")
 
-    print("[evaluating]")
+    print("[评测]")
     ppl_res = perplexity_eval(model, tok, LM_CORPUS, cfg.max_len)
     em_res = exact_match_eval(model, tok, EM_PAIRS)
     f1_res = token_f1_eval(model, tok, F1_PAIRS)
@@ -777,10 +776,10 @@ def run_demo(cfg: Optional[EvalConfig] = None, write_json: bool = True) -> int:
     render_report(report)
 
     print("")
-    print("[per-task spot checks]")
+    print("[逐任务抽查]")
     for res in [em_res, f1_res, j_res]:
         for rec in res.records[:2]:
-            print(f"  {res.name:>11s}  inst='{rec.instruction[:35]}' pred='{rec.prediction[:35]}' score={rec.score:.2f}")
+            print(f"  {res.name:>11s}  指令='{rec.instruction[:35]}' 预测='{rec.prediction[:35]}' 分数={rec.score:.2f}")
 
     if write_json:
         here = os.path.dirname(os.path.abspath(__file__))
@@ -788,10 +787,10 @@ def run_demo(cfg: Optional[EvalConfig] = None, write_json: bool = True) -> int:
         with open(out_path, "w", encoding="utf-8") as fh:
             json.dump(report.to_dict(), fh, indent=2, default=str)
         print("")
-        print(f"wrote {out_path}")
+        print(f"已写入 {out_path}")
 
     if report.aggregate <= 0.0 or math.isnan(report.aggregate):
-        print("ERROR: aggregate score is not positive", file=sys.stderr)
+        print("错误：聚合得分不是正数", file=sys.stderr)
         return 1
     return 0
 
