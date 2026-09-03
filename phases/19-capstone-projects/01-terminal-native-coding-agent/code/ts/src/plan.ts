@@ -38,7 +38,7 @@ export class Budget {
 
   step(tokens: number, dollars: number): void {
     if (tokens < 0 || dollars < 0) {
-      throw new RangeError("Budget.step requires non-negative tokens and dollars");
+      throw new RangeError("Budget.step 要求 token 数和美元成本均为非负数");
     }
     this.turnsUsed += 1;
     this.tokensUsed += tokens;

@@ -22,11 +22,11 @@ export function parseCommand(line: string): Command {
 
 export function helpText(): string {
   return [
-    "harness commands:",
-    "  run <task>   plan/act/observe loop for one task against the scripted model",
-    "  eval         run the offline eval and print pass/fail counts",
-    "  help         show this message",
-    "  quit         exit",
+    "运行框架命令：",
+    "  run <task>   针对脚本化模型运行单个任务的 plan/act/observe 循环",
+    "  eval         运行离线评测并输出通过/失败计数",
+    "  help         显示此帮助信息",
+    "  quit         退出",
   ].join("\n");
 }
 
@@ -49,7 +49,7 @@ export async function repl(sandbox: string): Promise<void> {
     }
     if (cmd.kind === "eval") {
       const e = runEval(sandbox);
-      console.log(`eval: passed=${e.passed} failed=${e.failed}`);
+      console.log(`评测：通过=${e.passed} 失败=${e.failed}`);
       continue;
     }
     if (cmd.kind === "run") {
@@ -62,7 +62,7 @@ export async function repl(sandbox: string): Promise<void> {
       );
       continue;
     }
-    console.log(`unknown command: ${cmd.raw}; type 'help'`);
+    console.log(`未知命令：${cmd.raw}；请输入 'help'`);
   }
   rl.close();
 }

@@ -7,6 +7,7 @@ import {
   TOOLS,
   ReadFileArgs,
   RunShellArgs,
+  SandboxPathError,
   toolReadFile,
   toolRunShell,
 } from "../src/tools.ts";
@@ -25,7 +26,15 @@ test("toolReadFile: reads inside sandbox", () => {
 test("toolReadFile: rejects path traversal", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "p19-01-"));
   try {
-    assert.throws(() => toolReadFile(dir, { path: "../../../etc/passwd" }), /escapes sandbox/);
+    assert.throws(
+      () => toolReadFile(dir, { path: "../../../etc/passwd" }),
+      (error: unknown) => {
+        assert.ok(error instanceof SandboxPathError);
+        assert.equal(error.code, "PATH_OUTSIDE_SANDBOX");
+        assert.match(error.message, /路径越出沙箱范围/);
+        return true;
+      },
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

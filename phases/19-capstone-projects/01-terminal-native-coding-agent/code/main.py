@@ -1,13 +1,11 @@
-"""Terminal-native coding agent — minimal plan/act/observe loop scaffold.
+"""终端原生编码智能体——最小化 plan/act/observe 循环脚手架。
 
-The hard architectural primitive in a 2026 coding agent is not the model call
-or any single tool. It is the plan-act-observe-recover loop with bounded
-context, a structured plan state, a sandboxed tool dispatcher, and hook
-callbacks at every lifecycle point. This file implements that loop end to end
-in stdlib Python. The LLM is stubbed out with a deterministic script so the
-loop logic stays observable and testable without network calls.
+2026 年编码智能体最关键的架构原语并非模型调用或某个单独工具，而是具有
+上下文边界、结构化计划状态、沙箱化工具分发器，以及覆盖每个生命周期节点
+hook 回调的 plan-act-observe-recover 循环。本文件使用 Python 标准库端到端
+实现该循环。LLM 由确定性脚本替代，因此无需网络调用也能观察并测试循环逻辑。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -22,7 +20,7 @@ from typing import Any, Callable
 
 
 # ---------------------------------------------------------------------------
-# plan state  --  TodoWrite shape, rewritten whole each turn
+# 计划状态——采用 TodoWrite 结构，每轮整体重写
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -47,7 +45,7 @@ class PlanState:
 
 
 # ---------------------------------------------------------------------------
-# budget  --  hard ceilings on turns, tokens, dollars
+# 预算——轮次、token 和美元成本的硬上限
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -75,7 +73,7 @@ class Budget:
 
 
 # ---------------------------------------------------------------------------
-# hooks  --  2026 eight-event surface (Pre/PostToolUse, SessionStart/End, etc)
+# hook——2026 年的八事件接口（Pre/PostToolUse、SessionStart/End 等）
 # ---------------------------------------------------------------------------
 
 HookFn = Callable[[dict[str, Any]], dict[str, Any]]
@@ -98,7 +96,7 @@ class HookBus:
 
 
 # ---------------------------------------------------------------------------
-# tool surface  --  six tools, each sandboxed, each returns truncated text
+# 工具接口——六个沙箱化工具，各自返回截断后的文本
 # ---------------------------------------------------------------------------
 
 TRUNCATE_BYTES = 4096
@@ -107,7 +105,7 @@ TRUNCATE_BYTES = 4096
 def tool_read_file(sandbox: str, path: str) -> str:
     full = os.path.join(sandbox, path)
     if not os.path.realpath(full).startswith(os.path.realpath(sandbox)):
-        raise RuntimeError("path escapes sandbox")
+        raise RuntimeError("路径越出沙箱范围")
     with open(full, "r", encoding="utf-8", errors="replace") as fh:
         return fh.read()[:TRUNCATE_BYTES]
 
@@ -126,30 +124,30 @@ TOOLS: dict[str, Callable[..., str]] = {
 
 
 # ---------------------------------------------------------------------------
-# stub model  --  deterministic script so loop is testable without LLM
+# stub 模型——使用确定性脚本，无需 LLM 即可测试循环
 # ---------------------------------------------------------------------------
 
 SCRIPT = [
-    {"plan": [("locate target file", "in_progress"),
-              ("read and diagnose", "pending"),
-              ("apply fix and verify", "pending")],
+    {"plan": [("定位目标文件", "in_progress"),
+              ("读取并诊断", "pending"),
+              ("应用修复并验证", "pending")],
      "tool": ("run_shell", {"cmd": "ls"}),
      "tokens": 1200, "cost": 0.02},
-    {"plan": [("locate target file", "done"),
-              ("read and diagnose", "in_progress"),
-              ("apply fix and verify", "pending")],
+    {"plan": [("定位目标文件", "done"),
+              ("读取并诊断", "in_progress"),
+              ("应用修复并验证", "pending")],
      "tool": ("read_file", {"path": "README.md"}),
      "tokens": 900, "cost": 0.02},
-    {"plan": [("locate target file", "done"),
-              ("read and diagnose", "done"),
-              ("apply fix and verify", "done")],
-     "tool": None,  # terminal turn
+    {"plan": [("定位目标文件", "done"),
+              ("读取并诊断", "done"),
+              ("应用修复并验证", "done")],
+     "tool": None,  # 终止轮次
      "tokens": 600, "cost": 0.01},
 ]
 
 
 def model_step(plan: PlanState, turn: int) -> dict[str, Any]:
-    """Stubbed model: returns a plan rewrite and (optionally) a tool call."""
+    """Stub 模型：返回重写后的计划，以及可选的工具调用。"""
     if turn >= len(SCRIPT):
         return {"plan": plan.items, "tool": None, "tokens": 200, "cost": 0.005}
     s = SCRIPT[turn]
@@ -158,14 +156,14 @@ def model_step(plan: PlanState, turn: int) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# main loop  --  plan / act / observe / recover with full hook integration
+# 主循环——完整集成 hook 的 plan / act / observe / recover 流程
 # ---------------------------------------------------------------------------
 
 def destructive_guard(payload: dict[str, Any]) -> dict[str, Any]:
     cmd = payload.get("args", {}).get("cmd", "")
     if "rm -rf" in cmd or "shutdown" in cmd:
         payload["blocked"] = True
-        payload["reason"] = "destructive command blocked by PreToolUse hook"
+        payload["reason"] = "破坏性命令已被 PreToolUse hook 阻止"
     return payload
 
 
@@ -225,7 +223,7 @@ def run_agent(task: str, sandbox: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    task = "demonstrate the plan-act-observe loop without network calls"
+    task = "演示无需网络调用的 plan-act-observe 循环"
     sandbox = os.path.dirname(os.path.abspath(__file__))
     result = run_agent(task, sandbox)
     print(result["plan"])
@@ -234,7 +232,7 @@ def main() -> None:
           f"tokens={result['budget']['tokens_used']} "
           f"dollars=${result['budget']['dollars_used']:.3f}")
     print("---")
-    print(f"trace events: {len(result['trace'])}")
+    print(f"追踪事件数：{len(result['trace'])}")
     for ev in result["trace"]:
         print(" ", json.dumps(ev, default=str))
 
