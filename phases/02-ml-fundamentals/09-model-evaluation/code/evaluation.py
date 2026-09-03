@@ -336,29 +336,29 @@ def make_imbalanced_data(n=300, minority_ratio=0.05, seed=42):
 if __name__ == "__main__":
     X_clf, y_clf = make_classification_data(300)
 
-    print("=== Train/Validation/Test Split ===")
+    print("=== 训练/验证/测试集划分 ===")
     X_train, y_train, X_val, y_val, X_test, y_test = train_val_test_split(X_clf, y_clf)
-    print(f"  Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
-    print(f"  Train class distribution: {sum(y_train)}/{len(y_train)} positive")
-    print(f"  Val class distribution: {sum(y_val)}/{len(y_val)} positive")
+    print(f"  训练集: {len(X_train)}, 验证集: {len(X_val)}, 测试集: {len(X_test)}")
+    print(f"  训练集类别分布: {sum(y_train)}/{len(y_train)} 正例")
+    print(f"  验证集类别分布: {sum(y_val)}/{len(y_val)} 正例")
 
     model = SimpleLogistic(lr=0.1, epochs=200)
     model.fit(X_train, y_train)
 
-    print("\n=== Classification Metrics ===")
+    print("\n=== 分类指标 ===")
     y_pred = [model.predict(x) for x in X_test]
     tp, tn, fp, fn = confusion_matrix(y_test, y_pred)
-    print(f"  Confusion matrix: TP={tp}, TN={tn}, FP={fp}, FN={fn}")
-    print(f"  Accuracy:  {accuracy(y_test, y_pred):.4f}")
-    print(f"  Precision: {precision(y_test, y_pred):.4f}")
-    print(f"  Recall:    {recall(y_test, y_pred):.4f}")
-    print(f"  F1 Score:  {f1_score(y_test, y_pred):.4f}")
+    print(f"  混淆矩阵: TP={tp}, TN={tn}, FP={fp}, FN={fn}")
+    print(f"  准确率:    {accuracy(y_test, y_pred):.4f}")
+    print(f"  精确率:    {precision(y_test, y_pred):.4f}")
+    print(f"  召回率:    {recall(y_test, y_pred):.4f}")
+    print(f"  F1:        {f1_score(y_test, y_pred):.4f}")
 
     y_scores = [model.predict_proba(x) for x in X_test]
     auc = auc_roc(y_test, y_scores)
     print(f"  AUC-ROC:   {auc:.4f}")
 
-    print("\n=== K-Fold Cross-Validation (K=5) ===")
+    print("\n=== K折交叉验证 (K=5) ===")
     cv_scores = cross_validate(
         X_clf, y_clf,
         model_fn=lambda: SimpleLogistic(lr=0.1, epochs=200),
@@ -367,10 +367,10 @@ if __name__ == "__main__":
     )
     mean_cv = sum(cv_scores) / len(cv_scores)
     std_cv = math.sqrt(sum((s - mean_cv) ** 2 for s in cv_scores) / len(cv_scores))
-    print(f"  Fold scores: {[round(s, 4) for s in cv_scores]}")
-    print(f"  Mean: {mean_cv:.4f} (+/- {std_cv:.4f})")
+    print(f"  各折得分: {[round(s, 4) for s in cv_scores]}")
+    print(f"  均值: {mean_cv:.4f} (+/- {std_cv:.4f})")
 
-    print("\n=== Stratified K-Fold Cross-Validation (K=5) ===")
+    print("\n=== 分层K折交叉验证 (K=5) ===")
     strat_scores = cross_validate(
         X_clf, y_clf,
         model_fn=lambda: SimpleLogistic(lr=0.1, epochs=200),
@@ -380,32 +380,32 @@ if __name__ == "__main__":
     )
     strat_mean = sum(strat_scores) / len(strat_scores)
     strat_std = math.sqrt(sum((s - strat_mean) ** 2 for s in strat_scores) / len(strat_scores))
-    print(f"  Fold scores: {[round(s, 4) for s in strat_scores]}")
-    print(f"  Mean: {strat_mean:.4f} (+/- {strat_std:.4f})")
+    print(f"  各折得分: {[round(s, 4) for s in strat_scores]}")
+    print(f"  均值: {strat_mean:.4f} (+/- {strat_std:.4f})")
 
-    print("\n=== Imbalanced Data: Why Accuracy Lies ===")
+    print("\n=== 不平衡数据: 准确率为何会骗人 ===")
     X_imb, y_imb = make_imbalanced_data(300, minority_ratio=0.05)
     positives = sum(y_imb)
-    print(f"  Class distribution: {positives} positive, {len(y_imb) - positives} negative ({positives/len(y_imb)*100:.1f}% positive)")
+    print(f"  类别分布: {positives} 正例, {len(y_imb) - positives} 负例 ({positives/len(y_imb)*100:.1f}% 正例)")
 
     always_negative = [0] * len(y_imb)
-    print(f"  Always-negative baseline:")
-    print(f"    Accuracy:  {accuracy(y_imb, always_negative):.4f}")
-    print(f"    Precision: {precision(y_imb, always_negative):.4f}")
-    print(f"    Recall:    {recall(y_imb, always_negative):.4f}")
-    print(f"    F1 Score:  {f1_score(y_imb, always_negative):.4f}")
+    print(f"  全负基线:")
+    print(f"    准确率:    {accuracy(y_imb, always_negative):.4f}")
+    print(f"    精确率:    {precision(y_imb, always_negative):.4f}")
+    print(f"    召回率:    {recall(y_imb, always_negative):.4f}")
+    print(f"    F1:        {f1_score(y_imb, always_negative):.4f}")
 
     X_tr_i, y_tr_i, X_v_i, y_v_i, X_te_i, y_te_i = train_val_test_split(X_imb, y_imb)
     model_imb = SimpleLogistic(lr=0.5, epochs=500)
     model_imb.fit(X_tr_i, y_tr_i)
     y_pred_imb = [model_imb.predict(x) for x in X_te_i]
-    print(f"\n  Trained model on imbalanced data:")
-    print(f"    Accuracy:  {accuracy(y_te_i, y_pred_imb):.4f}")
-    print(f"    Precision: {precision(y_te_i, y_pred_imb):.4f}")
-    print(f"    Recall:    {recall(y_te_i, y_pred_imb):.4f}")
-    print(f"    F1 Score:  {f1_score(y_te_i, y_pred_imb):.4f}")
+    print(f"\n  在不平衡数据上训练的模型:")
+    print(f"    准确率:    {accuracy(y_te_i, y_pred_imb):.4f}")
+    print(f"    精确率:    {precision(y_te_i, y_pred_imb):.4f}")
+    print(f"    召回率:    {recall(y_te_i, y_pred_imb):.4f}")
+    print(f"    F1:        {f1_score(y_te_i, y_pred_imb):.4f}")
 
-    print("\n=== Regression Metrics ===")
+    print("\n=== 回归指标 ===")
     X_reg, y_reg = make_regression_data(200)
 
     col0 = [x[0] for x in X_reg]
@@ -425,21 +425,21 @@ if __name__ == "__main__":
     print(f"  R-squared: {r_squared(y_te_r, y_pred_r):.4f}")
 
     mean_baseline = [sum(y_tr_r) / len(y_tr_r)] * len(y_te_r)
-    print(f"\n  Mean baseline:")
+    print(f"\n  均值基线:")
     print(f"    MSE:       {mse(y_te_r, mean_baseline):.4f}")
     print(f"    R-squared: {r_squared(y_te_r, mean_baseline):.4f}")
 
-    print("\n=== Learning Curve ===")
+    print("\n=== 学习曲线 ===")
     sizes, train_sc, val_sc = learning_curve(
         X_clf, y_clf,
         model_fn=lambda: SimpleLogistic(lr=0.1, epochs=200),
         metric_fn=accuracy,
     )
-    print(f"  {'Size':>6} {'Train':>8} {'Val':>8}")
+    print(f"  {'样本数':>6} {'训练':>8} {'验证':>8}")
     for s, tr, va in zip(sizes, train_sc, val_sc):
         print(f"  {s:>6} {tr:>8.4f} {va:>8.4f}")
 
-    print("\n=== Statistical Model Comparison ===")
+    print("\n=== 统计模型对比 ===")
     model_a_scores = cross_validate(
         X_clf, y_clf,
         model_fn=lambda: SimpleLogistic(lr=0.1, epochs=100),
@@ -454,8 +454,8 @@ if __name__ == "__main__":
     mean_diff = sum(diffs) / len(diffs)
     std_diff = math.sqrt(sum((d - mean_diff) ** 2 for d in diffs) / len(diffs))
     t_stat = mean_diff / (std_diff / math.sqrt(len(diffs))) if std_diff > 0 else 0.0
-    print(f"  Model A (100 epochs) mean: {sum(model_a_scores)/len(model_a_scores):.4f}")
-    print(f"  Model B (500 epochs) mean: {sum(model_b_scores)/len(model_b_scores):.4f}")
-    print(f"  Mean difference: {mean_diff:.4f}")
-    print(f"  Paired t-statistic: {t_stat:.4f}")
-    print(f"  (|t| > 2.78 for significance at p<0.05 with df=4)")
+    print(f"  模型A (100 epochs) 均值: {sum(model_a_scores)/len(model_a_scores):.4f}")
+    print(f"  模型B (500 epochs) 均值: {sum(model_b_scores)/len(model_b_scores):.4f}")
+    print(f"  均值差异: {mean_diff:.4f}")
+    print(f"  配对t统计量: {t_stat:.4f}")
+    print(f"  (|t| > 2.78 在 p<0.05 显著, df=4)")
