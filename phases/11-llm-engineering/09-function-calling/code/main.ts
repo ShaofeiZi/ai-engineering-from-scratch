@@ -1,11 +1,11 @@
-// Function calling in TypeScript: JSON-schema tool definitions, registry,
-// validator, sandboxed dispatcher, mock model decision loop, parallel calls.
-// Mirrors code/function_calling.py and follows the four-step pattern shared
-// by OpenAI, Anthropic, and Google: define, detect, execute, return.
-// Sources:
-//   https://platform.openai.com/docs/guides/function-calling
-//   https://docs.anthropic.com/en/docs/build-with-claude/tool-use
-//   https://ai.google.dev/gemini-api/docs/function-calling
+// 函数调用TypeScript:JSON-schema 工具定义、登记、
+// 校验器,沙盒式调度器,模拟模型决定环,并行调用.
+// 镜像代码/function_calling.py并遵循共享的四步模式
+// 由OpenAI,Anthropic,和Google(Google):定义,检测,执行,返回.
+// 资料来源:
+// https://platform.openai.com/docs/guides/function-calling (韩语)
+// https://docs.anthropic.com/en/docs/build-with-claude/tool-use (韩语)
+// https://ai.google.dev/gemini-api/docs/function-calling (韩语)
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
 
@@ -58,7 +58,7 @@ function calculator(args: Readonly<Record<string, JsonValue>>): JsonValue {
     return { error: true, message: "Invalid characters in expression: " + expression };
   }
   try {
-    // eslint-disable-next-line no-new-func
+    // eslint-disable-next-line 无新浪
     const value = new Function("return (" + expression + ")")() as unknown;
     const num = Number(value);
     if (!Number.isFinite(num)) return { error: true, message: "non-finite result" };
@@ -148,7 +148,7 @@ function runCode(args: Readonly<Record<string, JsonValue>>): JsonValue {
     }
   }
   try {
-    // eslint-disable-next-line no-new-func
+    // eslint-disable-next-line 无新浪
     const fn = new Function("Math", "let result; " + code + "; return result;");
     const result = fn(Math) as unknown;
     return { success: true, result: result as JsonValue };
@@ -322,16 +322,16 @@ function runFunctionCallingLoop(userMessage: string): { toolResults: ToolResult[
 function main(): void {
   registerAllTools();
   console.log("=".repeat(60));
-  console.log("  Function Calling and Tool Use");
+  console.log("函数调用和工具使用");
   console.log("=".repeat(60));
 
-  console.log("\n--- Registered Tools ---");
+  console.log("\n--- 已注册的工具 ---");
   for (const [name, tool] of TOOL_REGISTRY) {
     const params = Object.keys(tool.definition.function.parameters.properties);
-    console.log("  " + name + ": " + tool.definition.function.description.slice(0, 60) + " | params: " + params.join(","));
+    console.log("  " + name + ": " + tool.definition.function.description.slice(0, 60) + "；参数：" + params.join(","));
   }
 
-  console.log("\n--- Argument Validation ---");
+  console.log("\n - - - 参数验证 - -");
   const validationTests: ReadonlyArray<{ tool: string; args: unknown; label: string }> = [
     { tool: "get_weather", args: { city: "Tokyo" }, label: "Valid call" },
     { tool: "get_weather", args: {}, label: "Missing required arg" },
@@ -341,10 +341,10 @@ function main(): void {
   ];
   for (const { tool, args, label } of validationTests) {
     const errors = validateToolArguments(tool, args);
-    console.log("  " + label + ": " + (errors.length === 0 ? "VALID" : "ERRORS: " + errors.join(" / ")));
+    console.log("  " + label + "：" + (errors.length === 0 ? "有效" : "错误：" + errors.join(" / ")));
   }
 
-  console.log("\n--- Direct Tool Execution ---");
+  console.log("\n -- -- 直接工具执行 -- --");
   const directTests: readonly ToolCall[] = [
     { name: "calculator", arguments: { expression: "(10 + 5) * 3 / 2" } },
     { name: "get_weather", arguments: { city: "Tokyo" } },
@@ -361,10 +361,10 @@ function main(): void {
     const resStr = JSON.stringify(r.result).slice(0, 90);
     console.log("\n  " + call.name + "(" + argsStr.slice(0, 60) + ")");
     console.log("    -> " + resStr);
-    console.log("    time: " + r.executionTimeMs + "ms");
+    console.log("    耗时：" + r.executionTimeMs + " ms");
   }
 
-  console.log("\n--- Function Calling Loop ---");
+  console.log("\n - 函数调用循环 - -");
   const queries = [
     "What's the weather in Tokyo?",
     "Calculate (100 + 250) * 0.15",
@@ -375,23 +375,23 @@ function main(): void {
   ];
   for (const q of queries) {
     const { toolResults, iterations } = runFunctionCallingLoop(q);
-    console.log("\n  User: " + q);
+    console.log("\n用户：" + q);
     for (const tr of toolResults) {
-      console.log("    Tool: " + tr.tool + " (" + tr.executionTimeMs + "ms)");
+      console.log("    工具：" + tr.tool + "（" + tr.executionTimeMs + " ms）");
     }
-    if (toolResults.length === 0) console.log("    [No tool called]");
-    console.log("    Iterations: " + iterations);
+    if (toolResults.length === 0) console.log("    [未调用工具]");
+    console.log("    迭代次数：" + iterations);
   }
 
-  console.log("\n--- Parallel Tool Calls ---");
+  console.log("\n -- -- 并行工具呼叫 -- --");
   const { toolResults: multi } = runFunctionCallingLoop("What's the weather in tokyo and london?");
-  console.log("  Tool calls made: " + multi.length);
+  console.log("工具调用次数：" + multi.length);
   for (const tr of multi) {
     const r = tr.result as Record<string, JsonValue>;
     console.log("    " + String(r.city) + ": " + String(r.temp_c ?? r.temp_f) + ", " + String(r.condition));
   }
 
-  console.log("\n--- Security Checks ---");
+  console.log("\n -- -- 安全检查 -- --");
   const securityTests: ReadonlyArray<{ tool: string; args: Record<string, JsonValue> }> = [
     { tool: "read_file", args: { path: "../../etc/passwd" } },
     { tool: "run_code", args: { code: "process.exit(0)" } },
@@ -402,7 +402,7 @@ function main(): void {
     const blocked = typeof r.result === "object" && r.result !== null && (r.result as Record<string, JsonValue>).error === true;
     const firstArg = Object.values(args)[0];
     const argDisplay = String(firstArg).slice(0, 40);
-    console.log("  " + tool + "(" + argDisplay + "): " + (blocked ? "BLOCKED" : "ALLOWED"));
+    console.log("  " + tool + "(" + argDisplay + ")：" + (blocked ? "已阻止" : "已允许"));
   }
 }
 

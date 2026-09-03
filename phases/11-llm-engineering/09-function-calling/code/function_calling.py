@@ -346,30 +346,30 @@ def run_demo():
     register_all_tools()
 
     print("=" * 60)
-    print("  Function Calling & Tool Use Demo")
+    print("函数调用与工具使用演示")
     print("=" * 60)
 
-    print("\n--- Registered Tools ---")
+    print("\n--- 已注册的工具 ---")
     for name, tool in TOOL_REGISTRY.items():
         desc = tool["definition"]["function"]["description"][:60]
         params = list(tool["definition"]["function"]["parameters"].get("properties", {}).keys())
         print(f"  {name}: {desc}...")
-        print(f"    params: {params}")
+        print(f"    参数：{params}")
 
-    print(f"\n--- Argument Validation ---")
+    print("\n--- 参数验证 ---")
     validation_tests = [
-        ("get_weather", {"city": "Tokyo"}, "Valid call"),
-        ("get_weather", {}, "Missing required arg"),
-        ("get_weather", {"city": "Tokyo", "units": "kelvin"}, "Invalid enum value"),
-        ("calculator", {"expression": 123}, "Wrong type (int for string)"),
-        ("unknown_tool", {"x": 1}, "Unknown tool"),
+        ("get_weather", {"city": "Tokyo"}, "有效调用"),
+        ("get_weather", {}, "缺少必填参数"),
+        ("get_weather", {"city": "Tokyo", "units": "kelvin"}, "无效的枚举值"),
+        ("calculator", {"expression": 123}, "类型错误（应为字符串，实为整数）"),
+        ("unknown_tool", {"x": 1}, "未知工具"),
     ]
     for tool_name, args, label in validation_tests:
         errors = validate_tool_arguments(tool_name, args)
-        status = "VALID" if not errors else f"ERRORS: {errors}"
+        status = "有效" if not errors else f"错误：{errors}"
         print(f"  {label}: {status}")
 
-    print(f"\n--- Tool Execution ---")
+    print("\n--- 工具执行 ---")
     direct_tests = [
         {"name": "calculator", "arguments": {"expression": "(10 + 5) * 3 / 2"}},
         {"name": "get_weather", "arguments": {"city": "Tokyo"}},
@@ -384,9 +384,9 @@ def run_demo():
         result = execute_tool_call(call)
         print(f"\n  {call['name']}({json.dumps(call['arguments'])})")
         print(f"    -> {json.dumps(result['result'], indent=None)[:100]}")
-        print(f"    time: {result['execution_time_ms']}ms")
+        print(f"    耗时：{result['execution_time_ms']} ms")
 
-    print(f"\n--- Full Function Calling Loop ---")
+    print("\n--- 完整函数调用循环 ---")
     test_queries = [
         "What's the weather in Tokyo?",
         "Calculate (100 + 250) * 0.15",
@@ -396,27 +396,27 @@ def run_demo():
         "Tell me a joke",
     ]
     for query in test_queries:
-        print(f"\n  User: {query}")
+        print(f"\n  用户：{query}")
         result = run_function_calling_loop(query)
         if result["tool_results"]:
             for tr in result["tool_results"]:
-                print(f"    Tool: {tr['tool']} ({tr['execution_time_ms']}ms)")
-                print(f"    Result: {json.dumps(tr['result'], indent=None)[:90]}")
+                print(f"    工具：{tr['tool']}（{tr['execution_time_ms']} ms）")
+                print(f"    结果：{json.dumps(tr['result'], indent=None)[:90]}")
         else:
-            print(f"    [No tool called -- direct response]")
-        print(f"    Iterations: {result['iterations']}")
+            print("    [未调用工具——直接响应]")
+        print(f"    迭代次数：{result['iterations']}")
 
-    print(f"\n--- Parallel Tool Calls ---")
+    print("\n--- 并行工具调用 ---")
     multi_city_query = "What's the weather in tokyo and london?"
-    print(f"  User: {multi_city_query}")
+    print(f"  用户：{multi_city_query}")
     result = run_function_calling_loop(multi_city_query)
-    print(f"  Tool calls made: {len(result['tool_results'])}")
+    print(f"  工具调用次数：{len(result['tool_results'])}")
     for tr in result["tool_results"]:
         city = tr["result"].get("city", "unknown")
         temp = tr["result"].get("temp_c", "N/A")
         print(f"    {city}: {temp}C, {tr['result'].get('condition', 'N/A')}")
 
-    print(f"\n--- Security Checks ---")
+    print("\n--- 安全检查 ---")
     security_tests = [
         ("read_file", {"path": "../../etc/passwd"}),
         ("run_code", {"code": "import subprocess; subprocess.run(['ls'])"}),
@@ -425,7 +425,7 @@ def run_demo():
     for tool_name, args in security_tests:
         result = execute_tool_call({"name": tool_name, "arguments": args})
         blocked = result["result"].get("error", False)
-        print(f"  {tool_name}({list(args.values())[0][:40]}): {'BLOCKED' if blocked else 'ALLOWED'}")
+        print(f"  {tool_name}({list(args.values())[0][:40]})：{'已阻止' if blocked else '已允许'}")
 
 
 if __name__ == "__main__":
