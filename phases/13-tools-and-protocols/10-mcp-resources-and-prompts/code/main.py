@@ -1,8 +1,8 @@
-"""Runnable companion to docs/en.md for MCP protocol version 2026-07-28.
-Official resources contract: https://modelcontextprotocol.io/specification/2026-07-28/server/resources
-Official prompts contract: https://modelcontextprotocol.io/specification/2026-07-28/server/prompts
-Official subscription contract: https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-The simulator keeps transport details small so the wire invariants remain visible.
+"""docs/en.md 的可运行配套代码，用于 MCP 协议版本 2026-07-28。
+官方资源合约：https://modelcontextprotocol.io/specification/2026-07-28/server/resources
+官方提示词合约：https://modelcontextprotocol.io/specification/2026-07-28/server/prompts
+官方订阅合约：https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
+模拟器将传输细节保持精简，使线上传输不变量保持清晰可见。
 """
 
 from __future__ import annotations
