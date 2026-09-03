@@ -1,17 +1,16 @@
-"""Phase 13 Lesson 01 - the tool interface, four-step loop, no LLM.
+"""阶段 13 第 01 课 - 工具接口、four-step 循环、无 LLM.
 
-Implements the describe -> decide -> execute -> observe cycle used by every
-2026 tool-calling stack (OpenAI, Anthropic, Gemini, MCP, A2A). The "decide"
-step is faked with a keyword router so the loop runs offline; replace it with
-any real provider in Lesson 02.
+实现了每个 2026 tool-calling 技术栈（OpenAI、Anthropic、Gemini、MCP、A2A）都采用的 describe -> decide -> execute -> observe 循环。
+其中 "decide" 步骤用关键词路由器模拟，以便循环可以离线运行；
+在第 02 课中将其替换为任意真实的服务商即可。
 
-The harness:
-  - registers three tools (add, get_time, get_weather)
-  - validates tool-call arguments against a minimal JSON Schema subset
-  - prints each step so you can read the choreography
-  - bounds iteration at MAX_TURNS to prevent runaway loops
+该测试框架：
+  - 注册三个工具（add、get_time、get_weather）
+  - 根据最小 JSON Schema 子集校验 tool-call 参数
+  - 打印每一步，方便你查看整个编排流程
+  - 将迭代次数限制在 MAX_TURNS 以防止失控循环
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -59,8 +58,8 @@ REGISTRY: list[Tool] = [
     Tool(
         name="add",
         description=(
-            "Use when the user asks for the sum of two numbers. "
-            "Do not use for subtraction, product, or symbolic algebra."
+            "当用户要求计算两个数字之和时使用。"
+            "不要用于减法、乘法或符号代数。"
         ),
         input_schema={
             "type": "object",
@@ -75,8 +74,8 @@ REGISTRY: list[Tool] = [
     Tool(
         name="get_time",
         description=(
-            "Use when the user asks what time it is. "
-            "Do not use for historical dates or future scheduling."
+            "当用户询问当前时间时使用。"
+            "不要用于历史日期或未来日程安排。"
         ),
         input_schema={
             "type": "object",
@@ -90,8 +89,8 @@ REGISTRY: list[Tool] = [
     Tool(
         name="get_weather",
         description=(
-            "Use when the user asks about current conditions in a named city. "
-            "Do not use for forecasts or historical weather data."
+            "当用户询问指定城市的当前天气状况时使用。"
+            "不要用于天气预报或历史天气数据。"
         ),
         input_schema={
             "type": "object",
@@ -111,34 +110,34 @@ def validate(schema: dict, value: Any) -> list[str]:
     t = schema.get("type")
     if t == "object":
         if not isinstance(value, dict):
-            return [f"expected object, got {type(value).__name__}"]
+            return [f"期望 object，实际为 {type(value).__name__}"]
         for field in schema.get("required", []):
             if field not in value:
-                errors.append(f"missing required field '{field}'")
+                errors.append(f"缺少必填字段 '{field}'")
         for key, sub in schema.get("properties", {}).items():
             if key in value:
                 errors.extend(validate(sub, value[key]))
         return errors
     if t == "number" and not isinstance(value, (int, float)):
-        errors.append(f"expected number, got {type(value).__name__}")
+        errors.append(f"期望 number，实际为 {type(value).__name__}")
     if t == "string" and not isinstance(value, str):
-        errors.append(f"expected string, got {type(value).__name__}")
+        errors.append(f"期望 string，实际为 {type(value).__name__}")
     if "enum" in schema and value not in schema["enum"]:
-        errors.append(f"value {value!r} not in enum {schema['enum']}")
+        errors.append(f"值 {value!r} 不在 enum {schema['enum']} 中")
     return errors
 
 
 def fake_decide(user_msg: str, history: list[dict]) -> dict:
-    """Stand-in for the model. Routes by keyword so the loop runs offline.
+    """供模型使用的 Stand-in。通过关键词路由，使循环可离线运行。
 
-    Production substitute: swap this for provider.chat.completions.create with
-    tools=[t.input_schema for t in REGISTRY]. Same return shape.
+    生产环境替代方案：将其替换为 provider.chat.completions.create，并传入
+    tools=[t.input_schema for t in REGISTRY]。返回结构相同。
     """
     last = history[-1] if history else {}
     if last.get("role") == "tool":
-        return {"content": f"Final answer built from tool output: {last.get('content')}"}
+        return {"content": f"根据工具输出生成的最终答案：{last.get('content')}"}
     msg = user_msg.lower()
-    if re.search(r"\b(add|sum|plus)\b", msg):
+    if re.search(r"\b(add|sum|plus)\b", msg) or "加" in msg or "求和" in msg:
         nums = [float(n) for n in re.findall(r"-?\d+\.?\d*", msg)]
         if len(nums) >= 2:
             return {
@@ -150,7 +149,7 @@ def fake_decide(user_msg: str, history: list[dict]) -> dict:
                     }
                 ]
             }
-    if "time" in msg:
+    if "time" in msg or "几点" in msg or "时间" in msg:
         return {
             "tool_calls": [
                 {
@@ -160,7 +159,7 @@ def fake_decide(user_msg: str, history: list[dict]) -> dict:
                 }
             ]
         }
-    match = re.search(r"weather in (\w+)", msg)
+    match = re.search(r"weather in (\w+)", msg) or re.search(r"(\w+) 的天气", user_msg)
     if match:
         city = match.group(1).title()
         return {
@@ -172,66 +171,66 @@ def fake_decide(user_msg: str, history: list[dict]) -> dict:
                 }
             ]
         }
-    return {"content": "I cannot route that query to any registered tool."}
+    return {"content": "无法将该请求路由到任何已注册的工具。"}
 
 
 def run_loop(user_msg: str) -> None:
     print("=" * 72)
-    print(f"USER : {user_msg}")
+    print(f"用户：{user_msg}")
     print("-" * 72)
     tools_by_name = {t.name: t for t in REGISTRY}
     history: list[dict] = [{"role": "user", "content": user_msg}]
     for turn in range(1, MAX_TURNS + 1):
         decision = fake_decide(user_msg, history)
         if "content" in decision:
-            print(f"TURN {turn} DECIDE : final answer")
-            print(f"MODEL : {decision['content']}")
+            print(f"第 {turn} 轮 决策：最终答案")
+            print(f"模型：{decision['content']}")
             return
         for call in decision["tool_calls"]:
             tool = tools_by_name.get(call["name"])
-            print(f"TURN {turn} DECIDE : call {call['name']} id={call['id']}")
-            print(f"           args = {json.dumps(call['arguments'])}")
+            print(f"第 {turn} 轮 决策：调用 {call['name']} id={call['id']}")
+            print(f"           参数 = {json.dumps(call['arguments'])}")
             if tool is None:
-                print(f"           ERROR : unknown tool {call['name']}")
+                print(f"           错误：未知工具 {call['name']}")
                 return
             errs = validate(tool.input_schema, call["arguments"])
             if errs:
-                print(f"           VALIDATION ERRORS : {errs}")
+                print(f"           校验错误：{errs}")
                 return
             if tool.consequential:
-                print("           GATE : tool is consequential, would confirm")
+                print("           确认关卡：工具有副作用，将进行确认")
             start = time.perf_counter()
             result = tool.executor(call["arguments"])
             ms = (time.perf_counter() - start) * 1000
-            print(f"TURN {turn} EXECUTE: {tool.name} -> {json.dumps(result)}"
+            print(f"第 {turn} 轮 执行：{tool.name} -> {json.dumps(result)}"
                   f" [{ms:.2f} ms]")
             history.append({
                 "role": "tool", "id": call["id"],
                 "name": tool.name, "content": json.dumps(result),
             })
-        print(f"TURN {turn} OBSERVE: history length = {len(history)}")
-    print("LOOP TERMINATED : hit MAX_TURNS circuit breaker")
+        print(f"第 {turn} 轮 观察：历史记录长度 = {len(history)}")
+    print("循环终止：触发 MAX_TURNS 断路器")
 
 
 def describe_registry() -> None:
-    print("TOOL REGISTRY")
+    print("工具注册表")
     print("-" * 72)
     for t in REGISTRY:
-        kind = "consequential" if t.consequential else "pure"
+        kind = "有副作用" if t.consequential else "纯函数"
         print(f"  {t.name:14s} [{kind}] - {t.description}")
     print()
 
 
 def main() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 01 - THE TOOL INTERFACE")
+    print("第 13 阶段第 01 课 - 工具接口")
     print("=" * 72)
     describe_registry()
     for query in (
-        "please add 7 and 35",
-        "what time is it?",
-        "tell me the weather in Bengaluru",
-        "write me a haiku about tea",
+        "请计算 7 加 35",
+        "现在几点？",
+        "请告诉我 Bengaluru 的天气",
+        "写一首关于茶的俳句",
     ):
         run_loop(query)
         print()
