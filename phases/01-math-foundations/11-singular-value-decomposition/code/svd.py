@@ -82,44 +82,44 @@ def pseudoinverse_via_svd(A, tol=1e-10):
 
 def demo_svd_basics():
     print("=" * 70)
-    print("SVD FROM SCRATCH vs NUMPY")
+    print("从零实现 SVD 对比 NumPy")
     print("=" * 70)
 
     np.random.seed(42)
     A = np.random.randn(6, 4)
 
-    print(f"\nMatrix A shape: {A.shape}")
-    print(f"Matrix A:\n{np.round(A, 4)}")
+    print(f"\n矩阵 A 的形状: {A.shape}")
+    print(f"矩阵 A:\n{np.round(A, 4)}")
 
     U_ours, S_ours, V_ours = svd_from_scratch(A)
     U_np, S_np, Vt_np = np.linalg.svd(A, full_matrices=False)
 
-    print(f"\nOur singular values:   {np.round(S_ours, 4)}")
-    print(f"NumPy singular values: {np.round(S_np, 4)}")
+    print(f"\n我们的奇异值:   {np.round(S_ours, 4)}")
+    print(f"NumPy 奇异值: {np.round(S_np, 4)}")
 
     A_ours = U_ours @ np.diag(S_ours) @ V_ours.T
     A_np = U_np @ np.diag(S_np) @ Vt_np
 
     err_ours = np.linalg.norm(A - A_ours)
     err_np = np.linalg.norm(A - A_np)
-    print(f"\nReconstruction error (ours):  {err_ours:.10f}")
-    print(f"Reconstruction error (NumPy): {err_np:.10f}")
+    print(f"\n重建误差 (我们的):  {err_ours:.10f}")
+    print(f"重建误差 (NumPy): {err_np:.10f}")
 
-    print("\nVerifying A @ v_i = sigma_i * u_i:")
+    print("\n验证 A @ v_i = sigma_i * u_i:")
     for i in range(min(4, len(S_np))):
         v_i = Vt_np[i]
         u_i = U_np[:, i]
         lhs = A @ v_i
         rhs = S_np[i] * u_i
         match = np.allclose(lhs, rhs, atol=1e-10) or np.allclose(lhs, -rhs, atol=1e-10)
-        print(f"  i={i}: sigma={S_np[i]:.4f}, match={match}")
+        print(f"  i={i}: sigma={S_np[i]:.4f}, 是否匹配={match}")
 
     print()
 
 
 def demo_geometry():
     print("=" * 70)
-    print("SVD GEOMETRY: ROTATE, SCALE, ROTATE")
+    print("SVD 几何意义: 旋转, 缩放, 旋转")
     print("=" * 70)
 
     A = np.array([[3.0, 1.0],
@@ -127,22 +127,22 @@ def demo_geometry():
 
     U, S, Vt = np.linalg.svd(A)
 
-    print(f"\nMatrix A:\n{A}")
-    print(f"\nU (left rotation):\n{np.round(U, 4)}")
-    print(f"Sigma (scaling): {np.round(S, 4)}")
-    print(f"V^T (right rotation):\n{np.round(Vt, 4)}")
+    print(f"\n矩阵 A:\n{A}")
+    print(f"\nU (左旋转):\n{np.round(U, 4)}")
+    print(f"Sigma (缩放): {np.round(S, 4)}")
+    print(f"V^T (右旋转):\n{np.round(Vt, 4)}")
 
-    print("\nVerify U is orthogonal (U^T U = I):")
+    print("\n验证 U 是正交矩阵 (U^T U = I):")
     print(f"  {np.round(U.T @ U, 6)}")
 
-    print("Verify V is orthogonal (V^T V = I):")
+    print("验证 V 是正交矩阵 (V^T V = I):")
     print(f"  {np.round(Vt @ Vt.T, 6)}")
 
     theta = np.linspace(0, 2 * np.pi, 8, endpoint=False)
     circle = np.column_stack([np.cos(theta), np.sin(theta)])
 
-    print("\nUnit circle points through each SVD stage:")
-    print(f"  {'Point':>8s}  {'V^T(p)':>12s}  {'Sig*V^T(p)':>14s}  {'U*Sig*V^T(p)':>16s}")
+    print("\n单位圆上的点经过各 SVD 阶段的结果:")
+    print(f"  {'点':>8s}  {'V^T(p)':>12s}  {'Sig*V^T(p)':>14s}  {'U*Sig*V^T(p)':>16s}")
     for i in range(len(theta)):
         p = circle[i]
         step1 = Vt @ p
@@ -153,14 +153,14 @@ def demo_geometry():
               f"({step1[0]:5.2f},{step1[1]:5.2f})  "
               f"({step2[0]:6.2f},{step2[1]:6.2f})  "
               f"({step3[0]:6.2f},{step3[1]:6.2f})  "
-              f"check=({direct[0]:6.2f},{direct[1]:6.2f})")
+              f"校验=({direct[0]:6.2f},{direct[1]:6.2f})")
 
     print()
 
 
 def demo_low_rank_approximation():
     print("=" * 70)
-    print("LOW-RANK APPROXIMATION (ECKART-YOUNG)")
+    print("低秩逼近 (Eckart-Young 定理)")
     print("=" * 70)
 
     np.random.seed(42)
@@ -172,11 +172,11 @@ def demo_low_rank_approximation():
     A = U_true @ np.diag(S_true) @ V_true.T
 
     U, S, Vt = np.linalg.svd(A, full_matrices=False)
-    print(f"\nMatrix shape: {A.shape}, true rank: {true_rank}")
-    print(f"Top 10 singular values: {np.round(S[:10], 4)}")
-    print(f"  (Values 6-10 should be ~0 since true rank is 5)")
+    print(f"\n矩阵形状: {A.shape}, 真实秩: {true_rank}")
+    print(f"前 10 个奇异值: {np.round(S[:10], 4)}")
+    print(f"  (由于真实秩为 5, 第 6 到 10 个值应接近 0)")
 
-    print(f"\n{'k':>3s}  {'Error':>10s}  {'Rel Error':>10s}  {'Ratio':>8s}")
+    print(f"\n{'k':>3s}  {'误差':>10s}  {'相对误差':>10s}  {'比例':>8s}")
     print("-" * 40)
     A_norm = np.linalg.norm(A, 'fro')
     for k in range(1, 8):
@@ -191,7 +191,7 @@ def demo_low_rank_approximation():
 
 def demo_image_compression():
     print("=" * 70)
-    print("IMAGE COMPRESSION WITH SVD")
+    print("用 SVD 进行图像压缩")
     print("=" * 70)
 
     np.random.seed(42)
@@ -203,11 +203,11 @@ def demo_image_compression():
     image = np.sin(X) * np.cos(Y) + 0.5 * np.sin(2 * X + Y)
     image = (image - image.min()) / (image.max() - image.min()) * 255
 
-    print(f"\nSynthetic image: {rows}x{cols} = {rows * cols:,} values")
+    print(f"\n合成图像: {rows}x{cols} = {rows * cols:,} 个数值")
 
     U, S, Vt = np.linalg.svd(image, full_matrices=False)
 
-    print(f"\nSingular value spectrum:")
+    print(f"\n奇异值谱:")
     print(f"  sigma_1   = {S[0]:.2f}")
     print(f"  sigma_5   = {S[4]:.2f}")
     print(f"  sigma_10  = {S[9]:.2f}")
@@ -216,8 +216,8 @@ def demo_image_compression():
     print(f"  sigma_256 = {S[255]:.6f}")
 
     total_energy = np.sum(S ** 2)
-    print(f"\nCompression results:")
-    print(f"{'k':>5s}  {'Storage':>10s}  {'Ratio':>8s}  {'Energy':>10s}  {'RMSE':>8s}")
+    print(f"\n压缩结果:")
+    print(f"{'k':>5s}  {'存储量':>10s}  {'比例':>8s}  {'能量':>10s}  {'RMSE':>8s}")
     print("-" * 50)
 
     for k in [1, 2, 5, 10, 20, 50, 100, 200]:
@@ -233,7 +233,7 @@ def demo_image_compression():
 
 def demo_recommendation_system():
     print("=" * 70)
-    print("SVD FOR RECOMMENDATION SYSTEMS")
+    print("SVD 用于推荐系统")
     print("=" * 70)
 
     np.random.seed(42)
@@ -253,8 +253,8 @@ def demo_recommendation_system():
     observed = true_ratings.copy()
     observed[~mask] = np.nan
 
-    print(f"\nRatings matrix ({n_users} users x {n_movies} movies):")
-    print("  Observed ratings (? = missing):")
+    print(f"\n评分矩阵 ({n_users} 位用户 x {n_movies} 部电影):")
+    print("  已观测评分 (? = 缺失):")
     for i in range(n_users):
         row = "  "
         for j in range(n_movies):
@@ -274,31 +274,31 @@ def demo_recommendation_system():
     k = n_factors
     predicted = U[:, :k] @ np.diag(S[:k]) @ Vt[:k, :]
 
-    print(f"\nRank-{k} SVD predictions for missing entries:")
+    print(f"\n秩-{k} SVD 对缺失项的预测:")
     errors = []
     for i in range(n_users):
         for j in range(n_movies):
             if not mask[i, j]:
                 err = abs(predicted[i, j] - true_ratings[i, j])
                 errors.append(err)
-                print(f"  User {i}, Movie {j}: "
-                      f"predicted={predicted[i, j]:.2f}, "
-                      f"true={true_ratings[i, j]:.1f}, "
-                      f"error={err:.2f}")
+                print(f"  用户 {i}, 电影 {j}: "
+                      f"预测={predicted[i, j]:.2f}, "
+                      f"真实={true_ratings[i, j]:.1f}, "
+                      f"误差={err:.2f}")
 
-    print(f"\nMean absolute error on missing ratings: {np.mean(errors):.3f}")
+    print(f"\n缺失评分的平均绝对误差: {np.mean(errors):.3f}")
 
-    print(f"\nLatent factors (top {k} singular values): {np.round(S[:k], 2)}")
-    print(f"Remaining singular values: {np.round(S[k:], 2)}")
+    print(f"\n潜在因子 (前 {k} 个奇异值): {np.round(S[:k], 2)}")
+    print(f"其余奇异值: {np.round(S[k:], 2)}")
     energy_captured = np.sum(S[:k] ** 2) / np.sum(S ** 2)
-    print(f"Energy captured by rank-{k}: {energy_captured:.1%}")
+    print(f"秩-{k} 捕获的能量: {energy_captured:.1%}")
 
     print()
 
 
 def demo_lsa():
     print("=" * 70)
-    print("LATENT SEMANTIC ANALYSIS (LSA)")
+    print("潜在语义分析 (LSA)")
     print("=" * 70)
 
     terms = ["cat", "dog", "fish", "kitten", "puppy",
@@ -325,7 +325,7 @@ def demo_lsa():
         for i, term in enumerate(terms):
             td_matrix[i, j] = doc_lower.count(term)
 
-    print(f"\nTerm-Document matrix ({n_terms} terms x {n_docs} docs):")
+    print(f"\n词项-文档矩阵 ({n_terms} 个词项 x {n_docs} 篇文档):")
     header = "          " + "".join(f"{dl:>10s}" for dl in doc_labels)
     print(header)
     for i, term in enumerate(terms):
@@ -334,22 +334,22 @@ def demo_lsa():
 
     U, S, Vt = np.linalg.svd(td_matrix, full_matrices=False)
 
-    print(f"\nSingular values: {np.round(S, 3)}")
+    print(f"\n奇异值: {np.round(S, 3)}")
 
     k = 3
-    print(f"\nDocuments in {k}D latent space (rows of V_k^T scaled by Sigma_k):")
+    print(f"\n文档在 {k} 维潜在空间中的坐标 (V_k^T 的各行, 用 Sigma_k 缩放):")
     doc_coords = np.diag(S[:k]) @ Vt[:k, :]
     for j in range(n_docs):
         coords = doc_coords[:, j]
         print(f"  {doc_labels[j]:>10s}: [{coords[0]:7.3f}, {coords[1]:7.3f}, {coords[2]:7.3f}]")
 
-    print(f"\nTerms in {k}D latent space (rows of U_k scaled by Sigma_k):")
+    print(f"\n词项在 {k} 维潜在空间中的坐标 (U_k 的各行, 用 Sigma_k 缩放):")
     term_coords = U[:, :k] @ np.diag(S[:k])
     for i in range(n_terms):
         coords = term_coords[i]
         print(f"  {terms[i]:>10s}: [{coords[0]:7.3f}, {coords[1]:7.3f}, {coords[2]:7.3f}]")
 
-    print(f"\nDocument similarity (cosine similarity in latent space):")
+    print(f"\n文档相似度 (潜在空间中的余弦相似度):")
     doc_vecs = Vt[:k, :].T
     header = "          " + "".join(f"{dl:>10s}" for dl in doc_labels)
     print(header)
@@ -367,7 +367,7 @@ def demo_lsa():
 
 def demo_noise_reduction():
     print("=" * 70)
-    print("SVD FOR NOISE REDUCTION")
+    print("用 SVD 进行降噪")
     print("=" * 70)
 
     np.random.seed(42)
@@ -379,7 +379,7 @@ def demo_noise_reduction():
              + 3 * np.outer(np.cos(2 * t1), np.sin(t2))
              + 2 * np.outer(np.ones(m), np.sin(3 * t2)))
 
-    print(f"\nClean signal: rank {np.linalg.matrix_rank(clean)}, shape {clean.shape}")
+    print(f"\n纯净信号: 秩 {np.linalg.matrix_rank(clean)}, 形状 {clean.shape}")
 
     noise_levels = [0.1, 0.5, 1.0, 2.0]
     clean_norm = np.linalg.norm(clean, 'fro')
@@ -392,9 +392,9 @@ def demo_noise_reduction():
 
         noisy_err = np.linalg.norm(noisy - clean, 'fro') / clean_norm
 
-        print(f"\n  Noise level sigma={noise_std}:")
-        print(f"    Noisy relative error: {noisy_err:.4f}")
-        print(f"    Top 10 singular values: {np.round(S[:10], 2)}")
+        print(f"\n  噪声水平 sigma={noise_std}:")
+        print(f"    含噪相对误差: {noisy_err:.4f}")
+        print(f"    前 10 个奇异值: {np.round(S[:10], 2)}")
 
         best_k = 1
         best_err = float('inf')
@@ -408,19 +408,19 @@ def demo_noise_reduction():
         denoised = U[:, :best_k] @ np.diag(S[:best_k]) @ Vt[:best_k, :]
         improvement = 1 - best_err / noisy_err
 
-        print(f"    Best truncation rank: k={best_k}")
-        print(f"    Denoised relative error: {best_err:.4f}")
-        print(f"    Improvement: {improvement:.1%}")
+        print(f"    最佳截断秩: k={best_k}")
+        print(f"    降噪后相对误差: {best_err:.4f}")
+        print(f"    改善幅度: {improvement:.1%}")
 
     print()
 
 
 def demo_pseudoinverse():
     print("=" * 70)
-    print("PSEUDOINVERSE VIA SVD")
+    print("通过 SVD 求伪逆")
     print("=" * 70)
 
-    print("\n--- Overdetermined system (least squares) ---")
+    print("\n--- 超定方程组 (最小二乘) ---")
     A = np.array([[1, 1],
                   [2, 1],
                   [3, 1]], dtype=float)
@@ -428,73 +428,73 @@ def demo_pseudoinverse():
 
     print(f"A:\n{A}")
     print(f"b: {b}")
-    print("(3 equations, 2 unknowns, no exact solution)")
+    print("(3 个方程, 2 个未知数, 无精确解)")
 
     A_pinv = pseudoinverse_via_svd(A)
     x_svd = A_pinv @ b
     x_lstsq = np.linalg.lstsq(A, b, rcond=None)[0]
     x_normal = np.linalg.solve(A.T @ A, A.T @ b)
 
-    print(f"\nSVD pseudoinverse solution:     {np.round(x_svd, 6)}")
-    print(f"np.linalg.lstsq solution:       {np.round(x_lstsq, 6)}")
-    print(f"Normal equations solution:       {np.round(x_normal, 6)}")
+    print(f"\nSVD 伪逆解:     {np.round(x_svd, 6)}")
+    print(f"np.linalg.lstsq 解:       {np.round(x_lstsq, 6)}")
+    print(f"正规方程解:       {np.round(x_normal, 6)}")
 
     residual = A @ x_svd - b
-    print(f"Residual (A x - b): {np.round(residual, 6)}")
-    print(f"Residual norm: {np.linalg.norm(residual):.6f}")
+    print(f"残差 (A x - b): {np.round(residual, 6)}")
+    print(f"残差范数: {np.linalg.norm(residual):.6f}")
 
-    print("\n--- Underdetermined system (minimum norm) ---")
+    print("\n--- 欠定方程组 (最小范数解) ---")
     A2 = np.array([[1, 2, 3],
                    [4, 5, 6]], dtype=float)
     b2 = np.array([14.0, 32.0])
 
     print(f"A:\n{A2}")
     print(f"b: {b2}")
-    print("(2 equations, 3 unknowns, infinitely many solutions)")
+    print("(2 个方程, 3 个未知数, 有无穷多解)")
 
     A2_pinv = pseudoinverse_via_svd(A2)
     x_min_norm = A2_pinv @ b2
     x_lstsq2 = np.linalg.lstsq(A2, b2, rcond=None)[0]
 
-    print(f"\nSVD minimum-norm solution:  {np.round(x_min_norm, 6)}")
-    print(f"np.linalg.lstsq solution:   {np.round(x_lstsq2, 6)}")
-    print(f"Verify A x = b: {np.round(A2 @ x_min_norm, 6)}")
-    print(f"Solution norm: {np.linalg.norm(x_min_norm):.6f}")
+    print(f"\nSVD 最小范数解:  {np.round(x_min_norm, 6)}")
+    print(f"np.linalg.lstsq 解:   {np.round(x_lstsq2, 6)}")
+    print(f"验证 A x = b: {np.round(A2 @ x_min_norm, 6)}")
+    print(f"解的范数: {np.linalg.norm(x_min_norm):.6f}")
 
-    print("\n--- Singular matrix ---")
+    print("\n--- 奇异矩阵 ---")
     A3 = np.array([[1, 2],
                    [2, 4]], dtype=float)
     b3 = np.array([3.0, 6.0])
 
     print(f"A:\n{A3}")
     print(f"b: {b3}")
-    print("(Singular matrix, rank 1)")
+    print("(奇异矩阵, 秩为 1)")
 
     U, S, Vt = np.linalg.svd(A3, full_matrices=False)
-    print(f"Singular values: {np.round(S, 6)}")
+    print(f"奇异值: {np.round(S, 6)}")
 
     A3_pinv = pseudoinverse_via_svd(A3)
     x_pinv = A3_pinv @ b3
-    print(f"Pseudoinverse solution: {np.round(x_pinv, 6)}")
-    print(f"Verify A x = b: {np.round(A3 @ x_pinv, 6)}")
-    print(f"Solution norm: {np.linalg.norm(x_pinv):.6f}")
+    print(f"伪逆解: {np.round(x_pinv, 6)}")
+    print(f"验证 A x = b: {np.round(A3 @ x_pinv, 6)}")
+    print(f"解的范数: {np.linalg.norm(x_pinv):.6f}")
 
     print()
 
 
 def demo_condition_number():
     print("=" * 70)
-    print("CONDITION NUMBER AND NUMERICAL STABILITY")
+    print("条件数与数值稳定性")
     print("=" * 70)
 
     matrices = [
-        ("Well-conditioned", np.array([[2.0, 1.0], [1.0, 2.0]])),
-        ("Moderate", np.array([[10.0, 7.0], [7.0, 5.0]])),
-        ("Ill-conditioned", np.array([[1.0, 1.0], [1.0, 1.0001]])),
-        ("Nearly singular", np.array([[1.0, 2.0], [0.5, 1.00001]])),
+        ("良态", np.array([[2.0, 1.0], [1.0, 2.0]])),
+        ("中等", np.array([[10.0, 7.0], [7.0, 5.0]])),
+        ("病态", np.array([[1.0, 1.0], [1.0, 1.0001]])),
+        ("接近奇异", np.array([[1.0, 2.0], [0.5, 1.00001]])),
     ]
 
-    print(f"\n{'Name':>20s}  {'sigma_max':>10s}  {'sigma_min':>10s}  {'Condition':>12s}")
+    print(f"\n{'名称':>20s}  {'sigma_max':>10s}  {'sigma_min':>10s}  {'条件数':>12s}")
     print("-" * 58)
 
     for name, A in matrices:
@@ -502,30 +502,30 @@ def demo_condition_number():
         cond = S[0] / S[-1] if S[-1] > 1e-15 else float('inf')
         print(f"{name:>20s}  {S[0]:10.4f}  {S[-1]:10.6f}  {cond:12.1f}")
 
-    print("\nWhy it matters:")
-    print("  Condition number K means: a perturbation of size eps in the input")
-    print("  can cause a perturbation of size K * eps in the output.")
-    print("  K = 10^6 means you lose 6 digits of accuracy.")
+    print("\n为什么这很重要:")
+    print("  条件数 K 的含义是: 输入中大小为 eps 的扰动")
+    print("  可能在输出中造成大小为 K * eps 的扰动.")
+    print("  K = 10^6 意味着会损失 6 位精度.")
     print()
 
-    print("Comparing SVD vs eigendecomposition stability:")
+    print("对比 SVD 与特征分解的稳定性:")
     A = np.array([[1.0, 1.0], [1.0, 1.0001]])
     U, S, Vt = np.linalg.svd(A)
     AtA = A.T @ A
     eig_vals = np.linalg.eigvalsh(AtA)
 
-    print(f"  A singular values:     {S}")
-    print(f"  A condition number:    {S[0] / S[-1]:.1f}")
-    print(f"  A^T A eigenvalues:     {eig_vals}")
-    print(f"  A^T A condition number: {eig_vals[-1] / eig_vals[0]:.1f}")
-    print(f"  (Squared! Direct SVD avoids this.)")
+    print(f"  A 的奇异值:     {S}")
+    print(f"  A 的条件数:    {S[0] / S[-1]:.1f}")
+    print(f"  A^T A 的特征值:     {eig_vals}")
+    print(f"  A^T A 的条件数: {eig_vals[-1] / eig_vals[0]:.1f}")
+    print(f"  (被平方了! 直接用 SVD 可以避免这一问题.)")
 
     print()
 
 
 def demo_pca_is_svd():
     print("=" * 70)
-    print("PCA IS SVD ON CENTERED DATA")
+    print("PCA 就是对中心化数据做 SVD")
     print("=" * 70)
 
     np.random.seed(42)
@@ -553,34 +553,34 @@ def demo_pca_is_svd():
     U, S, Vt = np.linalg.svd(X_centered, full_matrices=False)
     svd_variance = S ** 2 / (n_samples - 1)
 
-    print(f"\nData: {n_samples} samples, {n_features} features")
-    print(f"\nPCA via eigendecomposition of covariance matrix:")
-    print(f"  Eigenvalues:  {np.round(eig_vals, 4)}")
-    print(f"  PC1 direction: {np.round(eig_vecs[:, 0], 4)}")
+    print(f"\n数据: {n_samples} 个样本, {n_features} 个特征")
+    print(f"\n通过对协方差矩阵做特征分解实现 PCA:")
+    print(f"  特征值:  {np.round(eig_vals, 4)}")
+    print(f"  PC1 方向: {np.round(eig_vecs[:, 0], 4)}")
 
-    print(f"\nPCA via SVD of centered data:")
+    print(f"\n通过对中心化数据做 SVD 实现 PCA:")
     print(f"  S^2/(n-1):    {np.round(svd_variance, 4)}")
-    print(f"  V1 direction:  {np.round(Vt[0], 4)}")
+    print(f"  V1 方向:  {np.round(Vt[0], 4)}")
 
     variance_match = np.allclose(eig_vals, svd_variance, atol=1e-8)
     direction_match = all(
         np.allclose(np.abs(eig_vecs[:, i]), np.abs(Vt[i]), atol=1e-8)
         for i in range(n_features)
     )
-    print(f"\n  Variances match: {variance_match}")
-    print(f"  Directions match (up to sign): {direction_match}")
+    print(f"\n  方差是否匹配: {variance_match}")
+    print(f"  方向是否匹配 (不考虑符号): {direction_match}")
 
     explained = svd_variance / np.sum(svd_variance)
     cumulative = np.cumsum(explained)
-    print(f"\n  Explained variance ratio: {np.round(explained, 4)}")
-    print(f"  Cumulative:               {np.round(cumulative, 4)}")
+    print(f"\n  方差解释比例: {np.round(explained, 4)}")
+    print(f"  累计比例:               {np.round(cumulative, 4)}")
 
     try:
         from sklearn.decomposition import PCA
         pca = PCA(n_components=n_features)
         pca.fit(X)
-        print(f"\n  sklearn PCA variance ratio: {np.round(pca.explained_variance_ratio_, 4)}")
-        print(f"  Match with our SVD: {np.allclose(explained, pca.explained_variance_ratio_, atol=1e-6)}")
+        print(f"\n  sklearn PCA 的方差比例: {np.round(pca.explained_variance_ratio_, 4)}")
+        print(f"  与我们的 SVD 是否匹配: {np.allclose(explained, pca.explained_variance_ratio_, atol=1e-6)}")
     except ImportError:
         pass
 
@@ -589,7 +589,7 @@ def demo_pca_is_svd():
 
 def demo_matrix_properties():
     print("=" * 70)
-    print("MATRIX PROPERTIES REVEALED BY SVD")
+    print("SVD 揭示的矩阵性质")
     print("=" * 70)
 
     np.random.seed(42)
@@ -602,27 +602,27 @@ def demo_matrix_properties():
 
     U, S, Vt = np.linalg.svd(A)
 
-    print(f"\nMatrix A:\n{A}")
-    print(f"Singular values: {np.round(S, 6)}")
+    print(f"\n矩阵 A:\n{A}")
+    print(f"奇异值: {np.round(S, 6)}")
 
-    print(f"\nRank (non-zero singular values): {np.sum(S > 1e-10)}")
-    print(f"  (3x3 matrix but only rank 2: rows are linearly dependent)")
+    print(f"\n秩 (非零奇异值个数): {np.sum(S > 1e-10)}")
+    print(f"  (3x3 矩阵但秩只有 2: 各行线性相关)")
 
-    print(f"\nFrobenius norm: {np.linalg.norm(A, 'fro'):.6f}")
+    print(f"\nFrobenius 范数: {np.linalg.norm(A, 'fro'):.6f}")
     print(f"  sqrt(sum(sigma_i^2)): {np.sqrt(np.sum(S ** 2)):.6f}")
 
-    print(f"\nSpectral norm (largest singular value): {S[0]:.6f}")
+    print(f"\n谱范数 (最大奇异值): {S[0]:.6f}")
     print(f"  np.linalg.norm(A, 2): {np.linalg.norm(A, 2):.6f}")
 
-    print(f"\nNuclear norm (sum of singular values): {np.sum(S):.6f}")
+    print(f"\n核范数 (奇异值之和): {np.sum(S):.6f}")
 
     B = np.array([[3, 1], [1, 3]], dtype=float)
     U_b, S_b, Vt_b = np.linalg.svd(B)
-    print(f"\nSquare matrix B:\n{B}")
-    print(f"Singular values: {S_b}")
+    print(f"\n方阵 B:\n{B}")
+    print(f"奇异值: {S_b}")
     print(f"det(B) = {np.linalg.det(B):.4f}")
-    print(f"Product of singular values: {np.prod(S_b):.4f}")
-    print(f"  (|det| = product of singular values for square matrices)")
+    print(f"奇异值之积: {np.prod(S_b):.4f}")
+    print(f"  (方阵的 |det| 等于奇异值之积)")
 
     print()
 
