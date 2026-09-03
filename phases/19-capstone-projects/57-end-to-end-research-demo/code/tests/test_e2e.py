@@ -1,4 +1,4 @@
-"""Tests for the end-to-end auto-research demo: composition, determinism, failure modes."""
+"""端到端自动研究演示的测试：组合、确定性与失败模式。"""
 
 from __future__ import annotations
 

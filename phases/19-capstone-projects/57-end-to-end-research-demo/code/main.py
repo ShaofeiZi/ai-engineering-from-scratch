@@ -1,13 +1,13 @@
-"""End-to-end auto-research demo: seed -> scheduler -> critic loop -> paper writer.
+"""端到端自动科研演示：种子 -> 调度器 -> 评审循环 -> 论文撰写器。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
-- Phase 19 lesson 54 (paper writer)
-- Phase 19 lesson 55 (critic loop)
-- Phase 19 lesson 56 (iteration scheduler)
-- Phase 19 lessons 50-53 (earlier auto-research stages; the seed/runner stub here stands in for them)
+概念参考：
+- ./docs/en.md（本课）
+- 第 19 阶段第 54 课（论文撰写器）
+- 第 19 阶段第 55 课（评审循环）
+- 第 19 阶段第 56 课（迭代调度器）
+- 第 19 阶段第 50–53 课（更早的自动科研阶段；这里的种子/运行器桩代码代为承担其职责）
 
-Stdlib + numpy only. Run: python3 code/main.py
+仅依赖标准库与 numpy。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ import importlib.util
 def _load_module(name: str, file_path: str):
     spec = importlib.util.spec_from_file_location(name, file_path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load {name} from {file_path}")
+        raise ImportError(f"无法从 {file_path} 加载 {name}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
@@ -84,11 +84,11 @@ make_deterministic_runner = scheduler_mod.make_deterministic_runner
 
 
 class NoTriggerError(Exception):
-    """No branch crossed the paper threshold; demo cannot pick a best result."""
+    """没有分支越过论文阈值；演示无法选出最佳结果。"""
 
 
 class BestResultError(Exception):
-    """Picker received an empty trigger list."""
+    """选择器收到了空的触发列表。"""
 
 
 @dataclass
@@ -112,7 +112,7 @@ class DemoReport:
 
 
 def make_seed_hypotheses() -> list[Hypothesis]:
-    """Three seed hypotheses, one per research branch. Stand-in for lessons 50-53."""
+    """三条种子假设，每条科研分支一条。作为第 50–53 课的桩代码替身。"""
     return [
         Hypothesis(id="h-alpha-1", branch="alpha", payload={"q": "method-x"}),
         Hypothesis(id="h-beta-1", branch="beta", payload={"q": "method-y"}),
@@ -121,16 +121,16 @@ def make_seed_hypotheses() -> list[Hypothesis]:
 
 
 def pick_best_branch(scheduler_report: SchedulerReport) -> tuple[str, float]:
-    """Pick the branch with the highest mean reward among triggered branches.
+    """在被触发的分支中挑选平均奖励最高的一条。
 
-    Ties break alphabetically by branch id (deterministic).
+    平局时按分支 id 字母序打破（确定性）。
     """
     if not scheduler_report.paper_triggers:
-        raise NoTriggerError("no branch crossed the paper threshold")
+        raise NoTriggerError("没有分支越过论文阈值")
     by_branch = {b.branch: b for b in scheduler_report.branches}
     triggered = [by_branch[name] for name in scheduler_report.paper_triggers if name in by_branch]
     if not triggered:
-        raise BestResultError("trigger list empty after lookup")
+        raise BestResultError("查找后触发列表为空")
     triggered.sort(key=lambda b: (-b.mean, b.branch))
     best = triggered[0]
     return best.branch, best.mean
@@ -157,10 +157,10 @@ def build_mini_paper(branch: str, reward: float) -> MiniPaper:
 
 
 def mini_to_full_paper(mini: MiniPaper, branch: str) -> Paper:
-    """Promote a converged MiniPaper into a full Paper for the writer.
+    """将收敛后的 MiniPaper 提升为撰写器使用的完整 Paper。
 
-    Adds one figure and one bibliography entry per used citation key. Every
-    section's cite list is preserved; the bibliography is built from the union.
+    为每个使用到的引用键添加一个图和一个参考文献条目。每个章节的
+    引用列表都被保留；参考文献由其并集构建。
     """
     cites: list[str] = []
     for sec in mini.sections:
@@ -211,7 +211,7 @@ def mini_to_full_paper(mini: MiniPaper, branch: str) -> Paper:
 async def _run_demo_async(out_dir: str, seed: int = 11) -> DemoReport:
     seed_list = make_seed_hypotheses()
     if not seed_list:
-        raise BestResultError("seed list is empty")
+        raise BestResultError("种子列表为空")
 
     runner = make_deterministic_runner(
         base_rewards={"alpha": 0.82, "beta": 0.55, "gamma": 0.15},
