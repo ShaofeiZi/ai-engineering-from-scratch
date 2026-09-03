@@ -63,15 +63,15 @@ def disambiguate(mention, context, use_prior=True):
 
 def run_eval(test_cases, use_prior):
     correct = 0
-    print(f"=== disambiguation {'with' if use_prior else 'without'} prior ===")
+    print(f"=== {'使用' if use_prior else '不使用'}先验的消歧 ===")
     for mention, context, gold in test_cases:
         pred, score = disambiguate(mention, context, use_prior=use_prior)
         ok = pred == gold
         correct += int(ok)
         tag = "  OK" if ok else "MISS"
-        print(f"  [{tag}] mention={mention:<10} pred={pred:<7} gold={gold:<7} score={score:.3f}")
-        print(f"         context: {context[:70]}...")
-    print(f"  accuracy: {correct}/{len(test_cases)} ({100 * correct / len(test_cases):.1f}%)")
+        print(f"  [{tag}] 提及={mention:<10} 预测={pred:<7} 标准答案={gold:<7} 得分={score:.3f}")
+        print(f"         上下文：{context[:70]}...")
+    print(f"  准确率：{correct}/{len(test_cases)} ({100 * correct / len(test_cases):.1f}%)")
     print()
     return correct
 
@@ -94,8 +94,8 @@ def main():
     run_eval(test_cases, use_prior=True)
     run_eval(test_cases, use_prior=False)
 
-    print("note: toy 11-case test set.")
-    print("production EL uses Wikipedia alias dumps (~18M aliases) and encoder-based disambiguation.")
+    print("注意：这是仅含 11 个用例的简化测试集。")
+    print("生产级实体链接使用 Wikipedia 别名转储（约 1800 万个别名）和基于编码器的消歧。")
 
 
 if __name__ == "__main__":
