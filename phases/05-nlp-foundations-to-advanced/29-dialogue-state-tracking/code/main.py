@@ -116,26 +116,26 @@ def main():
         },
     ]
 
-    print("=== rule-based DST ===")
+    print("=== 基于规则的 DST ===")
     jga_correct = 0
     for i, d in enumerate(dialogues):
         state = {"cuisine": None, "area": None, "price": None, "people": None}
-        print(f"\ndialogue {i}:")
+        print(f"\n对话 {i}：")
         for turn in d["turns"]:
             state = update_state(state, turn)
-            print(f"  user: {turn}")
-            print(f"  state: {state}")
+            print(f"  用户：{turn}")
+            print(f"  状态：{state}")
         ok = state == d["gold"]
         jga_correct += int(ok)
-        print(f"  gold:  {d['gold']}")
-        print(f"  match: {'  OK' if ok else 'MISS'}")
+        print(f"  标准答案：{d['gold']}")
+        print(f"  是否匹配：{'  正确' if ok else '未命中'}")
 
     print()
-    print(f"=== Joint Goal Accuracy: {jga_correct}/{len(dialogues)} ({100 * jga_correct / len(dialogues):.1f}%) ===")
+    print(f"=== 联合目标准确率：{jga_correct}/{len(dialogues)} ({100 * jga_correct / len(dialogues):.1f}%) ===")
     print()
-    print("note: rule-based works in narrow domains with canonical vocabulary.")
-    print("open-vocab slots (restaurant name, reservation time) need LLM-based DST.")
-    print("production pattern: regenerate-whole-state with Instructor + Pydantic schema.")
+    print("注意：基于规则的方法适用于词汇规范的狭窄领域。")
+    print("开放词表槽位（餐厅名称、预订时间）需要基于 LLM 的 DST。")
+    print("生产级模式：使用 Instructor + Pydantic schema 重新生成完整状态。")
 
 
 if __name__ == "__main__":
