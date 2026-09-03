@@ -1,8 +1,8 @@
-# Lesson program for deriving reproducible metrics from outcome goals.
-# Read: phases/14-agent-engineering/52-design-success-metrics/docs/en.md
-# Reference: Basili, Software Modeling and Measurement: The GQM Paradigm, 1992.
-# Reference: Basili, Caldiera, and Rombach, The Goal Question Metric Approach.
-# Run this file to generate outputs/measurement-report.json.
+# 根据结果目标推导可复现指标的教程。
+# 阅读: phases/14-agent-engineering/52-design-success-metrics/docs/en.md
+# 参考文献: Basili,《软件建模与度量: GQM 范式》, 1992年。
+# 参考文献: Basili、Caldiera 和 Rombach,《目标问题度量方法》。
+# 运行此文件以生成 outputs/measurement-report.json.
 from __future__ import annotations
 
 import json
