@@ -1,8 +1,8 @@
-/* figures-foundations3.js - animated lesson figures for Phase 1 (math
-   foundations), Phase 2 (ML fundamentals), and Phase 9 (reinforcement
-   learning). Loads after lesson-figures.js, registers through window.LF.
-   No deps, ES5 only, theme via CSS vars. SMIL-only animation: no JS render
-   loops. Authoring: a ```figure block naming a widget below. */
+/* figures-foundations3.js - 第一阶段（数学
+   基础）、第二阶段（ML 基础）及第九阶段（强化
+   学习）的动画课程图示。在 lesson-figures.js 之后加载，通过 window.LF 注册。
+   无依赖，仅 ES5，主题通过 CSS 变量。仅 SMIL 动画：无 JS 渲染
+   循环。编写方式：命名下列 widget 的 ```figure 块。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -46,7 +46,7 @@
     node.appendChild(svgEl('animate', { attributeName: 'stroke-dashoffset', values: len + ';0', dur: dur, begin: begin, fill: 'freeze', calcMode: 'spline', keySplines: SPL, keyTimes: '0;1' }));
   }
 
-  // -- f3-bootstrap-resample: data row resampled into a histogram of means ----
+  // -- f3-bootstrap-resample：数据行重采样为均值直方图 ----
   function bootstrapResample(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(txt(60, 20, 'observed data (n = 10)', '9', MUTE, 'start'));
@@ -82,7 +82,7 @@
       'The bootstrap treats your sample as a stand-in for the population. Draw n points with replacement, compute the statistic, and repeat thousands of times: the resulting distribution of bootstrap means shows how much the statistic wobbles from sampling noise alone. The middle 95 percent of it is a confidence interval that needs no normality assumption.');
   }
 
-  // -- f3-learning-boundary: centroids emerge from data, boundary follows -----
+  // -- f3-learning-boundary：中心点从数据中浮现，边界随之形成 -----
   function learningBoundary(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var A = [[118, 66], [156, 92], [130, 118], [176, 70]];
@@ -123,7 +123,7 @@
       'Nobody wrote an if-statement here. The classifier summarizes each labelled cluster by its centroid, and the decision boundary falls out of the geometry: the perpendicular bisector between the two centroids. Feed it different data and a different boundary emerges. That inversion, rules derived from examples rather than typed by hand, is what makes it machine learning.');
   }
 
-  // -- f3-ensemble-average: jittery weak learners average into a smooth one ---
+  // -- f3-ensemble-average：抖动的弱学习器平均为平滑的学习器 ---
   function ensembleAverage(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var weak = [
@@ -157,7 +157,7 @@
       'Each grey curve is one weak learner: high variance, wrong in its own way. Because their errors are (partly) independent, averaging them cancels the noise while keeping the shared signal, and the blue ensemble tracks the true pattern more closely than any member. Bagging builds exactly this, and majority voting is the same cancellation applied to class labels.');
   }
 
-  // -- f3-pipeline-flow: one sample rides through fit-once, ordered stages ----
+  // -- f3-pipeline-flow：一个样本流经一次拟合、有序的阶段 ----
   function pipelineFlow(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 200' });
     var stages = [
@@ -196,7 +196,7 @@
       'A pipeline chains every transformation and the model into one object: the sample enters raw and each stage reshapes it before handing it on. All statistics (medians, means, category maps) are fitted once, on training data only, then frozen. Serving runs the identical chain, which is what closes off data leakage and train-serve skew.');
   }
 
-  // -- f3-series-decompose: observed = trend + seasonality + residual --------
+  // -- f3-series-decompose：观测 = 趋势 + 季节性 + 残差 --------
   function seriesDecompose(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 280' });
     var obs = svgEl('path', { d: 'M60 88 C 90 58, 110 58, 140 76 C 170 94, 190 50, 220 46 C 250 42, 270 78, 300 70 C 330 62, 350 34, 380 36 C 410 38, 430 60, 480 48', fill: 'none', stroke: INK, 'stroke-width': '1.8' });
@@ -228,7 +228,7 @@
       'The observed series is a sum of three simpler signals: a slow trend, a repeating seasonal cycle, and what is left over, the residual. Decomposition separates them so each can be handled on its own terms: detrend and deseasonalize to reach stationarity, then model the residual. The sweep line reminds you the parts line up point-for-point in time.');
   }
 
-  // -- f3-anomaly-fence: model the normal region, flag what falls outside ----
+  // -- f3-anomaly-fence：对正常区域建模，将超出者标记为异常 ----
   function anomalyFence(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var pts = [[180, 100], [230, 132], [270, 96], [212, 78], [300, 128], [252, 148], [188, 138], [286, 76], [240, 110], [316, 104]];
@@ -258,7 +258,7 @@
       'There are too few labelled anomalies to learn what abnormal looks like, so the detector learns the shape of normal instead: the dense region where ordinary points live. Anything that lands outside that fence is flagged, no matter what kind of anomaly it is. That is why the method needs no anomaly labels and still catches failure modes it has never seen.');
   }
 
-  // -- f3-feature-prune: noise features fall away, signal features stay ------
+  // -- f3-feature-prune：噪声特征脱落，信号特征保留 ------
   function featurePrune(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var hs = [96, 14, 72, 10, 20, 84, 12, 58, 16, 9], base = 170;
@@ -290,7 +290,7 @@
       'Score every feature by how much it tells you about the target, mutual information here, and a threshold splits signal from noise. The low bars fade out: dropping them shrinks the feature space, so distances stay meaningful, the model needs less data, and overfitting to noise columns disappears. Filter, wrapper, and embedded methods differ only in how the scores are computed.');
   }
 
-  // -- f3-dqn-stability: replay decorrelates, target net updates in jumps ----
+  // -- f3-dqn-stability：回放去相关，目标网络跳跃式更新 ----
   function dqnStability(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var boxes = [
@@ -335,7 +335,7 @@
       'Two of the three tricks that made deep Q-learning converge. Transitions stream into a replay buffer, and training samples them at random, so consecutive updates stop being correlated. Meanwhile the amber target network stays frozen while the online network trains, and only snaps to a fresh copy every ten thousand or so steps, keeping the Bellman target from chasing itself.');
   }
 
-  // -- f3-marl-orbit: independent learners cycle, joint training converges ---
+  // -- f3-marl-orbit：独立学习器循环往复，联合训练收敛 ---
   function marlOrbit(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var orbit = svgEl('circle', { cx: 130, cy: 122, r: 55, fill: 'none', stroke: RULE, 'stroke-width': '1', 'stroke-dasharray': '4 4', opacity: '0' });
@@ -370,7 +370,7 @@
       'Left: two independent learners in the same world. Each treats the other as part of the environment, so every update by one invalidates the other\'s value estimates, and the pair orbits forever, the non-stationarity trap. Right: give training a centralized critic that sees the joint state and actions, and the same dynamics spiral inward to a stable joint policy.');
   }
 
-  // -- f3-reality-gap: the randomized sim envelope grows over the real world -
+  // -- f3-reality-gap：随机化仿真包络在真实世界之上扩展 -
   function realityGap(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var axis = svgEl('line', { x1: 50, y1: 150, x2: 470, y2: 150, stroke: SOFT, 'stroke-width': '1.2', opacity: '0' });
@@ -402,7 +402,7 @@
       'A policy trained in one fixed simulator sits some distance from the real system on every physics axis, and that distance is the reality gap. Domain randomization widens the training envelope: every episode samples different masses, frictions, delays, and lighting. Once the envelope spans the real robot\'s parameters, reality is just another sample the policy already handles.');
   }
 
-  // -- f3-selfplay-ladder: the self-play loop turns cycles into rising skill -
+  // -- f3-selfplay-ladder：自博弈循环将循环转化为不断上升的技能 -
   function selfplayLadder(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var nodes = [

@@ -1,5 +1,5 @@
-/* figures-agent-skills.js: staged SVG explanations for the Agent Skills track.
-   Loads after lesson-figures.js and registers through window.LF. */
+/* figures-agent-skills.js：Agent Skills 路线的分阶段 SVG 讲解图。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。 */
 (function () {
   'use strict';
 

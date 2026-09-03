@@ -1,7 +1,7 @@
-/* figures-multimodal.js — interactive lesson figures for Phase 12 (multimodal
-   AI). Loads after lesson-figures.js, uses the shared LF toolkit, registers via
-   LF.register. No deps, ES5 only, theme via CSS vars. Authoring is the same
-   fenced ```figure block in docs/en.md. */
+/* figures-multimodal.js — Phase 12（多模态 AI）的交互式课程图示。
+   在 lesson-figures.js 之后加载，使用共享的 LF 工具集，通过 LF.register 注册。
+   无依赖，仅 ES5，通过 CSS 变量实现主题。编写方式与 docs/en.md 中
+   的围栏 ```figure 代码块相同。*/
 (function () {
   'use strict';
   var LF = window.LF;
@@ -20,11 +20,11 @@
     return svgEl('text', { x: String(x), y: String(y), 'text-anchor': anchor || 'middle', 'font-size': String(size || 10), 'font-family': 'monospace', fill: color || 'var(--ink-soft,#555)' }, [document.createTextNode(s)]);
   }
 
-  // ── contrastive-matrix: CLIP InfoNCE similarity matrix, drag temperature ────
+  // ── contrastive-matrix：CLIP InfoNCE 相似度矩阵，拖动温度 ───
   function contrastiveMatrix(host) {
     var n = 5;
     var labels = ['dog', 'car', 'tree', 'boat', 'bird'];
-    // Fixed cosine similarities in [-1,1]; diagonal high, off-diagonal lower.
+    // 固定的余弦相似度，范围 [-1,1]；对角线高，非对角线低。
     var sim = [
       [0.92, 0.18, 0.24, 0.10, 0.30],
       [0.15, 0.90, 0.12, 0.40, 0.08],
@@ -42,7 +42,7 @@
       var tau = Math.max(0.01, state.tau);
       var r, c, x, y, diag = 0;
       for (r = 0; r < n; r++) {
-        // Softmax over the row of image r against all texts (InfoNCE numerator).
+        // 对图像 r 的行，在所有文本上做 softmax（InfoNCE 的分子）。
         var sc = [];
         for (c = 0; c < n; c++) { sc.push(sim[r][c] / tau); }
         var mx = Math.max.apply(null, sc);
@@ -70,13 +70,13 @@
     state._render();
   }
 
-  // ── cross-attention-fusion: text queries attend to image patch keys ─────────
+  // ── cross-attention-fusion：文本 query 关注图像 patch 的 key ──────────
   function crossAttentionFusion(host) {
     var texts = ['a', 'red', 'bird', 'on', 'branch'];
     var patches = 8;
     var nt = texts.length;
     var state = { focus: 2, sharp: 1.4 };
-    // Fixed affinity of each text token to each image patch (bird at patch 4-5).
+    // 每个文本 token 对每个图像 patch 的固定亲和度（鸟在 patch 4-5 处）。
     var aff = [
       [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3],
       [0.2, 0.3, 0.5, 0.7, 0.8, 0.6, 0.3, 0.2],
@@ -122,7 +122,7 @@
     state._render();
   }
 
-  // ── modality-projection: align image and text vectors in a shared space ─────
+  // ── modality-projection：将图像和文本向量对齐到共享空间 ────
   function modalityProjection(host) {
     var state = { align: 0 };
     var W = 360, H = 260, CX = 70, CY = 150, R = 120;
@@ -130,7 +130,7 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    var imgDeg0 = 78, txtDeg0 = 14; // misaligned to start
+    var imgDeg0 = 78, txtDeg0 = 14; // 起始时未对齐
     function vec(deg, color, label) {
       var rad = deg * Math.PI / 180;
       var x2 = CX + R * Math.cos(rad), y2 = CY - R * Math.sin(rad);
@@ -140,7 +140,7 @@
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var t = clamp(state.align, 0, 1);
-      // Both vectors converge toward a common 45-degree direction as t -> 1.
+      // 当 t -> 1 时，两个向量都收敛到一个共同的 45 度方向。
       var target = 46;
       var imgDeg = imgDeg0 + t * (target - imgDeg0);
       var txtDeg = txtDeg0 + t * (target - txtDeg0);
@@ -158,7 +158,7 @@
     state._render();
   }
 
-  // ── cfg-guidance-scale: guided = uncond + w (cond - uncond) ─────────────────
+  // ── cfg-guidance-scale：guided = uncond + w (cond - uncond) ───────────────────────────────────
   function cfgGuidanceScale(host) {
     var state = { w: 3.0 };
     var W = 520, H = 240, PAD = 40;
@@ -166,8 +166,8 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // 1D illustration: prediction is a point on a number line; vectors add.
-    var uncond = 1.4, cond = 3.6; // base predictions (e.g. denoised estimate)
+    // 一维示意：预测是数轴上的一个点；向量相加。
+    var uncond = 1.4, cond = 3.6; // 基础预测值（条件估计）
     var XMIN = 0, XMAX = 9;
     function px(v) { return PAD + (v - XMIN) / (XMAX - XMIN) * (W - 2 * PAD); }
     var axisY = 120;
@@ -181,13 +181,13 @@
         svg.appendChild(svgEl('circle', { cx: px(v).toFixed(1), cy: String(axisY), r: '5', fill: color }));
         svg.appendChild(txt(px(v).toFixed(1), String(axisY + dy), label, 'middle', color, 10));
       }
-      // arrow from uncond toward cond direction, scaled by w
+      // 从 uncond 指向 cond 方向的箭头，按 w 缩放
       svg.appendChild(svgEl('line', { x1: px(uncond).toFixed(1), y1: String(axisY - 26), x2: px(gClamp).toFixed(1), y2: String(axisY - 26), stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '2' }));
       svg.appendChild(txt(px((uncond + gClamp) / 2).toFixed(1), String(axisY - 34), 'w · (cond − uncond)', 'middle', 'var(--blueprint,#3553ff)', 10));
       tick(uncond, 'var(--ink-mute,#999)', 'uncond', 22);
       tick(cond, 'var(--warn,#b8870f)', 'cond', 38);
       tick(gClamp, 'var(--blueprint,#3553ff)', 'guided', 54);
-      // diversity / sharpness bars
+      // 多样性 / 锐度条
       var diversity = clamp(1 / (1 + 0.5 * w), 0, 1);
       var sharp = clamp(w / 12, 0, 1);
       svg.appendChild(txt(PAD.toFixed(1), '200', 'diversity', 'start', 'var(--ink-soft,#555)', 10));
@@ -206,7 +206,7 @@
     state._render();
   }
 
-  // ── vq-codebook: continuous encoder outputs snap to nearest code ────────────
+  // ── vq-codebook：连续编码器输出吸附到最近的 codebook 项 ────────────────
   function vqCodebook(host) {
     var state = { logK: 4 };
     var W = 520, H = 240, PAD = 34;
@@ -214,7 +214,7 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // Fixed set of continuous encoder outputs in 2D; deterministic.
+    // 2D 中固定的连续编码器输出；确定性。
     var enc = [
       [0.12, 0.18], [0.22, 0.74], [0.55, 0.30], [0.78, 0.62],
       [0.40, 0.88], [0.66, 0.12], [0.88, 0.40], [0.32, 0.46],
@@ -223,7 +223,7 @@
     function px(x) { return PAD + x * (W - 2 * PAD); }
     function py(y) { return H - PAD - y * (H - 2 * PAD); }
     function codebook(K) {
-      // Deterministic grid of codes covering the unit square.
+      // 覆盖单位方形的 codebook 确定性网格。
       var side = Math.max(1, Math.round(Math.sqrt(K)));
       var pts = [], i, j;
       for (i = 0; i < side; i++) {
@@ -239,12 +239,12 @@
       var K = Math.round(Math.pow(2, state.logK));
       var codes = codebook(K);
       var used = {}, totErr = 0;
-      // draw codebook vectors
+      // 绘制 codebook 向量
       codes.forEach(function (c) {
         svg.appendChild(svgEl('rect', { x: (px(c[0]) - 4).toFixed(1), y: (py(c[1]) - 4).toFixed(1), width: '8', height: '8', fill: 'none', stroke: 'var(--ink-mute,#999)', 'stroke-width': '1' }));
       });
       enc.forEach(function (e) {
-        // nearest code (quantization)
+        // 最近的 code（量化）
         var best = 0, bd = 1e9, k;
         for (k = 0; k < codes.length; k++) {
           var dx = e[0] - codes[k][0], dy = e[1] - codes[k][1];
@@ -270,10 +270,10 @@
     state._render();
   }
 
-  // ── video-temporal-patches: tokens = frames × (H/p)(W/p) ────────────────────
+  // ── video-temporal-patches：tokens = frames × (H/p)(W/p) ────────────────────
   function videoTemporalPatches(host) {
     var state = { frames: 8, patch: 16, tubelet: 2 };
-    var GRID = 224; // assume 224x224 frames
+    var GRID = 224; // 假设帧为 224×224
     var W = 520, H = 230, PAD = 30;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var num = el('span', { class: 'lf-num' });
@@ -286,7 +286,7 @@
       var spatial = perSide * perSide;
       var temporal = Math.max(1, Math.floor(F / tub));
       var tokens = spatial * temporal;
-      // draw a single representative frame grid + stack indicator
+      // 绘制单个代表性帧网格 + 堆叠指示
       var face = 120, ox = 40, oy = 36, depth = 5;
       var stack = Math.min(temporal, 6);
       var s;
@@ -294,14 +294,14 @@
         var sx = ox + s * depth * 4, sy = oy + s * depth * 2;
         svg.appendChild(svgEl('rect', { x: sx.toFixed(1), y: sy.toFixed(1), width: String(face), height: String(face), fill: s === 0 ? 'var(--bg-surface,#eee)' : 'var(--bg,#fafaf5)', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1', 'fill-opacity': (1 - s * 0.12).toFixed(2) }));
       }
-      // patch grid on the front frame
+      // 前面一帧上的 patch 网格
       var i, j;
       for (i = 0; i <= perSide; i++) {
         svg.appendChild(svgEl('line', { x1: (ox + i * face / perSide).toFixed(1), y1: String(oy), x2: (ox + i * face / perSide).toFixed(1), y2: String(oy + face), stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '0.6', 'stroke-opacity': '0.55' }));
         svg.appendChild(svgEl('line', { x1: String(ox), y1: (oy + i * face / perSide).toFixed(1), x2: String(ox + face), y2: (oy + i * face / perSide).toFixed(1), stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '0.6', 'stroke-opacity': '0.55' }));
       }
       svg.appendChild(txt((ox + face / 2).toFixed(1), String(oy + face + 18), perSide + ' × ' + perSide + ' patches/frame', 'middle', 'var(--ink-soft,#555)', 10));
-      // readout on the right
+      // 右侧的读数
       svg.appendChild(txt('300', '60', F + ' frames', 'start', 'var(--ink-soft,#555)', 11));
       svg.appendChild(txt('300', '82', '÷ ' + tub + ' (tubelet) = ' + temporal + ' temporal', 'start', 'var(--ink-mute,#777)', 10));
       svg.appendChild(txt('300', '108', spatial + ' spatial patches', 'start', 'var(--ink-soft,#555)', 11));
@@ -321,7 +321,7 @@
     state._render();
   }
 
-  // ── audio-text-ctc: monotonic alignment, blanks collapse to shorter text ────
+  // ── audio-text-ctc：单调对齐，blank 折叠成更短的文本 ────
   function audioTextCtc(host) {
     var state = { frames: 12, dup: 1 };
     var target = ['C', 'A', 'T'];
@@ -333,11 +333,11 @@
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var T = state.frames, dup = state.dup;
-      // Build a deterministic monotonic emission: distribute target letters
-      // across frames with repeats (dup) and blanks filling the rest.
+      // 构建确定性的单调发射：分配目标字母
+      // 通过重复（dup）占用若干帧，其余用 blank 填充。
       var emit = [];
       var spoken = target.length * dup;
-      // place letters in the centre region, blanks at the ends and between.
+      // 字母放在中间区域，两端和中间放 blank。
       var lead = Math.max(0, Math.floor((T - spoken) / 2));
       var f, idx = 0;
       for (f = 0; f < T; f++) {
@@ -348,14 +348,14 @@
           emit.push('_'); // blank
         }
       }
-      // CTC collapse: remove repeats then remove blanks.
+      // CTC 折叠：先去重复，再去 blank。
       var collapsed = [], prev = null, k;
       for (k = 0; k < emit.length; k++) {
         if (emit[k] !== prev) { if (emit[k] !== '_') { collapsed.push(emit[k]); } }
         prev = emit[k];
       }
       var cellW = (W - 2 * PAD) / T;
-      // top row: audio frames with emitted symbol
+      // 上行：带发射符号的音频帧
       for (f = 0; f < T; f++) {
         var x = PAD + f * cellW;
         var isBlank = emit[f] === '_';
@@ -363,7 +363,7 @@
         svg.appendChild(txt((x + cellW / 2).toFixed(1), '62', emit[f] === '_' ? '∅' : emit[f], 'middle', isBlank ? 'var(--ink-mute,#999)' : 'var(--bg,#fafaf5)', 12));
       }
       svg.appendChild(txt(PAD.toFixed(1), '32', T + ' audio frames (∅ = blank)', 'start', 'var(--ink-mute,#777)', 10));
-      // alignment path arrows down to collapsed text
+      // 对齐路径箭头向下指向折叠后的文本
       var ty = 150, tStep = (W - 2 * PAD) / Math.max(1, target.length);
       for (k = 0; k < target.length; k++) {
         var tx = PAD + (k + 0.5) * tStep;

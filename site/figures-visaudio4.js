@@ -1,12 +1,4 @@
-/* figures-visaudio4.js — animated SVG lesson figures for Phase 4 (vision),
-   Phase 6 (speech and audio), and Phase 8 (generative AI), fourth batch.
-   Loads after lesson-figures.js and registers widgets through window.LF.
-   Every figure is a self-running SMIL animation of one concept: no JS timers,
-   no compute loops. Vanilla ES5, no deps, theme via CSS vars.
-   Authoring is the same fenced block in docs/en.md:
-       ```figure
-       v4-video-temporal
-       ``` */
+/*图像-visaudio4.js 动画SVG课程图像4期 (视觉),6期 (语音和音频),8期 (生成人工智能),第四批.课程后加载-figures.js,并通过window.LF记录小工具.每个图像是一个概念的自动运行SMIL动画:没有JS计时器,没有计算循环.Vanilla ES5,没有 deps,通过CSS vars主题. 编制是doc/en.md 中相同的围块: ```图像 v4-视频-时间 ``*/
 (function () {
   'use strict';
   var LF = window.LF;
@@ -33,8 +25,8 @@
       el('div', { class: 'lf-cap' }, [caption])
     ]);
   }
-  // Entry helper: fade in and grow from 95 percent size around (cx, cy),
-  // then a fast fade at the loop wrap so exits read quicker than entries.
+  // 进入助手:从95%大小 (cx,cy) 消失,成长
+  // 循环环结尾会变得快,所以出口比进口更快.
   function rise(cx, cy, dur, t0, t1, kids) {
     var inner = svgEl('g', { transform: 'translate(' + (-cx) + ' ' + (-cy) + ')' }, kids);
     var g = svgEl('g', { transform: 'translate(' + cx + ' ' + cy + ')' }, [inner]);
@@ -58,7 +50,7 @@
     return node;
   }
 
-  // ── v4-video-temporal (P4/12): the same five frames, two ways to read time ──
+  // 视频时间 (P4/12):相同的五个框架,
   function videoTemporal(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' }), D = '5s';
     svg.appendChild(txt(14, 16, 'same five frames, two ways of reading time'));
@@ -92,7 +84,7 @@
       'A 2D+pool model runs the same image CNN on each frame and averages the features over time, so "pushing left" and "pushing right" collapse into the same clip vector. A 3D conv slides its kernel through time as well as space: it sees a short window of frames at once and can encode direction. Spatio-temporal transformers finish the idea by attending over every (t, h, w) token jointly, at quadratic cost in clip length.'));
   }
 
-  // ── v4-vision-pipeline (P4/16): one request through the detection chain ─────
+  // ──v4-视觉管道 (P4/16):通过检测链进行一次请求 ────
   function visionPipeline(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' }), D = '5s';
     svg.appendChild(txt(14, 16, 'one request through the chain'));
@@ -127,7 +119,7 @@
       'A production vision service is a chain of contracts: decode the bytes, detect boxes, crop each box, classify the crop, then assemble one structured response. Every arrow is an interface that can fail silently (coordinate order, normalisation, resize interpolation), which is why the output passes through a Pydantic schema before it leaves the service. Swap the detector or the classifier freely; the skeleton stays.'));
   }
 
-  // ── v4-vlm-projector (P4/25): patches become tokens the LLM reads inline ────
+  // 4vlm投影机 (P4/25):补丁成为代币
   function vlmProjector(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' }), D = '5.5s';
     svg.appendChild(txt(14, 16, 'ViT-MLP-LLM: the image enters the LLM as tokens'));
@@ -159,7 +151,7 @@
       'Every production VLM is the same three parts. A ViT slices the image into patches and encodes each one; a small MLP projects those patch embeddings into the LLM token space; the decoder then reads image tokens and text tokens as one interleaved sequence, so "how many red cars?" is answered by ordinary next-token prediction. Swapping the ViT, the projector, or the LLM is mechanical once the pattern is in place.'));
   }
 
-  // ── v4-world-rollout (P4/28): generated frames re-enter the context ─────────
+  // ── v4世界推广 (P4/28):生成的框架重新进入文本 ──────────
   function worldRollout(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' }), D = '5s';
     svg.appendChild(txt(14, 16, 'a world model rolls the future out of its own predictions'));
@@ -198,7 +190,7 @@
       'Pure video generation predicts frames from a prompt and stops. A world model is the same video DiT run in a loop: each denoised chunk is appended to the context, an action token (turn left, open door) conditions the next prediction, and the model becomes a learned simulator you can steer. Drift is the failure mode, because every hallucinated pixel becomes future input.'));
   }
 
-  // ── v4-alm-tokens (P6/10): three sound events fold into one token stream ────
+  // 它们是通过电子设备来实现的.
   function almTokens(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' }), D = '5s';
     svg.appendChild(txt(14, 16, 'five seconds of audio, three events, one token stream'));
@@ -228,7 +220,7 @@
       'An audio-language model keeps the three-part template: an audio encoder (Whisper, BEATs) turns each stretch of sound into embeddings, a projector maps them into the LLM token space, and the decoder reads them inline with the text prompt. Answering "is anyone hurt?" needs all three events at once, the bark, the shout, and the silence after. That joint read is exactly what a transcript-only ASR pipeline throws away.'));
   }
 
-  // ── v4-voice-latency (P6/12): streamed stages overlap under the 800ms line ──
+  // 4音频延迟 (P6/12):在800ms线下流媒体阶段重叠
   function voiceLatency(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' }), D = '5.5s';
     svg.appendChild(txt(14, 16, 'streamed stages overlap; the reply starts before the budget line'));
@@ -266,7 +258,7 @@
       'The 800 ms feel comes from overlap, not from any single fast component. STT starts on partial speech, the LLM starts on the partial transcript, TTS starts after the first few tokens, and the first audio byte lands around 750 ms, inside the budget. When the user barges in, the VAD event cancels TTS and playback immediately: the fastest path in the pipeline is the one that stops it.'));
   }
 
-  // ── v4-audio-watermark (P6/16): the watermark survives the distortion ───────
+  // 语音水印 (P6/16):水印存活在扭曲中 ────────
   function audioWatermark(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' }), D = '5s';
     svg.appendChild(txt(14, 16, 'the watermark rides below hearing and survives the pipeline'));
@@ -299,7 +291,7 @@
       'AudioSeal-style watermarking adds a learned, imperceptible signal to every sample of generated speech. The point is not secrecy but survival: after MP3 compression, cropping, and resampling, the detector still recovers the payload bits that mark the clip as synthetic. Detection models like AASIST and RawNet2 handle the uncooperative adversary; the watermark handles your own outputs. Ship voice cloning with both.'));
   }
 
-  // ── v4-controlnet-zero (P8/08): a trainable clone steers a frozen U-Net ─────
+  // 控制网零 (P8/08):可训练的克隆控制了结的U-网
   function controlnetZero(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' }), D = '5s';
     svg.appendChild(txt(14, 16, 'a trainable clone steers a frozen U-Net through zero-convs'));
@@ -339,7 +331,7 @@
       'ControlNet clones the encoder half of a pretrained U-Net, feeds the clone a pose map, and wires its features back into the frozen decoder through 1x1 convolutions initialised to zero. At step zero the side branch is exactly a no-op, so training can only improve on the base model; as the zero-convs warm up, the pose starts steering generation. LoRA plays the same trick on the weights themselves: a low-rank delta beside frozen attention matrices.'));
   }
 
-  // ── v4-3d-multiview (P8/12): one photo, an orbit of views, a splat cloud ────
+  // 视频视频 (P8/12):一个照片,一个视频轨道,一个片云
   function multiview3d(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' }), D = '5.5s';
     svg.appendChild(txt(14, 16, 'one photo becomes an orbit of views becomes a cloud of Gaussians'));

@@ -1,7 +1,7 @@
-/* figures-tools3.js - animated lesson figures for Phase 13 tools and
-   protocols, batch three. Loads after lesson-figures.js and registers
-   through window.LF. No deps, ES5 only, theme via CSS vars, SMIL only.
-   Authoring: a ```figure block naming one of the t3- widgets below. */
+/* figures-tools3.js - Phase 13 工具与协议第三批动画课程图示。在
+   lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，仅使用 ES5，
+   主题由 CSS 变量控制，仅使用 SMIL。编写方式：使用 ```figure 代码块指定
+   下方某个 t3- 组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -38,8 +38,8 @@
     if (extra) { for (var k in extra) { a[k] = extra[k]; } }
     return svgEl('animate', a);
   }
-  // packet: group moving along a path, parked at the ends via keyPoints,
-  // visible only during its keyTimes window so loops stay in sync
+  // 数据包：组沿路径移动，通过 keyPoints 停在两端，
+  // 仅在其 keyTimes 窗口内可见，使各循环保持同步
   function packet(kids, path, dur, moveTimes, opVals, opTimes) {
     var g = svgEl('g', { opacity: '0' }, kids);
     g.appendChild(svgEl('animateMotion', {
@@ -49,7 +49,7 @@
     g.appendChild(anim('opacity', opVals, opTimes, dur));
     return g;
   }
-  // entry: fade in from opacity 0 at 95 percent size, eased, frozen once done
+  // 入场：从透明度 0、尺寸 95% 开始缓动淡入，完成后保持最终状态
   function enter(x, y, begin, kids) {
     var inner = svgEl('g', { opacity: '0' }, kids);
     inner.appendChild(svgEl('animate', {
@@ -69,7 +69,7 @@
     ];
   }
 
-  // t3-dispatch-loop: JSON-RPC lines in on stdin, matched responses on stdout
+  // t3-dispatch-loop：JSON-RPC 行从 stdin 输入，匹配的响应从 stdout 输出
   function dispatchLoop(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(svgEl('line', { x1: 20, y1: 80, x2: 188, y2: 80, stroke: 'var(--rule-soft,#ccc)', 'stroke-width': '1.4' }));
@@ -99,7 +99,7 @@
     ]));
   }
 
-  // t3-primitive-sort: a capability routes to tool, resource, or prompt
+  // t3-primitive-sort：将 capability 路由到 tool、resource 或 prompt
   function primitiveSort(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     svg.appendChild(txt(260, 20, 'capability', '9', 'var(--ink-mute,#777)'));
@@ -133,7 +133,7 @@
     ]));
   }
 
-  // t3-sampling-flip: deprecated Sampling expressed through current MRTR
+  // t3-sampling-flip：通过当前 MRTR 表达已弃用的 Sampling
   function samplingFlip(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     svg.appendChild(enter(105, 115, '0.1s', [
@@ -167,7 +167,7 @@
     ]));
   }
 
-  // t3-roots-boundary: explicit resource scope replaces Roots in new designs
+  // t3-roots-boundary：新设计以显式资源范围取代 Roots
   function rootsBoundary(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(enter(80, 108, '0.1s', [
@@ -203,7 +203,7 @@
     ]));
   }
 
-  // t3-ui-sandbox: a ui:// payload renders in an iframe, postMessage hops out
+  // t3-ui-sandbox：ui:// payload 在 iframe 中渲染，通过 postMessage 向外通信
   function uiSandbox(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     svg.appendChild(enter(85, 125, '0.1s', [
@@ -242,7 +242,7 @@
     ]));
   }
 
-  // t3-scope-stepup: 403 with WWW-Authenticate, consent, retry with more scope
+  // t3-scope-stepup：收到带 WWW-Authenticate 的 403，经授权后扩大 scope 重试
   function scopeStepup(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     svg.appendChild(enter(70, 90, '0.1s', [
@@ -282,7 +282,7 @@
     ]));
   }
 
-  // t3-gateway-funnel: many developers, one policy point, many backends
+  // t3-gateway-funnel：多个开发者、一个策略点、多个后端
   function gatewayFunnel(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var dy = [45, 125, 205], i;
@@ -326,7 +326,7 @@
     ]));
   }
 
-  // t3-jwks-rotate: keys roll on the auth server, the cache refreshes first
+  // t3-jwks-rotate：认证服务器轮换密钥，缓存提前刷新
   function jwksRotate(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(enter(105, 70, '0.1s', [
@@ -371,7 +371,7 @@
     ]));
   }
 
-  // t3-span-waterfall: one trace, nested spans grow in as a waterfall
+  // t3-span-waterfall：一条 trace 中，嵌套 span 以瀑布形式展开
   function spanWaterfall(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     svg.appendChild(txt(20, 26, 'one trace id', '9', 'var(--blueprint,#3553ff)', 'start'));
@@ -409,7 +409,7 @@
     ]));
   }
 
-  // t3-skill-layers: three context layers, one bundle, any agent
+  // t3-skill-layers：三层上下文、一个 bundle，适用于任意 agent
   function skillLayers(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var layers = [
@@ -449,7 +449,7 @@
     ]));
   }
 
-  // t3-capstone-chain: one request crosses every Phase 13 piece
+  // t3-capstone-chain：一个请求贯穿 Phase 13 的所有组成部分
   function capstoneChain(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 270' });
     var stops = [

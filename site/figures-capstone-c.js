@@ -32,7 +32,7 @@
     }, [svgEl('tspan', {}, [document.createTextNode(s)])]);
   }
 
-  // ── 32: embedding lookup — an id selects a row, sum with position vector ────
+  // ─ 32:嵌入搜索 一个 id 选择一行,加值与位置向量 ───
   function embeddingLookup(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var tx = 40, ty = 28, rw = 96, rh = 26, rows = 6;
@@ -43,23 +43,23 @@
       svg.appendChild(svgEl('rect', { x: tx, y: ry, width: rw, height: rh - 3, rx: 3, fill: i === 3 ? 'none' : BG, stroke: RULE, 'stroke-width': '1' }));
       svg.appendChild(txt(tx - 8, ry + 16, 'id ' + i, MUTE, 8, 'end'));
     }
-    // the highlight box that lands on the selected row (id 3)
+    // 选择的行 (id 3) 上的亮点框
     var sel = svgEl('rect', { x: tx - 2, y: ty - 2, width: rw + 4, height: rh - 1, rx: 4, fill: BP, opacity: '0.14', stroke: BP, 'stroke-width': '2.4' });
     sel.appendChild(anim('y', (ty - 2) + ';' + (ty - 2 + 3 * rh) + ';' + (ty - 2 + 3 * rh), '3s', { keyTimes: '0;0.45;1' }));
     svg.appendChild(sel);
     svg.appendChild(txt(tx + rw / 2, ty + 3 * rh + 16, 'row 3', BP, 9));
-    // arrow: selected row flows right to the dense vector
+    // 箭头:选定的行向密集向量流向
     var flow = svgEl('path', { d: 'M' + (tx + rw + 4) + ' ' + (ty + 3 * rh + 11) + ' H300', fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '6 5' });
     flow.appendChild(anim('stroke-dashoffset', '22;0', '1s', { begin: '1.2s' }));
     svg.appendChild(flow);
-    // the token vector (D cells)
+    // 标志向量 (D 细胞)
     var vx = 308, vy = ty + 3 * rh - 4, cell = 18;
     var tg = svgEl('g', {});
     for (i = 0; i < 5; i++) tg.appendChild(svgEl('rect', { x: vx + i * cell, y: vy, width: cell - 2, height: 22, rx: 2, fill: BP, opacity: (0.3 + i * 0.12).toFixed(2) }));
     tg.appendChild(txt(vx + 5 * cell / 2, vy - 6, 'token vec (D)', BP, 9));
     tg.appendChild(anim('opacity', '0;0;1;1', '3s', { keyTimes: '0;0.55;0.75;1', fill: 'freeze' }));
     svg.appendChild(tg);
-    // position vector below it, then plus sign and sum
+    // 位置向量在它的下面,然后加上标志和总数
     var py = vy + 64;
     var pg = svgEl('g', {});
     for (i = 0; i < 5; i++) pg.appendChild(svgEl('rect', { x: vx + i * cell, y: py, width: cell - 2, height: 22, rx: 2, fill: WARN, opacity: (0.3 + i * 0.12).toFixed(2) }));
@@ -76,7 +76,7 @@
       'A token id is not arithmetic; it is an index. The id selects one row of the token table, returning a dense vector the model treats as the meaning of that id. Position has no inherent vector either, so a parallel positional embedding is looked up by slot and summed elementwise. The result is the (B, T, D) tensor the first attention block consumes.');
   }
 
-  // ── 34: transformer block — two residual bypasses skip the sublayers ────────
+  // 转变器块 两个剩余绕过的绕过下层 ───────
   function transformerBlock(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var sx = 200, w = 120;
@@ -94,25 +94,25 @@
     var ln2 = block(150, 24, 'LayerNorm 2', '', SURF, MUTE);
     var mlp = block(182, 38, 'MLP  D→4D→D', '', BG, BP);
     [ln1, attn, add1, ln2, mlp].forEach(function (g) { svg.appendChild(g); });
-    // vertical spine flowing down
+    // 垂直的脊柱下流
     var spine = svgEl('line', { x1: sx + w / 2, y1: 28, x2: sx + w / 2, y2: 220, stroke: RULE, 'stroke-width': '2' });
     svg.appendChild(spine);
-    // first residual bypass: from input around attention into add1
+    // 首先的残余绕行:从注意力周围输入到add1
     var rp1 = svgEl('path', { d: 'M' + sx + ' 30 C 120 30, 120 128, ' + sx + ' 128', fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '7 5' });
     rp1.appendChild(anim('stroke-dashoffset', '120;0', '2.2s'));
     svg.appendChild(rp1);
     svg.appendChild(txt(96, 80, 'residual', BP, 9, 'middle'));
-    // second residual bypass: from add1 around mlp into output
+    // 剩余绕行第二次:从在mlp周围的add1到输出
     var rp2 = svgEl('path', { d: 'M' + sx + ' 132 C 120 132, 120 232, ' + sx + ' 232', fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '7 5' });
     rp2.appendChild(anim('stroke-dashoffset', '120;0', '2.2s', { begin: '0.5s' }));
     svg.appendChild(rp2);
-    // a signal token riding the spine down through the block
+    // 信号标志,穿过区块的脊椎
     var dot = svgEl('circle', { r: 5, fill: WARN });
     dot.appendChild(anim('cy', '28;220', '2.6s'));
     dot.setAttribute('cx', sx + w / 2);
     svg.appendChild(dot);
     svg.appendChild(txt(sx + w / 2, 238, 'output  (B, T, D)', INK, 10));
-    // pre-LN annotation on the right
+    // 右边的LN前注释
     svg.appendChild(txt(420, 60, 'pre-LN:', INK, 10, 'middle'));
     svg.appendChild(txt(420, 76, 'norm sits', SOFT, 9, 'middle'));
     svg.appendChild(txt(420, 90, 'inside the', SOFT, 9, 'middle'));
@@ -125,18 +125,18 @@
       'The block has exactly two sublayers and two residual paths. The input forks: one copy flows through LayerNorm then attention, the other skips straight to the add. The same fork repeats around the MLP. The clean bypass is what lets gradients reach the bottom of a deep stack, and placing the norm inside the bypass (pre-LN) is why the stack trains without a warmup crutch.');
   }
 
-  // ── 35: GPT assembly — stack of blocks, head tied back to the token table ──
+  // ─ 35:GPT组装堆块,头回到标志表 ──
   function gptAssembly(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var cx = 200, w = 150;
     svg.appendChild(txt(cx + w / 2, 16, 'token ids  (B, T)', INK, 10));
-    // token + position embedding merge
+    // 代币+位置嵌入式融合
     svg.appendChild(svgEl('rect', { x: cx, y: 24, width: 66, height: 30, rx: 4, fill: BG, stroke: BP, 'stroke-width': '1.8' }));
     svg.appendChild(txt(cx + 33, 43, 'tok emb', BP, 9));
     svg.appendChild(svgEl('rect', { x: cx + 84, y: 24, width: 66, height: 30, rx: 4, fill: BG, stroke: WARN, 'stroke-width': '1.8' }));
     svg.appendChild(txt(cx + 117, 43, 'pos emb', WARN, 9));
     svg.appendChild(txt(cx + 75, 70, '⊕', INK, 14));
-    // the stack of 12 blocks as compressed bars, lighting up top to bottom
+    // 压缩的子,从上到下,
     var by = 84, bh = 11, n = 12, i;
     for (i = 0; i < n; i++) {
       var yy = by + i * (bh + 1);
@@ -148,17 +148,17 @@
     var ly = by + n * (bh + 1) + 6;
     svg.appendChild(svgEl('rect', { x: cx + 20, y: ly, width: w - 40, height: 22, rx: 3, fill: SURF, stroke: MUTE, 'stroke-width': '1.4' }));
     svg.appendChild(txt(cx + w / 2, ly + 15, 'final LayerNorm', SOFT, 9));
-    // LM head
+    // 头
     var hy = ly + 32;
     svg.appendChild(svgEl('rect', { x: cx + 20, y: hy, width: w - 40, height: 26, rx: 4, fill: BG, stroke: BP, 'stroke-width': '1.8' }));
     svg.appendChild(txt(cx + w / 2, hy + 17, 'LM head → logits', BP, 9));
-    // weight-tying arc: head reuses the token table
+    // 重量绑定弧:头重复使用标志表
     var tie = svgEl('path', { d: 'M' + (cx + 20) + ' ' + (hy + 13) + ' C 90 ' + (hy + 13) + ', 90 39, ' + cx + ' 39', fill: 'none', stroke: BP, 'stroke-width': '1.8', 'stroke-dasharray': '6 5' });
     tie.appendChild(anim('stroke-dashoffset', '200;0', '2.6s'));
     svg.appendChild(tie);
     svg.appendChild(txt(78, (hy + 39) / 2 + 20, 'weights', BP, 9, 'middle'));
     svg.appendChild(txt(78, (hy + 39) / 2 + 32, 'tied', BP, 9, 'middle'));
-    // param tally on the right
+    // 右边的参数数
     svg.appendChild(txt(440, 70, '124M total', INK, 11, 'middle'));
     svg.appendChild(txt(440, 88, '50257 × 768', SOFT, 9, 'middle'));
     svg.appendChild(txt(440, 102, '+ 1024 × 768', SOFT, 9, 'middle'));
@@ -170,7 +170,7 @@
       'The whole 124M model is four pieces: a token table, a position table summed into it, twelve identical blocks lit in sequence, a final LayerNorm, and a language-model head. The head is not new weights; it reuses the token-embedding matrix transposed, which is why tying saves roughly 38M parameters at this scale and makes the count land exactly on the reference.');
   }
 
-  // ── 37: weight remapping — pretrained names rewired into local names ────────
+  // :重量重调 预训练名字重新连接到当地名字
   function weightRemap(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var lx = 30, rx = 330, w = 168, rh = 34, gap = 10, y0 = 40;
@@ -185,7 +185,7 @@
       svg.appendChild(txt(lx + w / 2, y + 21, src[i], SOFT, 10));
       svg.appendChild(svgEl('rect', { x: rx, y: y, width: w, height: rh, rx: 4, fill: BP, opacity: '0.1', stroke: BP, 'stroke-width': '1.6' }));
       svg.appendChild(txt(rx + w / 2, y + 21, dst[i], BP, 10));
-      // a tensor packet that travels the mapper wire and only lands after a shape check
+      // 一个穿过地图线的光器包,只有在检查形状后才能降落
       var midY = y + rh / 2;
       var wire = svgEl('path', { d: 'M' + (lx + w) + ' ' + midY + ' H' + (lx + w + 60) + ' L' + (rx - 60) + ' ' + midY + ' H' + rx, fill: 'none', stroke: RULE, 'stroke-width': '1.2', 'stroke-dasharray': '4 4' });
       svg.appendChild(wire);
@@ -194,7 +194,7 @@
       if (i === 2) pkt.appendChild(anim('opacity', '1;1;0.15', '3s', { begin: '1s', keyTimes: '0;0.7;1' }));
       svg.appendChild(pkt);
     }
-    // shape-check gate in the middle
+    // 中间的形状检查门
     svg.appendChild(svgEl('rect', { x: 248, y: y0, width: 24, height: 3 * (rh + gap) - gap, rx: 4, fill: SURF, stroke: MUTE, 'stroke-width': '1.4' }));
     svg.appendChild(txt(260, y0 - 6, 'shape', MUTE, 8));
     svg.appendChild(txt(260, y0 + (3 * (rh + gap) - gap) / 2, 'check', MUTE, 8, 'middle'));
@@ -204,11 +204,11 @@
       'A published checkpoint carries the original implementation\'s parameter names, not yours. The loader is a string-to-string mapper feeding a single shape check: matching tensors copy under no_grad into the local name, mismatches are logged and refused rather than copied blindly. Every assignment is recorded so a misload shows up in the report instead of as silent gibberish at generation time.');
   }
 
-  // ── 39: SFT loss masking — instruction tokens get -100, only response scored ─
+  // 指令令令得到 -100,只有响应得分 ─
   function sftMasking(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var toks = ['<INST>', 'capital', 'of', 'France', '<RESP>', 'Paris', 'is', 'it'];
-    var mask = [0, 0, 0, 0, 0, 1, 1, 1]; // 1 = response, scored
+    var mask = [0, 0, 0, 0, 0, 1, 1, 1]; // 1 = 答案,得分
     var bw = 56, gap = 4, x0 = 24, y = 56;
     svg.appendChild(txt(x0, 38, 'one causal sequence', MUTE, 10, 'start'));
     var i;
@@ -217,7 +217,7 @@
       var scored = mask[i] === 1;
       svg.appendChild(svgEl('rect', { x: x, y: y, width: bw, height: 30, rx: 3, fill: scored ? BG : SURF, stroke: scored ? BP : MUTE, 'stroke-width': scored ? '1.8' : '1.2' }));
       svg.appendChild(txt(x + bw / 2, y + 20, toks[i], scored ? BP : MUTE, 9));
-      // loss label below each token
+      // 每个代币下面的损失标签
       var ly = y + 56;
       if (scored) {
         svg.appendChild(txt(x + bw / 2, ly, 'CE', BP, 9));
@@ -225,7 +225,7 @@
         svg.appendChild(txt(x + bw / 2, ly, '-100', MUTE, 9));
       }
     }
-    // bracket marking the masked instruction region
+    // 标记面具指令区域的括号
     var instW = 5 * (bw + gap) - gap;
     svg.appendChild(svgEl('path', { d: 'M' + x0 + ' ' + (y - 8) + ' V' + (y - 14) + ' H' + (x0 + instW) + ' V' + (y - 8), fill: 'none', stroke: MUTE, 'stroke-width': '1.4' }));
     svg.appendChild(txt(x0 + instW / 2, y - 20, 'instruction · masked, zero gradient', MUTE, 9));
@@ -233,7 +233,7 @@
     var respW = 3 * (bw + gap) - gap;
     svg.appendChild(svgEl('path', { d: 'M' + respX + ' ' + (y - 8) + ' V' + (y - 14) + ' H' + (respX + respW) + ' V' + (y - 8), fill: 'none', stroke: BP, 'stroke-width': '1.6' }));
     svg.appendChild(txt(respX + respW / 2, y - 20, 'response · scored', BP, 9));
-    // gradient flowing only into the response region
+    // 只有进入响应区域的梯度
     var gy = y + 78;
     var grad = svgEl('path', { d: 'M' + (respX + respW / 2) + ' ' + gy + ' V' + (gy + 24), fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '5 4' });
     grad.appendChild(anim('stroke-dashoffset', '0;18', '1s'));
@@ -245,10 +245,10 @@
       'Instruction tuning packs each example into one sequence with boundary tokens, but the instruction is given, not learned. The collate function sets those positions to ignore_index -100 so cross-entropy skips them entirely. Only the tokens after the response boundary contribute loss, so the gradient teaches the model to produce the answer rather than to memorize the prompt.');
   }
 
-  // ── 43: HDF5 buffer-then-extend — buffer fills, dataset resizes, range written ─
+  // 填充缓冲器,数据集的重大小,范围写 ── 43: HDF5缓冲器,然后扩展
   function hdf5Buffer(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
-    // incoming token stream on the left
+    // 进入的代币流左边
     svg.appendChild(txt(60, 36, 'tokenized docs', MUTE, 10));
     var fy = 50;
     var b;
@@ -257,20 +257,20 @@
       dot.appendChild(svgEl('animateMotion', { dur: '2.4s', repeatCount: 'indefinite', path: 'M30 ' + (fy + 14) + ' H150', begin: (b * 0.6) + 's' }));
       svg.appendChild(dot);
     }
-    // the in-memory buffer that fills to chunk size
+    // 存储器中填充到零件尺寸的缓冲器
     var bx = 156, by = 50, bw = 110, bh = 28;
     svg.appendChild(svgEl('rect', { x: bx, y: by, width: bw, height: bh, rx: 3, fill: 'none', stroke: MUTE, 'stroke-width': '1.6' }));
     svg.appendChild(txt(bx + bw / 2, by - 8, 'buffer (= chunk)', MUTE, 9));
     var fill = svgEl('rect', { x: bx + 1, y: by + 1, width: 0, height: bh - 2, rx: 2, fill: BP, opacity: '0.45' });
     fill.appendChild(anim('width', '0;' + (bw - 2) + ';' + (bw - 2) + ';0;0', '3.2s', { keyTimes: '0;0.5;0.6;0.62;1' }));
     svg.appendChild(fill);
-    // flush arrow appears when full
+    // 当满时,闪射箭头出现
     var flush = svgEl('path', { d: 'M' + (bx + bw) + ' ' + (by + bh / 2) + ' H' + (bx + bw + 40), fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '6 4' });
     flush.appendChild(anim('stroke-dashoffset', '20;0', '0.8s', { begin: '1.6s' }));
     flush.appendChild(anim('opacity', '0;0;1;1;0', '3.2s', { keyTimes: '0;0.48;0.52;0.9;1' }));
     svg.appendChild(flush);
     svg.appendChild(txt(bx + bw + 20, by - 8, 'flush', BP, 8));
-    // the HDF5 dataset that resizes by one chunk each flush
+    // 对于 HDF5 数据集,每次冲动的尺寸都增加了一块
     var hx = 320, hy = 46, ch = 36, chunks = 4, cyc;
     svg.appendChild(txt(hx + (chunks * (ch + 4)) / 2, hy - 12, 'HDF5 resizable dataset', SOFT, 9));
     for (cyc = 0; cyc < chunks; cyc++) {
@@ -283,7 +283,7 @@
       svg.appendChild(c);
     }
     svg.appendChild(txt(hx + (chunks - 1) * (ch + 4) + ch / 2, hy + 58, 'new range', BP, 8));
-    // mmap read marker at training time
+    // 在训练时的mmap读取标记
     svg.appendChild(svgEl('rect', { x: hx, y: 150, width: chunks * (ch + 4) - 4, height: 26, rx: 3, fill: SURF, stroke: MUTE, 'stroke-width': '1.4' }));
     svg.appendChild(txt(hx + (chunks * (ch + 4)) / 2 - 2, 167, 'mmap slice → batch buffer', SOFT, 9));
     var rd = svgEl('rect', { x: hx, y: 151, width: 30, height: 24, rx: 2, fill: WARN, opacity: '0.4' });
@@ -294,12 +294,12 @@
       'Writing one document at a time fragments the file; writing everything at once loses the shard on a crash. The honest discipline is buffer-then-extend: accumulate tokens until the buffer matches the chunk size, resize the dataset by exactly that chunk, and write the new range. At training time a memory-mapped slice copies a hyperslab straight from the page cache into the batch buffer.');
   }
 
-  // ── 46: gradient accumulation — micro-batches pile grads, step on the last ──
+  // - 46:梯度积累 微批量堆积的,最后一步 ──
   function gradAccum(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var n = 4, bw = 70, gap = 22, x0 = 36, y = 40;
     svg.appendChild(txt(260, 22, 'one effective batch = 4 micro-batches', MUTE, 10));
-    // a gradient buffer bar that fills across the micro-batches
+    // 梯缓冲杆,填充整个微批量
     var gy = 150, gx = x0, gw = n * (bw + gap) - gap;
     svg.appendChild(svgEl('rect', { x: gx, y: gy, width: gw, height: 24, rx: 3, fill: 'none', stroke: MUTE, 'stroke-width': '1.6' }));
     svg.appendChild(txt(gx, gy - 8, 'accumulated grad buffer', MUTE, 9, 'start'));
@@ -316,13 +316,13 @@
       g.appendChild(txt(x + bw / 2, y + 32, 'loss / 4', SOFT, 8));
       g.appendChild(anim('opacity', '0.35;1;0.35', '4s', { begin: (i * 0.5) + 's', keyTimes: '0;0.5;1' }));
       svg.appendChild(g);
-      // scaled-backward arrow down into the buffer
+      // 缩小向后箭头进入缓冲器
       var arr = svgEl('line', { x1: x + bw / 2, y1: y + 40, x2: x + bw / 2, y2: gy, stroke: last ? WARN : BP, 'stroke-width': '1.6', 'stroke-dasharray': '5 4' });
       arr.appendChild(anim('stroke-dashoffset', '0;18', '0.9s', { begin: (i * 0.5) + 's' }));
       svg.appendChild(arr);
       if (last) svg.appendChild(txt(x + bw / 2, y + 54, 'sync', WARN, 8));
     }
-    // optimizer step fires once, after the buffer is full
+    // 优化器步骤一次,缓冲器满后
     var sx = gx + gw + 18;
     var stepg = svgEl('g', {});
     stepg.appendChild(svgEl('rect', { x: sx, y: gy - 4, width: 86, height: 32, rx: 5, fill: WARN, opacity: '0.16', stroke: WARN, 'stroke-width': '2' }));
@@ -336,10 +336,10 @@
       'When the accelerator holds 32 examples but the loss curve wants 512, run the backward pass micro-batch by micro-batch and let the gradients sum inside the parameter buffers. Each loss is divided by the accumulation count so the running sum matches a single full-batch backward, and the optimizer steps exactly once when the buffer is full, with synchronization deferred to the last micro-batch.');
   }
 
-  // ── 47: atomic checkpoint — write temp, fsync, rename over the good file ────
+  // 核检查站 写 Temp, fsync,重新命名好文件
   function atomicCheckpoint(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
-    // payload buckets gathering into one file on the left
+    // 收藏在左边的一个文件中的有效载荷桶
     var px = 30, py = 36, bw = 116, bh = 18, gap = 5;
     var parts = ['model', 'optimizer', 'scheduler', 'step + losses', 'RNG state'];
     svg.appendChild(txt(px + bw / 2, py - 10, 'checkpoint payload', MUTE, 9));
@@ -351,7 +351,7 @@
       svg.appendChild(r);
       svg.appendChild(txt(px + bw / 2, yy + 13, parts[i], SOFT, 8));
     }
-    // flow into a temp file
+    // 流入临时文件
     var tx = 220, ty = 70;
     var flow = svgEl('path', { d: 'M' + (px + bw) + ' ' + (py + 50) + ' H' + tx, fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '6 5' });
     flow.appendChild(anim('stroke-dashoffset', '22;0', '1s'));
@@ -359,7 +359,7 @@
     svg.appendChild(svgEl('rect', { x: tx, y: ty, width: 96, height: 46, rx: 5, fill: 'none', stroke: MUTE, 'stroke-width': '1.6', 'stroke-dasharray': '4 4' }));
     svg.appendChild(txt(tx + 48, ty + 20, 'ckpt.tmp', MUTE, 10));
     svg.appendChild(txt(tx + 48, ty + 36, 'write + fsync', MUTE, 8));
-    // the atomic rename arc onto the final filename
+    // 原子改名弧在最终文件名上
     var fx = 400, fy = 70;
     var ren = svgEl('path', { d: 'M' + (tx + 96) + ' ' + (ty + 23) + ' C ' + (fx - 20) + ' ' + (ty + 23) + ', ' + (fx - 20) + ' ' + (fy + 23) + ', ' + fx + ' ' + (fy + 23), fill: 'none', stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '7 5' });
     ren.appendChild(anim('stroke-dashoffset', '40;0', '1.4s', { begin: '1s' }));
@@ -372,7 +372,7 @@
     fin.appendChild(txt(fx + 48, fy + 36, 'always valid', SOFT, 8));
     fin.appendChild(anim('opacity', '0.2;0.2;1;1', '2.4s', { keyTimes: '0;0.55;0.75;1', fill: 'freeze' }));
     svg.appendChild(fin);
-    // a crash bolt that strikes the temp file but never the final one
+    // 一个撞击临时文件的故障螺栓,但从来没有最后一个
     var bolt = svgEl('g', {});
     bolt.appendChild(svgEl('polygon', { points: (tx + 48) + ',150 ' + (tx + 40) + ',172 ' + (tx + 52) + ',172 ' + (tx + 44) + ',192', fill: 'none', stroke: WARN, 'stroke-width': '2' }));
     bolt.appendChild(txt(tx + 48, 206, 'crash here?', WARN, 8));

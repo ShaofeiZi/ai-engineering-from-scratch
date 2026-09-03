@@ -1,8 +1,7 @@
-/* figures-autoswarm5.js - animated, theme-aware figures for Phase 15
-   (autonomous systems) and Phase 16 (multi-agent and swarms), fifth module.
-   Loads after lesson-figures.js, registers through window.LF. No deps,
-   ES5 only, SMIL animation, theme via CSS vars. Authoring: a ```figure
-   block naming one of the widgets below. */
+/* figures-autoswarm5.js - 第 15 阶段（自主系统）和第 16 阶段（多智能体与集群）
+   第五模块的动画课程图示，支持主题适配。在 lesson-figures.js 之后加载，并
+   通过 window.LF 注册。无依赖，仅使用 ES5 和 SMIL 动画，通过 CSS 变量适配
+   主题。编写时使用 ```figure 代码块指定下列某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -32,8 +31,8 @@
   function f2(x) { return x.toFixed(3); }
   var EASE = '0.23 1 0.32 1';
   var LIN = '0 0 1 1';
-  // entry: hidden until lo, spline-eases to full by lo+rise, holds to hi,
-  // exits by hi+drop (keep drop < rise so exits read faster than entries)
+  // 入场：在 lo 之前隐藏，经样条缓动在 lo+rise 时完全显示，保持到 hi，
+  // 在 hi+drop 时退场（保持 drop < rise，使退场看起来比入场更快）
   function appear(node, lo, rise, hi, drop, period) {
     var kt = '0;' + f2(lo) + ';' + f2(lo + rise) + ';' + f2(hi) + ';' + f2(hi + drop) + ';1';
     node.appendChild(svgEl('animate', {
@@ -42,7 +41,7 @@
       keySplines: LIN + ';' + EASE + ';' + LIN + ';' + LIN + ';' + LIN
     }));
   }
-  // scalar attribute grows from -> to inside the loop with the same ease
+  // 标量属性在循环内以相同缓动从 from 增长到 to
   function grow(node, attr, from, to, lo, rise, period) {
     var kt = '0;' + f2(lo) + ';' + f2(lo + rise) + ';1';
     node.appendChild(svgEl('animate', {
@@ -58,8 +57,8 @@
   var SURF = 'var(--bg-surface,#eee)';
   var MUTE = 'var(--ink-mute,#777)';
 
-  // ── a5-scaffold-delta: one model feeds two scaffolds; the score bars land
-  //    16.6 points apart with identical weights ──────────────────────────────
+  // ── a5-scaffold-delta：一个模型接入两个脚手架；权重相同时，分数条相差
+  //    16.6 分 ──────────────────────────────────────────────────────────────
   function scaffoldDelta(host) {
     var W = 520, H = 250, period = 6;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -98,8 +97,8 @@
       'Claude Sonnet 4.5 scores 43.2% on SWE-bench Verified inside SWE-agent v1 and 59.8% inside the Cline autonomous scaffold. Same weights, 16.6 points apart. The retrieval layer, planner, sandbox, and edit-verify loop around the model now matter as much as the model itself.');
   }
 
-  // ── a5-guard-sieve: prompts pass an input classifier and responses pass an
-  //    output classifier; one attack is caught, an emoji-smuggled one slips ──
+  // ── a5-guard-sieve：提示通过输入分类器，响应通过输出分类器；一个攻击被捕获，
+  //    另一个藏在 emoji 中的攻击成功穿透 ───────────────────────────────────
   function guardSieve(host) {
     var W = 520, H = 230, period = 7, y = 100;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -139,8 +138,8 @@
       'Llama Guard sits on both sides of the model, classifying inputs and outputs against the MLCommons S1-S14 hazard taxonomy. Obvious misuse is caught cheaply. But Huang et al. 2025 measured emoji smuggling at 100% attack success across six guard systems: classifiers are a layer, not a solution.');
   }
 
-  // ── a5-rsp-ladder: a capability gauge rises toward the AI R&D-4 threshold
-  //    while the v3.0 policy splits commitments into two tiers ───────────────
+  // ── a5-rsp-ladder：能力仪表向 AI R&D-4 阈值上升，同时 v3.0 政策将承诺
+  //    分为两个层级 ─────────────────────────────────────────────────────────
   function rspLadder(host) {
     var W = 520, H = 250, period = 8;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -180,8 +179,8 @@
       'RSP v3.0 names AI R&D-4 as the next threshold: a model that could automate a substantial fraction of AI research at competitive cost. Claude Opus 4.6 sits below it, though Anthropic concedes that confidently ruling it out is getting difficult. Commitments now split into unilateral actions and industry recommendations, and the 2023 pause clause is gone; SaferAI scored the policy down from 2.2 to 1.9.');
   }
 
-  // ── a5-tracked-vs-research: two lanes for the same capability; the Tracked
-  //    lane passes reports and a review gate, the Research lane is only watched ─
+  // ── a5-tracked-vs-research：同一能力对应两条通道；Tracked 通道需经过报告和
+  //    审查关卡，Research 通道只受监测 ─────────────────────────────────────
   function trackedVsResearch(host) {
     var W = 520, H = 250, period = 7;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -222,8 +221,8 @@
       'OpenAI Preparedness v2 splits categories in two. Tracked Categories trigger Capabilities and Safeguards Reports reviewed by the Safety Advisory Group before deployment. Research Categories, including Long-range Autonomy and Sandbagging, are monitored with only potential mitigations. DeepMind FSF v3 makes the same move by folding autonomy into its ML R&D and Cyber domains.');
   }
 
-  // ── a5-horizon-fit: task dots scatter on a log-time axis, a logistic curve
-  //    draws through them, and the 50% crossing pins the time horizon ────────
+  // ── a5-horizon-fit：任务点散布在对数时间轴上，一条 logistic 曲线穿过它们，
+  //    其 50% 交点确定时间跨度 ──────────────────────────────────────────────
   function horizonFit(host) {
     var W = 520, H = 250, period = 8;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -273,8 +272,8 @@
       'METR runs a model across HCAST, RE-Bench, and SWAA tasks spanning minutes to hours of expert time, then fits a logistic curve to success probability versus log expert-completion-time. The 50% crossing is the time horizon. It is an idealized upper bound measured without real consequences, not a deployment prediction.');
   }
 
-  // ── a5-four-risks: the CAIS quadrants light in sequence; organizational
-  //    risk holds the highlight because it is the one practitioners control ──
+  // ── a5-four-risks：CAIS 四个象限依次亮起；组织风险持续高亮，因为这是
+  //    实践者能够控制的风险 ────────────────────────────────────────────────
   function fourRisks(host) {
     var W = 520, H = 250, period = 8;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -300,8 +299,8 @@
       'The CAIS framework groups catastrophic AI risk into malicious use, AI races, organizational risks, and rogue AIs. The categories overlap: a rogue AI shipped by a lab that traded audits for speed in a race is all four at once. Organizational risk is the quadrant a practitioner can actually act on, which is why it holds the highlight.');
   }
 
-  // ── a5-primitive-radar: agent, handoff, shared state, orchestrator as four
-  //    axes; each framework is a different shape on the same radar ───────────
+  // ── a5-primitive-radar：以智能体、移交、共享状态、编排器为四个轴；每个
+  //    框架在同一雷达图上呈现不同形状 ──────────────────────────────────────
   function primitiveRadar(host) {
     var W = 520, H = 260, period = 9;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -335,8 +334,8 @@
       'Agent, handoff, shared state, orchestrator: four primitives span the whole design space. OpenAI Swarm leans on agents plus handoffs and leaves state to the caller. LangGraph puts weight on the StateGraph and a deterministic graph orchestrator. CrewAI leans on role-heavy agents with a manager process. Every new framework release is another shape on the same radar.');
   }
 
-  // ── a5-og-narrator: an LLM alone closes few deals; splitting a deterministic
-  //    offer generator from an LLM narrator triples the deal rate ────────────
+  // ── a5-og-narrator：仅靠 LLM 很少促成交易；将确定性报价生成器与 LLM
+  //    叙述器分离后，成交率提高到三倍 ───────────────────────────────────────
   function ogNarrator(host) {
     var W = 520, H = 250, period = 8;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -377,8 +376,8 @@
       'LLMs conflate deciding an offer with narrating it, and close only 26.7% of tightly-parameterized bargains; scale does not fix it. OG-Narrator splits the two: a deterministic offer generator computes each numeric move and the LLM only writes the accompanying message. Deal rate jumps to 88.9%, echoing Contract Net: keep the mechanism separate from the communication layer.');
   }
 
-  // ── a5-memory-reflection: observations stack into a stream, a reflection
-  //    synthesizes from them and drops back in as a new retrievable memory ────
+  // ── a5-memory-reflection：观察结果堆叠成流，反思对其进行综合，并作为新的
+  //    可检索记忆重新加入其中 ───────────────────────────────────────────────
   function memoryReflection(host) {
     var W = 520, H = 250, period = 9;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -427,8 +426,8 @@
       'Smallville agents keep an append-only memory stream scored by recency, importance, and relevance. Periodically the agent synthesizes recent memories into a reflection, which drops back into the stream and feeds top-down plans from day level to action level. Ablate any of the three and believability drops: this loop is what let one seeded party idea spread through 24 unscripted agents.');
   }
 
-  // ── a5-retry-cascade: one payment failure fans out into multiplying retries
-  //    downstream until a circuit breaker cuts the storm ─────────────────────
+  // ── a5-retry-cascade：一次支付失败向下游扩散为不断倍增的重试，直至断路器
+  //    切断重试风暴 ─────────────────────────────────────────────────────────
   function retryCascade(host) {
     var W = 520, H = 250, period = 8;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -475,8 +474,8 @@
       'MAST puts coordination failures at 36.94% of 1642 multi-agent execution traces, and the retry storm is the canonical cascade: a payment failure triggers order retries, each order retry triggers inventory retries, and the inventory service sees 10x load within seconds. A circuit breaker between tiers is the mitigation that turns an amplifying chain back into one contained failure.');
   }
 
-  // ── a5-bench-gap: the same frontier model as two columns, tall on Verified
-  //    and short on Pro; the dashed line makes the gap visible ───────────────
+  // ── a5-bench-gap：同一个前沿模型显示为两列，在 Verified 上较高、在 Pro 上
+  //    较低；虚线突显这一差距 ───────────────────────────────────────────────
   function benchGap(host) {
     var W = 520, H = 260, period = 7;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -516,8 +515,8 @@
       'Frontier models score 70%+ on SWE-bench Verified and about 23% on SWE-bench Pro, whose 1865 problems require 10+ line changes across 41 repos. Verified is near saturation, partially contaminated, and padded by an easy tail of one-to-two-line tasks. Pro is the uncontaminated reality check: read any leaderboard claim against both columns.');
   }
 
-  // ── a5-orchestrator-scale: a lead agent spawns 1, then 3, then 10+ subagents
-  //    as query complexity rises, and the token meter pays for it ────────────
+  // ── a5-orchestrator-scale：随着查询复杂度上升，主智能体依次生成 1 个、3 个、
+  //    10+ 个子智能体，并由 token 仪表显示相应成本 ──────────────────────────
   function orchestratorScale(host) {
     var W = 520, H = 260, period = 9;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });

@@ -181,17 +181,14 @@
     }
     grid.innerHTML = html;
 
-    // Re-apply per-row stagger delays for the freshly created rows.
+    // 为新创建的行重新应用逐行错峰延迟。
     initStaggerIndex();
 
-    // If the reveal observer has already initialised (body.js-anim is set),
-    // the IntersectionObserver is only watching the *original* rows it was
-    // given at startup. Re-rendering via innerHTML replaces those nodes with
-    // brand-new elements that are NOT being observed, so they would otherwise
-    // stay hidden forever under `body.js-anim .toc-row { opacity: 0 }`.
+    // 若 reveal observer 已初始化（已设置 body.js-anim），IntersectionObserver
+    // 只会观察启动时收到的原始行。通过 innerHTML 重绘会用未受观察的新元素替换
+    // 这些节点，若不处理，它们会一直被 `body.js-anim .toc-row { opacity: 0 }` 隐藏。
     //
-    // Since the user has already seen the initial reveal animation, just mark
-    // the rebuilt rows as visible immediately (no second fade-in).
+    // 用户已经看过首次 reveal 动画，因此直接将重建行标记为可见，不再淡入一次。
     if (document.body.classList.contains('js-anim')) {
       var newRows = grid.querySelectorAll('.toc-row');
       for (var r = 0; r < newRows.length; r++) {
@@ -427,8 +424,8 @@
     });
   }
 
-  // One clipboard implementation for every copy chip on the site: debounced
-  // copied-state revert, execCommand fallback when the async API is denied.
+  // 全站复制按钮共用一套 clipboard 实现：对 copied 状态恢复做 debounce，
+  // 异步 API 被拒绝时回退到 execCommand。
   function wireCopyButton(btn, label, getText) {
     if (!btn || !label) return;
     var revertTimer = null;

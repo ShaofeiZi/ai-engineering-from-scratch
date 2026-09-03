@@ -1,6 +1,6 @@
-/* figures-genai-rl.js — interactive lesson figures for Phase 8 (generative AI)
-   and Phase 9 (reinforcement learning). Loads after lesson-figures.js and
-   registers through window.LF. No deps, ES5 only, theme via CSS vars. */
+/* figures-genai-rl.js — 阶段 8（生成式 AI）和阶段 9（强化学习）的交互式课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，仅使用 ES5，
+   通过 CSS 变量应用主题。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -16,11 +16,11 @@
     ]));
   }
 
-  // ── diffusion-denoise: a 1D signal emerging as noise is stripped away ──────
+  // ── diffusion-denoise：随着噪声被逐步去除，一维信号逐渐显现 ──────────────
   function diffusionDenoise(host) {
     var W = 520, H = 240, PAD = 30, N = 96, T = 50;
     var state = { t: 35 };
-    // fixed clean signal x0 and a fixed noise sample, so render is deterministic
+    // 固定干净信号 x0 和噪声样本，使渲染结果具有确定性
     var x0 = [], noise = [], i, seed = 12345;
     function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff * 2 - 1; }
     for (i = 0; i < N; i++) {
@@ -36,14 +36,14 @@
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(svgEl('line', { x1: PAD, y1: H / 2, x2: W - PAD, y2: H / 2, stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
-      // alpha_bar runs 1 (clean, t=0) down to ~0 (pure noise, t=T)
+      // alpha_bar 从 1（干净，t=0）逐渐降至约 0（纯噪声，t=T）
       var ab = Math.pow(Math.cos((state.t / T) * Math.PI / 2), 2);
       var sA = Math.sqrt(ab), sN = Math.sqrt(1 - ab), d = '', j;
       for (j = 0; j < N; j++) {
         var xt = sA * x0[j] + sN * noise[j];
         d += (j ? 'L' : 'M') + px(j).toFixed(1) + ' ' + py(xt).toFixed(1) + ' ';
       }
-      // faint ghost of the clean target
+      // 淡显干净目标的轮廓
       var dc = '';
       for (j = 0; j < N; j++) { dc += (j ? 'L' : 'M') + px(j).toFixed(1) + ' ' + py(x0[j]).toFixed(1) + ' '; }
       svg.appendChild(svgEl('path', { d: dc, fill: 'none', stroke: 'var(--ink-mute,#999)', 'stroke-width': '1.5', 'stroke-dasharray': '4 3', opacity: '0.5' }));
@@ -58,7 +58,7 @@
     state._render();
   }
 
-  // ── noise-schedule: linear vs cosine alpha_bar across diffusion steps ──────
+  // ── noise-schedule：对比扩散步骤中的线性与余弦 alpha_bar ────────────────
   function noiseSchedule(host) {
     var W = 520, H = 220, PAD = 32, T = 1000;
     var state = { sched: 'cosine', t: 500 };
@@ -93,14 +93,14 @@
     state._render();
   }
 
-  // ── vae-latent-grid: walk a 2D latent space, watch the decoded shape morph ─
+  // ── vae-latent-grid：遍历二维潜在空间，观察解码形状的变化 ───────────────
   function vaeLatentGrid(host) {
     var W = 520, H = 240, CX = 380, CY = 120, R = 78;
     var state = { z1: 0, z2: 0 };
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // left: latent plane with a moving dot; right: a parametric shape decoded from (z1,z2)
+    // 左侧：带移动点的潜在平面；右侧：由 (z1,z2) 解码出的参数化形状
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var planeX = 40, planeY = 40, planeW = 160, planeH = 160;
@@ -110,7 +110,7 @@
       var dx = planeX + planeW / 2 + state.z1 / 3 * (planeW / 2);
       var dy = planeY + planeH / 2 - state.z2 / 3 * (planeH / 2);
       svg.appendChild(svgEl('circle', { cx: dx, cy: dy, r: '5', fill: 'var(--blueprint,#3553ff)' }));
-      // decode: z1 controls number of lobes / pointiness, z2 controls roundness vs star
+      // 解码：z1 控制瓣数和尖锐程度，z2 控制圆润与星形之间的变化
       var pts = 80, k, dpath = '';
       var lobes = 3 + Math.round((state.z1 + 3) / 6 * 5); // 3..8
       var spike = (state.z2 + 3) / 6; // 0..1
@@ -135,10 +135,10 @@
     state._render();
   }
 
-  // ── gan-minimax: generator vs discriminator balance and failure modes ──────
+  // ── gan-minimax：生成器与判别器的平衡及失效模式 ─────────────────────────
   function ganMinimax(host) {
     var W = 520, H = 220, PAD = 34;
-    // bal: -1 = generator far ahead, 0 = equilibrium, +1 = discriminator far ahead
+    // bal：-1 表示生成器大幅领先，0 表示均衡，+1 表示判别器大幅领先
     var state = { bal: 0 };
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var status = el('span', { class: 'lf-num' });
@@ -146,13 +146,13 @@
     var formula = el('div', { class: 'lf-formula' });
     function px(b) { return PAD + (b + 1) / 2 * (W - 2 * PAD); }
     function py(v) { return H - PAD - clamp(v, 0, 3) / 3 * (H - 2 * PAD); }
-    // D accuracy on fakes rises with bal; gradient to G vanishes when D is certain
-    function dLoss(b) { return 0.4 + 0.9 * (1 - Math.abs(b)); } // lowest losses at extremes for the winner
-    function gLoss(b) { return 0.5 + 1.4 * (b + 1) / 2; } // generator suffers as D gets stronger
+    // D 对伪样本的准确率随 bal 升高；当 D 确信无疑时，传给 G 的梯度消失
+    function dLoss(b) { return 0.4 + 0.9 * (1 - Math.abs(b)); } // 在极端状态下，占优一方的损失最低
+    function gLoss(b) { return 0.5 + 1.4 * (b + 1) / 2; } // D 越强，生成器承受的损失越大
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(svgEl('line', { x1: PAD, y1: H - PAD, x2: W - PAD, y2: H - PAD, stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
-      // equilibrium marker at bal = 0
+      // bal = 0 处的均衡标记
       var ex = px(0);
       svg.appendChild(svgEl('line', { x1: ex, y1: PAD, x2: ex, y2: H - PAD, stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1', 'stroke-dasharray': '3 3' }));
       function curve(fn, st) { var d = '', i, b; for (i = 0; i <= 100; i++) { b = -1 + 2 * i / 100; d += (i ? 'L' : 'M') + px(b).toFixed(1) + ' ' + py(fn(b)).toFixed(1) + ' '; } svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: st, 'stroke-width': '2' })); }
@@ -176,15 +176,15 @@
     state._render();
   }
 
-  // ── qlearning-gridworld: 4x4 grid, value snapshots over training episodes ──
+  // ── qlearning-gridworld：4x4 网格及不同训练回合的价值快照 ────────────────
   function qlearningGridworld(host) {
     var W = 520, H = 240, GRID = 4, CELL = 52, OX = 40, OY = 18;
-    var GOAL = 3, PIT = 9; // index = row*4 + col; goal at (0,3), pit at (2,1)
+    var GOAL = 3, PIT = 9; // 索引 = 行*4 + 列；目标位于 (0,3)，陷阱位于 (2,1)
     var state = { ep: 200 };
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // converged values via value iteration on a deterministic 4x4 (gamma 0.9, step -0.04)
+    // 在确定性 4x4 网格上通过价值迭代得到的收敛值（gamma 0.9，步长 -0.04）
     var GAMMA = 0.9, STEP = -0.04, Rgoal = 1, Rpit = -1;
     function neighbors(s) {
       var r = Math.floor(s / GRID), c = s % GRID, out = [];
@@ -198,7 +198,7 @@
     (function () { var it, s, nb, best, k; for (it = 0; it < 200; it++) { for (s = 0; s < GRID * GRID; s++) { if (s === GOAL || s === PIT) continue; nb = neighbors(s); best = -1e9; for (k = 0; k < nb.length; k++) best = Math.max(best, Vstar[nb[k]]); Vstar[s] = STEP + GAMMA * best; } } })();
     function valueAt(s, ep) { if (s === GOAL) return Rgoal; if (s === PIT) return Rpit; return Vstar[s] * clamp(ep / 300, 0, 1); }
     function shade(v) {
-      // map v in [-1,1] to opacity of blueprint (positive) or warn (negative)
+      // 将 [-1,1] 范围内的 v 映射为 blueprint（正值）或 warn（负值）的不透明度
       if (v >= 0) return { fill: 'var(--blueprint,#3553ff)', op: (0.08 + 0.6 * Math.min(1, v)).toFixed(2) };
       return { fill: 'var(--warn,#b8870f)', op: (0.08 + 0.6 * Math.min(1, -v)).toFixed(2) };
     }
@@ -241,14 +241,14 @@
     state._render();
   }
 
-  // ── value-iteration-gamma: value propagating along a 1D chain toward a goal ─
+  // ── value-iteration-gamma：价值沿一维链向目标传播 ────────────────────────
   function valueIterationGamma(host) {
     var W = 520, H = 200, N = 10, CELL = 44, OX = 36, OY = 70;
     var state = { gamma: 0.9 };
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // goal at the rightmost cell, reward 1; each step costs nothing; V(s) = gamma^(dist)
+    // 目标位于最右侧单元格，奖励为 1；每步无成本；V(s) = gamma^(dist)
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var g = state.gamma, i, vals = [];
@@ -273,10 +273,10 @@
     state._render();
   }
 
-  // ── epsilon-greedy: explore/exploit split and cumulative regret ────────────
+  // ── epsilon-greedy：探索/利用比例与累积遗憾 ──────────────────────────────
   function epsilonGreedy(host) {
     var W = 520, H = 210, PAD = 32, N = 500;
-    var state = { eps: 0.1, decay: 1 }; // decay 1 = fixed, 0 = decaying schedule
+    var state = { eps: 0.1, decay: 1 }; // decay 为 1 表示固定值，为 0 表示衰减调度
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var bar = el('i');
     var barWrap = el('div', { class: 'lf-bar' }, [bar]);
@@ -285,7 +285,7 @@
     function epsAt(t) { return state.decay > 0.5 ? state.eps : state.eps / (1 + t / 60); }
     function px(t) { return PAD + t / N * (W - 2 * PAD); }
     function py(v, vmax) { return H - PAD - clamp(v / vmax, 0, 1) * (H - 2 * PAD); }
-    var GAP = 0.4; // regret cost per exploratory pull (suboptimal arm)
+    var GAP = 0.4; // 每次探索性拉动（次优臂）的遗憾成本
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(svgEl('line', { x1: PAD, y1: H - PAD, x2: W - PAD, y2: H - PAD, stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
@@ -312,7 +312,7 @@
     state._render();
   }
 
-  // ── discount-horizon: effective horizon and geometric weight decay ─────────
+  // ── discount-horizon：有效时域与几何权重衰减 ─────────────────────────────
   function discountHorizon(host) {
     var W = 520, H = 210, PAD = 32, TMAX = 40;
     var state = { gamma: 0.9 };
@@ -331,7 +331,7 @@
         svg.appendChild(svgEl('rect', { x: px(t) - 3, y: py(w), width: 6, height: (H - PAD) - py(w), fill: 'var(--blueprint,#3553ff)', opacity: '0.85' }));
       }
       var hor = 1 / (1 - g);
-      // mark the effective horizon
+      // 标记有效时域
       var hx = px(Math.min(TMAX, hor));
       svg.appendChild(svgEl('line', { x1: hx, y1: PAD, x2: hx, y2: H - PAD, stroke: 'var(--warn,#b8870f)', 'stroke-width': '1.5', 'stroke-dasharray': '4 3' }));
       num.innerHTML = hor.toFixed(1) + ' <small>step horizon</small>';
@@ -345,7 +345,7 @@
     state._render();
   }
 
-  // ── policy-gradient-landscape: gradient ascent climbing a reward peak ──────
+  // ── policy-gradient-landscape：通过梯度上升攀向奖励峰值 ──────────────────
   function policyGradientLandscape(host) {
     var W = 520, H = 230, PAD = 30;
     var state = { lr: 0.15, steps: 14, theta0: -2.4 };
@@ -353,7 +353,7 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // reward J(theta): a smooth peaked landscape with the maximum near theta = 1.2
+    // 奖励 J(theta)：平滑的峰形曲面，最大值位于 theta = 1.2 附近
     function J(t) { return 3 * Math.exp(-0.35 * (t - 1.2) * (t - 1.2)) + 0.4 * Math.exp(-0.8 * (t + 2) * (t + 2)); }
     function grad(t) { var h = 1e-3; return (J(t + h) - J(t - h)) / (2 * h); }
     function px(t) { return PAD + (t + 3.5) / 7 * (W - 2 * PAD); }

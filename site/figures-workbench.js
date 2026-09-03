@@ -1,8 +1,7 @@
-/* figures-workbench.js - animated lesson figures for the agent workbench
-   mini-track and late phase-14 lessons. Loads after lesson-figures.js,
-   registers through window.LF. No deps, ES5, theme via CSS vars. SMIL-only
-   animation: no JS render loops. Authoring: a ```figure block naming one of
-   the widgets below. */
+/* figures-workbench.js - agent workbench 小型专题与 Phase 14 后期课程的动画图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，使用 ES5，
+   主题由 CSS 变量控制。仅使用 SMIL 动画，不使用 JS 渲染循环。编写方式：使用
+   ```figure 代码块指定下方某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -30,8 +29,8 @@
     if (splines) { a.calcMode = 'spline'; a.keySplines = splines; }
     return svgEl('animate', a);
   }
-  /* Entry craft: fade in from opacity 0 at ~95% size, hold, exit faster than
-     the entry. kids must be drawn centered on (0,0). */
+  /* 入场效果：从透明度 0、约 95% 尺寸淡入，保持一段时间，并以快于入场的速度
+     退出。子元素必须以 (0,0) 为中心绘制。 */
   function popG(x, y, kids, times, dur) {
     var g = svgEl('g', { transform: 'translate(' + x + ' ' + y + ')' }, kids);
     g.appendChild(seq('opacity', '0;0;1;1;0;0', times, dur, sp(5)));
@@ -44,7 +43,7 @@
   }
   function dot(r, fill) { return svgEl('circle', { cx: '0', cy: '0', r: r || '5', fill: fill || 'var(--blueprint,#3553ff)' }); }
 
-  // ── wb-runtime-spawn: a fresh agent instantiated per request, then gone ────
+  // ── wb-runtime-spawn：为每个请求实例化一个新 agent，随后销毁 ─────────
   function runtimeSpawn(host) {
     var W = 520, H = 230, D = '3.6s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -75,7 +74,7 @@
       'Agno\'s recommended production shape: a stateless session-scoped backend where every request instantiates a fresh agent in microseconds, session state lives in a store, and the agent is torn down after the response. Mastra makes the same bet in TypeScript with typed Agents, Tools, and Workflows served behind standard server adapters.');
   }
 
-  // ── wb-trace-ingest: spans stacking into a waterfall, a judge scores one ───
+  // ── wb-trace-ingest：span 堆叠成瀑布图，由 judge 对其中一个评分 ──────
   function traceIngest(host) {
     var W = 520, H = 250, D = '4.8s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -115,7 +114,7 @@
       'The platform layer above OTel GenAI: it ingests spans, renders the trace waterfall, and runs evaluations over individual steps. Langfuse pairs this with prompt management and session replay, Phoenix with RAG-focused evals and auto-instrumentation, Opik with prompt optimization and LLM-judge hallucination checks.');
   }
 
-  // ── wb-runtime-shapes: queue, event, and cron intakes feeding one worker ───
+  // ── wb-runtime-shapes：队列、事件和 cron 三种入口为同一 worker 供给任务 ─
   function runtimeShapes(host) {
     var W = 520, H = 250, D = '4.2s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -153,7 +152,7 @@
       'Queue-based background work, event-driven triggers, and scheduled cron jobs are three of the six production runtime shapes. Each intake delivers work to the same agent loop, but the shape decides which failures are survivable: a queue can retry, an event can replay, a cron must assume the last run died.');
   }
 
-  // ── wb-seven-surfaces: workbench surfaces docking around a bare model ──────
+  // ── wb-seven-surfaces：workbench 各层围绕裸模型依次接入 ─────────────
   function sevenSurfaces(host) {
     var W = 520, H = 270, D = '6s', CX = 260, CY = 122, R = 92;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -185,7 +184,7 @@
       'A frontier model on its own flickers: plausible code, no definition of done, no record of what it assumed. Reliability appears as the seven workbench surfaces dock around it, one by one: instructions, state, scope, feedback, verification, review, and handoff. Strip any one away and its failure mode comes back.');
   }
 
-  // ── wb-three-files: the read-work-write cycle over three workbench files ───
+  // ── wb-three-files：围绕三个 workbench 文件的读取-工作-写入循环 ─────
   function threeFiles(host) {
     var W = 520, H = 250, D = '5s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -232,7 +231,7 @@
       'The smallest useful workbench: a short root router the agent reads first, a state file it reads before acting and writes after, and a task board that says what is in flight, blocked, and next. Reads open every turn, writes close it, and no part of the cycle depends on chat history surviving.');
   }
 
-  // ── wb-rule-checkoff: a rule set scored against a real run ─────────────────
+  // ── wb-rule-checkoff：根据一次真实运行对规则集逐项评分 ──────────────
   function ruleCheckoff(host) {
     var W = 520, H = 250, D = '4.4s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -267,7 +266,7 @@
       'Prose instructions say "be careful"; constraints say which check failed. The rule checker walks the rule set against the run artifacts and marks each rule pass or fail, so a violation is a named line in a report instead of a vibe. Diff-friendly rules mean review sees exactly which constraint changed.');
   }
 
-  // ── wb-state-persist: chat evaporates, the repo file survives the boundary ─
+  // ── wb-state-persist：聊天内容消失，仓库文件跨越边界继续保留 ────────
   function statePersist(host) {
     var W = 520, H = 260, D = '5s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -311,7 +310,7 @@
       'The chat bubbles dissolve when the session ends; the state file does not. A write goes through the schema check before it lands, the revision advances atomically, and the next session, the next agent, and the reviewer all read the same versioned file instead of re-deriving where the work left off.');
   }
 
-  // ── wb-init-probes: health checks light up before the gate opens ───────────
+  // ── wb-init-probes：门禁打开前，健康检查依次点亮 ───────────────────
   function initProbes(host) {
     var W = 520, H = 260, D = '4.6s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -344,7 +343,7 @@
       'One deterministic script probes the runtime, dependencies, paths, and test command before the agent does anything else, and writes each answer into an init report. Only when every lamp is lit does the gate lift and real work begin; a cold session reads the report instead of paying the discovery tax again.');
   }
 
-  // ── wb-scope-bounce: one diff lands in scope, one bounces off the glob ─────
+  // ── wb-scope-bounce：一个 diff 落在范围内，另一个被 glob 边界弹回 ──
   function scopeBounce(host) {
     var W = 520, H = 250, D = '4.2s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -378,7 +377,7 @@
       'The contract lists where the task may write and where it must not. A diff that lands inside the allowed glob passes; a diff that drifts toward a forbidden path hits the contract boundary, bounces, and becomes a named violation with a rollback plan, caught by the checker rather than by a reviewer two days later.');
   }
 
-  // ── wb-feedback-loop: captured exit codes route back into the next turn ────
+  // ── wb-feedback-loop：捕获的退出码被传回下一回合 ───────────────────
   function feedbackLoop(host) {
     var W = 520, H = 260, D = '5s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -418,7 +417,7 @@
       'Every command goes through the runner, which captures stdout, stderr, exit code, and duration into a structured record. The first run fails with exit 1 and that record, not the agent\'s imagination of the output, routes back into the next turn; the retry then earns its exit 0 on the same evidence trail the gate will read.');
   }
 
-  // ── wb-gate-sequence: a diff clears three gates, the fourth blocks it ──────
+  // ── wb-gate-sequence：diff 通过前三道门禁，在第四道被拦截 ──────────
   function gateSequence(host) {
     var W = 520, H = 240, D = '4.6s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -452,7 +451,7 @@
       'The gate is a deterministic function over artifacts the agent already produced: the rule report, the scope report, the feedback records, and the diff. The change clears rules, scope, and feedback, but acceptance has no record of ever running, so the final gate stays down and done stays false, whatever the chat claimed.');
   }
 
-  // ── wb-builder-marker: artifacts cross the wall to an independent marker ───
+  // ── wb-builder-marker：artifact 穿过隔离墙交给独立评分器 ───────────
   function builderMarker(host) {
     var W = 520, H = 250, D = '4.4s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -486,7 +485,7 @@
       'The builder cannot grade its own work, so its artifacts pass through a slot in the wall to a second loop with a different system prompt, a different goal, and read-only access. The reviewer grades against a rubric line by line and emits a report; nothing it does can modify what the builder produced.');
   }
 
-  // ── wb-handoff-packet: state arcs across the gap between sessions ──────────
+  // ── wb-handoff-packet：状态跨过 session 之间的间隔传递 ─────────────
   function handoffPacket(host) {
     var W = 520, H = 260, D = '5.2s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -532,7 +531,7 @@
       'At session end the workbench compresses state, verdict, and review into one handoff packet and throws it across the boundary. The old session dims, the new one lights up already knowing its first action, so the next agent is productive in the first minute instead of spending thirty rediscovering the last thirty seconds.');
   }
 
-  // ── wb-ab-runs: the same task through both pipelines, five outcomes each ───
+  // ── wb-ab-runs：同一任务分别经过两条流水线，各产生五项结果 ─────────
   function abRuns(host) {
     var W = 520, H = 260, D = '4.8s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -564,7 +563,7 @@
       'The same task runs twice on the same repo: once prompt-only, once through the full workbench. Five measured outcomes do the arguing: tests, scope, feedback records, handoff quality, and reverts. The model is identical in both lanes; the surfaces are the only variable, and the tally is the case you hand a skeptic.');
   }
 
-  // ── wb-pack-install: the workbench pack copied into a target repo ──────────
+  // ── wb-pack-install：将 workbench 包复制到目标仓库 ─────────────────
   function packInstall(host) {
     var W = 520, H = 250, D = '4.8s';
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });

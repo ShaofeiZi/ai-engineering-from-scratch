@@ -1,6 +1,6 @@
-/* figures-math2.js - interactive math-foundations widgets (phase 01).
-   Loads after lesson-figures.js and registers through window.LF. Vanilla ES5,
-   no deps, theme via CSS vars. Each widget renders deterministically. */
+/* figures-math2.js - 交互式数学基础小部件（阶段 01）。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。原生 ES5，
+   无依赖，主题通过 CSS 变量定义。每个小部件确定性渲染。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -8,10 +8,10 @@
   var el = LF.el, svgEl = LF.svgEl, slider = LF.slider, select = LF.select;
   var fmtInt = LF.fmtInt, clamp = LF.clamp;
 
-  // ── svd-rank-reconstruction: keep k singular values, watch energy return ──
+  // ── svd-rank-reconstruction：保留 k 个奇异值，观察能量回归 ──
   function svdRank(host) {
-    // A fixed 8x8 pattern. Its singular values are baked in (decreasing), so
-    // energy retained = sum(top-k sigma^2) / sum(all sigma^2) is exact.
+    // 一个固定的 8x8 图案。其奇异值是预置的（递减），因此
+    // 保留能量 = sum(top-k sigma^2) / sum(all sigma^2) 是精确的。
     var sigma = [9.0, 5.4, 3.1, 1.8, 1.0, 0.55, 0.28, 0.12];
     var n = sigma.length;
     var total = 0, i;
@@ -25,7 +25,7 @@
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
     function cell(r, c) {
-      // smooth low-rank-friendly target intensity in [0,1]
+      // 平滑的、利于低秩重建的目标强度，取值于 [0,1]
       return 0.5 + 0.5 * Math.cos((r + c) * Math.PI / (n - 1));
     }
     state._render = function () {
@@ -33,7 +33,7 @@
       var keep = state.k, energy = 0, j;
       for (j = 0; j < keep; j++) { energy += sigma[j] * sigma[j]; }
       var frac = energy / total;
-      // reconstruction quality scales with retained energy: blend cell toward grey
+      // 重建质量随保留能量提升：将单元格向灰色混合
       var r, c;
       for (r = 0; r < n; r++) {
         for (c = 0; c < n; c++) {
@@ -46,7 +46,7 @@
           }));
         }
       }
-      // singular-value spectrum bars on the right
+      // 右侧的奇异值谱条形图
       var maxS = sigma[0], bw = 14, sx = GX;
       for (j = 0; j < n; j++) {
         var bh = sigma[j] / maxS * 120;
@@ -71,7 +71,7 @@
     state._render();
   }
 
-  // ── tensor-broadcast: do two shapes align trailing dims? ──────────────────
+  // ── tensor-broadcast：两个形状的尾部维度是否对齐？ ──────────────────
   function tensorBroadcast(host) {
     var state = { a0: 8, a1: 1, a2: 3, b0: 1, b1: 4, b2: 3 };
     var rows = el('div', {});
@@ -124,7 +124,7 @@
     state._render();
   }
 
-  // ── logsumexp-stability: naive exp overflows, max-subtraction stays finite ─
+  // ── logsumexp-stability：朴素 exp 会溢出，减去最大值后保持有限 ─
   function logsumexpStability(host) {
     var base = [1.0, 0.5, -0.3];
     var state = { big: 700 };
@@ -134,11 +134,11 @@
     var formula = el('div', { class: 'lf-formula' });
     state._render = function () {
       var x = [state.big].concat(base);
-      // naive: log(sum(exp(x)))  -- exp(710+) overflows to Infinity in float64
+      // 朴素：log(sum(exp(x)))  -- exp(710+) 在 float64 中溢出为 Infinity
       var naiveSum = 0, i;
       for (i = 0; i < x.length; i++) { naiveSum += Math.exp(x[i]); }
       var naive = Math.log(naiveSum);
-      // stable: m + log(sum(exp(x - m)))
+      // 稳定：m + log(sum(exp(x - m)))
       var m = x[0];
       for (i = 1; i < x.length; i++) { if (x[i] > m) { m = x[i]; } }
       var s = 0;
@@ -170,7 +170,7 @@
     state._render();
   }
 
-  // ── norm-unit-balls: L1 diamond, L2 circle, Linf square; readout point norm ─
+  // ── norm-unit-balls：L1 菱形、L2 圆形、Linf 方形；读出点的范数 ─
   function normUnitBalls(host) {
     var state = { which: 'l2', px: 0.6, py: 0.5 };
     var W = 260, H = 230, CX = 130, CY = 115, R = 90;
@@ -181,10 +181,10 @@
     function toY(v) { return CY - v * R; }
     state._render = function () {
       while (svg.firstChild) { svg.removeChild(svg.firstChild); }
-      // axes
+      // 坐标轴
       svg.appendChild(svgEl('line', { x1: toX(-1.3), y1: CY, x2: toX(1.3), y2: CY, stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
       svg.appendChild(svgEl('line', { x1: CX, y1: toY(-1.3), x2: CX, y2: toY(1.3), stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
-      // unit ball
+      // 单位球
       var shape;
       if (state.which === 'l1') {
         shape = svgEl('polygon', { points: [toX(1) + ',' + toY(0), toX(0) + ',' + toY(1), toX(-1) + ',' + toY(0), toX(0) + ',' + toY(-1)].join(' '), fill: 'none', stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '2' });
@@ -194,7 +194,7 @@
         shape = svgEl('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '2' });
       }
       svg.appendChild(shape);
-      // the point and its vector
+      // 该点及其向量
       svg.appendChild(svgEl('line', { x1: CX, y1: CY, x2: toX(state.px), y2: toY(state.py), stroke: 'var(--ink-mute,#999)', 'stroke-width': '1.5' }));
       svg.appendChild(svgEl('circle', { cx: toX(state.px), cy: toY(state.py), r: '5', fill: 'var(--warn,#b8870f)' }));
       var ax = Math.abs(state.px), ay = Math.abs(state.py);
@@ -217,7 +217,7 @@
     state._render();
   }
 
-  // ── monte-carlo-pi: fraction inside the quarter circle estimates pi ────────
+  // ── monte-carlo-pi：四分之一圆内的比例估计 pi ────────
   function monteCarloPi(host) {
     var state = { n: 200 };
     var W = 230, H = 230, PAD = 14, S = 200;
@@ -225,8 +225,8 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // deterministic low-discrepancy points (additive recurrence with the golden
-    // ratio conjugate) so the figure renders the same every time.
+    // 确定性的低偏差点（以黄金比例共轭为加项的递增序列），
+    // 使图示每次渲染结果一致。
     var g1 = 0.7548776662466927, g2 = 0.5698402909980532;
     state._render = function () {
       while (svg.firstChild) { svg.removeChild(svg.firstChild); }
@@ -259,9 +259,9 @@
     state._render();
   }
 
-  // ── linear-system-conditioning: two lines toward parallel, condition blows up ─
+  // ── linear-system-conditioning：两条直线趋于平行，条件数激增 ─
   function linearConditioning(host) {
-    // System: line1 x + y = 2 (fixed). line2 has slope controlled toward line1.
+    // 系统：line1 x + y = 2（固定）。line2 的斜率朝 line1 方向调整。
     var state = { tilt: 60 };
     var W = 260, H = 230, CX = 130, CY = 115, SC = 28;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -272,15 +272,15 @@
     function toY(y) { return CY - y * SC; }
     state._render = function () {
       while (svg.firstChild) { svg.removeChild(svg.firstChild); }
-      // Line 1: a1 x + b1 y = c1  ->  x + y = 2
+      // 直线 1：a1 x + b1 y = c1  ->  x + y = 2
       var a1 = 1, b1 = 1, c1 = 2;
-      // Line 2 angle approaches line 1 as tilt -> 100. line1 direction angle 135deg.
+      // 当 tilt -> 100 时，Line 2 的角度趋近于 Line 1。line1 方向角为 135deg。
       var t = state.tilt / 100;
       var ang = (135 - 55 * t) * Math.PI / 180; // 80deg .. 135deg
       var a2 = Math.cos(ang), b2 = Math.sin(ang);
-      var c2 = a2 * 1 + b2 * 1; // force both lines through the solution (1,1)
+      var c2 = a2 * 1 + b2 * 1; // 强制两条直线都经过解 (1,1)
       var det = a1 * b2 - a2 * b1;
-      // condition number of the 2x2 matrix via singular values
+      // 通过奇异值计算 2x2 矩阵的条件数
       var M = [[a1, b1], [a2, b2]];
       var ata00 = M[0][0] * M[0][0] + M[1][0] * M[1][0];
       var ata01 = M[0][0] * M[0][1] + M[1][0] * M[1][1];
@@ -290,7 +290,7 @@
       var l1 = tr / 2 + disc, l2 = tr / 2 - disc;
       var cond = Math.sqrt(l1 / Math.max(l2, 1e-12));
       function drawLine(a, b, c, st) {
-        // a x + b y = c, sample x range
+        // a x + b y = c，采样 x 的范围
         var pts = [], xx;
         for (xx = -4; xx <= 4.01; xx += 8) {
           if (Math.abs(b) > 1e-6) { pts.push([xx, (c - a * xx) / b]); }
@@ -318,7 +318,7 @@
     state._render();
   }
 
-  // ── random-walk-diffusion: spread of a 1D walk grows like sqrt(t) ──────────
+  // ── random-walk-diffusion：一维随机游走的扩散以 sqrt(t) 量级增长 ──────────
   function randomWalkDiffusion(host) {
     var state = { t: 50 };
     var W = 520, H = 220, PAD = 30;
@@ -327,10 +327,10 @@
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
     var TMAX = 200;
-    // a few deterministic sample paths via a fixed sign sequence per walker
+    // 通过每个游走者固定的符号序列生成若干确定性样本路径
     var walkers = 7;
     function step(seed, k) {
-      // deterministic pseudo-sign in {-1,+1}
+      // 确定性的伪符号 ∈ {-1,+1}
       var v = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453;
       v = v - Math.floor(v);
       return v < 0.5 ? -1 : 1;
@@ -340,7 +340,7 @@
     state._render = function () {
       while (svg.firstChild) { svg.removeChild(svg.firstChild); }
       svg.appendChild(svgEl('line', { x1: PAD, y1: H / 2, x2: W - PAD, y2: H / 2, stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
-      // theoretical +/- one std envelope: std = sqrt(t)
+      // 理论上的 +/- 一倍标准差包络：std = sqrt(t)
       var dUp = '', dDn = '', i;
       for (i = 0; i <= 120; i++) {
         var s = TMAX * i / 120;
@@ -377,7 +377,7 @@
     state._render();
   }
 
-  // ── roots-of-unity: n complex nth-roots evenly spaced on the unit circle ───
+  // ── roots-of-unity：n 个复数的 n 次单位根均匀分布在单位圆上 ───
   function rootsOfUnity(host) {
     var state = { n: 5 };
     var W = 260, H = 240, CX = 130, CY = 120, R = 95;
@@ -417,7 +417,7 @@
     state._render();
   }
 
-  // ── graph-degree-distribution: degrees sum to twice the edge count ─────────
+  // ── graph-degree-distribution：度数之和等于边数的两倍 ─────────
   function graphDegrees(host) {
     var state = { nodes: 6, edges: 7 };
     var W = 260, H = 240, CX = 130, CY = 110, R = 80;
@@ -430,10 +430,10 @@
       var n = state.nodes;
       var maxEdges = n * (n - 1) / 2;
       var e = Math.min(state.edges, maxEdges);
-      // deterministic edge list: enumerate all pairs in a fixed order, take first e
+      // 确定性的边表：按固定顺序枚举所有点对，取前 e 条
       var pairs = [], i, j;
       for (i = 0; i < n; i++) { for (j = i + 1; j < n; j++) { pairs.push([i, j]); } }
-      // interleave so early edges spread around the ring rather than clustering
+      // 交错排列，使较早的边在环上均匀分布而非聚集
       pairs.sort(function (a, b) { return ((a[1] - a[0]) - (b[1] - b[0])) || (a[0] - b[0]); });
       var deg = [];
       for (i = 0; i < n; i++) { deg.push(0); }

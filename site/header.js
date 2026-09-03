@@ -1,13 +1,12 @@
 /**
- * Shared header behaviors: responsive navigation, current-page state, and the
- * live GitHub star counter.
+ * 共享 header 行为：响应式导航、当前页面状态和实时 GitHub star 计数。
  */
 (function () {
   'use strict';
 
   var REPO = 'rohitg00/ai-engineering-from-scratch';
   var CACHE_KEY = 'gh:stars:' + REPO;
-  var CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  var CACHE_TTL_MS = 10 * 60 * 1000; // 10 分钟
   var COMPACT_HEADER_QUERY = '(max-width: 1400px)';
   var NARROW_HEADER_QUERY = '(max-width: 820px)';
   var NARRATION_VERSION = '20260829a';
@@ -101,7 +100,7 @@
     }
     var links = document.querySelectorAll('.header-github');
     for (var j = 0; j < links.length; j++) {
-      links[j].setAttribute('aria-label', 'View ai-engineering-from-scratch on GitHub, ' + format(n) + ' stars');
+      links[j].setAttribute('aria-label', '在 GitHub 上查看 ai-engineering-from-scratch，当前 ' + format(n) + ' 个 star');
     }
   }
 
@@ -121,7 +120,7 @@
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({ n: n, t: Date.now() }));
     } catch (e) {
-      // localStorage may be disabled
+      // localStorage 可能被禁用。
     }
   }
 
@@ -145,13 +144,13 @@
         paint(n);
       })
       .catch(function () {
-        // Leave the placeholder; the link still works.
+        // 保留占位符；链接仍可正常使用。
       });
   }
 
   /**
-   * Narration is a site capability, not a page-template responsibility. Load
-   * it once from the shared header so new pages cannot silently omit it.
+   * 朗读是站点能力，不是页面模板的职责。从共享 header 统一加载，避免新页面
+   * 无意中漏掉该功能。
    */
   function ensureNarration() {
     if (window.__AIFS_TTS_VERSION === NARRATION_VERSION || document.querySelector('script[data-aifs-tts="' + NARRATION_VERSION + '"]')) return;
@@ -224,6 +223,11 @@
     nav.insertBefore(link, github || null);
   }
 
+  function isPriorityRouteLink(link) {
+    var file = pageFile(link && link.getAttribute ? link.getAttribute('href') : '');
+    return file === 'index.html' || file === 'catalog.html' || file === 'learning-paths.html';
+  }
+
   function addNavigationLinks(nav) {
     ensureNavigationLink(nav, 'learning-paths.html', 'Learning Paths', '');
     ensureNavigationLink(nav, 'certifications.html', 'Certifications', 'header-mobile-only');
@@ -240,21 +244,21 @@
 
     navId += 1;
     if (!nav.id) nav.id = 'siteNavigation' + navId;
-    if (!nav.getAttribute('aria-label')) nav.setAttribute('aria-label', 'Primary');
+    if (!nav.getAttribute('aria-label')) nav.setAttribute('aria-label', '主导航');
 
     var toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'header-menu-toggle';
     toggle.setAttribute('aria-controls', nav.id);
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-label', 'Open navigation');
+    toggle.setAttribute('aria-label', '打开导航');
     toggle.innerHTML = '<span class="header-menu-icon" aria-hidden="true">'
       + '<span></span><span></span><span></span></span>';
     inner.insertBefore(toggle, nav);
 
     var priorityNav = document.createElement('nav');
     priorityNav.className = 'header-priority-nav';
-    priorityNav.setAttribute('aria-label', 'Quick links');
+    priorityNav.setAttribute('aria-label', '快捷链接');
     priorityNav.hidden = true;
     inner.insertBefore(priorityNav, nav);
 
@@ -263,9 +267,9 @@
       return child.tagName === 'A';
     });
     routeLinks.forEach(function (link) {
-      var label = link.textContent.trim().toLowerCase();
-      if (label !== 'contents' && label !== 'catalog' && label !== 'learning paths') return;
-      var marker = document.createComment('header-priority-' + label);
+      if (!isPriorityRouteLink(link)) return;
+      var file = pageFile(link.getAttribute('href') || '');
+      var marker = document.createComment('header-priority-' + file);
       nav.insertBefore(marker, link);
       priorityEntries.push({ link: link, marker: marker });
     });
@@ -279,7 +283,7 @@
     var tools = document.createElement('div');
     tools.className = 'header-mobile-tools';
     tools.setAttribute('role', 'group');
-    tools.setAttribute('aria-label', 'Site tools');
+    tools.setAttribute('aria-label', '站点工具');
     nav.appendChild(tools);
 
     var toolAnchor = document.createComment('header-tools');
@@ -339,7 +343,7 @@
       open = !!next;
       header.classList.toggle('header-nav-open', open);
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      toggle.setAttribute('aria-label', open ? '关闭导航' : '打开导航');
       if (compact && compact.matches) nav.hidden = !open;
       else nav.hidden = false;
       if (restoreFocus && !open) toggle.focus();

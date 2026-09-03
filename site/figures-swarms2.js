@@ -1,7 +1,7 @@
-/* figures-swarms2.js - animated, theme-aware figures for Phase 16
-   (multi-agent and swarms). Loads after lesson-figures.js, registers through
-   window.LF. No deps, ES5 only, SMIL animation, theme via CSS vars.
-   Authoring: a ```figure block naming one of the widgets below. */
+/* figures-swarms2.js - 第 16 阶段（多智能体与集群）的动画课程图示，支持主题适配。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，仅使用 ES5
+   和 SMIL 动画，通过 CSS 变量适配主题。编写时使用 ```figure 代码块指定下列
+   某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -33,8 +33,8 @@
   var BG = 'var(--bg,#fafaf5)';
   var MUTE = 'var(--ink-mute,#777)';
 
-  // ── swarm-consensus-wave: a ring of agents flips to one shared color in a
-  //    wave; one byzantine node stays off-color and never converges ──────────
+  // ── swarm-consensus-wave：环形智能体以波浪方式切换为同一种颜色；一个
+  //    拜占庭节点保持异色，始终不收敛 ──────────────────────────────────────
   function consensusWave(host) {
     var W = 520, H = 250, CX = 260, CY = 120, R = 90, N = 8;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -54,7 +54,7 @@
       if (isByz) {
         c.setAttribute('fill', WARN);
       } else {
-        // flip to consensus color in a staggered wave, then hold
+        // 以错开的波浪方式切换为共识颜色，然后保持
         var begin = (i * (period / N)).toFixed(2);
         c.appendChild(svgEl('animate', { attributeName: 'fill', values: SURF + ';' + SURF + ';' + BP + ';' + BP, keyTimes: '0;0.12;0.2;1', dur: period + 's', begin: begin + 's', repeatCount: 'indefinite' }));
       }
@@ -68,13 +68,13 @@
       'Honest agents converge on a shared value as the decision ripples around the ring. A single byzantine node (X) refuses to flip, so naive majority can still be captured. Classical BFT tolerates f < n/3 such nodes; the open question for LLM agents is correlated faults, not arbitrary ones.');
   }
 
-  // ── swarm-auction: bidders raise bars over time; the winner is highlighted,
-  //    paying the second-highest price (Vickrey) ──────────────────────────────
+  // ── swarm-auction：竞标者的柱条随时间升高；获胜者高亮，并支付第二高的价格
+  //    （Vickrey 拍卖）──────────────────────────────────────────────────────
   function auction(host) {
     var W = 520, H = 250, N = 5, base = 60, bw = 54, gap = 36, x0 = 70, period = 7;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var bids = [42, 88, 61, 30, 73];
-    var winner = 1, second = 4; // index of highest and second-highest
+    var winner = 1, second = 4; // 最高出价和第二高出价的索引
     var floorY = H - 50, maxH = 130, maxBid = 100, i;
     svg.appendChild(svgEl('line', { x1: 40, y1: floorY, x2: W - 30, y2: floorY, stroke: SOFT, 'stroke-width': '1.4' }));
     for (i = 0; i < N; i++) {
@@ -83,14 +83,14 @@
       var isWin = (i === winner);
       var bar = svgEl('rect', { x: x, y: floorY, width: bw, height: 0, fill: isWin ? BP : SURF, stroke: isWin ? BP : SOFT, 'stroke-width': '1.5' });
       var beg = (i * 0.5).toFixed(2);
-      // grow from floor to final height, then hold
+      // 从底部增长到最终高度，然后保持
       bar.appendChild(svgEl('animate', { attributeName: 'height', values: '0;' + h.toFixed(0) + ';' + h.toFixed(0), keyTimes: '0;0.45;1', dur: period + 's', begin: beg + 's', repeatCount: 'indefinite' }));
       bar.appendChild(svgEl('animate', { attributeName: 'y', values: floorY + ';' + (floorY - h).toFixed(0) + ';' + (floorY - h).toFixed(0), keyTimes: '0;0.45;1', dur: period + 's', begin: beg + 's', repeatCount: 'indefinite' }));
       svg.appendChild(bar);
       svg.appendChild(txt(x + bw / 2, floorY + 18, 'a' + i, '10', isWin ? BP : MUTE));
       svg.appendChild(txt(x + bw / 2, floorY - h - 8, '$' + bids[i], '11', isWin ? BP : MUTE));
       if (i === second) {
-        // settlement line: winner pays the second-highest bid
+        // 结算线：获胜者支付第二高的出价
         var sy = floorY - bids[second] / maxBid * maxH;
         var pay = svgEl('line', { x1: 40, y1: sy, x2: W - 30, y2: sy, stroke: WARN, 'stroke-width': '1.4', 'stroke-dasharray': '5 4', opacity: '0' });
         pay.appendChild(svgEl('animate', { attributeName: 'opacity', values: '0;0;0.9;0.9', keyTimes: '0;0.55;0.7;1', dur: period + 's', repeatCount: 'indefinite' }));
@@ -103,25 +103,25 @@
       'Agents bid for a task; bids rise as the round runs. The highest bidder (a1) wins but pays the second-highest price — the dashed line. Truthful bidding is the dominant strategy under second-price, which is why mechanism design favors it for allocating work and tokens across agents.');
   }
 
-  // ── swarm-stigmergy: ants leave pheromone on edges between nest and food;
-  //    the shortest edge brightens as traffic concentrates, others fade ───────
+  // ── swarm-stigmergy：蚂蚁在巢穴与食物之间的路径上留下信息素；随着流量集中，
+  //    最短路径变亮，其他路径逐渐变淡 ──────────────────────────────────────
   function stigmergy(host) {
     var W = 520, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var nest = { x: 60, y: 125 }, food = { x: 460, y: 125 };
-    // three routes: a short direct one and two long detours
+    // 三条路线：一条短直达路线和两条较长绕行路线
     var paths = [
-      'M60 125 L260 125 L460 125',          // short, strong
-      'M60 125 Q260 40 460 125',            // medium
-      'M60 125 Q260 215 460 125'            // long, weak
+      'M60 125 L260 125 L460 125',          // 短而强
+      'M60 125 Q260 40 460 125',            // 中等
+      'M60 125 Q260 215 460 125'            // 长而弱
     ];
     var strength = [1, 0.45, 0.2], dur = [2.0, 2.9, 3.6];
     var i;
     for (i = 0; i < paths.length; i++) {
-      // base trail: opacity oscillates to show deposit + evaporation
+      // 基础路径：透明度振荡，以表现沉积与蒸发
       var base = svgEl('path', { id: 'lf-st-p' + i, d: paths[i], fill: 'none', stroke: BP, 'stroke-width': (1 + strength[i] * 3).toFixed(1), 'stroke-linecap': 'round' });
       base.appendChild(anim('opacity', (0.15 * strength[i]).toFixed(2) + ';' + (0.9 * strength[i] + 0.1).toFixed(2) + ';' + (0.15 * strength[i]).toFixed(2), 3 + i, {}));
       svg.appendChild(base);
-      // ants riding the trail via animateMotion
+      // 蚂蚁通过 animateMotion 沿路径移动
       var nAnts = i === 0 ? 4 : 2, j;
       for (j = 0; j < nAnts; j++) {
         var ant = svgEl('circle', { r: '4', fill: i === 0 ? BP : MUTE });
@@ -141,8 +141,8 @@
       'No agent plans the route. Each deposits pheromone as it travels and prefers stronger trails, so the shortest path accumulates traffic while detours evaporate. ACO turns this into agent routing: the trail records which agent handled which task-type, decay lets better routes be rediscovered.');
   }
 
-  // ── swarm-hierarchy-token: a delegation token flows down a tree of managers
-  //    to workers, then results bubble back up the same edges ──────────────────
+  // ── swarm-hierarchy-token：委派 token 沿管理者树向下流向 worker，随后结果
+  //    沿相同边逐层向上返回 ─────────────────────────────────────────────────
   function hierarchyToken(host) {
     var W = 520, H = 260, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var mgr = { x: 260, y: 36, l: 'MGR' };
@@ -157,7 +157,7 @@
     for (i = 0; i < edges.length; i++) {
       svg.appendChild(svgEl('path', { id: 'lf-hi-e' + i, d: edges[i], fill: 'none', stroke: SOFT, 'stroke-width': '1.4' }));
     }
-    // delegation token: travels down (first half), result bubbles up (second half)
+    // 委派 token：前半程向下传递，后半程将结果向上返回
     for (i = 0; i < edges.length; i++) {
       var down = svgEl('circle', { r: '5', fill: BP });
       var dm = svgEl('animateMotion', { dur: period + 's', repeatCount: 'indefinite', begin: (i < 2 ? 0 : 0.9) + 's', keyPoints: '0;1;1;1', keyTimes: '0;0.3;0.5;1', calcMode: 'linear' });
@@ -184,8 +184,8 @@
       'A manager splits the goal and delegates down through sub-managers to workers; results return along the same edges. The risk: an LLM manager re-reasons the whole tree each turn, so small context drift misallocates work and the structure loops. Often a flat sequence beats it.');
   }
 
-  // ── swarm-message-bus: typed packets travel along a shared spine; MCP and
-  //    A2A lanes carry different message kinds via animateMotion ──────────────
+  // ── swarm-message-bus：类型化数据包沿共享主干传输；MCP 和 A2A 通道通过
+  //    animateMotion 承载不同类型的消息 ────────────────────────────────────
   function messageBus(host) {
     var W = 520, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var lanes = [
@@ -194,7 +194,7 @@
       { y: 180, l: 'ANP · identity', d: 'M70 180 L450 180', col: MUTE }
     ];
     var i, j;
-    // endpoints
+    // 端点
     [70, 450].forEach(function (x, e) {
       svg.appendChild(svgEl('rect', { x: x - 26, y: 60, width: 52, height: 140, rx: '5', fill: SURF, stroke: SOFT, 'stroke-width': '1.5' }));
       svg.appendChild(txt(x, 52, e === 0 ? 'agent A' : 'agent B', '10', MUTE));
@@ -205,7 +205,7 @@
       svg.appendChild(txt(W - 60, ln.y - 8, ln.l, '9', ln.col, 'end'));
       var nP = 3, dur = 3 + i * 0.6;
       for (j = 0; j < nP; j++) {
-        var dir = (i === 1) ? 1 : 0; // A2A travels back B->A occasionally
+        var dir = (i === 1) ? 1 : 0; // A2A 偶尔从 B 返回 A
         var pkt = svgEl('rect', { x: -5, y: -5, width: 10, height: 10, rx: '2', fill: ln.col });
         var mm = svgEl('animateMotion', { dur: dur + 's', repeatCount: 'indefinite', begin: (j * dur / nP).toFixed(2) + 's', rotate: '0' });
         if (dir) { mm.setAttribute('keyPoints', '1;0'); mm.setAttribute('keyTimes', '0;1'); }
@@ -219,8 +219,8 @@
       'Agents stop passing raw strings and speak typed protocols over a shared bus. MCP carries tool calls, A2A carries delegated tasks (and replies), ANP carries identity. Separating the lanes is what makes a multi-agent system auditable and lets agents built by different teams interoperate.');
   }
 
-  // ── swarm-roles: agents take distinct shapes/roles and an artifact passes
-  //    through plan → execute → critique → verify, looping back on reject ──────
+  // ── swarm-roles：智能体采用不同形状/角色，制品依次经过规划 → 执行 → 批评 →
+  //    验证，被拒绝时返回循环起点 ───────────────────────────────────────────
   function roles(host) {
     var W = 520, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var R = [
@@ -230,11 +230,11 @@
       { x: 450, l: 'VERIFY', shape: 'hex' }
     ];
     var y = 110, i;
-    // connecting spine
+    // 连接主干
     var spine = 'M' + R[0].x + ' ' + y;
     for (i = 1; i < R.length; i++) spine += ' L' + R[i].x + ' ' + y;
     svg.appendChild(svgEl('path', { id: 'lf-rl-spine', d: spine, fill: 'none', stroke: SOFT, 'stroke-width': '1.4' }));
-    // reject loop critic -> plan
+    // 从批评返回规划的拒绝循环
     svg.appendChild(svgEl('path', { d: 'M330 ' + (y + 24) + ' Q200 ' + (y + 90) + ' 70 ' + (y + 24), fill: 'none', stroke: WARN, 'stroke-width': '1.3', 'stroke-dasharray': '5 4' }));
     svg.appendChild(txt(200, y + 86, 'reject → re-plan', '10', WARN));
     function drawRole(r, idx) {
@@ -246,7 +246,7 @@
       svg.appendChild(txt(r.x, y + 4, r.l, '9', BP));
     }
     R.forEach(drawRole);
-    // artifact token travels along the spine, pulsing as it lands on each role
+    // 制品 token 沿主干移动，到达每个角色时产生脉冲
     var art = svgEl('circle', { r: '6', fill: BP });
     var am = svgEl('animateMotion', { dur: '6s', repeatCount: 'indefinite', keyPoints: '0;0.33;0.66;1;1', keyTimes: '0;0.3;0.6;0.85;1', calcMode: 'linear' });
     am.appendChild(svgEl('mpath', { href: '#lf-rl-spine' }));
@@ -259,14 +259,14 @@
       'More agents do not help; different agents do. The plan, the artifact, a subjective critique, and a deterministic check are separate roles with separate tools. The verifier is load-bearing: MAST traces nearly every multi-agent failure to missing or broken verification. A reject sends the artifact back to re-plan.');
   }
 
-  // ── swarm-blackboard: writers post to a central board, readers subscribe;
-  //    one poisoned fact spreads outward to readers (gossip ripple) ────────────
+  // ── swarm-blackboard：写入者向中央黑板发布内容，读取者订阅；一条被污染的事实
+  //    向外传播至读取者（流言涟漪）─────────────────────────────────────────
   function blackboard(host) {
     var W = 520, H = 260, CX = 260, CY = 130, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
-    // central board
+    // 中央黑板
     svg.appendChild(svgEl('rect', { x: CX - 70, y: CY - 38, width: 140, height: 76, rx: '6', fill: SURF, stroke: BP, 'stroke-width': '2' }));
     svg.appendChild(txt(CX, CY - 14, 'BLACKBOARD', '10', BP));
-    // a fact entry that turns from blue (verified) to gold (poisoned) and back
+    // 一条事实记录从蓝色（已验证）变为金色（被污染），然后恢复
     var fact = svgEl('rect', { x: CX - 54, y: CY, width: 108, height: 16, rx: '3', fill: BP });
     fact.appendChild(anim('fill', BP + ';' + BP + ';' + WARN + ';' + WARN + ';' + BP, 8, { keyTimes: '0;0.25;0.35;0.8;1' }));
     svg.appendChild(fact);
@@ -279,19 +279,19 @@
     for (i = 0; i < agents.length; i++) {
       var a = agents[i];
       var isW = a.w === 1;
-      // edge between agent and board
+      // 智能体与黑板之间的边
       var ex = CX + (a.x < CX ? -70 : 70), ey = CY;
       svg.appendChild(svgEl('path', { id: 'lf-bb-e' + i, d: 'M' + a.x + ' ' + a.y + ' L' + ex + ' ' + ey, fill: 'none', stroke: SOFT, 'stroke-width': '1.2' }));
       svg.appendChild(svgEl('circle', { cx: a.x, cy: a.y, r: '14', fill: SURF, stroke: isW ? WARN : BP, 'stroke-width': '1.8' }));
       svg.appendChild(txt(a.x, a.y + 4, isW ? 'W' : 'R', '10', isW ? WARN : BP));
-      // packet: writers push to board; readers pull from board
+      // 数据包：写入者推送至黑板；读取者从黑板拉取
       var pkt = svgEl('circle', { r: '4', fill: isW ? WARN : BP });
-      var rev = !isW; // readers travel board -> agent
+      var rev = !isW; // 读取者从黑板流向智能体
       var mm = svgEl('animateMotion', { dur: (isW ? 4 : 4.5) + 's', repeatCount: 'indefinite', begin: (i * 0.4).toFixed(2) + 's' });
       if (rev) { mm.setAttribute('keyPoints', '1;0'); mm.setAttribute('keyTimes', '0;1'); }
       mm.appendChild(svgEl('mpath', { href: '#lf-bb-e' + i }));
       pkt.appendChild(mm);
-      // the poisoned reader's packet flashes gold to show adoption
+      // 被污染的读取者数据包闪烁金色，表示已经采纳
       if (i === poisonReader) pkt.appendChild(anim('fill', BP + ';' + WARN + ';' + WARN + ';' + BP, 4.5, { keyTimes: '0;0.4;0.7;1' }));
       svg.appendChild(pkt);
     }
@@ -300,8 +300,8 @@
       'Agents share facts through a central board instead of copying messages. The danger is memory poisoning: one agent writes a hallucination, every reader downstream adopts it as verified, and accuracy decays silently. Provenance, an unwritable verifier, and per-agent views are the mitigations that hold.');
   }
 
-  // ── swarm-speaker: a selector token hops between chat agents around a pool,
-  //    settling on the next speaker (leader-election style) ───────────────────
+  // ── swarm-speaker：选择器 token 在共享池周围的聊天智能体之间跳转，最终停在
+  //    下一位发言者上（类似领导者选举）─────────────────────────────────────
   function speaker(host) {
     var W = 520, H = 260, CX = 260, CY = 135, R = 88, N = 5, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var px = [], py = [], i;
@@ -309,18 +309,18 @@
       var ang = -Math.PI / 2 + i * 2 * Math.PI / N;
       px.push(CX + R * Math.cos(ang)); py.push(CY + R * Math.sin(ang));
     }
-    // central shared pool
+    // 中央共享池
     svg.appendChild(svgEl('circle', { cx: CX, cy: CY, r: '30', fill: SURF, stroke: SOFT, 'stroke-width': '1.4' }));
     svg.appendChild(txt(CX, CY - 2, 'shared', '9', MUTE));
     svg.appendChild(txt(CX, CY + 10, 'pool', '9', MUTE));
-    // spokes from pool to each agent
+    // 从共享池连接到各智能体的辐条
     for (i = 0; i < N; i++) {
       svg.appendChild(svgEl('line', { x1: CX, y1: CY, x2: px[i], y2: py[i], stroke: SOFT, 'stroke-width': '1' }));
     }
-    var period = 7.5, settle = N; // hop through all, then settle on one
+    var period = 7.5, settle = N; // 依次跳过所有智能体，然后停在其中一个上
     for (i = 0; i < N; i++) {
       var on = svgEl('circle', { cx: px[i], cy: py[i], r: '17', fill: SURF, stroke: BP, 'stroke-width': '2' });
-      // each agent lights up in turn as the token visits, last one (index 2) holds
+      // token 访问时，各智能体依次亮起，最后一个（索引 2）保持高亮
       var lit = (i === 2);
       var k0 = (i / N).toFixed(3), k1 = ((i + 0.5) / N).toFixed(3);
       var vals = lit
@@ -331,7 +331,7 @@
       svg.appendChild(on);
       svg.appendChild(txt(px[i], py[i] + 4, String.fromCharCode(65 + i), '11', BP));
     }
-    // selector token hops between agents then rests on the chosen one (index 2)
+    // 选择器 token 在智能体之间跳转，最后停在选中的智能体（索引 2）上
     var order = [0, 1, 2, 3, 4, 2], motVals = '', j;
     for (j = 0; j < order.length; j++) {
       motVals += px[order[j]] + ',' + (py[order[j]] - 26) + (j < order.length - 1 ? ';' : '');

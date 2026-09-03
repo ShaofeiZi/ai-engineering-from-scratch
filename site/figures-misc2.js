@@ -1,9 +1,8 @@
-/* figures-misc2.js: animated lesson figures spanning Phase 15 (Autonomous
-   Systems), Phase 17 (Infrastructure and Production), and Phase 11 (LLM
-   Engineering). Loads after lesson-figures.js and registers through
-   window.LF.register. Vanilla ES5, no deps, theme via CSS vars. Animation is
-   SMIL only (animate / animateMotion / animateTransform). Authoring is the same
-   fenced block:
+/* figures-misc2.js：覆盖 Phase 15（自主系统）、Phase 17（基础设施与生产）和
+   Phase 11（LLM 工程）的动画课程图示。在 lesson-figures.js 之后加载，并通过
+   window.LF.register 注册。原生 ES5，无依赖，主题由 CSS 变量控制。动画仅使用
+   SMIL（animate / animateMotion / animateTransform）。编写方式仍使用相同的
+   围栏代码块：
        ```figure
        mx-tool-call-loop
        ``` */
@@ -42,7 +41,7 @@
     return svgEl('text', { x: x, y: y, 'font-family': 'var(--font-mono,monospace)', 'font-size': size || 11, fill: fill || MUTE, 'text-anchor': anchor || 'middle' }, [document.createTextNode(s)]);
   }
 
-  // ── mx-propose-then-commit: durable record walks propose→review→commit→verify
+  // ── mx-propose-then-commit：持久记录依次经过提议→审查→提交→验证
   // phases/15-autonomous-systems/15-propose-then-commit
   function proposeThenCommit(host) {
     var W = 520, H = 230;
@@ -62,11 +61,11 @@
       svg.appendChild(txt(st.x + 45, 118, st.s, 7.5, MUTE));
       if (i < 3) svg.appendChild(svgEl('path', { d: 'M' + (st.x + 90) + ' 105 L' + (st.x + 130) + ' 105', fill: 'none', stroke: SOFT, 'stroke-width': 1.2 }));
     });
-    // the durable record token travels stage to stage and loops
+    // 持久记录 token 在各阶段间移动并循环
     var rec = svgEl('g', {}, [svgEl('rect', { x: -11, y: -9, width: 22, height: 18, rx: 3, fill: BP }), txt(0, 4, 'rec', 7.5, BG)]);
     rec.appendChild(motion('M85 105 L215 105 L345 105 L475 105', '6.4s', '0s'));
     svg.appendChild(rec);
-    // rubber-stamp warning: a fast skip from review straight past commit, flagged
+    // 走过场警告：从审查快速跳过提交阶段时进行标记
     var stamp = txt(215, 60, 'rubber-stamp: skips review', 8, WARN);
     stamp.appendChild(anim('opacity', '0;0;0;1;1;0', '6.4s', { begin: '1.6s' }));
     svg.appendChild(stamp);
@@ -76,7 +75,7 @@
       'The 2026 HITL shape is not a synchronous Approve prompt. The proposed action is persisted with an idempotency key, surfaced with intent, blast radius, and a rollback plan, committed only on positive acknowledgement, then verified to confirm the side effect actually happened. The failure mode is the rubber-stamp: clicking Approve without review. Challenge-and-response with an explicit checklist is the documented mitigation.');
   }
 
-  // ── mx-priority-tiers: four-tier resolver, higher tier always wins ──────────
+  // ── mx-priority-tiers：四级冲突解析器，较高层级始终优先 ─────────────
   // phases/15-autonomous-systems/17-constitutional-ai
   function priorityTiers(host) {
     var W = 520, H = 240;
@@ -92,7 +91,7 @@
       svg.appendChild(svgEl('rect', { x: x, y: ti.y, width: ti.w, height: 36, rx: 4, fill: 'none', stroke: ti.c, 'stroke-width': i === 0 ? 2 : 1.4 }));
       svg.appendChild(txt(W / 2, ti.y + 23, ti.t, 9.5, ti.hard ? WARN : INK));
     });
-    // a request signal rises through the tiers and is resolved at the top tier
+    // 请求信号逐级上升，并在最高层级得到解析
     var probe = svgEl('circle', { cx: W / 2 + 130, cy: 202, r: 6, fill: BP });
     probe.appendChild(anim('cy', '202;202;154;106;58;58', '5s'));
     probe.appendChild(anim('cx', (W / 2 + 130) + ';' + (W / 2 + 130) + ';' + (W / 2 + 90) + ';' + (W / 2 + 40) + ';' + (W / 2) + ';' + (W / 2), '5s'));
@@ -105,7 +104,7 @@
       'The 2026 Claude Constitution ranks behaviour in four tiers: safety and supporting human oversight first, ethics second, Anthropic guidelines third, helpfulness last. When tiers conflict the higher one wins, the same shape as Unix priorities or network QoS. Hardcoded prohibitions sit above the whole stack and cannot be overridden; everything else is reason-based within the hierarchy, which trades auditability for generalisation to unseen cases.');
   }
 
-  // ── mx-research-loop: hypothesis→code→run→critique cycle with sandbox + review
+  // ── mx-research-loop：在沙箱和审查下循环执行假设→编码→运行→批判
   // phases/15-autonomous-systems/05-ai-scientist-v2
   function researchLoop(host) {
     var W = 520, H = 240, CX = 260, CY = 120, R = 78;
@@ -118,7 +117,7 @@
       { a: 198, t: 'figures', c: BP },
       { a: 270, t: 'writeup', c: BP }
     ];
-    // dashed cycle ring
+    // 虚线循环环
     var ring = svgEl('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: SOFT, 'stroke-width': 1.4, 'stroke-dasharray': '5 5' });
     ring.appendChild(anim('stroke-dashoffset', '40;0', '2.2s'));
     svg.appendChild(ring);
@@ -129,11 +128,11 @@
       var lx = CX + (R + 30) * Math.cos(rad), ly = CY + (R + 30) * Math.sin(rad) + 3;
       svg.appendChild(txt(lx, ly, n.t, 8.5, n.c === WARN ? WARN : INK));
     });
-    // the loop pointer orbits the ring
+    // 循环指针沿环运行
     var ptr = svgEl('circle', { cx: 0, cy: 0, r: 7, fill: BP });
     ptr.appendChild(motion('M' + CX + ' ' + (CY - R) + ' A ' + R + ' ' + R + ' 0 1 1 ' + (CX - 0.1) + ' ' + (CY - R) + ' Z', '5s', '0s'));
     svg.appendChild(ptr);
-    // center critique label
+    // 中央批判标签
     svg.appendChild(txt(CX, CY - 4, 'VLM', 9, INK));
     svg.appendChild(txt(CX, CY + 10, 'critique', 8, MUTE));
     svg.appendChild(txt(CX, 224, '42% of runs fail on coding errors; the loop re-enters at sandbox', 8.5, WARN));
@@ -141,7 +140,7 @@
       'AI Scientist v2 closes the research loop without human templates: it generates ideas, checks novelty, drafts and runs experiments in a sandbox, has a vision-language model critique the figures, and writes the paper, iterating on internal review. One generated paper passed an ICLR 2025 workshop review. Independent evaluation found 42% of experiments failed on coding errors and the novelty check often mislabeled established methods as new, so the sandbox edge of the loop is where reliability is decided.');
   }
 
-  // ── mx-speculative-tree: draft proposes K tokens, target verifies, accept/reject
+  // ── mx-speculative-tree：draft 提议 K 个 token，target 验证并接受或拒绝
   // phases/17-infrastructure-and-production/05-eagle3-speculative-decoding
   function speculativeTree(host) {
     var W = 520, H = 235;
@@ -152,7 +151,7 @@
     svg.appendChild(box(370, 95, 80, 44, BG, INK));
     svg.appendChild(txt(410, 113, 'target', 9, INK));
     svg.appendChild(txt(410, 127, '1 forward', 8, MUTE));
-    // K drafted tokens in a row between draft and target; last is rejected
+    // draft 与 target 之间依次排列 K 个候选 token；最后一个被拒绝
     var ks = [{ x: 140, ok: true }, { x: 190, ok: true }, { x: 240, ok: true }, { x: 290, ok: false }];
     ks.forEach(function (k, i) {
       var tok = svgEl('rect', { x: k.x, y: 102, width: 30, height: 28, rx: 3, fill: 'none', stroke: SOFT, 'stroke-width': 1.4 });
@@ -163,7 +162,7 @@
       mark.appendChild(anim('opacity', '0;0;1;1', '4s', { begin: (i * 0.4) + 's' }));
       svg.appendChild(mark);
     });
-    // draft proposes (token flowing right), target verifies (single pulse back)
+    // draft 提议（token 向右流动），target 验证（单次脉冲返回）
     var prop = svgEl('circle', { cx: 0, cy: 0, r: 5, fill: BP });
     prop.appendChild(motion('M100 117 L370 117', '4s', '0s'));
     svg.appendChild(prop);
@@ -176,7 +175,7 @@
       'EAGLE-3 trains a draft head on the target model hidden states, so its distribution tracks the target and acceptance rate alpha lands in the 0.6 to 0.8 band on general chat. The draft proposes K tokens; the target verifies all K in a single forward; accepted tokens are amortized free. But every rejected draft costs a second target pass, so below alpha of about 0.55 the technique is net negative at high concurrency. Measure alpha on real traffic first, flip the flag second.');
   }
 
-  // ── mx-gateway-fallback: one API fans out to providers, 429 reroutes ────────
+  // ── mx-gateway-fallback：一个 API 扇出到多个提供方，遇到 429 时改道 ──
   // phases/17-infrastructure-and-production/19-ai-gateways
   function gatewayFallback(host) {
     var W = 520, H = 235;
@@ -194,13 +193,13 @@
       svg.appendChild(txt(445, p.y - 4, p.t, 9, p.c));
       svg.appendChild(txt(445, p.y + 10, p.s, 7.5, MUTE));
     });
-    // primary link blocked (warn), fallback link active (blue dash)
+    // 主链路被阻断（警告色），备用链路处于活动状态（蓝色虚线）
     svg.appendChild(svgEl('path', { d: 'M120 108 L388 45', fill: 'none', stroke: WARN, 'stroke-width': 1.2, 'stroke-dasharray': '3 5' }));
     var fb = svgEl('path', { d: 'M120 116 L388 110', fill: 'none', stroke: BP, 'stroke-width': 2, 'stroke-dasharray': '6 4' });
     fb.appendChild(anim('stroke-dashoffset', '20;0', '0.8s'));
     svg.appendChild(fb);
     svg.appendChild(svgEl('path', { d: 'M120 124 L388 175', fill: 'none', stroke: SOFT, 'stroke-width': 1, 'stroke-dasharray': '3 5' }));
-    // requests in: first tries primary (bounces), then routes to fallback
+    // 请求进入：先尝试主链路（被弹回），再路由到备用链路
     var i;
     for (i = 0; i < 4; i++) {
       var g = svgEl('g', {}, [svgEl('circle', { cx: 0, cy: 0, r: 5, fill: BP })]);
@@ -215,7 +214,7 @@
       'A gateway sits between your apps and providers, consolidating routing, fallback, retries, rate limits, secret references, and observability behind one OpenAI-compatible API. When the primary returns 429 or 5xx the gateway reroutes to a fallback provider so the request still completes. The 2026 split: LiteLLM (MIT, 100+ providers, breaks down near 2000 RPS), Portkey (control-plane, guardrails), Kong AI (fastest in its own benchmark), Bifrost (auto-retry). Data residency drives self-host vs managed.');
   }
 
-  // ── mx-sequential-test: cumulative effect crosses an early-stop boundary ────
+  // ── mx-sequential-test：累积效应跨过提前停止边界 ───────────────────
   // phases/17-infrastructure-and-production/21-ab-testing-llm-features
   function sequentialTest(host) {
     var W = 520, H = 230, PAD = 36;
@@ -223,7 +222,7 @@
     var midY = H / 2;
     function px(t) { return PAD + t * (W - 2 * PAD); }
     function py(v) { return midY - v * (midY - PAD); }
-    // funnel-shaped sequential boundaries (always-valid): wide early, narrow late
+    // 漏斗形序贯边界（始终有效）：前期宽，后期窄
     function bound(sign) {
       var d = '', i;
       for (i = 0; i <= 40; i++) {
@@ -239,7 +238,7 @@
     svg.appendChild(svgEl('line', { x1: PAD, y1: midY, x2: W - PAD, y2: midY, stroke: MUTE, 'stroke-width': 1, 'stroke-dasharray': '2 4' }));
     svg.appendChild(txt(W - PAD, py(1) - 6, 'reject H0 (B wins)', 8, BP, 'end'));
     svg.appendChild(txt(W - PAD, midY + 14, 'no effect', 8, MUTE, 'end'));
-    // cumulative test statistic random-walks up and crosses the upper boundary
+    // 累积检验统计量随机游走上升，并跨过上边界
     var walk = 'M' + px(0) + ' ' + py(0) + ' L' + px(0.12) + ' ' + py(0.18) + ' L' + px(0.24) + ' ' + py(0.1) +
       ' L' + px(0.36) + ' ' + py(0.34) + ' L' + px(0.48) + ' ' + py(0.46) + ' L' + px(0.6) + ' ' + py(0.62) +
       ' L' + px(0.7) + ' ' + py(0.78);
@@ -259,33 +258,33 @@
       'Evals ask whether the model can do the job; A/B tests ask whether users care. Fixed-horizon tests punish peeking, so 2026 platforms use sequential testing with always-valid boundaries that stay wide early and tighten over time. The cumulative statistic random-walks until it crosses a boundary, at which point you stop and ship, or it stays inside and you call it flat. CUPED reduces variance and Benjamini-Hochberg corrects for testing many variants at once.');
   }
 
-  // ── mx-schema-funnel: free text → constrained decode → validated typed JSON ──
+  // ── mx-schema-funnel：自由文本 → 约束解码 → 验证后的类型化 JSON ──────
   // phases/11-llm-engineering/03-structured-outputs
   function schemaFunnel(host) {
     var W = 520, H = 235;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
-    // free text on the left
+    // 左侧为自由文本
     svg.appendChild(box(28, 70, 120, 90, BG, MUTE));
     svg.appendChild(txt(88, 60, 'free text', 9, MUTE));
     [82, 100, 118, 136].forEach(function (ly, i) {
       svg.appendChild(svgEl('line', { x1: 40, y1: ly, x2: 40 + [96, 80, 104, 60][i], y2: ly, stroke: SOFT, 'stroke-width': 3 }));
     });
-    // constrained-decode grammar gate in the middle
+    // 中间为约束解码语法门禁
     svg.appendChild(box(210, 80, 100, 70, BG, BP));
     svg.appendChild(txt(260, 70, 'grammar gate', 9, BP));
     svg.appendChild(txt(260, 108, 'FSM / CFG', 8, MUTE));
     svg.appendChild(txt(260, 124, 'mask logits', 8, MUTE));
-    // valid JSON on the right
+    // 右侧为有效 JSON
     svg.appendChild(box(372, 70, 120, 90, BG, INK));
     svg.appendChild(txt(432, 60, 'typed JSON', 9, INK));
     svg.appendChild(txt(432, 95, '{ name, price,', 8, BP, 'middle'));
     svg.appendChild(txt(432, 110, '  in_stock }', 8, BP, 'middle'));
-    // links
+    // 链路
     svg.appendChild(svgEl('path', { d: 'M148 115 L210 115', fill: 'none', stroke: SOFT, 'stroke-width': 1.4 }));
     var g2 = svgEl('path', { d: 'M310 115 L372 115', fill: 'none', stroke: BP, 'stroke-width': 2, 'stroke-dasharray': '6 4' });
     g2.appendChild(anim('stroke-dashoffset', '20;0', '0.8s'));
     svg.appendChild(g2);
-    // tokens fall through the gate; invalid ones (warn) are masked out, valid pass
+    // token 通过门禁；无效项（警告色）被屏蔽，有效项通过
     var spec = [{ ok: true, b: '0s' }, { ok: false, b: '0.7s' }, { ok: true, b: '1.4s' }, { ok: true, b: '2.1s' }];
     spec.forEach(function (s) {
       var c = svgEl('circle', { cx: 0, cy: 0, r: 5, fill: s.ok ? BP : WARN });
@@ -303,7 +302,7 @@
       'An LLM returns a string; your application needs typed JSON. Adding "respond in JSON" to the prompt works about 90% of the time and crashes on the rest. Constrained decoding closes the gap at the token level: a finite-state machine or grammar masks the logits so any token that would break the schema is forbidden before it is sampled. The output is valid JSON by construction, not by post-processing, with a Pydantic layer validating types and retrying on the rare miss.');
   }
 
-  // ── mx-tool-call-loop: model emits call JSON → execute → result back → answer
+  // ── mx-tool-call-loop：模型输出调用 JSON → 执行 → 返回结果 → 回答 ───
   // phases/11-llm-engineering/09-function-calling
   function toolCallLoop(host) {
     var W = 520, H = 235;
@@ -314,17 +313,17 @@
     svg.appendChild(box(350, 90, 110, 56, BG, INK));
     svg.appendChild(txt(405, 112, 'your code', 9.5, INK));
     svg.appendChild(txt(405, 128, 'the hands', 8, MUTE));
-    // top arc: model emits call JSON to code
+    // 上方弧线：模型向代码发送调用 JSON
     var out = svgEl('path', { d: 'M170 100 C 240 50, 290 50, 350 100', fill: 'none', stroke: BP, 'stroke-width': 1.8, 'stroke-dasharray': '6 4' });
     out.appendChild(anim('stroke-dashoffset', '20;0', '0.8s'));
     svg.appendChild(out);
     svg.appendChild(txt(260, 56, 'call: get_weather("Tokyo")', 8.5, BP));
-    // bottom arc: code returns result to model
+    // 下方弧线：代码向模型返回结果
     var back = svgEl('path', { d: 'M350 136 C 290 186, 240 186, 170 136', fill: 'none', stroke: INK, 'stroke-width': 1.8, 'stroke-dasharray': '6 4' });
     back.appendChild(anim('stroke-dashoffset', '0;20', '0.8s'));
     svg.appendChild(back);
     svg.appendChild(txt(260, 182, 'result: 15°C', 8.5, INK));
-    // a token rides the out arc, then a result token rides back, looping
+    // 一个 token 沿外发弧线移动，随后结果 token 沿返回弧线移动并循环
     var callTok = svgEl('rect', { x: -10, y: -7, width: 20, height: 14, rx: 2, fill: BP });
     callTok.appendChild(motion('M170 100 C 240 50, 290 50, 350 100', '2.8s', '0s'));
     callTok.appendChild(anim('opacity', '1;1;0;0', '2.8s'));

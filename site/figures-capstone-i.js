@@ -1,5 +1,4 @@
-/* figures-capstone-i.js: animated figures for Phase 19 capstone lessons
-   64, 68, 70, 74, 76, 77, 80, 81, 84. SMIL only, no deps, theme via CSS vars. */
+/*图像-capstone-i.js:动画图像19期的 capstone课程 64, 68, 70, 74, 76, 77, 80, 81, 84.仅 SMIL,没有 deps,通过CSS vars主题. */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -34,7 +33,7 @@
       'font-family': 'var(--font-mono,monospace)', 'text-anchor': anchor || 'middle'
     }, [svgEl('tspan', {}, [document.createTextNode(s)])]);
   }
-  // Entry: fade in from opacity 0 at ~95% size, ease out, hold for the loop.
+  // 进入:在95%大小的度 0 时消失,轻松退出,保持循环.
   function popIn(g, cx, cy, dur, begin) {
     var b = begin || '0s', kt = '0;0.16;1', sp = EASE + ';0 0 1 1';
     g.setAttribute('opacity', '0');
@@ -45,7 +44,7 @@
     g.appendChild(anim('opacity', '0;1;1', dur, { keyTimes: kt, calcMode: 'spline', keySplines: sp, begin: b }));
   }
 
-  // ── 64: same document, three cut plans; one slices the gold answer span ────
+  // 六四:同一文件,三张剪切图案;一个切片黄金答案跨度 ───
   function chunkBoundaries(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var x0 = 100, w = 380;
@@ -80,7 +79,7 @@
       'Every strategy cuts the same document at different offsets. The fixed 512-token window slices straight through the gold answer span, so the two halves embed into different clusters and recall drops before the retriever even runs. Sentence and structural markdown splitters respect the boundaries the text already carries.');
   }
 
-  // ── 68: sweep descends the ranked list, gold hits light the metric panel ───
+  // 选排名,黄金击中, 启发测量板
   function ragMetricLadder(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var x0 = 70, y0 = 42, rh = 34, gold = { 0: 1, 3: 1 };
@@ -114,7 +113,7 @@
       'The evaluator walks the ranked list once. Each gold document it passes updates precision and recall; the position of the first gold hit fixes MRR; the discounted positions fix nDCG. Faithfulness and answer relevance are computed afterwards on the generated answer, which is why a perfect retrieval score can still ship a wrong response.');
   }
 
-  // ── 70: JSONL records stream through the validator gate; a bad line drops ──
+  // 通过验证器门流 JSONL 记录; 坏线下降 ──
   function taskSpecGate(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     svg.appendChild(txt(62, 66, 'tasks.jsonl', MUTE, 10));
@@ -146,7 +145,7 @@
       'Every line of tasks.jsonl is validated independently before it reaches the runner: required fields present, metric_name inside the closed vocabulary, targets typed correctly. A malformed record is diverted and logged; the run continues. Freezing this gate is what lets lessons 71 through 75 dispatch on a single field.');
   }
 
-  // ── 74: mean bars grow, bootstrap whiskers pop in, two CIs overlap ─────────
+  // 七四:子生长,子子出,两个CI重叠
   function leaderboardCI(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var x0 = 140, dur = '5s';
@@ -184,7 +183,7 @@
       'The aggregator turns per-task EvalRun records into per-model means, then resamples tasks with replacement to put a bootstrap confidence interval on each mean. Model A leads model B on the point estimate, but the intervals overlap, so the pairwise difference CI is the number that decides whether the ranking is real or sampling noise.');
   }
 
-  // ── 76: four ranks on a ring, chunks rotate; two passes alternate ──────────
+  // 环上四个行,四个块旋转,两条通过交替.
   function ringAllreduce(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var cx = 170, cy = 128, r = 76;
@@ -218,7 +217,7 @@
       'Each rank owns one chunk of the tensor and only ever talks to its ring neighbour. In the reduce-scatter pass a chunk accumulates partial sums as it hops N-1 times; in the allgather pass the finished sums rotate back around. No root, no bottleneck: per-rank traffic stays at 2T(N-1)/N bytes no matter how many ranks join.');
   }
 
-  // ── 77: backward sweeps right to left, buckets fill, allreduce overlaps ────
+  // 后面扫描右到左,填满桶,减少重叠
   function ddpGradSync(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var lw = 88, gap = 18, x0 = 60, y0 = 50, dur = '5s';
@@ -258,7 +257,7 @@
       'A backward hook on every parameter drops its gradient into a bucket. The moment bucket 1 fills, its allreduce launches on the wire while layers 2 and 1 are still backpropagating, so communication hides behind compute. One broadcast at construction made all replicas identical; the summed gradients keep them identical every step.');
   }
 
-  // ── 80: four ranks write tmp shards in parallel, then one atomic rename ────
+  // 八十:四个行列并行写出tmp分片,然后一个原子改名 ───
   function shardedCheckpoint(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var dur = '6s', i;
@@ -293,7 +292,7 @@
       'Every rank streams its own shard to a temp file at the same time, so write bandwidth scales with the cluster instead of one gather bottleneck. Only after all shards land does the rename flip the temp files and the manifest live. Resume reads the manifest first, checks world size and hashes, and fails loudly on any mismatch.');
   }
 
-  // ── 81: three proven pieces slot into one loop; a run rides 20 steps ───────
+  // 八十一:三块被证明的块插入一个循环;一个跑步行驶20步
   function distributedAssembly(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var dur = '5.5s', pieces = [
@@ -331,7 +330,7 @@
       'Each piece was built and tested alone; the capstone proves they compose. DDP broadcast syncs the initial weights once, the ZeRO-1 step replaces optimiser.step every iteration, and the sharded checkpoint fires at step 10. The run self-terminates after 20 steps only if all four invariants hold on every rank.');
   }
 
-  // ── 84: prompts fall into a 2x2 quadrant; the off-diagonal cells are bugs ──
+  // ── 84：提示落入 2x2 象限，两个非对角单元格代表错误情况 ──
   function refusalQuadrant(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var gx = 160, gy = 56, cw = 130, ch = 74, dur = '5s';

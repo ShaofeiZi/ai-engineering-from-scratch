@@ -1,7 +1,6 @@
-/* figures-agents2.js - interactive lesson figures for advanced agent
-   engineering and multi-agent coordination. Loads after lesson-figures.js
-   and registers through window.LF. No deps, ES5, theme via CSS vars.
-   Authoring: a ```figure block naming one of the widgets below. */
+/* figures-agents2.js - 面向高级 agent 工程与多智能体协作的交互课程图。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，仅 ES5，
+   通过 CSS 变量支持主题。编写时用 ```figure 块指定下方某个 widget。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -29,7 +28,7 @@
     return t;
   }
 
-  // -- rewoo-plan: plan all tool calls up front, then execute, vs ReAct -------
+  // -- rewoo-plan：预先规划全部工具调用，再执行；与 ReAct 对比 -----------
   function rewooPlan(host) {
     var state = { steps: 4 };
     var W = 520, H = 230;
@@ -41,7 +40,7 @@
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(arrowDefs());
       var i;
-      // ReWOO row: one planner, then a worker runs the whole plan
+      // ReWOO 行：一个 planner 制定计划，再由 worker 执行完整计划。
       svg.appendChild(label(W / 2, 16, 'ReWOO: plan once, then execute', 'var(--blueprint,#3553ff)', '11'));
       svg.appendChild(box(18, 30, 90, 34, 'PLANNER', true));
       var plX = 130;
@@ -51,7 +50,7 @@
         if (i === 0) { svg.appendChild(arrow(108, 47, bx, 47)); }
         else { svg.appendChild(arrow(bx - 8, 47, bx, 47)); }
       }
-      // ReAct row: interleaved think/act/observe, one LLM call per action
+      // ReAct 行：think/act/observe 交错进行，每个 action 调用一次 LLM。
       svg.appendChild(label(W / 2, 120, 'ReAct: interleave a model call per step', 'var(--warn,#b8870f)', '11'));
       var rx = 18, ry = 134;
       for (i = 0; i < n; i++) {
@@ -76,14 +75,14 @@
     state._render();
   }
 
-  // -- tree-of-thoughts: branching reasoning tree, beam keeps the best path ---
+  // -- tree-of-thoughts：分支推理树，由 beam 保留最佳路径 -------------------
   function treeOfThoughts(host) {
     var state = { breadth: 3, depth: 3, beam: 2 };
     var W = 520, H = 250, PAD = 22;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // deterministic pseudo-score from level and index
+    // 根据 level 与 index 生成确定性伪分数。
     function score(level, idx) {
       var v = Math.sin((level + 1) * 12.9898 + (idx + 1) * 78.233) * 43758.5453;
       return v - Math.floor(v);
@@ -108,7 +107,7 @@
             totalNodes++;
           }
         });
-        // pick beam best children by score
+        // 按分数选出 beam 中最优的子项。
         var ranked = children.slice().sort(function (a, c) { return c.s - a.s; });
         var keepSet = {};
         var m; for (m = 0; m < beam && m < ranked.length; m++) { keepSet[ranked[m].idx] = true; }
@@ -137,7 +136,7 @@
     state._render();
   }
 
-  // -- self-refine: critique-and-revise loop, quality climbs then plateaus ----
+  // -- self-refine：批评与修订循环，质量先提升再趋于平稳 --------------------
   function selfRefine(host) {
     var state = { iters: 3 };
     var W = 520, H = 210, PAD = 34, IMAX = 8;
@@ -145,7 +144,7 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // quality(0)=52, gains shrink geometrically toward a ceiling of 94
+    // quality(0)=52，增益按几何级数递减并趋近 94 的上限。
     function quality(k) { return 94 - 42 * Math.pow(0.62, k); }
     function px(k) { return PAD + k / IMAX * (W - 2 * PAD); }
     function py(q) { return H - PAD - (q - 40) / 60 * (H - 2 * PAD); }
@@ -175,20 +174,20 @@
     state._render();
   }
 
-  // -- memory-blocks: fixed core memory + unbounded archival, paging in/out ---
+  // -- memory-blocks：固定核心记忆 + 无限归档，可换入换出 -------------------
   function memoryBlocks(host) {
     var state = { paged: 3 };
     var W = 520, H = 230;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    var CORE = 4; // fixed core slots
+    var CORE = 4; // 固定的核心槽位
     var archival = ['proj specs', 'api keys note', 'user prefs', 'past bug', 'design doc', 'meeting log', 'schema v2', 'todo list'];
     state._render = function () {
       var paged = state.paged;
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(arrowDefs());
-      // context window column (core memory, fixed)
+      // context window 列（固定的核心记忆）
       svg.appendChild(label(110, 18, 'context window', 'var(--blueprint,#3553ff)', '11'));
       var cy = 30, slot;
       for (slot = 0; slot < CORE; slot++) {
@@ -196,7 +195,7 @@
         svg.appendChild(box(40, cy, 140, 38, filled ? archival[slot] : 'free slot', filled));
         cy += 46;
       }
-      // archival store (unbounded)
+      // 归档存储（无限）
       svg.appendChild(label(400, 18, 'archival store (unbounded)', 'var(--ink-mute,#777)', '11'));
       var ax = 320, ay = 30, j;
       for (j = 0; j < archival.length; j++) {
@@ -221,14 +220,14 @@
     state._render();
   }
 
-  // -- voyager-skills: skill library grows, later tasks compose old skills ----
+  // -- voyager-skills：skill 库持续增长，后续任务组合旧 skill ---------------
   function voyagerSkills(host) {
     var state = { episodes: 4 };
     var W = 520, H = 230, PAD = 22;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // each episode adds skills; later episodes reuse some prior skills
+    // 每个 episode 都会新增 skill；后续 episode 会复用一部分既有 skill。
     var newPerEp = [2, 2, 1, 2, 1, 1, 1, 1];
     var reusePerEp = [0, 1, 2, 2, 3, 3, 4, 4];
     state._render = function () {
@@ -236,7 +235,7 @@
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var libSize = 0, reusedTotal = 0, i;
       for (i = 0; i < ep; i++) { libSize += newPerEp[i]; reusedTotal += reusePerEp[i]; }
-      // growth bars: library size after each episode
+      // 增长柱：每个 episode 结束后的 skill 库大小。
       var maxLib = 0, cum = 0, sizes = [];
       for (i = 0; i < 8; i++) { cum += newPerEp[i]; sizes.push(cum); if (cum > maxLib) maxLib = cum; }
       var bw = (W - 2 * PAD) / 8;
@@ -260,14 +259,14 @@
     state._render();
   }
 
-  // -- langgraph-state: state machine of nodes, conditional edges, step through
+  // -- langgraph-state：由节点和条件边组成的状态机，可逐步执行
   function langgraphState(host) {
     var state = { step: 0 };
     var W = 520, H = 240;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var stateOut = el('div', { class: 'lf-formula' });
-    // nodes laid out; a deterministic walk visits them, updating a state object
+    // 布置节点；确定性路径依次访问节点并更新 state 对象。
     var nodes = [
       { x: 210, y: 24, w: 100, label: 'START' },
       { x: 70, y: 96, w: 110, label: 'retrieve' },
@@ -275,7 +274,7 @@
       { x: 210, y: 168, w: 120, label: 'grade' },
       { x: 40, y: 168, w: 90, label: 'rewrite' }
     ];
-    // walk: START -> retrieve -> generate -> grade -> (rewrite) -> generate -> grade -> END
+    // 路径：START -> retrieve -> generate -> grade -> (rewrite) -> generate -> grade -> END
     var walk = [0, 1, 2, 3, 4, 2, 3];
     var updates = [
       { key: 'query', val: '"how to deploy"' },
@@ -291,7 +290,7 @@
       var cur = walk[s];
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(arrowDefs());
-      // static edges
+      // 静态边。
       function center(i) { return { x: nodes[i].x + nodes[i].w / 2, y: nodes[i].y + 22 }; }
       var edges = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 2]];
       edges.forEach(function (e) {
@@ -303,7 +302,7 @@
         svg.appendChild(box(nodes[i].x, nodes[i].y, nodes[i].w, 44, nodes[i].label, i === cur));
       }
       svg.appendChild(label(120, 168 - 8, 'grade=fail', 'var(--warn,#b8870f)', '9'));
-      // render the state object accumulated so far
+      // 渲染目前累计的 state 对象。
       var st = {}, j;
       for (j = 0; j <= s; j++) { st[updates[j].key] = updates[j].val; }
       while (stateOut.firstChild) stateOut.removeChild(stateOut.firstChild);
@@ -321,7 +320,7 @@
     state._render();
   }
 
-  // -- multi-agent-debate: two agents converge over rounds, accuracy vs rounds
+  // -- multi-agent-debate：两个 agent 随轮次收敛，比较准确率与轮次
   function multiAgentDebate(host) {
     var state = { rounds: 3 };
     var W = 520, H = 240, PAD = 30;
@@ -330,18 +329,18 @@
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
     var RMAX = 6;
-    // two answer estimates start apart and pull toward a shared answer (0.5)
+    // 两个答案估计值起点不同，随后向共同答案（0.5）靠拢。
     var TRUTH = 0.5;
     function posA(r) { return TRUTH + (0.28) * Math.pow(0.55, r); }
     function posB(r) { return TRUTH - (0.34) * Math.pow(0.55, r); }
-    // accuracy rises as the gap closes, with diminishing returns
+    // 随差距缩小，准确率提升，但收益递减。
     function acc(r) { return 62 + 32 * (1 - Math.pow(0.55, r)); }
     function px(r) { return PAD + r / RMAX * (W - 2 * PAD - 40); }
     function py(p) { return PAD + (1 - p) * (H - 2 * PAD); }
     state._render = function () {
       var n = state.rounds;
       while (svg.firstChild) svg.removeChild(svg.firstChild);
-      // shared-answer line
+      // 共同答案线。
       svg.appendChild(svgEl('line', { x1: PAD, y1: py(TRUTH), x2: W - PAD - 40, y2: py(TRUTH), stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1', 'stroke-dasharray': '3 3' }));
       svg.appendChild(label(W - PAD - 18, py(TRUTH) + 3, 'answer', 'var(--ink-mute,#777)', '9'));
       function track(fn, st) {
@@ -371,7 +370,7 @@
     state._render();
   }
 
-  // -- orchestration-pattern: supervisor | swarm | hierarchical topologies ----
+  // -- orchestration-pattern：supervisor | swarm | hierarchical 拓扑 --------
   function orchestrationPattern(host) {
     var state = { pat: 'supervisor' };
     var W = 520, H = 230;
@@ -405,7 +404,7 @@
         for (i = 0; i < N; i++) { svg.appendChild(dot(pts[i].x, pts[i].y, false)); }
         formula.textContent = 'peers hand off directly: ' + edges + ' edges, O(N^2).  no central bottleneck, but coordination cost grows fast';
       } else {
-        // hierarchical: root -> 2 mids -> leaves
+        // hierarchical：root -> 2 个中间节点 -> 叶节点。
         var rootX = W / 2, rootY = 30;
         var mids = [{ x: W / 3, y: 110 }, { x: 2 * W / 3, y: 110 }];
         svg.appendChild(dot(rootX, rootY, true));

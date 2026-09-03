@@ -1,16 +1,13 @@
 /**
- * Read-aloud support built on the browser's built-in SpeechSynthesis API.
+ * 基于浏览器内置 SpeechSynthesis API 的朗读支持。
  *
- * Injects a speaker button into the site header (between the language picker
- * and the theme toggle) on any page that has readable article content, plus a
- * floating control bar for pause/stop/speed while playback runs.
+ * 在包含可读文章内容的页面 header 中注入朗读按钮（位于语言选择器与主题切换
+ * 按钮之间），并在播放期间提供可控制暂停、停止和速度的浮动控制栏。
  *
- * Scope is the article prose: headings, paragraphs, lists, tables, the lesson
- * motto and meta tags, quiz text and figure captions. Code blocks and rendered
- * diagrams are skipped — narrating those needs its own parsing layer and lands
- * separately.
+ * 朗读范围为文章正文：标题、段落、列表、表格、课程格言与 meta 标签、测验文本和
+ * 图注。代码块与渲染后的图示会被跳过，因为朗读它们需要单独的解析层。
  *
- * No network calls and no dependencies: everything is native Web Speech API.
+ * 不发起网络请求且无依赖：全部使用原生 Web Speech API。
  */
 (function () {
   'use strict';
@@ -81,8 +78,8 @@
   }
 
   var silentMode = localSilentMode();
-  // The optional overrides and local silent mode are tiny test seams. They let
-  // browser QA exercise every control without producing audible speech.
+  // 可选 override 与本地静音模式是轻量测试 seam，使浏览器 QA 可操作所有控件
+  // 而不会真正发声。
   var synth = window.__AIFS_TTS_SYNTH__ || window.speechSynthesis;
   var Utterance = window.__AIFS_TTS_UTTERANCE__ || window.SpeechSynthesisUtterance;
   if (silentMode) {
@@ -96,7 +93,7 @@
   var VOICE_KEY_PREFIX = 'tts:voice:';
   var MAX_CHUNK = 160;
 
-  // Regions that are chrome, not content — nothing inside is ever read.
+  // 这些区域属于页面 chrome 而非内容，其中任何文本都不会被朗读。
   var HARD_SKIP = [
     'script',
     'style',
@@ -118,8 +115,7 @@
     '[data-tts-skip]',
   ].join(',');
 
-  // Interactive elements are skipped by default (copy buttons, tabs, controls)
-  // except these, which carry real content.
+  // 默认跳过交互元素（复制按钮、tab、控件），但以下承载真实内容的元素除外。
   var ALLOW_SELECTOR = '.quiz-option,.quiz-explanation,[data-tts-read]';
 
   var INTERACTIVE_SKIP = 'button,code,[role="button"]';
@@ -127,7 +123,7 @@
   var BLOCK_SELECTOR = [
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'p', 'li', 'blockquote', 'dd', 'dt', 'figcaption', 'summary', 'tr',
-    // Lesson prose and panels build their text out of plain divs.
+    // 课程正文和 panel 使用普通 div 组织文本。
     '.motto',
     '.lesson-meta-tag',
     '.ai-panel-title',
@@ -139,20 +135,19 @@
     '.quiz-score-number',
     '.quiz-score-label',
     '.quiz-deeper',
-    // Interactive lesson figures: title + caption carry the explanation.
+    // 交互课程图：由 title 和 caption 承载讲解。
     '.lf-label',
     '.lf-cap',
     '[data-tts-read]',
   ].join(',');
 
-  // A block that contains one of these is a wrapper: read only its own text
-  // so a list item holding a code block still reads its sentence, and the
-  // code inside it stays unread.
+  // 包含以下任一元素的 block 是 wrapper：只读它自身的文本，使包含代码块的
+  // 列表项仍能朗读其句子，同时不朗读内部代码。
   var NESTED_PROBE = BLOCK_SELECTOR + ',pre';
 
-  // Storage throws instead of returning null when a browser blocks it
-  // (Safari with cookies off, sandboxed iframes), so every read goes through
-  // these — lsGet() runs on the collection hot path and must never throw.
+  // 浏览器阻止 Storage 时会抛错，而不是返回 null。
+  // （如关闭 cookie 的 Safari、沙箱 iframe），因此所有读取都经过这些函数；
+  // lsGet() 位于收集流程的热路径中，绝不能抛错。
   function lsGet(key) {
     try {
       return localStorage.getItem(key);
@@ -165,12 +160,11 @@
     try {
       localStorage.setItem(key, value);
     } catch (e) {
-      // Storage disabled; the preference just won't persist.
+      // Storage 被禁用；偏好设置将无法持久化。
     }
   }
 
-  // Only an explicit lesson continuation may carry playback to another page.
-  // The target route is stored so an unrelated page can never inherit audio.
+  // 只有显式续读课程时才允许跨页面延续播放。保存目标 route，避免无关页面继承音频。
   var RESUME_KEY = 'tts:resume';
 
   function routeKey(url) {
@@ -196,7 +190,7 @@
     try {
       sessionStorage.setItem(RESUME_KEY, JSON.stringify({ target: target, createdAt: Date.now() }));
     } catch (e) {
-      // sessionStorage may be disabled; playback just won't carry over.
+      // sessionStorage 可能被禁用；播放状态将无法跨页面延续。
     }
   }
 
@@ -204,7 +198,7 @@
     try {
       sessionStorage.removeItem(RESUME_KEY);
     } catch (e) {
-      // sessionStorage may be disabled.
+      // sessionStorage 可能被禁用。
     }
   }
 
@@ -266,13 +260,13 @@
     mode: 'idle',
     message: '',
     scope: null,
-    // Bar shown as a single puck, and the drag-vs-click guard.
+    // 控制条折叠为单个圆钮，以及区分拖动与点击的 guard。
     collapsed: false,
     dragged: false,
     highlighted: null,
     utterance: null,
-    // Playback health: sequence token for stale callbacks, strong refs against
-    // GC, stall counter, and the offline voice a stall fell back to.
+    // 播放健康状态：识别过期 callback 的序列 token、防止 GC 的强引用、
+    // 卡顿计数器，以及卡顿时回退到的离线 voice。
     seq: 0,
     spoken: [],
     stalls: 0,
@@ -286,7 +280,7 @@
 
   var els = {};
 
-  /* ---------------------------------------------------------------- text */
+  /* ---------------------------------------------------------------- 文本 */
 
   function contentRoot(scope) {
     if (scope && scope.nodeType === 1 && document.contains(scope)) return scope;
@@ -311,15 +305,14 @@
     if (explicit && !explicit.closest('[data-tts-skip],.site-header,.site-footer,.tts-bar,[aria-hidden="true"]')) return false;
     if (el.closest(HARD_SKIP)) return true;
     if (el.closest(ALLOW_SELECTOR)) return false;
-    // Code blocks and rendered diagrams are not narrated by this reader.
+    // 本阅读器不会朗读代码块和已渲染的图示。
     if (el.closest('pre')) return true;
     return !!el.closest(INTERACTIVE_SKIP);
   }
 
   function isVisible(el) {
     if (el.hidden) return false;
-    // offsetParent is null for display:none (and for position:fixed, which
-    // none of the readable blocks use).
+    // display:none 时 offsetParent 为 null（position:fixed 时也如此，但可读块均未使用）。
     return el.offsetParent !== null || el.getClientRects().length > 0;
   }
 
@@ -348,7 +341,7 @@
     return value.replace(/\s+/g, ' ').trim();
   }
 
-  /** Preserve visual line breaks as spoken word boundaries. */
+  /** 将视觉换行保留为朗读时的单词边界。 */
   function readableText(el) {
     var out = '';
     for (var i = 0; i < el.childNodes.length; i++) {
@@ -363,7 +356,7 @@
     return out;
   }
 
-  /** Split a long block into speakable pieces at sentence boundaries. */
+  /** 在句子边界将长 block 拆为可朗读片段。 */
   function split(text) {
     if (text.length <= MAX_CHUNK) return [text];
     var sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
@@ -372,7 +365,7 @@
     for (var i = 0; i < sentences.length; i++) {
       var s = sentences[i];
       while (s.length > MAX_CHUNK) {
-        // A single monster sentence: break it on the last space in range.
+        // 单个超长句：在范围内最后一个空格处切分。
         var cut = s.lastIndexOf(' ', MAX_CHUNK);
         if (cut <= 0) cut = MAX_CHUNK;
         if (buf) {
@@ -393,7 +386,7 @@
     return out.filter(Boolean);
   }
 
-  /** Text belonging to this element but not to any nested readable block. */
+  /** 属于此元素、但不属于任何嵌套可读 block 的文本。 */
   function ownText(el) {
     var out = '';
     for (var i = 0; i < el.childNodes.length; i++) {
@@ -405,7 +398,7 @@
           out += ' ';
           continue;
         }
-        // Descend into plain wrappers so nested blocks stay un-duplicated.
+        // 进入普通 wrapper，避免重复读取嵌套 block。
         out += n.querySelector(BLOCK_SELECTOR) ? ownText(n) : readableText(n);
       }
     }
@@ -445,7 +438,7 @@
     return '';
   }
 
-  /** Build the play queue: [{ text, el }] in document order. */
+  /** 按文档顺序构建播放队列：[{ text, el }]。 */
   function collect(scope) {
     var root = contentRoot(scope);
     if (!root) return [];
@@ -462,14 +455,14 @@
       } else if (el.matches('tr')) {
         text = clean(tableRowText(el));
       } else if (el.querySelector(NESTED_PROBE)) {
-        // A wrapper (list item holding a code block, panel holding headings).
-        // Read only its own text; the nested blocks come round on their own.
+        // wrapper（如包含代码块的列表项、包含标题的 panel）。
+        // 仅朗读它自身的文本；嵌套 block 会单独轮到。
         text = clean(ownText(el));
       } else {
         text = clean(readableText(el));
         if (el.matches('.quiz-option')) {
-          // Markup is <span>A</span><span>answer</span> with no whitespace
-          // between them, so read the letter as its own beat.
+          // 标记为 <span>A</span><span>answer</span>，两者之间没有空白，
+          // 因此将字母作为单独节拍朗读。
           var letter = el.querySelector('.opt-letter');
           var label = letter ? clean(letter.textContent || '') : '';
           var rest = label ? clean(text.slice(label.length)) : text;
@@ -506,28 +499,28 @@
     return '';
   }
 
-  /* --------------------------------------------------------------- voices */
+  /* --------------------------------------------------------------- voice */
 
   /**
-   * Voice quality varies wildly per platform, and the browser default is often
-   * the worst option available (Windows ships robotic SAPI5 voices as default).
-   * Score every voice so "Auto" lands on the best neural/cloud voice present.
+   * 各平台的 voice 质量差异很大，浏览器默认项往往是最差选择
+   * （Windows 默认提供机械感很强的 SAPI5 voice）。为每个 voice 评分，
+   * 让 "Auto" 选择现有的最佳神经网络或云端 voice。
    */
 
-  // Named winners, best first. Matched loosely against voice.name.
+  // 优选名称，质量由高到低；与 voice.name 宽松匹配。
   var PREFERRED = [
-    // Edge / Windows 11 neural voices
+    // Edge / Windows 11 神经网络 voice。
     'microsoft aria', 'microsoft jenny', 'microsoft guy', 'microsoft ava',
     'microsoft andrew', 'microsoft emma', 'microsoft brian', 'microsoft libby',
     'microsoft ryan', 'microsoft sonia',
-    // Chrome cloud voices
+    // Chrome 云端 voice。
     'google us english', 'google uk english female', 'google uk english male',
-    // Apple high-quality voices
+    // Apple 高质量 voice。
     'samantha', 'ava', 'allison', 'tom', 'evan', 'zoe', 'nathan', 'joelle',
     'serena', 'daniel', 'alex',
   ];
 
-  // macOS novelty voices — comedic, unusable for prose.
+  // macOS 趣味 voice：偏喜剧效果，不适合朗读正文。
   var NOVELTY = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|fred|kathy|bruce|princess|grandma|grandpa|rocko|shelley|sandy|eddy|flo|reed|grandpa|bells)\b/i;
 
   function pageLocale() {
@@ -566,12 +559,12 @@
 
     if (NOVELTY.test(v.name || '')) return -100;
 
-    // Explicit quality markers in the voice name.
+    // voice 名称中的显式质量标记。
     if (/natural|neural/.test(name)) s += 60;
     if (/premium|enhanced/.test(name)) s += 50;
     if (/\bonline\b/.test(name)) s += 40;
     if (/^google/.test(name)) s += 35;
-    // SAPI5 desktop voices are the robotic legacy set.
+    // SAPI5 桌面 voice 是机械感较强的旧版集合。
     if (/desktop/.test(name)) s -= 30;
     if (v.localService === false) s += 15;
 
@@ -582,8 +575,8 @@
       }
     }
 
-    // Match the content language first. A beautiful English voice is still
-    // the wrong default for Spanish, Hindi, Japanese, or any other locale.
+    // 首先匹配内容语言。再优美的英文 voice，也不适合作为西班牙语、印地语、
+    // 日语或其他 locale 的默认项。
     if (sameLanguage(v, wanted)) s += 260;
     else s -= 250;
     if (lang === wanted) s += 35;
@@ -616,14 +609,14 @@
     for (var i = 0; i < list.length; i++) {
       if (sameLanguage(list[i], locale)) return list[i];
     }
-    // Let the browser choose for utterance.lang when no matching installed
-    // voice exists. Forcing an unrelated English voice is worse.
+    // 没有匹配的已安装 voice 时，让浏览器根据 utterance.lang 选择；
+    // 强制使用无关的英文 voice 更糟。
     return null;
   }
 
   function selectedVoice(locale) {
     locale = locale || pageLocale();
-    // A voice that kept dropping has been replaced for this session.
+    // 本次会话中，持续中断的 voice 已被替换。
     if (state.forcedLocal && sameLanguage(state.forcedLocal, locale)) return state.forcedLocal;
     state.forcedLocal = null;
     var wanted = lsGet(voiceKey(locale));
@@ -634,7 +627,7 @@
         if (all[i].voiceURI === wanted && sameLanguage(all[i], locale)) return all[i];
       }
     }
-    // No stored pick (or it vanished with an OS update): auto-pick the best.
+    // 没有已保存选择（或系统升级后消失）：自动选择最佳项。
     return bestVoice(locale);
   }
 
@@ -662,7 +655,7 @@
       if (list[voiceIndex].voiceURI === current && sameLanguage(list[voiceIndex], locale)) selected = current;
     }
     els.voice.value = selected;
-    // A stored voice that no longer exists falls back to Auto.
+    // 已保存但不再存在的 voice 回退到 Auto。
     if (els.voice.value !== selected) els.voice.value = '';
   }
 
@@ -671,7 +664,7 @@
     return stored >= 0.5 && stored <= 3 ? stored : 1;
   }
 
-  /* ------------------------------------------------------------- playback */
+  /* ------------------------------------------------------------- 播放 */
 
   function isActive() {
     return state.mode !== 'idle';
@@ -703,16 +696,15 @@
     el.classList.add('tts-reading');
     var box = el.getBoundingClientRect();
     if (box.top < 80 || box.bottom > window.innerHeight - 80) {
-      // Auto-scrolling at every chunk boundary is the most motion-heavy part
-      // of the feature, so honour the same preference the CSS does.
+      // 每个 chunk 边界自动滚动是该功能中动态效果最强的部分，
+      // 因此遵循与 CSS 相同的偏好设置。
       el.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     }
   }
 
   /**
-   * The lesson page keeps building itself after the first paint (panels,
-   * diagrams, figures). If the block we are on has been swapped out, rebuild
-   * the queue against the live DOM and keep our place by text.
+   * 课程页面在首次绘制后仍会继续构建（panel、diagram、figure）。如果当前 block
+   * 已被替换，则根据实时 DOM 重建队列，并通过文本保持当前位置。
    */
   function refreshQueue(restartIfMissing) {
     var current = state.chunks[state.index];
@@ -777,12 +769,10 @@
     if (target.closest('.tts-bar,.tts-from-here,.tts-toggle')) return true;
     if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') return false;
 
-    // Highlight movement removes tts-reading from the previous block before
-    // adding it to the next one. Mutation callbacks run after both operations,
-    // so comparing only against state.highlighted misses the removal and makes
-    // narration rebuild its own queue. Ignore a class mutation only when the
-    // non-narration classes are unchanged; real application class changes still
-    // refresh the readable DOM.
+    // 高亮移动会先从上一个 block 移除 tts-reading，再添加到下一个 block。
+    // Mutation callback 在两次操作后运行，因此只与 state.highlighted 比较会漏掉
+    // 移除动作，并导致朗读器重建自身队列。仅在非朗读 class 未变化时忽略 class
+    // mutation；真实的应用 class 变化仍需刷新可读 DOM。
     return nonNarrationClasses(mutation.oldValue) ===
       nonNarrationClasses(target.getAttribute('class'));
   }
@@ -835,9 +825,8 @@
       u.voice = v;
       u.lang = v.lang;
     }
-    // Callbacks from an utterance we have already moved past must not advance
-    // the queue: the watchdog can re-speak a chunk whose original is still
-    // sitting somewhere inside the engine.
+    // 已跳过 utterance 的 callback 不得推进队列：watchdog 可能重新朗读一个 chunk，
+    // 而原 utterance 仍停留在引擎内部。
     var token = ++state.seq;
 
     u.onend = function () {
@@ -845,12 +834,12 @@
       state.index++;
       state.stalls = 0;
       render();
-      // Calling speak() synchronously from inside onend wedges the queue in
-      // some Chromium builds; yielding first is reliable.
+      // 某些 Chromium 版本会因在 onend 内同步调用 speak() 而卡住队列；
+      // 先让出执行权更可靠。
       deferSpeak();
     };
     u.onerror = function (e) {
-      // "interrupted"/"canceled" are the normal result of stop()/next().
+      // "interrupted"/"canceled" 是 stop()/next() 的正常结果。
       if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
       if (token !== state.seq || !isPlaying()) return;
       state.index++;
@@ -860,8 +849,7 @@
     };
 
     state.utterance = u;
-    // Chromium can garbage-collect an in-flight utterance and cut it off, so
-    // hold a strong reference to the recent ones.
+    // Chromium 可能回收正在播放的 utterance 并将其截断，因此要强引用近期项。
     state.spoken.push(u);
     if (state.spoken.length > 8) state.spoken.shift();
 
@@ -869,12 +857,11 @@
     synth.speak(u);
   }
 
-  /* ------------------------------------------------------- read from here */
+  /* ------------------------------------------------------- 从此处朗读 */
 
   /**
-   * The readable block an arbitrary node sits in. When the node is inside
-   * something unreadable (a code block), the node itself is returned so the
-   * caller can start from whatever comes after it.
+   * 任意节点所在的可读 block。当节点位于不可读内容（如代码块）中时，返回节点
+   * 自身，以便调用方从其后续内容开始。
    */
   function blockOf(node) {
     var el = node && node.nodeType === 3 ? node.parentNode : node;
@@ -888,14 +875,14 @@
     return first && first.nodeType === 1 ? first : null;
   }
 
-  /** Queue position for a block: itself, or the next one that follows it. */
+  /** block 在队列中的位置：它自身，或紧随其后的下一项。 */
   function indexOfBlock(el) {
     if (!el) return 0;
     for (var i = 0; i < state.chunks.length; i++) {
       var c = state.chunks[i].el;
       if (c === el || (c && (c.contains(el) || el.contains(c)))) return i;
     }
-    // Not queued (skipped block): fall through to the next one in the document.
+    // 未入队（被跳过的 block）：继续查找文档中的下一项。
     for (var j = 0; j < state.chunks.length; j++) {
       var pos = el.compareDocumentPosition(state.chunks[j].el);
       if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return j;
@@ -903,7 +890,7 @@
     return 0;
   }
 
-  /** The block the current text selection starts in, if any. */
+  /** 当前文本选区起点所在的 block（如有）。 */
   function selectedBlock() {
     var sel = window.getSelection && window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
@@ -993,8 +980,8 @@
   }
 
   /**
-   * Carry playback across a lesson navigation. Lesson bodies are fetched after
-   * load, so poll until there is something to read before starting.
+   * 在课程导航之间延续播放。课程正文在 load 后获取，因此开始前需轮询，
+   * 直到出现可读内容。
    */
   function autoResume() {
     if (!takeResumeTarget()) return;
@@ -1009,9 +996,8 @@
         return;
       }
       tries++;
-      // Wait for the article to stop growing, otherwise we would queue up
-      // paragraphs that the page is about to replace — and the highlight
-      // would land on detached nodes.
+      // 等待文章停止增长，否则会把页面即将替换的段落加入队列，
+      // 高亮也会落在已脱离 DOM 的节点上。
       var root = contentRoot();
       var size = root ? root.textContent.trim().length : 0;
       if (!size || size !== lastSize) {
@@ -1024,7 +1010,7 @@
         return;
       }
       if (tries > 60) {
-        // ~15s: the page has nothing to read, so drop the hand-off.
+        // 约 15 秒：页面仍无内容可读，因此放弃交接。
         state.mode = 'idle';
         clearResumeTarget();
         clearInterval(timer);
@@ -1061,8 +1047,7 @@
   }
 
   /**
-   * Some browsers refuse to speak on a page the user has not interacted with
-   * yet. If that happened, the first click or key press starts it.
+   * 某些浏览器拒绝在用户尚未交互的页面朗读。若发生此情况，首次点击或按键时启动。
    */
   function armGestureFallback() {
     if (synth.speaking) return;
@@ -1096,11 +1081,9 @@
   }
 
   /**
-   * cancel() does not silence the callbacks of the utterance it kills: WebKit
-   * still fires onend for a cancelled utterance, and engines that report an
-   * error without a recognised `error` string fall through the same path. Bump
-   * the sequence first so anything arriving afterwards is stale and cannot
-   * advance the queue or start a second reader.
+   * cancel() 不会屏蔽被终止 utterance 的 callback：WebKit 仍会为已取消的
+   * utterance 触发 onend，未提供可识别 `error` 字符串的引擎也会进入同一路径。
+   * 因此先递增序列号，使之后到达的事件变为过期事件，不能推进队列或启动第二个阅读器。
    */
   function cancelSpeech() {
     state.seq++;
@@ -1108,10 +1091,9 @@
   }
 
   /**
-   * Hand control to the next chunk on a fresh task. Each deferral remembers
-   * the sequence it was scheduled under, so if anything else takes over in the
-   * meantime — a stall retry, a jump, a stop — this one quietly drops instead
-   * of starting a second reader.
+   * 在新 task 中把控制权交给下一个 chunk。每次延迟都会记住调度时的序列号，
+   * 因此若期间发生卡顿重试、跳转或停止等接管操作，该任务会静默退出，
+   * 不会启动第二个阅读器。
    */
   function deferSpeak() {
     var expected = state.seq;
@@ -1123,14 +1105,12 @@
   }
 
   /**
-   * Network-backed voices (Google's, and Edge's "Online (Natural)" set) can
-   * drop an utterance without ever firing onend or onerror. The queue then
-   * stalls silently while the bar still says it is reading, which is heard as
-   * "the voice stops after a few seconds".
+   * 网络 voice（Google 以及 Edge 的 "Online (Natural)" 集合）可能丢弃
+   * utterance，却不触发 onend 或 onerror。此时队列会静默卡住，控制条仍显示正在
+   * 朗读，听起来就像“声音几秒后停止”。
    *
-   * Nothing in the API reports this, so poll for it: an engine that is neither
-   * speaking nor pending, while we believe playback is running, has dropped
-   * the utterance.
+   * API 不会报告这种情况，因此需要轮询：若我们认为仍在播放，但引擎既未 speaking
+   * 也未 pending，说明 utterance 已被丢弃。
    */
   function startWatchdog() {
     stopWatchdog();
@@ -1141,7 +1121,7 @@
         state.idleTicks = 0;
         return;
       }
-      // Two ticks, so an ordinary gap between utterances is not read as a stall.
+      // 等待两个 tick，避免把 utterance 之间的正常间隔误判为卡顿。
       if (++state.idleTicks < 2) return;
       state.idleTicks = 0;
       recoverFromStall();
@@ -1155,20 +1135,18 @@
 
   function recoverFromStall() {
     state.stalls++;
-    // Give up on the fourth ignored attempt; a fifth only skips one more chunk.
+    // 第四次无响应后放弃；第五次只会再跳过一个 chunk。
     if (state.stalls >= 4) {
       fail('Speech engine stopped responding');
       return;
     }
     var local = state.stalls >= 2 && !state.forcedLocal ? localVoice() : null;
     if (local) {
-      // A cloud voice that keeps dropping will not recover on its own; move to
-      // an offline voice, which is plainer but does not cut out.
+      // 持续中断的云端 voice 不会自行恢复；改用效果普通但不会中断的离线 voice。
       state.forcedLocal = local;
       flash(tr('Switched to {name} — the previous voice kept cutting out', { name: local.name }));
     } else if (state.stalls >= 3) {
-      // Still stalling after the fallback: skip the chunk rather than retry it
-      // forever, so the rest of the article is still read.
+      // 回退后仍卡顿：跳过该 chunk，而不是无限重试，以便继续朗读文章其余部分。
       state.index++;
       if (state.index >= state.chunks.length) {
         stop();
@@ -1180,7 +1158,7 @@
     deferSpeak();
   }
 
-  /** Best offline voice, used when a network voice keeps dropping out. */
+  /** 最佳离线 voice，在网络 voice 持续中断时使用。 */
   function localVoice() {
     var locale = pageLocale();
     var all = voices(locale);
@@ -1242,7 +1220,7 @@
     els.bar.hidden = !active;
     els.bar.classList.toggle('is-visible', active);
     if (active && wasHidden && els.bar.classList.contains('is-placed')) schedulePlacementBoundsRefresh();
-    // Collapsed, the puck's speaker icon is the only playback feedback left.
+    // 折叠后，圆钮上的扬声器图标是唯一剩余的播放反馈。
     els.bar.classList.toggle('is-reading', isPlaying() || isWaiting());
     if (!active) return;
     els.playPause.textContent = isPaused() ? '▶' : '⏸';
@@ -1348,7 +1326,7 @@
     return btn;
   }
 
-  /* ------------------------------------------------- collapse and dragging */
+  /* ------------------------------------------------- 折叠与拖动 */
 
   var COLLAPSED_KEY = 'tts:collapsed';
   var POS_KEY = 'tts:pos';
@@ -1378,7 +1356,7 @@
     restorePlacementTransition();
   }
 
-  /** Collapsed, the bar is just the speaker puck — click it to expand. */
+  /** 折叠后控制条仅显示扬声器圆钮，点击即可展开。 */
   function setCollapsed(on, quiet) {
     state.collapsed = !!on;
     if (!quiet) lsSet(COLLAPSED_KEY, on ? '1' : '0');
@@ -1406,7 +1384,7 @@
     }
   }
 
-  /** Pin the bar at viewport coordinates, replacing the default anchoring. */
+  /** 将控制条固定在 viewport 坐标处，替换默认锚定方式。 */
   function enterPlacedMode() {
     if (!els.bar || els.bar.classList.contains('is-placed')) return;
     els.bar.classList.add('is-placed');
@@ -1507,9 +1485,8 @@
   }
 
   /**
-   * Drag the bar anywhere over the article. Buttons and selects keep their own
-   * behaviour unless the pointer actually moves, so a collapsed puck can be
-   * both clicked and dragged.
+   * 可将控制条拖到文章上的任意位置。只要指针没有实际移动，button 和 select 就保留
+   * 自身行为，因此折叠后的圆钮既可点击，也可拖动。
    */
   function bindDrag(bar) {
     var active = false;
@@ -1584,8 +1561,7 @@
     bar.addEventListener('pointerdown', function (e) {
       if (e.button != null && e.button !== 0) return;
       if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches) return;
-      // Leave real controls alone while the bar is open; the puck is all
-      // button, so it has to be draggable too.
+      // 控制条展开时不要干扰真实控件；圆钮整体都是 button，因此也必须可拖动。
       if (!state.collapsed && e.target.closest('select,input,option')) return;
       stopDragInertia();
       var rect = bar.getBoundingClientRect();
@@ -1640,7 +1616,7 @@
         try {
           bar.releasePointerCapture(e.pointerId);
         } catch (err) {
-          // Capture may already be gone.
+          // pointer capture 可能已经释放。
         }
       }
       if (e.type === 'pointerup' && Math.abs(velocityX) + Math.abs(velocityY) >= 0.06) {
@@ -1650,9 +1626,8 @@
         place(currentX, currentY, true, dragLimits);
         restorePlacementTransition();
       }
-      // Swallow the click a completed drag is about to produce. A cancelled
-      // gesture emits no click, so arming the guard there would eat the next
-      // real one instead.
+      // 吞掉完成拖动后即将产生的 click。取消的 gesture 不会触发 click，
+      // 若此时启用 guard，反而会吞掉下一次真实点击。
       state.dragged = e.type === 'pointerup';
     };
 
@@ -1703,7 +1678,7 @@
     els.resetPosition = bar.querySelector('[data-tts="reset"]');
 
     bar.addEventListener('click', function (e) {
-      // A click that ended a drag should not also press the button under it.
+      // 结束拖动的 click 不应同时按下其下方的按钮。
       if (state.dragged) {
         state.dragged = false;
         return;
@@ -1723,7 +1698,7 @@
     els.rate.addEventListener('change', function () {
       lsSet(RATE_KEY, els.rate.value);
       if (isPlaying()) {
-        // Rate only applies to a new utterance, so restart the current chunk.
+        // rate 只对新 utterance 生效，因此需重启当前 chunk。
         cancelSpeech();
         speakCurrent();
       }
@@ -1732,7 +1707,7 @@
 
     els.voice.addEventListener('change', function () {
       lsSet(voiceKey(), els.voice.value);
-      // An explicit choice overrides the automatic offline fallback.
+      // 显式选择会覆盖自动离线回退。
       state.forcedLocal = null;
       if (isPlaying()) {
         cancelSpeech();
@@ -1755,7 +1730,7 @@
   }
 
   /**
-   * A "Read from here" chip that follows a text selection inside the article.
+   * 跟随文章内文本选区的“从此处朗读”chip。
    */
   function buildSelectionButton() {
     var btn = document.createElement('button');
@@ -1765,7 +1740,7 @@
     btn.hidden = true;
     btn.innerHTML = '<span aria-hidden="true">▶</span> ' + escapeHtml(tr('Read from here'));
     btn.title = tr('Read from here (Alt+R)');
-    // mousedown would clear the selection before the click lands.
+    // mousedown 会在 click 到达前清除选区。
     btn.addEventListener('mousedown', function (e) {
       e.preventDefault();
     });
@@ -1849,8 +1824,7 @@
 
   function showSelectionButton() {
     if (!els.fromHere) return;
-    // Only offered while read-aloud is running — with the bar closed, the
-    // speaker button is the way in.
+    // 仅在朗读运行时提供；控制条关闭时，应通过扬声器按钮进入。
     if (!isPlaying() && !isPaused()) {
       hideSelectionButton();
       return;
@@ -1867,7 +1841,7 @@
     }
     els.fromHere.hidden = false;
     var top = rect.top + window.pageYOffset - els.fromHere.offsetHeight - 8;
-    // Flip below the selection when there is no room above it.
+    // 选区上方空间不足时翻转到其下方。
     if (rect.top < 60) top = rect.bottom + window.pageYOffset + 8;
     var left = rect.left + window.pageXOffset + rect.width / 2 - els.fromHere.offsetWidth / 2;
     var max = document.documentElement.clientWidth - els.fromHere.offsetWidth - 8;
@@ -1973,8 +1947,8 @@
     bindNavigationResume();
     render();
 
-    // Leftover utterances would keep talking over the next page; the resume
-    // flag (not the audio) is what carries playback across the navigation.
+    // 遗留 utterance 会覆盖下一页继续朗读；跨导航延续的是 resume 标记，
+    // 而不是音频本身。
     window.addEventListener('pagehide', function (event) {
       if (!state.navigationTarget) clearResumeTarget();
       cancelSpeech();
@@ -1986,8 +1960,7 @@
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !e.defaultPrevented && isActive()) stop();
-      // The chip sits at the end of the tab order, so keyboard users get a
-      // shortcut instead: Alt+R reads from wherever the selection starts.
+      // chip 位于 tab 顺序末尾，因此为键盘用户提供快捷键：Alt+R 从选区起点朗读。
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'r' || e.key === 'R')) {
         if (selectedBlock() && readFromSelection()) e.preventDefault();
       }

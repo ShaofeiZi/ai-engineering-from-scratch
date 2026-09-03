@@ -1,9 +1,4 @@
-/* figures-capstone-f.js - animated lesson figures for Phase 19 capstone
-   projects 12-17 and 20-23 (video scene index, MCP gate, speculative decode,
-   safety stack, issue-to-PR, tutor loop, harness loop contract, tool registry
-   validation, JSON-RPC framing, dispatcher retry). Loads after
-   lesson-figures.js, registers through window.LF. SMIL motion only, ES5,
-   no deps, theme via CSS vars. */
+/*图像-capstone-f.js - - 动画课程图像为第19阶段的顶石项目12-17和20-23 (视频场景索引,MCP门,投机解码,安全堆,问题-到-PR,导师循环,使用循环合同,工具注册表验证,JSON-RPC框架,发送器重试).课程后载-figures.js,通过窗口注册.仅通过SMIL运动,ES5,没有 deps,通过 vars CSS. */
 (function(){'use strict';var LF=window.LF;if(!LF){return;}
   var el = LF.el, svgEl = LF.svgEl;
   var EASE = '0.23 1 0.32 1';
@@ -41,7 +36,7 @@
     node.appendChild(anim('opacity', '0;1;1', dur, { begin: at, keyTimes: '0;0.12;1', calcMode: 'spline', keySplines: EASE + ';0 0 1 1' }));
     return node;
   }
-  // fade + grow entrance from 95% about (cx,cy), soft exit at loop end
+  // 化+增长入口从95%左右 (cx,cy),在循环端的软出口
   function pop(kids, cx, cy, dur, at) {
     var g = svgEl('g', { transform: 'translate(' + cx + ' ' + cy + ')' }, kids);
     g.appendChild(svgEl('animateTransform', { attributeName: 'transform', type: 'scale', additive: 'sum', values: '0.95;1;1', dur: dur, begin: at, repeatCount: 'indefinite', calcMode: 'spline', keySplines: EASE + ';0 0 1 1', keyTimes: '0;0.18;1' }));
@@ -60,7 +55,7 @@
     return 'url(#' + id + ')';
   }
 
-  // ── cf-scene-index (12): scenes fan into three vectors, query returns a window ─
+  // ── cf-scene-index (12):场景将风扇成三个向量,查询返回一个窗口 ─
   function sceneIndex(host) {
     var D = '5.5s', s = svg(260), i;
     var xs = [30, 112, 220, 290, 414], ws = [78, 104, 66, 120, 88];
@@ -94,7 +89,7 @@
       'Ingest cuts the video into scenes, and every scene stores three vectors side by side: caption embedding, keyframe embedding, transcript embedding. A query fires against all three at once, results merge, and the answer comes back as a (start, end) window inside the top scene rather than a whole file.');
   }
 
-  // ── cf-mcp-gate (13): stateless metadata, policy, registry and live discovery ─
+  // ── cf-mcp-gate (13):无国籍的元数据,政策,登记和现场发现 ─
   function mcpGate(host) {
     var D = '5s', s = svg(250);
     s.appendChild(pop([box(24, 44, 92, 40), txt(70, 62, 'MCP client', '9'), txt(70, 76, 'version + caps', '8', MUTE)], 70, 64, D, '0s'));
@@ -129,7 +124,7 @@
       'Each JSON-RPC message gets its own POST and carries protocol version plus client capabilities. The gate validates issuer, audience, scope, tool, and arguments; a consequential call also needs an approval record bound to that exact action. The registry indexes server.json publication metadata, while a separate server/discover probe verifies what the live endpoint supports.');
   }
 
-  // ── cf-spec-decode (14): draft proposes k tokens, one verify pass accepts a prefix ─
+  // ── cf-spec-decode (14):草案提出 k代币,一个验证通过接受一个前 ─
   function specDecode(host) {
     var D = '5.5s', s = svg(240), i;
     s.appendChild(pop([box(24, 96, 88, 40), txt(68, 113, 'draft head', '9'), txt(68, 127, 'k tokens', '8', MUTE), line(112, 116, 146, 116, SOFT)], 68, 116, D, '0s'));
@@ -167,7 +162,7 @@
       'The draft head proposes five candidate tokens; the target model scores all of them in a single verify pass. The accepted prefix replaces three sequential decode steps, the rejected suffix is dropped and resampled. Acceptance rate sets the speedup, and the larger verify pass on rejection is exactly why p99 latency needs its own report.');
   }
 
-  // ── cf-safety-stack (15): five layers, one request passes, one attack deflects ─
+  // ── 防护堆 (15):五层,一个请求通过,一个攻击偏向 ─
   function safetyStack(host) {
     var D = '5.5s', s = svg(270), i;
     var names = ['input sanitize', 'rails / policy', 'classifier gate', 'target model', 'output filter'];
@@ -206,7 +201,7 @@
       'A clean request falls straight through: sanitize, rails, classifier gate, model, output filter. A jailbreak makes it two layers deep before the classifier gate catches and deflects it. The red-team range keeps probing every layer from outside, and anything the output filter flags as high risk detours to the human review queue.');
   }
 
-  // ── cf-issue-to-pr (16): label to review-ready PR through sandbox and CI gate ─
+  // ── 通过沙箱和CI门进行审核准备的 PR标签 (16):
   function issuePr(host) {
     var D = '5.5s', s = svg(240);
     var m = arrows(s, 'cf-a16');
@@ -238,7 +233,7 @@
       'A labeled issue fires the GitHub App webhook; the dispatcher checks the per-repo daily budget before enqueueing. The sandbox reproduces the build from scratch and holds the task until the full test suite passes. Only a green CI gate opens the PR, and branch protection, not agent goodwill, forbids force-push.');
   }
 
-  // ── cf-tutor-loop (17): Socratic exchange feeds mastery bars on the graph ──
+  // 苏格拉底的交流,在图表上养了掌握的条条
   function tutorLoop(host) {
     var D = '5.5s', s = svg(250), i;
     var m = arrows(s, 'cf-a17');
@@ -279,7 +274,7 @@
       'The tutor never dumps the answer: every learner reply comes back as a leading question or a scaffolded hint. Each exchange updates the mastery probability for the active concept, and when the bar fills, the policy walks the prerequisite edge in the curriculum graph and lights up the next concept.');
   }
 
-  // ── cf-loop-contract (20): a token walks the six-state machine, events tick out ─
+  // ── 合约 (20):一个代币走在六状态机器上,事件开始 ─
   function loopContract(host) {
     var D = '6s', s = svg(260), i;
     var m = arrows(s, 'cf-a20');
@@ -316,7 +311,7 @@
       'The loop is a deterministic state machine, not a chat while-loop. One run token walks IDLE through PLANNING, EXECUTING, AWAITING_TOOL, and REFLECTING, takes the inner execute-reflect cycle as many turns as the budget allows, and lands in DONE. Every transition emits a typed event on the stream, so UIs and tracers subscribe instead of inspecting the loop.');
   }
 
-  // ── cf-registry-validate (21): bad args bounce with a json-pointer, good args reach the handler ─
+  // ── 查看注册表有效性 (21):坏的阿尔格与一个Json指针跳转,好的阿尔格到达处理器 ─
   function registryValidate(host) {
     var D = '5.5s', s = svg(240);
     s.appendChild(pop([box(24, 88, 80, 40), txt(64, 112, 'model', '9')], 64, 108, D, '0s'));
@@ -359,7 +354,7 @@
       'The registry pins name to schema to handler once, and the dispatcher trusts it afterwards. A bad call never reaches the handler: the schema check bounces it back with a json-pointer path the model can fix in one round trip. The corrected call passes the same pure validator and only then touches code.');
   }
 
-  // ── cf-jsonrpc-frames (22): one JSON frame per line, ids pair the traffic ──
+  // ── cf-jsonrpc-frames (22):每行一个JSON框架,IDs对交通信 ──
   function jsonrpcFrames(host) {
     var D = '6s', s = svg(250);
     s.appendChild(line(80, 36, 80, 224, SOFT));
@@ -390,7 +385,7 @@
       'Every message is one JSON object on one line. A request carries an id and gets exactly one response with the same id; a notification carries no id and must get nothing back. A garbled line earns a -32700 parse error with id null, and the very next line parses normally: one bad frame never poisons the stream.');
   }
 
-  // ── cf-dispatch-retry (23): timeout, backoff with jitter, dedupe, one envelope ─
+  // ,,,一个封信 ─
   function dispatchRetry(host) {
     var D = '6s', s = svg(250);
     var m = arrows(s, 'cf-a23');

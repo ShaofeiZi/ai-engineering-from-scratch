@@ -1,7 +1,7 @@
-/* figures-foundations2.js — interactive lesson figures for Phase 4 (computer
-   vision), Phase 6 (speech & audio), and Phase 8 (generative AI). Loads after
-   lesson-figures.js and registers widgets through window.LF. Vanilla ES5, no
-   deps, theme via CSS vars. Authoring is the same fenced block in docs/en.md:
+/* figures-foundations2.js — 第四阶段（计算机
+   视觉）、第六阶段（语音与音频）及第八阶段（生成式 AI）的交互式课程图示。在
+   lesson-figures.js 之后加载，通过 window.LF 注册 widget。原生 ES5，无
+   依赖，主题通过 CSS 变量。编写方式为 docs/en.md 中的同一围栏块：
        ```figure
        data-augmentation
        ``` */
@@ -21,7 +21,7 @@
   }
   function tx(s) { return document.createTextNode(s); }
 
-  // ── data-augmentation: one source image, four transformed copies ───────────
+  // ── data-augmentation：一张源图像，四个变换副本 ───────────
   function dataAugmentation(host) {
     var SRC = [
       [0, 0, 6, 6, 0, 0],
@@ -84,7 +84,7 @@
     state._render();
   }
 
-  // ── transfer-learning: freeze a pretrained backbone, train the head ────────
+  // ── transfer-learning：冻结预训练主干，训练头部 ────────
   function transferLearning(host) {
     var TOTAL = 24, FULL = 24e6;
     var state = { frozen: 18 };
@@ -118,7 +118,7 @@
     state._render();
   }
 
-  // ── batchnorm-inference: batch stats in training vs running averages ───────
+  // ── batchnorm-inference：训练时的批统计量 vs 运行平均 ───────
   function batchnormInference(host) {
     var POP_MEAN = 0.0, POP_STD = 1.0;
     var state = { batch: 8, seed: 3 };
@@ -157,7 +157,7 @@
     state._render();
   }
 
-  // ── ctc-collapse: per-frame chars collapse to a transcript ─────────────────
+  // ── ctc-collapse：逐帧字符折叠为转录文本 ─────────────────
   function ctcCollapse(host) {
     var FRAMES = ['_', 'h', 'h', 'e', '_', 'l', 'l', '_', 'l', 'l', 'o', 'o', '_'];
     var state = { stage: 2 };
@@ -202,7 +202,7 @@
     state._render();
   }
 
-  // ── mfcc-pipeline: spectrogram → mel → log → DCT → keep N coeffs ────────────
+  // ── mfcc-pipeline：spectrogram → mel → log → DCT → 保留 N 个系数 ────────────
   function mfccPipeline(host) {
     var state = { keep: 13 };
     var MELS = 40;
@@ -241,7 +241,7 @@
     state._render();
   }
 
-  // ── autoencoder-bottleneck: reconstruction quality vs latent dim ───────────
+  // ── autoencoder-bottleneck：重建质量 vs 隐空间维度 ───────────
   function autoencoderBottleneck(host) {
     var DIN = 16;
     var SIGNAL = [];
@@ -294,7 +294,7 @@
     state._render();
   }
 
-  // ── normalizing-flow: invertible map, base → target, log-det Jacobian ──────
+  // ── normalizing-flow：可逆映射，base → target，log-det 雅可比 ──────
   function normalizingFlow(host) {
     var state = { a: 1.4 };
     var W = 520, H = 210, PAD = 34;
@@ -339,7 +339,7 @@
     state._render();
   }
 
-  // ── score-matching: score vector field and Langevin sampling steps ─────────
+  // ── score-matching：得分向量场与朗之万采样步 ─────────
   function scoreMatching(host) {
     var state = { steps: 18, step: 0.06 };
     var W = 520, H = 240, PAD = 24;

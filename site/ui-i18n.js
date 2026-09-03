@@ -188,6 +188,7 @@
         ))
       || !lang
       || lang === 'en'
+      || root.AIFS_CHINESE_ONLY
     ) {
       params.delete('lang');
     } else {
@@ -363,6 +364,7 @@
     var query;
     var saved;
     if (isCertificationPath()) return 'en';
+    if (root.AIFS_CHINESE_ONLY) return 'zh';
     if (preferred) return isSupportedLanguage(preferred) ? preferred : 'en';
     query = queryLanguage();
     if (query && isSupportedLanguage(query)) return query;
@@ -923,7 +925,7 @@
 
   function setDocumentLanguage(lang) {
     if (!doc || !doc.documentElement) return;
-    doc.documentElement.lang = lang === 'en' ? 'en' : lang;
+    doc.documentElement.lang = root.AIFS_CHINESE_ONLY && lang === 'zh' ? 'zh-CN' : (lang === 'en' ? 'en' : lang);
     doc.documentElement.dir = RTL_LANGUAGES[lang] ? 'rtl' : FALLBACK_DIR;
   }
 

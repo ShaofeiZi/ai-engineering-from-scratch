@@ -1,8 +1,8 @@
-/* figures-autonomous2.js - animated lesson figures for Phase 15 autonomous
-   systems. Loads after lesson-figures.js and registers through window.LF.
-   No deps, ES5 only, theme via CSS vars. Every figure is a unique animated
-   SVG (SMIL: animate / animateTransform / animateMotion / stroke-dashoffset).
-   Authoring: a ```figure block naming one of the widgets below. */
+/* figures-autonomous2.js - 第 15 阶段自主系统的动画课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，仅使用 ES5，
+   通过 CSS 变量适配主题。每幅图都是独立的 SVG 动画（SMIL：animate /
+   animateTransform / animateMotion / stroke-dashoffset）。编写时使用
+   ```figure 代码块指定下列某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -43,14 +43,14 @@
   }
   function newSvg(h) { return svgEl('svg', { viewBox: '0 0 520 ' + h }); }
 
-  // ── alphaevolve-loop: propose → evaluate → keep spiralling into a growing
-  //    program database. (Phase 15 · 03) ──────────────────────────────────────
+  // ── alphaevolve-loop：提议 → 评估 → 保留，螺旋进入持续增长的程序数据库。
+  //    （第 15 阶段 · 03）────────────────────────────────────────────────────
   function alphaevolveLoop(host) {
     var svg = newSvg(250);
     var cx = 160, cy = 125;
     var ringStops = [[300, 'propose'], [60, 'evaluate'], [180, 'keep']];
     var i;
-    // faint outward spiral suggesting generations accumulating
+    // 向外延伸的淡色螺旋表示世代不断积累
     var sp = 'M ' + cx + ' ' + cy + ' ';
     for (i = 0; i <= 220; i++) {
       var th = i / 220 * Math.PI * 6, rr = i / 220 * 78;
@@ -59,7 +59,7 @@
     var spiral = svgEl('path', { d: sp, fill: 'none', stroke: RULE, 'stroke-width': '1', 'stroke-dasharray': '420 420', 'stroke-dashoffset': '420' });
     spiral.appendChild(anim('stroke-dashoffset', { from: '420', to: '0', dur: '5s' }));
     svg.appendChild(spiral);
-    // three stages on the ring
+    // 环上的三个阶段
     var R = 78;
     for (i = 0; i < 3; i++) {
       var ang = (i / 3 * 2 - 0.5) * Math.PI;
@@ -67,7 +67,7 @@
       svg.appendChild(svgEl('circle', { cx: x, cy: y, r: '24', fill: SURF, stroke: BP, 'stroke-width': '1.5' }));
       svg.appendChild(txt(x, y + 4, ringStops[i][1], { mono: true, size: '10', fill: BP }));
     }
-    // a candidate token orbiting the loop
+    // 一个候选 token 沿循环轨道运行
     var orbit = 'M ' + (cx + R) + ' ' + cy + ' A ' + R + ' ' + R + ' 0 1 1 ' + (cx + R) + ' ' + (cy - 0.1) + ' Z';
     svg.appendChild(svgEl('path', { id: 'ae-orbit', d: orbit, fill: 'none', stroke: 'none' }));
     var dot = svgEl('circle', { r: '6', fill: WARN });
@@ -75,7 +75,7 @@
     m.appendChild(svgEl('mpath', { href: '#ae-orbit' }));
     dot.appendChild(m);
     svg.appendChild(dot);
-    // growing database column on the right
+    // 右侧不断增长的数据库列
     var bx = 380;
     for (i = 0; i < 6; i++) {
       var r = svgEl('rect', { x: bx, y: 200 - i * 28, width: 110, height: 22, rx: '3', fill: i === 0 ? BP : SURF, stroke: RULE, 'stroke-width': '1', opacity: '0' });
@@ -89,8 +89,8 @@
       'The LLM proposes a targeted edit, a machine-checkable evaluator scores it, and high scorers are kept as parents for the next generation. The loop spirals outward as the program database fills with ever-better variants. The wins come from the rigor of the evaluator, not the cleverness of the loop.');
   }
 
-  // ── dgm-archive: an expanding lineage of self-modifying agents, branches
-  //    drawing forward, scores climbing. (Phase 15 · 04) ───────────────────────
+  // ── dgm-archive：自修改智能体谱系不断扩展，分支向前延伸，分数逐步提高。
+  //    （第 15 阶段 · 04）────────────────────────────────────────────────────
   function dgmArchive(host) {
     var svg = newSvg(250);
     var nodes = [
@@ -128,13 +128,13 @@
       'DGM drops the formal proof and keeps an open-ended archive. Each agent proposes an edit to its own source, is scored on a benchmark, and is kept if it clears the bar. The lineage branches forward and the best score climbs — SWE-bench rose from 20% to 50% this way. The same open-endedness is what let it learn to game its own evaluator.');
   }
 
-  // ── aar-forum: parallel sandboxed agents writing through to an append-only
-  //    forum outside any sandbox. (Phase 15 · 06) ──────────────────────────────
+  // ── aar-forum：并行沙箱智能体写入所有沙箱之外的仅追加论坛。
+  //    （第 15 阶段 · 06）────────────────────────────────────────────────────
   function aarForum(host) {
     var svg = newSvg(250);
     var boxes = [{ x: 30, y: 30 }, { x: 30, y: 105 }, { x: 30, y: 180 }];
     var logX = 350, i;
-    // the append-only log on the right
+    // 右侧的仅追加日志
     svg.appendChild(svgEl('rect', { x: logX, y: 24, width: 140, height: 200, rx: '5', fill: 'none', stroke: BP, 'stroke-width': '2' }));
     svg.appendChild(txt(logX + 70, 18, 'SHARED FORUM (append-only)', { mono: true, size: '8', fill: BP, spacing: '0.08em' }));
     for (i = 0; i < 5; i++) {
@@ -143,7 +143,7 @@
       svg.appendChild(lr);
       svg.appendChild(txt(logX + 70, 200 - i * 34 + 17, 'finding #' + (i + 1), { mono: true, size: '9', fill: SOFT }));
     }
-    // three sandboxes, each fires a record toward the log
+    // 三个沙箱分别向日志发送一条记录
     var colors = [BP, WARN, SOFT];
     for (i = 0; i < boxes.length; i++) {
       var bx = boxes[i].x, by = boxes[i].y;
@@ -164,8 +164,8 @@
       'Parallel Claude AARs each run in an isolated sandbox and publish findings to a shared forum whose storage sits outside every sandbox. The agents can read the log but cannot delete or edit past records from inside their box. That append-only, write-through property is what makes the research output trustworthy — an agent cannot quietly cover up a failed experiment.');
   }
 
-  // ── bounded-gates: a proposed edit rises through invariant gates; one that
-  //    violates is bounced. (Phase 15 · 08) ────────────────────────────────────
+  // ── bounded-gates：提议的编辑向上通过不变量关卡；违反约束的编辑会被弹回。
+  //    （第 15 阶段 · 08）────────────────────────────────────────────────────
   function boundedGates(host) {
     var svg = newSvg(260);
     var gates = ['invariants', 'alignment anchor', 'multi-objective', 'regression'];
@@ -176,17 +176,17 @@
       svg.appendChild(svgEl('circle', { cx: gx, cy: gy[i], r: '3', fill: BP }));
       svg.appendChild(svgEl('circle', { cx: gx + gw, cy: gy[i], r: '3', fill: BP }));
     }
-    // accepted edit: climbs through all gates
+    // 接受的编辑：通过所有关卡
     var accepted = svgEl('circle', { cx: gx + 50, cy: 240, r: '8', fill: BP });
     accepted.appendChild(anim('cy', { values: '240;210;160;110;60;30', dur: '5s', keyTimes: '0;0.2;0.42;0.62;0.82;1' }));
     svg.appendChild(accepted);
     svg.appendChild(txt(gx + 50, 252, 'edit', { mono: true, size: '8', fill: MUTE }));
-    // rejected edit: rises to a gate, then bounces back down
+    // 拒绝的编辑：上升到某个关卡后向下弹回
     var rej = svgEl('circle', { cx: gx + 160, cy: 240, r: '8', fill: WARN });
     rej.appendChild(anim('cy', { values: '240;210;160;160;240', dur: '5s', keyTimes: '0;0.25;0.45;0.55;1', begin: '1.2s' }));
     rej.appendChild(anim('opacity', { values: '1;1;1;0.3;0', dur: '5s', keyTimes: '0;0.45;0.5;0.6;1', begin: '1.2s' }));
     svg.appendChild(rej);
-    // a little X flashing at the second gate when the rejected one hits it
+    // 被拒绝的编辑撞上第二个关卡时，会闪烁一个小叉号
     var x1 = svgEl('text', { x: gx + 160, y: 152, 'text-anchor': 'middle', 'font-family': 'var(--font-mono,monospace)', 'font-size': '16', fill: WARN, opacity: '0' });
     x1.appendChild(document.createTextNode('×'));
     x1.appendChild(anim('opacity', { values: '0;0;1;0;0', dur: '5s', keyTimes: '0;0.45;0.55;0.75;1', begin: '1.2s' }));
@@ -197,25 +197,25 @@
       'A bounded loop checks each proposed self-modification against external invariants the loop cannot edit: formal invariants, an immutable alignment anchor, every safety objective, and a regression check. An edit is accepted only if it clears all of them; one that violates any gate is bounced. None of this is a proof of safety — it raises the cost of silent failure.');
   }
 
-  // ── injection-boundary: untrusted page content fires injection attempts at
-  //    the agent's read/act boundary; most bounce, one slips. (Phase 15 · 11) ──
+  // ── injection-boundary：不可信页面内容向智能体的读取/行动边界发起注入尝试；
+  //    大多数被弹回，一个成功穿透。（第 15 阶段 · 11）───────────────────────
   function injectionBoundary(host) {
     var svg = newSvg(250);
     var bx = 250;
-    // the fuzzy read/act boundary
+    // 模糊的读取/行动边界
     var bound = svgEl('line', { x1: bx, y1: 30, x2: bx, y2: 220, stroke: BP, 'stroke-width': '2', 'stroke-dasharray': '6 5' });
     svg.appendChild(bound);
     svg.appendChild(txt(bx, 22, 'read  ⇋  act  boundary', { mono: true, size: '9', fill: BP }));
-    // left: untrusted web page
+    // 左侧：不可信网页
     svg.appendChild(svgEl('rect', { x: 24, y: 60, width: 120, height: 130, rx: '4', fill: SURF, stroke: RULE, 'stroke-width': '1.5' }));
     svg.appendChild(txt(84, 52, 'untrusted page', { mono: true, size: '9', fill: MUTE }));
     var ly;
     for (ly = 0; ly < 5; ly++) svg.appendChild(svgEl('line', { x1: 38, y1: 82 + ly * 22, x2: 130, y2: 82 + ly * 22, stroke: RULE, 'stroke-width': '4' }));
-    // right: the agent
+    // 右侧：智能体
     svg.appendChild(svgEl('circle', { cx: 420, cy: 125, r: '34', fill: SURF, stroke: BP, 'stroke-width': '2' }));
     svg.appendChild(txt(420, 122, 'agent', { mono: true, size: '11', fill: INK }));
     svg.appendChild(txt(420, 138, 'tools', { mono: true, size: '8', fill: MUTE }));
-    // injection darts: three bounce off the boundary, one passes through
+    // 注入飞镖：三个被边界弹回，一个成功穿过
     var lanes = [80, 125, 170], i;
     for (i = 0; i < 3; i++) {
       var dart = svgEl('polygon', { points: '0,-4 12,0 0,4', fill: WARN });
@@ -230,7 +230,7 @@
       dart.appendChild(fade);
       svg.appendChild(dart);
     }
-    // the one that slips through
+    // 成功穿透的那个
     var slip = svgEl('polygon', { points: '0,-4 12,0 0,4', fill: BP });
     slip.appendChild(svgEl('animateTransform', { attributeName: 'transform', type: 'translate', repeatCount: 'indefinite', dur: '3.6s', begin: '1.8s', values: '150,125; 386,125', keyTimes: '0;1' }));
     slip.appendChild(anim('opacity', { values: '0;1;1;0', dur: '3.6s', begin: '1.8s', keyTimes: '0;0.08;0.9;1' }));
@@ -240,8 +240,8 @@
       'A browser agent reads untrusted pages and takes consequential actions. Every page is an input the user did not write, so each line of content is a potential command aimed at the fuzzy read-versus-act boundary. Defenses bounce most attempts, but indirect prompt injection lives in that boundary and, as OpenAI put it, "is not a bug that can be fully patched."');
   }
 
-  // ── cost-governor-stack: spend rises through stacked caps at different time
-  //    scales; the velocity limit trips first. (Phase 15 · 13) ─────────────────
+  // ── cost-governor-stack：支出逐步触及不同时间尺度的多层上限；速率限制最先
+  //    触发。（第 15 阶段 · 13）──────────────────────────────────────────────
   function costGovernorStack(host) {
     var svg = newSvg(250);
     var caps = [
@@ -257,14 +257,14 @@
       svg.appendChild(svgEl('line', { x1: gx, y1: c.y, x2: gx + gw, y2: c.y, stroke: c.trip ? WARN : RULE, 'stroke-width': c.trip ? '2' : '1.5', 'stroke-dasharray': c.trip ? '' : '4 4' }));
       svg.appendChild(txt(gx + gw + 8, c.y + 4, c.label, { mono: true, size: '9', fill: c.trip ? WARN : SOFT, anchor: 'start' }));
     }
-    // rising spend bar
+    // 上升的支出条
     var bar = svgEl('rect', { x: gx + 40, y: 220, width: 40, height: 0, rx: '2', fill: BP });
     bar.appendChild(anim('y', { values: '220;110;110', dur: '4s', keyTimes: '0;0.7;1', fill: 'freeze' }));
     bar.appendChild(anim('height', { values: '0;110;110', dur: '4s', keyTimes: '0;0.7;1', fill: 'freeze' }));
     bar.appendChild(anim('fill', { values: BP + ';' + BP + ';' + WARN + ';' + WARN, dur: '4s', keyTimes: '0;0.68;0.72;1', fill: 'freeze' }));
     svg.appendChild(bar);
     svg.appendChild(txt(gx + 60, 234, '$ spend', { mono: true, size: '9', fill: MUTE }));
-    // "CUT" flash when velocity cap trips
+    // 速率上限触发时闪烁 "CUT"
     var cut = svgEl('text', { x: gx + 160, y: 100, 'text-anchor': 'middle', 'font-family': 'var(--font-mono,monospace)', 'font-size': '14', fill: WARN, opacity: '0' });
     cut.appendChild(document.createTextNode('⚡ access cut'));
     cut.appendChild(anim('opacity', { values: '0;0;1;1', dur: '4s', keyTimes: '0;0.7;0.78;1', fill: 'freeze' }));
@@ -274,11 +274,11 @@
       'A single monthly cap catches a runaway agent only after the wallet is gone. The fix is a stack of limits at different time scales — per-request, per-task, velocity, per-day, per-month. A runaway loop burns fast, so the velocity limit ("$50 in 10 minutes") trips long before the daily or monthly caps would ever fire.');
   }
 
-  // ── circuit-breaker: a repeating identical tool call trips the breaker, which
-  //    flips from closed to open. (Phase 15 · 14) ──────────────────────────────
+  // ── circuit-breaker：重复的相同工具调用触发断路器，使其从闭合切换为断开。
+  //    （第 15 阶段 · 14）────────────────────────────────────────────────────
   function circuitBreaker(host) {
     var svg = newSvg(240);
-    // call log on the left: five identical calls stack up
+    // 左侧的调用日志：五次相同调用堆叠起来
     var lx = 36, i;
     svg.appendChild(txt(lx + 70, 24, 'tool calls', { mono: true, size: '9', fill: MUTE }));
     for (i = 0; i < 5; i++) {
@@ -290,13 +290,13 @@
       tl.appendChild(anim('opacity', { values: '0;1', dur: '0.3s', begin: (i * 0.7) + 's', fill: 'freeze' }));
       svg.appendChild(tl);
     }
-    // the breaker switch on the right
+    // 右侧的断路器开关
     var bx = 360, by = 120;
     svg.appendChild(svgEl('circle', { cx: bx, cy: by - 50, r: '6', fill: BP }));
     svg.appendChild(svgEl('circle', { cx: bx, cy: by + 50, r: '6', fill: BP }));
     svg.appendChild(svgEl('line', { x1: bx, y1: by - 50, x2: bx, y2: by - 44, stroke: SOFT, 'stroke-width': '2' }));
     svg.appendChild(svgEl('line', { x1: bx, y1: by + 50, x2: bx, y2: by + 44, stroke: SOFT, 'stroke-width': '2' }));
-    // the lever: starts closed (connecting), then snaps open
+    // 控制杆：开始时闭合（连通），随后突然断开
     var lever = svgEl('line', { x1: bx, y1: by - 44, x2: bx, y2: by + 44, stroke: BP, 'stroke-width': '3' });
     var lt = svgEl('animateTransform', { attributeName: 'transform', type: 'rotate', dur: '4.5s', repeatCount: 'indefinite', values: '0 ' + bx + ' ' + (by - 44) + ';0 ' + bx + ' ' + (by - 44) + ';48 ' + bx + ' ' + (by - 44) + ';48 ' + bx + ' ' + (by - 44), keyTimes: '0;0.62;0.72;1' });
     lever.appendChild(lt);
@@ -312,8 +312,8 @@
       'A circuit breaker watches for a specific action pattern — here, five identical destructive calls in a row. When the pattern trips, it snaps from closed to open: the offending path pauses and escalates to a human. Unlike a cost cap, it does not trust the agent\'s self-report; it reacts to what the agent actually does.');
   }
 
-  // ── checkpoint-replay: a workflow runs, crashes mid-step, and a new worker
-  //    replays from the last checkpoint. (Phase 15 · 16) ───────────────────────
+  // ── checkpoint-replay：工作流运行到一半崩溃，新 worker 从上一个检查点重放。
+  //    （第 15 阶段 · 16）────────────────────────────────────────────────────
   function checkpointReplay(host) {
     var svg = newSvg(240);
     var y = 110, steps = ['start', 'ckpt A', 'step', 'ckpt B', 'step', 'commit'];
@@ -330,12 +330,12 @@
     }
     var crashX = x0 + dx * 4;
     var ckBX = x0 + dx * 3;
-    // crash marker
+    // 崩溃标记
     var crash = svgEl('text', { x: crashX, y: y - 26, 'text-anchor': 'middle', 'font-family': 'var(--font-mono,monospace)', 'font-size': '15', fill: WARN, opacity: '0' });
     crash.appendChild(document.createTextNode('✕ crash'));
     crash.appendChild(anim('opacity', { values: '0;0;1;1;0;0', dur: '6s', keyTimes: '0;0.42;0.46;0.62;0.66;1' }));
     svg.appendChild(crash);
-    // worker playhead: advances to crash, jumps back to ckpt B, replays forward
+    // worker 播放头：前进到崩溃处，跳回 ckpt B，然后向前重放
     var head = svgEl('circle', { cx: x0, cy: y, r: '6', fill: WARN });
     head.appendChild(anim('cx', {
       values: x0 + ';' + crashX + ';' + ckBX + ';' + (x0 + dx * 5),
@@ -343,7 +343,7 @@
     }));
     head.appendChild(anim('fill', { values: WARN + ';' + WARN + ';' + BP + ';' + BP, dur: '6s', keyTimes: '0;0.5;0.55;1' }));
     svg.appendChild(head);
-    // resume arc from crash back to ckpt B
+    // 从崩溃处返回 ckpt B 的恢复弧线
     var arc = svgEl('path', { d: 'M ' + crashX + ' ' + (y - 12) + ' Q ' + ((crashX + ckBX) / 2) + ' ' + (y - 52) + ' ' + ckBX + ' ' + (y - 12), fill: 'none', stroke: BP, 'stroke-width': '1.5', 'stroke-dasharray': '4 3', 'marker-end': '', opacity: '0' });
     arc.appendChild(anim('opacity', { values: '0;0;1;1;0;0', dur: '6s', keyTimes: '0;0.46;0.5;0.7;0.8;1' }));
     svg.appendChild(arc);

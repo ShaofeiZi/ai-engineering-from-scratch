@@ -1,6 +1,6 @@
-/* figures-mcp.js - learner-controlled MCP protocol labs.
-   Loads after figures-tools3.js so these registrations replace selected
-   passive figures with inspectable, data-driven protocol decisions. */
+/* figures-mcp.js - 由学习者控制的 MCP protocol 实验。
+   在 figures-tools3.js 之后加载，使这些注册项能将选定的被动图示替换为
+   可检查、数据驱动的 protocol 决策。 */
 (function () {
   'use strict';
 

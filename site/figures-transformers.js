@@ -1,7 +1,7 @@
-/* figures-transformers.js — interactive lesson figures for Phase 5 (NLP) and
-   Phase 7 (transformers deep dive). Loads after lesson-figures.js, uses the
-   shared LF toolkit, registers via LF.register. No deps, ES5 only, theme via
-   CSS vars. Authoring is the same fenced ```figure block in docs/en.md. */
+/* figures-transformers.js — Phase 5（NLP）和 Phase 7（Transformer 深入）的
+   交互课程图。在 lesson-figures.js 之后加载，使用共享 LF 工具集，并通过
+   LF.register 注册。无依赖，仅 ES5，通过 CSS 变量支持主题。编写方式仍是在
+   docs/en.md 中使用 fenced ```figure 块。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -16,11 +16,11 @@
     ]));
   }
 
-  // ── attention-heatmap: QK^T scores, softmax rows, opacity = weight ─────────
+  // ── attention-heatmap：QK^T 分数、逐行 softmax，透明度表示权重 ─────────────
   function attentionHeatmap(host) {
     var toks = ['The', 'cat', 'sat', 'on', 'the', 'mat'];
     var n = toks.length;
-    // Fixed Q,K vectors (3-dim) per token; deterministic, no randomness.
+    // 每个 token 使用固定的三维 Q、K 向量；结果确定，不含随机性。
     var Q = [[1.0, 0.2, 0.0], [0.3, 1.0, 0.1], [0.1, 0.4, 0.9], [0.6, 0.1, 0.5], [0.9, 0.3, 0.0], [0.2, 0.5, 0.8]];
     var K = [[0.9, 0.1, 0.0], [0.2, 1.0, 0.2], [0.0, 0.3, 1.0], [0.5, 0.2, 0.4], [0.9, 0.2, 0.1], [0.1, 0.4, 0.9]];
     var state = { T: 1.0 };
@@ -59,7 +59,7 @@
     state._render();
   }
 
-  // ── multihead-split: split d_model into num_heads of size d_model/heads ─────
+  // ── multihead-split：将 d_model 拆为 num_heads 个 d_model/heads 维 head ────
   function multiheadSplit(host) {
     var state = { dModel: 512, heads: 8 };
     var W = 520, H = 200, PAD = 24;
@@ -100,7 +100,7 @@
     state._render();
   }
 
-  // ── causal-mask: NxN grid, upper triangle masked (greyed) ──────────────────
+  // ── causal-mask：N×N 网格，上三角被 mask（灰显）──────────────────────────
   function causalMask(host) {
     var state = { n: 7 };
     var W = 520, H = 240;
@@ -137,7 +137,7 @@
     state._render();
   }
 
-  // ── softmax-attention-scaling: why divide by sqrt(d_k) ─────────────────────
+  // ── softmax-attention-scaling：为何除以 sqrt(d_k) ─────────────────────────
   function softmaxAttentionScaling(host) {
     var state = { dk: 64, scaled: 1 };
     var W = 520, H = 210, PAD = 30;
@@ -146,12 +146,12 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // Fixed unit-scale base logits; raw dot-product std grows as sqrt(d_k).
+    // 固定单位尺度的基础 logits；原始点积标准差按 sqrt(d_k) 增长。
     var base = [1.4, 0.9, 0.5, 0.1, -0.2, -0.5, -0.9, -1.3];
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var dk = state.dk;
-      // Unscaled dot product magnitude scales ~ sqrt(dk); scaled divides it back.
+      // 未缩放点积的量级约按 sqrt(dk) 增长；缩放后将其除回原尺度。
       var spread = Math.sqrt(dk);
       var logits = base.map(function (b) { return state.scaled ? b * spread / Math.sqrt(dk) : b * spread; });
       var mx = Math.max.apply(null, logits);
@@ -171,7 +171,7 @@
       formula.textContent = state.scaled ? 'softmax(QKᵀ / √d_k),  d_k = ' + dk + ',  √d_k = ' + spread.toFixed(1) : 'softmax(QKᵀ),  variance grows with d_k = ' + dk;
     };
     var sel = LF.select(state, 'scaled', 'scaling', [['scaled  (÷ √d_k)', 1], ['unscaled', 0]]);
-    // select stores string; coerce on render
+    // select 存储字符串；渲染时执行类型转换。
     var origRender = state._render;
     state._render = function () { state.scaled = Number(state.scaled); origRender(); };
     var grid = el('div', { class: 'lf-grid' }, [
@@ -183,14 +183,14 @@
     state._render();
   }
 
-  // ── word-vector-arithmetic: king - man + woman ≈ queen ─────────────────────
+  // ── word-vector-arithmetic：king - man + woman ≈ queen ────────────────────
   function wordVectorArithmetic(host) {
     var state = { t: 1.0 };
     var W = 520, H = 260, PAD = 36;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // Fixed 2D embedding space. Gender axis horizontal, royalty axis vertical.
+    // 固定二维 embedding 空间：横轴表示性别，纵轴表示王室身份。
     var pts = { man: [1.0, 1.0], woman: [3.0, 1.0], king: [1.0, 4.0], queen: [3.0, 4.0] };
     function px(x) { return PAD + (x + 0.5) / 4.5 * (W - 2 * PAD); }
     function py(y) { return H - PAD - (y) / 5 * (H - 2 * PAD); }
@@ -203,7 +203,7 @@
     }
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
-      // result = king - man + woman, animated along t from king toward result.
+      // result = king - man + woman；沿 t 从 king 向结果播放动画。
       var resX = pts.king[0] - pts.man[0] + pts.woman[0];
       var resY = pts.king[1] - pts.man[1] + pts.woman[1];
       var t = clamp(state.t, 0, 1);
@@ -227,15 +227,15 @@
     state._render();
   }
 
-  // ── bpe-merge: step through byte-pair-encoding merges ──────────────────────
+  // ── bpe-merge：逐步执行 byte-pair encoding 合并 ───────────────────────────
   function bpeMerge(host) {
     var state = { step: 0 };
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
     var rows = el('div', {});
-    // Toy corpus of word counts (split into chars, words end in stop marker _).
+    // 带词频的玩具语料（拆为字符，单词以终止标记 _ 结尾）。
     var corpus = [['l o w _', 5], ['l o w e r _', 2], ['n e w e s t _', 6], ['w i d e s t _', 3]];
-    // Precompute the deterministic merge sequence.
+    // 预先计算确定性的合并序列。
     function tokenizeAll(words) { return words.map(function (w) { return [w[0].split(' '), w[1]]; }); }
     function pairCounts(toks) {
       var counts = {}, order = [];
@@ -305,7 +305,7 @@
     state._render();
   }
 
-  // ── gqa-kv-sharing: query heads sharing kv heads (MHA / GQA / MQA) ──────────
+  // ── gqa-kv-sharing：query head 共享 KV head（MHA / GQA / MQA）──────────────
   function gqaKvSharing(host) {
     var state = { qHeads: 8, kvHeads: 2 };
     var W = 520, H = 220;
@@ -318,7 +318,7 @@
       var q = state.qHeads;
       var kv = clamp(state.kvHeads, 1, q);
       if (state.kvHeads > q) { state.kvHeads = q; kv = q; }
-      // Snap kv to a divisor of q for clean grouping.
+      // 将 kv 调整为 q 的因数，以便整齐分组。
       var divs = [], d; for (d = 1; d <= q; d++) { if (q % d === 0) { divs.push(d); } }
       var nearest = divs[0];
       divs.forEach(function (x) { if (Math.abs(x - kv) <= Math.abs(nearest - kv)) { nearest = x; } });
@@ -355,7 +355,7 @@
     state._render();
   }
 
-  // ── transformer-residual: one block with residual skip connections ─────────
+  // ── transformer-residual：带 residual skip connection 的单个 block ────────
   function transformerResidual(host) {
     var state = { skip: 1 };
     var W = 520, H = 240;
@@ -373,7 +373,7 @@
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var cx = W / 2, bw = 150, bh = 30, lx = cx - bw / 2;
       var skip = state.skip ? 'var(--blueprint,#3553ff)' : 'var(--rule-soft,#eee)';
-      // main spine
+      // 主干。
       flow(cx, 16, cx, 36);
       box(lx, 36, bw, bh, 'self-attention', 'var(--blueprint,#3553ff)');
       var attnAdd = 86;
@@ -385,10 +385,10 @@
       flow(cx, attnAdd + 44 + bh, cx, ffnAdd);
       box(cx - 36, ffnAdd, 72, 24, 'add & norm');
       flow(cx, ffnAdd + 24, cx, ffnAdd + 40);
-      // input/output labels
+      // 输入/输出标签。
       svg.appendChild(svgEl('text', { x: cx.toFixed(1), y: '12', 'text-anchor': 'middle', 'font-size': '10', 'font-family': 'monospace', fill: 'var(--ink-mute,#777)' }, [document.createTextNode('x in')]));
       svg.appendChild(svgEl('text', { x: cx.toFixed(1), y: (ffnAdd + 38).toFixed(1), 'text-anchor': 'middle', 'font-size': '10', 'font-family': 'monospace', fill: 'var(--ink-mute,#777)' }, [document.createTextNode('x out')]));
-      // residual skips (curve around the blocks)
+      // residual skip（绕过 block 的曲线）。
       var rx = cx + bw / 2 + 24;
       svg.appendChild(svgEl('path', { d: 'M ' + cx + ' 30 C ' + rx + ' 30, ' + rx + ' ' + attnAdd + ', ' + (cx + 36) + ' ' + (attnAdd + 12), fill: 'none', stroke: skip, 'stroke-width': '2', 'stroke-dasharray': '5 3' }));
       svg.appendChild(svgEl('path', { d: 'M ' + cx + ' ' + (attnAdd + 30) + ' C ' + rx + ' ' + (attnAdd + 30) + ', ' + rx + ' ' + ffnAdd + ', ' + (cx + 36) + ' ' + (ffnAdd + 12), fill: 'none', stroke: skip, 'stroke-width': '2', 'stroke-dasharray': '5 3' }));
@@ -403,7 +403,7 @@
     state._render();
   }
 
-  // ── flash-attention-memory: O(N^2) standard vs O(N) tiled ──────────────────
+  // ── flash-attention-memory：标准 O(N^2) 与分块 O(N) 对比 ──────────────────
   function flashAttentionMemory(host) {
     var state = { logN: 12 };
     var W = 520, H = 220, PAD = 36;

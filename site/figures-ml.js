@@ -1,6 +1,6 @@
-/* figures-ml.js — interactive, theme-aware lesson figures for Phase 2 (classical ML).
-   Loads after lesson-figures.js and registers widgets via LF.register({...}).
-   Vanilla ES5, no deps, theme via CSS vars. Same fenced-block authoring:
+/* figures-ml.js — 第二阶段（经典机器学习）的交互式、主题自适应课程图示。
+   在 lesson-figures.js 之后加载，并通过 LF.register({...}) 注册小部件。
+   原生 ES5，无依赖，主题通过 CSS 变量定义。相同的围栏块编写方式：
        ```figure
        linear-regression-fit
        ```  */
@@ -10,9 +10,9 @@
   if (!LF) { return; }
   var el = LF.el, svgEl = LF.svgEl, slider = LF.slider, select = LF.select;
 
-  // ── linear-regression-fit: drag slope + intercept, watch the MSE ───────────
+  // ── linear-regression-fit：拖动斜率和截距，观察 MSE ───────────
   function linearRegressionFit(host) {
-    // fixed scatter of 12 points along y ≈ 0.7x + 1.4 with deterministic jitter
+    // 沿 y ≈ 0.7x + 1.4 分布的 12 个固定散点，带确定性抖动
     var X = [0.4, 1.1, 1.8, 2.3, 3.0, 3.6, 4.2, 5.0, 5.7, 6.4, 7.1, 7.8];
     var Y = [2.0, 1.9, 2.9, 2.7, 3.8, 3.5, 4.6, 4.4, 5.7, 5.3, 6.5, 6.2];
     var state = { m: 0.7, b: 1.4 };
@@ -52,7 +52,7 @@
     state._render();
   }
 
-  // ── logistic-sigmoid: drag w and b, find the decision boundary ─────────────
+  // ── logistic-sigmoid：拖动 w 和 b，寻找决策边界 ─────────────
   function logisticSigmoid(host) {
     var state = { w: 1.5, b: 0.0 };
     var W = 520, H = 220, PAD = 32, XR = 6;
@@ -89,9 +89,9 @@
     state._render();
   }
 
-  // ── svm-margin: rotate the boundary, widen the street, mark support vectors ─
+  // ── svm-margin：旋转边界，加宽间隔，标记支持向量 ─
   function svmMargin(host) {
-    // two linearly separable clusters (fixed). class +1 upper-right, class -1 lower-left
+    // 两个线性可分的簇（固定）。类别 +1 位于右上，类别 -1 位于左下
     var POS = [[6.0, 5.4], [6.8, 4.6], [5.4, 6.2], [7.2, 5.8], [6.4, 6.8], [7.8, 6.0]];
     var NEG = [[2.2, 3.0], [3.0, 2.2], [1.6, 2.4], [3.4, 3.2], [2.6, 1.6], [1.8, 3.6]];
     var state = { ang: 45, margin: 1.0 };
@@ -100,15 +100,15 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    var CX = 4.6, CY = 4.0; // line passes through this midpoint
+    var CX = 4.6, CY = 4.0; // 直线经过该中点
     function px(x) { return PAD + x / AX * (W - 2 * PAD); }
     function py(y) { return H - PAD - y / AX * (H - 2 * PAD); }
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var rad = state.ang * Math.PI / 180;
-      // unit normal to the boundary
+      // 边界的单位法向量
       var nx = Math.cos(rad), ny = Math.sin(rad);
-      // boundary direction (perpendicular to normal)
+      // 边界方向（垂直于法向量）
       var dx = -ny, dy = nx;
       function lineAt(off, stroke, dash) {
         var ox = CX + nx * off, oy = CY + ny * off;
@@ -151,9 +151,9 @@
     state._render();
   }
 
-  // ── knn-smoothness: raise k, the probability curve smooths out ─────────────
+  // ── knn-smoothness：增大 k，概率曲线变得更平滑 ─────────────
   function knnSmoothness(host) {
-    // 1D two-class points: x position, class (1 or 0). Deterministic layout.
+    // 一维两类点：x 位置，类别（1 或 0）。确定性布局。
     var PTS = [
       [0.6, 1], [1.0, 1], [1.4, 0], [1.8, 1], [2.3, 1], [2.7, 0], [3.1, 1],
       [3.6, 0], [4.0, 0], [4.5, 1], [4.9, 0], [5.3, 0], [5.8, 0], [6.2, 1],
@@ -194,15 +194,15 @@
     state._render();
   }
 
-  // ── kmeans-step: step through Lloyd iterations, watch WCSS fall ────────────
+  // ── kmeans-step：逐步执行 Lloyd 迭代，观察 WCSS 下降 ────────────
   function kmeansStep(host) {
-    // fixed 2D points in three loose blobs
+    // 三个松散簇中的固定二维点
     var PTS = [
       [1.8, 7.4], [2.4, 8.0], [1.4, 6.8], [2.8, 7.0], [2.0, 8.4], [1.2, 7.8],
       [7.6, 7.2], [8.2, 7.8], [7.0, 6.8], [8.6, 7.0], [7.8, 8.2], [8.0, 6.4],
       [4.4, 1.8], [5.0, 2.4], [3.8, 1.4], [5.4, 1.8], [4.0, 2.6], [4.8, 1.2]
     ];
-    // start centroids deliberately off, so they migrate
+    // 初始质心故意偏离，使其发生迁移
     var INIT = [[3.5, 5.5], [6.0, 5.0], [5.0, 3.5]];
     var state = { iter: 0 };
     var W = 520, H = 240, PAD = 28, AX = 10;
@@ -213,7 +213,7 @@
     var COLORS = ['var(--blueprint,#3553ff)', 'var(--warn,#b8870f)', 'var(--ink,#1a1a1a)'];
     function px(x) { return PAD + x / AX * (W - 2 * PAD); }
     function py(y) { return H - PAD - y / AX * (H - 2 * PAD); }
-    // precompute Lloyd iterations deterministically (max 6 steps)
+    // 确定性地预计算 Lloyd 迭代（最多 6 步）
     function assign(cs) {
       var a = [], i, j;
       for (i = 0; i < PTS.length; i++) {
@@ -265,11 +265,11 @@
     state._render();
   }
 
-  // ── decision-tree-depth: deeper tree, more splits, overfitting warning ─────
+  // ── decision-tree-depth：更深的树，更多分裂，过拟合警告 ─────
   function decisionTreeDepth(host) {
     var state = { depth: 3 };
     var W = 520, H = 220, PAD = 24;
-    // the data has roughly 4 real regions; past depth ~2 (3 leaves) we overfit
+    // 数据大致有 4 个真实区域；超过约深度 2（3 个叶节点）就会过拟合
     var REAL_LEAVES = 4;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var status = el('span', { class: 'lf-num' });
@@ -282,7 +282,7 @@
       var topY = PAD, botY = H - PAD;
       var dy = (botY - topY) / Math.max(1, depth);
       var L;
-      // draw the binary tree, level by level
+      // 逐层绘制二叉树
       for (L = 0; L <= depth; L++) {
         var nodes = Math.pow(2, L);
         var y = depth === 0 ? (topY + botY) / 2 : topY + L * dy;
@@ -317,7 +317,7 @@
     state._render();
   }
 
-  // ── feature-scaling: raw elongated contours vs scaled circular ones ────────
+  // ── feature-scaling：原始的拉长等高线 vs 缩放后的圆形等高线 ────────
   function featureScaling(host) {
     var state = { mode: 'raw' };
     var W = 520, H = 240, PAD = 30, CX = 260, CY = 120;
@@ -327,17 +327,17 @@
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var raw = state.mode === 'raw';
-      var ax = raw ? 210 : 90, ay = 70; // x-radius wide when raw, near-circular when scaled
+      var ax = raw ? 210 : 90, ay = 70; // 原始时 x 半径较大，缩放后接近圆形
       var k;
       for (k = 1; k <= 4; k++) {
         svg.appendChild(svgEl('ellipse', { cx: CX, cy: CY, rx: ax * k / 4, ry: ay * k / 4, fill: 'none', stroke: 'var(--rule-soft,#ccc)', 'stroke-width': '1.2' }));
       }
       svg.appendChild(svgEl('circle', { cx: CX, cy: CY, r: '4', fill: 'var(--ink,#1a1a1a)' }));
-      // gradient-descent path from a fixed start toward the center
+      // 梯度下降路径：从固定起点走向中心
       var sx = CX - (raw ? 200 : 80), sy = CY - 62;
       var path = 'M ' + sx + ' ' + sy + ' ', x = sx, y = sy, i;
       for (i = 0; i < 9; i++) {
-        // step proportional to local gradient: large along the steep (short) axis
+        // 步长与局部梯度成正比：在陡峭（短）轴方向上较大
         var gx = (x - CX) / (ax * ax), gy = (y - CY) / (ay * ay);
         var scale = raw ? 7200 : 2600;
         x -= gx * scale; y -= gy * scale;
@@ -358,9 +358,9 @@
     state._render();
   }
 
-  // ── naive-bayes: observe a value, compare likelihoods, read the posterior ──
+  // ── naive-bayes：观测一个值，比较似然，读出后验 ──
   function naiveBayes(host) {
-    // two class-conditional gaussians on one feature, equal priors
+    // 单一特征上的两个类条件高斯分布，等先验
     var muA = 0.38, muB = 0.66, sd = 0.12;
     var state = { x: 0.5 };
     var W = 520, H = 220, PAD = 30;
@@ -382,7 +382,7 @@
       var tx = px(state.x);
       svg.appendChild(svgEl('line', { x1: tx, y1: PAD, x2: tx, y2: H - PAD, stroke: 'var(--warn,#b8870f)', 'stroke-width': '1.5' }));
       var la = gauss(state.x, muA), lb = gauss(state.x, muB);
-      // equal priors → posterior is normalized likelihood
+      // 等先验 → 后验即归一化后的似然
       var postB = lb / (la + lb || 1);
       svg.appendChild(svgEl('circle', { cx: tx, cy: py(la), r: '4', fill: 'var(--ink-mute,#999)' }));
       svg.appendChild(svgEl('circle', { cx: tx, cy: py(lb), r: '4', fill: 'var(--blueprint,#3553ff)' }));
@@ -400,9 +400,9 @@
     state._render();
   }
 
-  // ── class-imbalance: the accuracy paradox of predicting the majority ───────
+  // ── class-imbalance：预测多数类的准确率悖论 ───────
   function classImbalance(host) {
-    var state = { ratio: 5 }; // positive-class percent
+    var state = { ratio: 5 }; // 正类百分比
     var N = 1000;
     var W = 520, H = 120, PAD = 24;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -418,9 +418,9 @@
       var split = PAD + neg * inner;
       svg.appendChild(svgEl('rect', { x: PAD, y: 40, width: (neg * inner).toFixed(1), height: '40', fill: 'var(--ink-mute,#999)' }));
       svg.appendChild(svgEl('rect', { x: split.toFixed(1), y: 40, width: (pos * inner).toFixed(1), height: '40', fill: 'var(--warn,#b8870f)' }));
-      // a "predict majority (negative)" classifier
-      var acc = neg; // accuracy = fraction it gets right = negatives
-      var recall = 0; // it never predicts positive → zero true positives
+      // 一个“预测多数（负）类”的分类器
+      var acc = neg; // 准确率 = 正确预测的比例 = 负类比例
+      var recall = 0; // 它从不预测正类 → 真阳性为零
       bar.style.width = (acc * 100).toFixed(1) + '%';
       barWrap.classList.toggle('over', pos < 0.2);
       status.innerHTML = (acc * 100).toFixed(1) + '% <small>accuracy · 0% recall</small>';
@@ -436,7 +436,7 @@
     state._render();
   }
 
-  // ── k-fold-cv: split into k folds, hold one out per round ──────────────────
+  // ── k-fold-cv：划分为 k 折，每轮留一折验证 ──────────────────
   function kFoldCv(host) {
     var state = { k: 5 };
     var W = 520, ROWH = 26, PAD = 24;

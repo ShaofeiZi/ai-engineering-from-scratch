@@ -1,7 +1,7 @@
-/* figures-llms-systems.js: interactive lesson figures for Phase 10 (LLMs from
-   scratch), Phase 12 (multimodal), and Phase 13 (tools & protocols). Loads after
-   lesson-figures.js and registers through window.LF.register. Vanilla ES5, no
-   deps, theme via CSS vars. Authoring is the same fenced block:
+/* figures-llms-systems.js：阶段 10（从零构建 LLM）、阶段 12（多模态）和阶段 13
+   （工具与协议）的交互式课程图示。在 lesson-figures.js 之后加载，并通过
+   window.LF.register 注册。原生 ES5，无依赖，通过 CSS 变量应用主题。编写方式
+   使用相同的围栏代码块：
        ```figure
        beam-search
        ``` */
@@ -11,21 +11,21 @@
   if (!LF) { return; }
   var el = LF.el, svgEl = LF.svgEl, slider = LF.slider;
 
-  // ── beam-search: keep the top-B cumulative-logprob sequences each step ─────
+  // ── beam-search：每一步保留累积对数概率最高的 B 个序列 ─────────────────
   function beamSearch(host) {
     var state = { B: 3, steps: 4 };
     var W = 520, H = 240, PAD = 26;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // deterministic per-step log-probs for the candidate children of any node
+    // 任意节点的候选子节点都使用确定性的逐步对数概率
     var STEP_LP = [-0.22, -0.51, -0.92, -1.39, -1.90];
     function px(s) { return PAD + s / state.steps * (W - 2 * PAD); }
     function py(rank, rows) { return PAD + (rank + 0.5) / rows * (H - 2 * PAD); }
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var B = state.B, rows = B;
-      // each surviving beam is a cumulative log-prob; root is one beam at 0
+      // 每个存活束都有一个累积对数概率；根节点是概率为 0 的单束
       var beams = [{ lp: 0, y: py(0, 1), x: px(0) }];
       var s, kept = 1;
       for (s = 1; s <= state.steps; s++) {
@@ -40,7 +40,7 @@
           svg.appendChild(svgEl('line', { x1: c.from.x, y1: c.from.y, x2: c.x, y2: c.y,
             stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '1.4', opacity: '0.55' }));
         });
-        // dropped candidates fade
+        // 被丢弃的候选项淡出
         cands.slice(B).forEach(function (c, r) {
           var dy = py(B + r, B + cands.length - B);
           svg.appendChild(svgEl('line', { x1: c.from.x, y1: c.from.y, x2: px(s), y2: dy,
@@ -48,7 +48,7 @@
         });
         beams = survivors; kept = survivors.length;
       }
-      // draw the kept nodes on top
+      // 在上层绘制保留的节点
       beams.forEach(function (b) {
         svg.appendChild(svgEl('circle', { cx: b.x, cy: b.y, r: '4', fill: 'var(--blueprint,#3553ff)' }));
       });
@@ -70,7 +70,7 @@
     state._render();
   }
 
-  // ── speculative-decoding: draft length, acceptance rate, resulting speedup ─
+  // ── speculative-decoding：草稿长度、接受率及由此产生的加速比 ───────────
   function speculativeDecoding(host) {
     var state = { gamma: 4, accept: 0.7 };
     var rows = el('div', {});
@@ -79,17 +79,17 @@
     var formula = el('div', { class: 'lf-formula' });
     state._render = function () {
       var g = state.gamma, a = state.accept;
-      // expected accepted prefix length before first rejection (verifier still
-      // emits one correction token), capped at g; plus the bonus token if all g pass
+      // 首次拒绝前的预期接受前缀长度（验证器仍会发出一个纠正 token），
+      // 上限为 g；如果全部 g 个 token 均通过，再加上奖励 token
       var expAcc = 0, prob = 1, i;
       for (i = 1; i <= g; i++) { expAcc += prob * a; prob *= a; }
       var allPass = Math.pow(a, g);
-      // tokens produced per verify pass: accepted run + 1 (correction or bonus)
+      // 每次验证生成的 token 数：连续接受数 + 1（纠正或奖励）
       var tokensPerPass = expAcc + 1;
-      // one verify pass replaces tokensPerPass sequential target steps
+      // 一次验证替代 tokensPerPass 个顺序执行的目标步骤
       var speedup = tokensPerPass;
       while (rows.firstChild) rows.removeChild(rows.firstChild);
-      // visual row of g draft tokens: accepted (blue) up to floor(expAcc), then one verify token
+      // 可视化一行 g 个草稿 token：前 floor(expAcc) 个被接受（蓝色），随后是一个验证 token
       var acceptedShown = Math.min(g, Math.round(expAcc));
       var strip = el('div', { class: 'lf-grid' });
       for (i = 0; i < g; i++) {
@@ -119,7 +119,7 @@
     state._render();
   }
 
-  // ── moe-routing: tokens to top-k experts, active vs total params, balance ──
+  // ── moe-routing：将 token 路由至 top-k 专家，对比活跃参数与总参数并展示均衡性 ──
   function moeRouting(host) {
     var state = { experts: 8, topk: 2 };
     var W = 520, H = 200, PAD = 24;
@@ -130,7 +130,7 @@
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
     var TOKENS = 6;
-    // deterministic routing: token t prefers experts starting at (t*3) mod E
+    // 确定性路由：token t 优先选择从 (t*3) mod E 开始的专家
     function routeOf(t, E, k) {
       var picks = [], j;
       for (j = 0; j < k; j++) { picks.push((t * 3 + j) % E); }
@@ -163,7 +163,7 @@
       var activeFrac = k / E;
       num.innerHTML = (activeFrac * 100).toFixed(0) + ' <small>% of expert params active</small>';
       bar.style.width = (activeFrac * 100).toFixed(0) + '%';
-      // load balance: ideal is TOKENS*k/E per expert; report max/avg imbalance
+      // 负载均衡：理想情况是每位专家处理 TOKENS*k/E；报告最大值/平均值不均衡率
       var avg = TOKENS * k / E;
       var mx = Math.max.apply(null, load);
       var imbal = avg > 0 ? mx / avg : 1;
@@ -185,7 +185,7 @@
     state._render();
   }
 
-  // ── context-window-slide: tokens beyond a fixed window get dropped ─────────
+  // ── context-window-slide：超出固定窗口的 token 会被丢弃 ─────────────────
   function contextWindowSlide(host) {
     var state = { seq: 14, window: 8 };
     var W = 520, H = 130, PAD = 20;
@@ -209,7 +209,7 @@
           fill: inWin ? 'var(--blueprint,#3553ff)' : 'var(--rule-soft,#ccc)',
           opacity: inWin ? '1' : '0.6' }));
       }
-      // window bracket
+      // 窗口括号
       var wx0 = PAD + firstKept * cw, wx1 = PAD + n * cw;
       svg.appendChild(svgEl('rect', { x: wx0.toFixed(1), y: (y - 8).toFixed(1),
         width: (wx1 - wx0).toFixed(1), height: '44', fill: 'none',
@@ -233,7 +233,7 @@
     state._render();
   }
 
-  // ── perplexity-loss: perplexity = e^loss, random over V is V ───────────────
+  // ── perplexity-loss：困惑度 = e^loss，在 V 上随机猜测时困惑度为 V ───────
   function perplexityLoss(host) {
     var state = { loss: 2.0, logV: 4.7 };
     var W = 520, H = 200, PAD = 32, LMAX = 7;
@@ -253,7 +253,7 @@
       var d = '', i;
       for (i = 0; i <= 120; i++) { var l = LMAX * i / 120; d += (i ? 'L' : 'M') + px(l).toFixed(1) + ' ' + py(Math.exp(l)).toFixed(1) + ' '; }
       svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '2' }));
-      // random baseline: vertical at loss = ln V
+      // 随机基线：位于 loss = ln V 的竖线
       var rx = px(Math.min(LMAX, randomLoss));
       svg.appendChild(svgEl('line', { x1: rx, y1: PAD, x2: rx, y2: H - PAD,
         stroke: 'var(--warn,#b8870f)', 'stroke-width': '1.5', 'stroke-dasharray': '4 3' }));
@@ -275,7 +275,7 @@
     state._render();
   }
 
-  // ── continuous-batching: static vs continuous fill of GPU slots ────────────
+  // ── continuous-batching：对比 GPU 槽位的静态填充与连续填充 ──────────────
   function continuousBatching(host) {
     var state = { mode: 'continuous', slots: 4 };
     var W = 520, H = 200, PAD = 26;
@@ -285,7 +285,7 @@
     var barWrap = el('div', { class: 'lf-bar' }, [bar]);
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // request lengths (in steps) arriving for the slots, deterministic
+    // 到达槽位的请求长度（以步数计），取值确定
     var LENS = [3, 7, 2, 9, 4, 6, 5, 8, 3, 7];
     var STEPS = 12;
     state._render = function () {
@@ -293,7 +293,7 @@
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var rowH = (H - 2 * PAD) / S, cw = (W - 2 * PAD) / STEPS;
       var busy = 0, total = S * STEPS;
-      var queue = LENS.slice(S); // remaining requests after the first S
+      var queue = LENS.slice(S); // 前 S 个请求之后的剩余请求
       var qi = 0;
       var r;
       for (r = 0; r < S; r++) {
@@ -302,7 +302,7 @@
         var curLen = LENS[r];
         var start = 0;
         while (t < STEPS) {
-          // run current request for curLen steps from start
+          // 从起点开始运行当前请求 curLen 步
           var runEnd = Math.min(STEPS, start + curLen);
           var x = PAD + start * cw;
           svg.appendChild(svgEl('rect', { x: x.toFixed(1), y: y.toFixed(1),
@@ -311,22 +311,22 @@
           busy += (runEnd - start);
           t = runEnd;
           if (state.mode === 'continuous' && qi < queue.length) {
-            // immediately refill the freed slot with the next queued request
+            // 立即用队列中的下一个请求填充释放的槽位
             start = t; curLen = queue[qi++];
           } else {
-            // static: slot idles until the whole batch finishes at max length
+            // 静态模式：槽位保持空闲，直至整个批次按最大长度运行完毕
             break;
           }
         }
       }
       var util;
       if (state.mode === 'static') {
-        // static batch runs until the longest request in the first batch ends
+        // 静态批处理持续运行，直到首批请求中最长的请求结束
         var maxLen = Math.max.apply(null, LENS.slice(0, S));
         var work = 0, k;
         for (k = 0; k < S; k++) { work += Math.min(STEPS, LENS[k]); }
         util = work / (S * Math.min(STEPS, maxLen));
-        // draw idle tails (grey) for static
+        // 为静态模式绘制空闲尾段（灰色）
         for (r = 0; r < S; r++) {
           var ll = Math.min(STEPS, LENS[r]);
           var maxl = Math.min(STEPS, maxLen);
@@ -362,7 +362,7 @@
     state._render();
   }
 
-  // ── image-patch-tokens: split an image into (size/patch)^2 patch tokens ────
+  // ── image-patch-tokens：将图像拆分成 (size/patch)^2 个图块 token ─────────
   function imagePatchTokens(host) {
     var state = { size: 224, patch: 16 };
     var W = 520, H = 240, PAD = 16, BOX = 200;
@@ -388,7 +388,7 @@
         svg.appendChild(svgEl('line', { x1: ox, y1: gy.toFixed(1), x2: (ox + BOX), y2: gy.toFixed(1),
           stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '0.8', opacity: '0.7' }));
       }
-      // a strip of token squares to the right, capped for legibility
+      // 右侧的一排 token 方块，为保证可读性而限制数量
       var tx = ox + BOX + 28, ty = oy, ts = 12, cols = 6;
       var shown = Math.min(n, 36);
       for (i = 0; i < shown; i++) {
@@ -414,7 +414,7 @@
     state._render();
   }
 
-  // ── multimodal-fusion: two encoders into a shared space, early vs late ─────
+  // ── multimodal-fusion：两个编码器映射到共享空间，对比早期融合与晚期融合 ─
   function multimodalFusion(host) {
     var state = { mode: 'late' };
     var W = 520, H = 230, PAD = 20;
@@ -438,19 +438,19 @@
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var imgY = 36, txtY = 150, colW = 92, colH = 36, h2 = 18;
-      // inputs
+      // 输入
       svg.appendChild(box(PAD, imgY, colW, colH, 'image', 'var(--bg,#fafaf5)'));
       svg.appendChild(box(PAD, txtY, colW, colH, 'text', 'var(--bg,#fafaf5)'));
-      // encoders
+      // 编码器
       var encX = PAD + colW + 40;
       svg.appendChild(box(encX, imgY, colW, colH, 'img enc'));
       svg.appendChild(box(encX, txtY, colW, colH, 'txt enc'));
       svg.appendChild(arrow(PAD + colW, imgY + h2, encX, imgY + h2));
       svg.appendChild(arrow(PAD + colW, txtY + h2, encX, txtY + h2));
-      // projection into shared space
+      // 投影到共享空间
       var projX = encX + colW + 40;
       if (state.mode === 'late') {
-        // each projects independently; fusion is comparing the two vectors at the end
+        // 两者各自独立投影；融合发生在最后比较两个向量时
         svg.appendChild(box(projX, imgY, colW, colH, 'proj'));
         svg.appendChild(box(projX, txtY, colW, colH, 'proj'));
         svg.appendChild(arrow(encX + colW, imgY + h2, projX, imgY + h2));
@@ -460,7 +460,7 @@
         svg.appendChild(arrow(projX + colW, imgY + h2, sx, sy + 6));
         svg.appendChild(arrow(projX + colW, txtY + h2, sx, sy + colH - 6));
       } else {
-        // early fusion: tokens concatenated into one stream, jointly modeled
+        // 早期融合：将 token 拼接成单个序列并联合建模
         var fy = (imgY + txtY) / 2;
         svg.appendChild(box(projX, fy, 80, colH, 'concat', 'var(--bg-surface,#eee)'));
         svg.appendChild(arrow(encX + colW, imgY + h2, projX, fy + 8));
@@ -485,7 +485,7 @@
     state._render();
   }
 
-  // ── mcp-tool-call: client to server JSON-RPC round trip, result into context ─
+  // ── mcp-tool-call：客户端与服务器之间的 JSON-RPC 往返，结果写入上下文 ──
   function mcpToolCall(host) {
     var state = { step: 2 };
     var W = 520, H = 250, PAD = 18;
@@ -527,11 +527,11 @@
       var serverActive = (s === 1 || s === 3);
       svg.appendChild(box(clientX, midY, bw, bh, 'client / host', clientActive));
       svg.appendChild(box(serverX, midY, bw, bh, 'MCP server', serverActive));
-      // registry under server
+      // 服务器下方的注册表
       svg.appendChild(box(serverX, midY + bh + 16, bw, 30, 'fn registry', s === 1));
-      // context under client
+      // 客户端下方的上下文
       svg.appendChild(box(clientX, midY + bh + 16, bw, 30, 'model context', s === 4));
-      // message arrow between them
+      // 二者之间的消息箭头
       var ay = midY + bh + 92;
       var goingRight = (s === 0 || s === 2);
       var x1 = clientX + bw, x2 = serverX;
@@ -546,7 +546,7 @@
         'font-family': 'monospace', 'font-size': '10', fill: 'var(--ink-mute,#777)' });
       dir.appendChild(document.createTextNode(goingRight ? 'request -->' : (s === 4 ? 'result feeds back' : '<-- response')));
       svg.appendChild(dir);
-      // step label
+      // 步骤标签
       var lbl = svgEl('text', { x: (W / 2).toFixed(1), y: (H - 14).toFixed(1), 'text-anchor': 'middle',
         'font-family': 'monospace', 'font-size': '10.5', fill: 'var(--ink-soft,#555)' });
       lbl.appendChild(document.createTextNode((s + 1) + ' / ' + STEPS.length + '  ' + STEPS[s]));

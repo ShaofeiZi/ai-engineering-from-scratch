@@ -1,7 +1,7 @@
-/* figures-nlp2.js — interactive lesson figures for Phase 5 (NLP foundations to
-   advanced). Loads after lesson-figures.js, uses the shared LF toolkit, registers
-   via LF.register. No deps, ES5 only, theme via CSS vars. Authoring is the same
-   fenced ```figure block in docs/en.md. */
+/* figures-nlp2.js — Phase 5（NLP 基础到进阶）的交互课程图。
+   在 lesson-figures.js 之后加载，使用共享 LF 工具集，并通过 LF.register 注册。
+   无依赖，仅 ES5，通过 CSS 变量支持主题。编写方式仍是在 docs/en.md 中使用
+   围栏式 ```figure 块。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -20,10 +20,10 @@
     return svgEl('text', { x: x, y: y, 'text-anchor': anchor || 'start', 'font-size': size || '10', 'font-family': 'monospace', fill: fill || 'var(--ink-soft,#555)' }, [document.createTextNode(str)]);
   }
 
-  // ── bow-tfidf: raw term frequency vs tf-idf = tf · log(N/df) ────────────────
+  // ── bow-tfidf：原始词频与 tf-idf = tf · log(N/df) 对比 ────────────────────
   function bowTfidf(host) {
     var state = { term: 0 };
-    // Three short documents, fixed counts. N = 3 docs.
+    // 三份短文档，计数固定。N = 3 份文档。
     var docs = [
       { name: 'doc1', tf: { the: 4, cat: 2, sat: 1, mat: 1 } },
       { name: 'doc2', tf: { the: 3, dog: 2, ran: 1 } },
@@ -65,7 +65,7 @@
     state._render();
   }
 
-  // ── rnn-unroll: h_t = tanh(W h_{t-1} + U x_t) as a chain of cells ───────────
+  // ── rnn-unroll：将 h_t = tanh(W h_{t-1} + U x_t) 展开为单元链 ──────────────
   function rnnUnroll(host) {
     var state = { len: 5 };
     var W = 520, H = 200;
@@ -101,14 +101,14 @@
     state._render();
   }
 
-  // ── lstm-gates: forget erases, input writes, output exposes the cell state ──
+  // ── lstm-gates：遗忘门擦除、输入门写入、输出门暴露 cell state ───────────────
   function lstmGates(host) {
     var state = { f: 0.7, i: 0.5, o: 0.8 };
     var W = 520, H = 180;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    var cPrev = 1.0, cand = 0.8; // previous cell state, candidate value
+    var cPrev = 1.0, cand = 0.8; // 上一个 cell state 与候选值。
     function bar(x, y, w, val, vmax, color, label) {
       var hh = Math.abs(val) / vmax * 60;
       svg.appendChild(svgEl('rect', { x: x.toFixed(1), y: (y - hh).toFixed(1), width: w.toFixed(1), height: hh.toFixed(1), fill: color, 'fill-opacity': '0.75' }));
@@ -141,12 +141,12 @@
     state._render();
   }
 
-  // ── seq2seq-alignment: encoder-decoder attention, rows sum to 1 ─────────────
+  // ── seq2seq-alignment：encoder-decoder attention，每行之和为 1 ─────────────
   function seq2seqAlignment(host) {
     var state = { sharp: 1.0 };
     var src = ['the', 'red', 'house', '.'];
     var tgt = ['la', 'maison', 'rouge', '.'];
-    // Base alignment logits: target row -> source columns. Reordering captured.
+    // 基础对齐 logits：目标行 -> 源列，并体现重排序。
     var base = [
       [2.0, 0.2, 0.4, 0.1],
       [0.3, 0.5, 2.2, 0.1],
@@ -184,7 +184,7 @@
     state._render();
   }
 
-  // ── edit-distance: Levenshtein DP matrix, min-edit path, distance readout ───
+  // ── edit-distance：Levenshtein DP 矩阵、最小编辑路径与距离读数 ──────────────
   function editDistance(host) {
     var pairs = [['kitten', 'sitting'], ['flaw', 'lawn'], ['sunday', 'saturday'], ['book', 'back']];
     var state = { pair: 0 };
@@ -207,7 +207,7 @@
           D[i][j] = Math.min(D[i - 1][j] + 1, D[i][j - 1] + 1, D[i - 1][j - 1] + cost);
         }
       }
-      // Backtrace the min-edit path.
+      // 回溯最小编辑路径。
       var path = {}; i = m; j = n;
       while (i > 0 || j > 0) {
         path[i + ',' + j] = 1;
@@ -242,10 +242,10 @@
     state._render();
   }
 
-  // ── ngram-backoff: higher n captures more context but sparser counts ────────
+  // ── ngram-backoff：n 越高，上下文越丰富，但计数越稀疏 ─────────────────────
   function ngramBackoff(host) {
     var state = { n: 2 };
-    // Toy corpus token count and vocabulary; observed n-grams shrink with n.
+    // 玩具语料的 token 数和词表；观测到的 n-gram 数随 n 增大而减少。
     var tokens = 100000, vocab = 5000;
     var num = el('span', { class: 'lf-num' });
     var bar = el('i');
@@ -256,7 +256,7 @@
     state._render = function () {
       var n = clamp(Math.round(state.n), 1, 5);
       var possible = Math.pow(vocab, n);
-      // Distinct n-grams actually seen are bounded by corpus length and saturate.
+      // 实际见过的不同 n-gram 数受语料长度限制，并最终饱和。
       var observed = Math.min(tokens - n + 1, possible);
       var coverage = observed / possible;
       num.innerHTML = (coverage * 100 < 0.001 ? coverage.toExponential(1) : (coverage * 100).toFixed(coverage * 100 < 1 ? 4 : 1) + '%') + ' <small>of n-grams seen</small>';
@@ -271,10 +271,10 @@
     state._render();
   }
 
-  // ── ner-bio-tagging: BIO tags per token, drag which span is the entity ──────
+  // ── ner-bio-tagging：为每个 token 标 BIO 标签，拖动选择实体 span ──────────
   function nerBioTagging(host) {
     var toks = ['Barack', 'Obama', 'visited', 'New', 'York', 'last', 'week'];
-    // Candidate entity spans: [startIndex, length, type]
+    // 候选实体 span：[startIndex, length, type]
     var spans = [
       [0, 2, 'PER'],
       [3, 2, 'LOC'],
@@ -314,7 +314,7 @@
     state._render();
   }
 
-  // ── sentiment-logits: summed word weights → logit → sigmoid → probability ───
+  // ── sentiment-logits：词权重求和 → logit → sigmoid → 概率 ─────────────────
   function sentimentLogits(host) {
     var words = ['great', 'not', 'terrible', 'okay'];
     var state = { w0: 1.6, w1: -0.4, w2: -1.8, w3: 0.2, bias: 0.0 };

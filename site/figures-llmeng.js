@@ -1,7 +1,6 @@
-/* figures-llmeng.js: interactive lesson figures for Phase 11 (LLM engineering)
-   and Phase 13 (tools & protocols). Loads after lesson-figures.js and registers
-   through window.LF.register. Vanilla ES5, no deps, theme via CSS vars. Authoring
-   is the same fenced block:
+/* figures-llmeng.js：阶段 11（LLM 工程）和阶段 13（工具与协议）的交互式课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF.register 注册。原生 ES5，
+   无依赖，通过 CSS 变量应用主题。编写方式使用相同的围栏代码块：
        ```figure
        few-shot-curve
        ``` */
@@ -11,7 +10,7 @@
   if (!LF) { return; }
   var el = LF.el, svgEl = LF.svgEl, slider = LF.slider, clamp = LF.clamp;
 
-  // ── few-shot-curve: illustrative utility vs in-context examples k ──────────
+  // ── few-shot-curve：示意效用与上下文示例数 k 的关系 ─────────────────────
   function fewShotCurve(host) {
     var state = { k: 4 };
     var W = 520, H = 220, PAD = 32, KMAX = 16;
@@ -44,7 +43,7 @@
     state._render();
   }
 
-  // ── cot-decomposition: a hard problem split into reasoning steps, CoT lift ──
+  // ── cot-decomposition：将难题拆成推理步骤，展示 CoT 带来的提升 ──────────
   function cotDecomposition(host) {
     var state = { cot: 'on' };
     var W = 520, H = 220, PAD = 18;
@@ -98,14 +97,14 @@
     state._render();
   }
 
-  // ── constrained-decoding: a grammar mask greys out schema-invalid tokens ────
+  // ── constrained-decoding：语法掩码将不符合模式的 token 置灰 ────────────
   function constrainedDecoding(host) {
     var state = { step: 1 };
     var rows = el('div', {});
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // candidate next tokens at each grammar state; valid = allowed by JSON schema
+    // 每个语法状态下的候选后继 token；valid 表示 JSON schema 允许
     var STATES = [
       { ctx: '', valid: ['{'], cands: ['{', 'hello', '42', '[', 'true'] },
       { ctx: '{', valid: ['"'], cands: ['"', '{', '42', 'name', ':'] },
@@ -139,7 +138,7 @@
     state._render();
   }
 
-  // ── prompt-cache-hit: shared-prefix length and hit rate cut latency and cost ─
+  // ── prompt-cache-hit：共享前缀长度和命中率可降低延迟与成本 ──────────────
   function promptCacheHit(host) {
     var state = { prefix: 70, hit: 80 };
     var W = 520, H = 120, PAD = 20;
@@ -181,7 +180,7 @@
     state._render();
   }
 
-  // ── semantic-cache: similarity threshold trades hit rate against safety ──────
+  // ── semantic-cache：相似度阈值用于权衡命中率与安全性 ───────────────────
   function semanticCache(host) {
     var state = { thr: 0.85 };
     var W = 520, H = 200, PAD = 26;
@@ -189,8 +188,8 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // deterministic incoming queries: cosine similarity to nearest cached entry,
-    // and whether the cached answer is actually correct for that query
+    // 确定性的传入查询：与最近缓存项的余弦相似度，
+    // 以及缓存答案对该查询是否确实正确
     var Q = [
       { sim: 0.97, ok: true }, { sim: 0.93, ok: true }, { sim: 0.90, ok: true },
       { sim: 0.88, ok: true }, { sim: 0.84, ok: false }, { sim: 0.80, ok: true },
@@ -225,14 +224,14 @@
     state._render();
   }
 
-  // ── function-call-args: model picks a tool then fills typed JSON slots ───────
+  // ── function-call-args：模型选择工具，然后填充带类型的 JSON 槽位 ────────
   function functionCallArgs(host) {
     var state = { step: 2 };
     var W = 520, H = 200, PAD = 18;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var code = el('div', { class: 'lf-formula' });
     var meta = el('div', { class: 'lf-meta' });
-    // schema slots filled progressively from the user request
+    // 根据用户请求逐步填充 schema 槽位
     var SLOTS = [
       { name: 'tool', type: 'enum', val: 'book_flight' },
       { name: 'from', type: 'string', val: '"BOM"' },
@@ -274,14 +273,14 @@
     state._render();
   }
 
-  // ── llm-judge-rubric: weighted rubric score, LLM-as-judge aggregation ───────
+  // ── llm-judge-rubric：加权评分标准分数与 LLM 裁判聚合 ──────────────────
   function llmJudgeRubric(host) {
     var state = { wHelp: 40, wCorr: 40, wSafe: 20 };
     var rows = el('div', {});
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // judge's per-criterion scores for one response, on a 0..1 scale
+    // 裁判对单个响应各项标准的评分，范围为 0..1
     var CRIT = [
       { key: 'wHelp', label: 'helpfulness', score: 0.85 },
       { key: 'wCorr', label: 'correctness', score: 0.60 },
@@ -318,7 +317,7 @@
     state._render();
   }
 
-  // ── lost-in-the-middle: retrieval accuracy is U-shaped over fact position ────
+  // ── lost-in-the-middle：检索准确率随事实位置呈 U 形分布 ─────────────────
   function lostInTheMiddle(host) {
     var state = { pos: 50 };
     var W = 520, H = 220, PAD = 32;
@@ -326,7 +325,7 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // U-shape: high at the ends (recency + primacy), dips in the middle
+    // U 形：两端较高（近因效应 + 首因效应），中间较低
     function acc(p) { var x = p / 100; var u = 0.40 + 0.55 * Math.pow(2 * x - 1, 2); return clamp(u, 0, 1); }
     function px(p) { return PAD + p / 100 * (W - 2 * PAD); }
     function py(a) { return H - PAD - (a - 0.3) / 0.7 * (H - 2 * PAD); }

@@ -1,8 +1,4 @@
-/* figures-capstone-b.js - animated lesson figures for Phase 19 capstone
-   projects (training safety, hybrid retrieval, reranking, end-to-end RAG,
-   eval harness, code-exec sandbox, injection detection, safety gate).
-   Loads after lesson-figures.js, registers through window.LF. SMIL/CSS motion
-   only - no JS loops, no rAF. ES5, no deps, theme via CSS vars. */
+/*图像-capstone-b.js - 阶段19的终点项目动画课程图像 (训练安全,混合检索,重新排名,端到端RAG,评估使用,代码执行沙箱,注射检测,安全门).课程后载-figures.js,通过窗口进行注册.LF. SMIL/CSS 运动仅 - 无JS循环,无rAF.ES5,无 deps,通过CSS vars进行主题. */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -31,7 +27,7 @@
     return svgEl('rect', { x: x, y: y, width: w, height: h, rx: '4', fill: fill || 'var(--bg-surface,#eee)', stroke: stroke || 'var(--rule-soft,#ddd)', 'stroke-width': '1.4' });
   }
 
-  // ── grad-clip-monitor (45): gradient norm spikes, clip ceiling, scaler skip ─
+  // ── grad-clip-monitor (45)：梯度范数尖峰、裁剪上限与缩放器跳步 ──
   function gradClip(host) {
     var s = svg(240), W = 520, BASE = 150, CEIL = 70, PAD = 30;
     s.appendChild(svgEl('line', { x1: PAD, y1: CEIL, x2: W - PAD, y2: CEIL, stroke: 'var(--warn,#b8870f)', 'stroke-width': '1.4', 'stroke-dasharray': '5 4' }));
@@ -60,7 +56,7 @@
       'Every step the global gradient norm is measured and clipped to the ceiling. A single overflow batch (orange) would spike past it and turn the loss to NaN; the GradScaler detects the Inf, skips the optimizer step, and halves its scale so the run survives.');
   }
 
-  // ── rrf-fusion (65): query splits into BM25 + dense lanes, ranks vote ──────
+  // 选:查询分为BM25+密集车道,排名投票 ────
   function rrfFusion(host) {
     var s = svg(250), defs = svgEl('defs', {});
     var grad = svgEl('marker', { id: 'cb-arr', viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '7', markerHeight: '7', orient: 'auto' }, [svgEl('path', { d: 'M0 0 L8 4 L0 8 z', fill: 'var(--ink-soft,#555)' })]);
@@ -92,7 +88,7 @@
       'A query runs through BM25 and a dense retriever in parallel. Each returns a ranked list; RRF scores every document by 1/(k+rank) summed across lists, so a document ranked well by either lane rises. The fusion votes rather than interpolates, which is why it wins across query classes.');
   }
 
-  // ── rerank-funnel (66): N candidates funnel through cross-encoder to top-K ─
+  // ──重排 (66):N候选人通过交叉编码器到顶K ─
   function rerankFunnel(host) {
     var s = svg(240), N = 8, x0 = 50, y0 = 30, rh = 22, gap = 4;
     s.appendChild(txt(80, 20, 'retrieved N', '9', 'var(--ink-mute,#777)'));
@@ -124,7 +120,7 @@
       'A cheap retriever returns N candidates; the cross-encoder reads each (query, document) pair with full attention and scores it. Only the top-K survive (blue). The expensive model runs N times instead of corpus-many, so its precision lift lands inside the request latency budget.');
   }
 
-  // ── rag-pipeline-flow (69): query packet travels the full pipeline ─────────
+  // ──布料管道流 (69):查询包沿着整个管道
   function ragPipeline(host) {
     var s = svg(220), defs = svgEl('defs', {});
     defs.appendChild(svgEl('marker', { id: 'cb-rag', viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '6', markerHeight: '6', orient: 'auto' }, [svgEl('path', { d: 'M0 0 L8 4 L0 8 z', fill: 'var(--ink-soft,#555)' })]));
@@ -153,7 +149,7 @@
       'The packet carries one query through the assembled pipeline: rewrite expands it, the hybrid index retrieves, the cross-encoder reranks, the generator answers with a chunk-anchored citation or refuses when confidence is low. Six isolated components become one system that beats each stage measured alone.');
   }
 
-  // ── sandbox-runner (72): code into subprocess, assertions light up, timeout ─
+  // 子程序,宣称启发,时间限度 ─
   function sandboxRunner(host) {
     var s = svg(230);
     s.appendChild(rect(20, 80, 90, 60, 'var(--blueprint,#3553ff)', 'none'));
@@ -193,7 +189,7 @@
       'Generated code is shipped on stdin to a fresh interpreter inside a subprocess with an import denylist and output cap. Each supplied assertion runs and lights pass (blue) or fail (orange); a wall-clock timeout kills runaway loops. The score is the fraction of assertions that pass, with crashes and timeouts as first-class fail modes.');
   }
 
-  // ── eval-grid (75): task grid lights pass/fail across a worker pool ─────────
+  // 评价网 (75):任务网灯通过员工池
   function evalGrid(host) {
     var s = svg(240), cols = 8, rows = 4, cw = 38, ch = 30, gx0 = 130, gy0 = 30;
     s.appendChild(txt(60, 50, 'worker', '10', 'var(--ink-soft,#555)'));
@@ -224,7 +220,7 @@
       'The runner reads the task spec, fans the tasks across a worker pool, and scores each with the metric layer plus the calibration report. Cells light pass (blue) or fail (orange) as the sweep crosses them. Per-model EvalRun records flow straight into the leaderboard aggregator; the demo self-terminates on a clean run.');
   }
 
-  // ── injection-gate (83): prompts stream through three detector layers ──────
+  // 通过三层探测器流出提示
   function injectionGate(host) {
     var s = svg(230), defs = svgEl('defs', {});
     defs.appendChild(svgEl('marker', { id: 'cb-inj', viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '6', markerHeight: '6', orient: 'auto' }, [svgEl('path', { d: 'M0 0 L8 4 L0 8 z', fill: 'var(--ink-soft,#555)' })]));
@@ -239,7 +235,7 @@
     s.appendChild(rect(440, 80, 60, 50, 'var(--bg-surface,#eee)', 'var(--blueprint,#3553ff)'));
     s.appendChild(txt(470, 100, 'verdict', '9'));
     s.appendChild(svgEl('line', { x1: 426, y1: 105, x2: 440, y2: 105, stroke: 'var(--ink-soft,#555)', 'stroke-width': '1.3', 'marker-end': 'url(#cb-inj)' }));
-    // a malicious prompt fired at the regex layer, a benign one passes clean
+    // 恶意的提示向Regex层发射,良性传递清洁
     function flow(begin, fired, fill) {
       var pk = svgEl('circle', { r: '5', fill: fill, cx: '20', cy: '105' });
       pk.appendChild(svgEl('animateMotion', { path: 'M0 0 L450 0', dur: '3s', begin: begin, repeatCount: 'indefinite', keyTimes: '0;1', keyPoints: '0;1', calcMode: 'linear' }));
@@ -260,7 +256,7 @@
       'A prompt flows through three auditable layers: normalize decodes base64/rot13/zero-width tricks, substring rules catch hand-written phrases, regex rules catch families. A benign prompt (blue) passes clean; an attack (orange) trips a rule and the aggregator emits a confidence and category instead of a vibe.');
   }
 
-  // ── safety-checkpoints (87): pre / during / post gates over the lifecycle ──
+  // ──安全检查点 (87):在生命周期中前/期间/后门 ──
   function safetyCheckpoints(host) {
     var s = svg(250), defs = svgEl('defs', {});
     defs.appendChild(svgEl('marker', { id: 'cb-sg', viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '6', markerHeight: '6', orient: 'auto' }, [svgEl('path', { d: 'M0 0 L8 4 L0 8 z', fill: 'var(--ink-soft,#555)' })]));
@@ -277,7 +273,7 @@
     var pk = svgEl('circle', { r: '5', fill: 'var(--warn,#b8870f)', cx: '14', cy: '115' });
     pk.appendChild(svgEl('animateMotion', { path: 'M0 0 L502 0', dur: '4s', repeatCount: 'indefinite', keyTimes: '0;1', keyPoints: '0;1', calcMode: 'linear' }));
     s.appendChild(pk);
-    // early-block branch dropping down from each checkpoint
+    // 早期区分分从每个检查点下降
     [60, 340, 470].forEach(function (cx, j) {
       var br = svgEl('line', { x1: cx, y1: 140, x2: cx, y2: 175, stroke: 'var(--warn,#b8870f)', 'stroke-width': '1.4', 'stroke-dasharray': '4 3', 'marker-end': 'url(#cb-sg)' });
       s.appendChild(br);

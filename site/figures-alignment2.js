@@ -1,7 +1,6 @@
-/* figures-alignment2.js — interactive lesson figures for Phase 18 (ethics,
-   safety, alignment) and Phase 9 (reinforcement learning). Loads after
-   lesson-figures.js and registers through window.LF. No deps, ES5 only,
-   theme via CSS vars. */
+/* figures-alignment2.js — 第 18 阶段（伦理、安全、对齐）和第 9 阶段
+   （强化学习）的动画课程图示。在 lesson-figures.js 之后加载，并通过
+   window.LF 注册。无依赖，仅使用 ES5，通过 CSS 变量适配主题。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -17,7 +16,7 @@
     ]));
   }
 
-  // ── ppo-clip: the clipped surrogate flattens updates outside [1-eps, 1+eps] ─
+  // ── ppo-clip：裁剪代理目标会压平 [1-eps, 1+eps] 之外的更新 ─────────────────
   function ppoClip(host) {
     var W = 520, H = 230, PAD = 34;
     var state = { adv: 1, eps: 0.2 };
@@ -65,7 +64,7 @@
     state._render();
   }
 
-  // ── reward-model: Bradley-Terry preference, chosen scored above rejected ────
+  // ── reward-model：Bradley-Terry 偏好模型，chosen 得分高于 rejected ─────────
   function rewardModel(host) {
     var state = { gap: 1.2 };
     var W = 520, H = 150, PAD = 30;
@@ -96,7 +95,7 @@
     state._render();
   }
 
-  // ── constitutional-ai: principles flag and revise a harmful response ────────
+  // ── constitutional-ai：原则标记并修订有害响应 ─────────────────────────────
   function constitutionalAI(host) {
     var principles = [
       { name: 'harmlessness', flags: 'requests for harm', sev: 0.9 },
@@ -133,7 +132,7 @@
     state._render();
   }
 
-  // ── actor-critic: advantage A = Q - V from the TD error drives the update ───
+  // ── actor-critic：由 TD 误差得到的优势 A = Q - V 驱动更新 ─────────────────
   function actorCritic(host) {
     var W = 520, H = 200, PAD = 32;
     var state = { td: 0.6, value: 1.0 };
@@ -148,13 +147,13 @@
       var V = state.value, Q = V + state.td, A = Q - V;
       var baseX = PAD + 40, qX = W - PAD - 40;
       svg.appendChild(svgEl('line', { x1: PAD, y1: py(0), x2: W - PAD, y2: py(0), stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
-      // critic baseline V
+      // critic 基线 V
       svg.appendChild(svgEl('line', { x1: PAD, y1: py(V), x2: W - PAD, y2: py(V), stroke: 'var(--ink-mute,#999)', 'stroke-width': '1.5', 'stroke-dasharray': '4 3' }));
       svg.appendChild(svgEl('text', { x: PAD + 4, y: py(V) - 6, 'font-size': '10', fill: 'var(--ink-mute,#777)', 'font-family': 'monospace' }, [document.createTextNode('V (critic) = ' + V.toFixed(2))]));
-      // realized return Q
+      // 实现的回报 Q
       svg.appendChild(svgEl('circle', { cx: qX, cy: py(Q), r: '5', fill: 'var(--blueprint,#3553ff)' }));
       svg.appendChild(svgEl('text', { x: qX, y: py(Q) - 10, 'text-anchor': 'end', 'font-size': '10', fill: 'var(--blueprint,#3553ff)', 'font-family': 'monospace' }, [document.createTextNode('Q = V + delta = ' + Q.toFixed(2))]));
-      // advantage bar from V to Q
+      // 从 V 到 Q 的优势条
       var col = A >= 0 ? 'var(--blueprint,#3553ff)' : 'var(--warn,#b8870f)';
       svg.appendChild(svgEl('line', { x1: qX, y1: py(V), x2: qX, y2: py(Q), stroke: col, 'stroke-width': '6' }));
       status.innerHTML = 'advantage A = ' + A.toFixed(2);
@@ -171,7 +170,7 @@
     state._render();
   }
 
-  // ── interpretability-probe: probe accuracy rising through the layers ────────
+  // ── interpretability-probe：探针准确率随层级上升 ──────────────────────────
   function interpretabilityProbe(host) {
     var W = 520, H = 210, PAD = 36, NL = 24;
     var state = { layer: 12, depth: 0.5 };
@@ -179,7 +178,7 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // probe accuracy: rises with a logistic in layer index; midpoint set by depth
+    // 探针准确率：随层索引按 logistic 曲线上升；中点由深度决定
     function acc(layer) {
       var mid = NL * (0.2 + 0.6 * state.depth);
       var a = 0.5 + 0.48 / (1 + Math.exp(-(layer - mid) / 2.2));
@@ -211,7 +210,7 @@
     state._render();
   }
 
-  // ── sae-features: dense activation decomposed into sparse features ──────────
+  // ── sae-features：将稠密激活分解为稀疏特征 ────────────────────────────────
   function saeFeatures(host) {
     var state = { l1: 1.0 };
     var feats = [0.95, 0.82, 0.74, 0.61, 0.52, 0.44, 0.36, 0.29, 0.21, 0.14, 0.09, 0.05];
@@ -221,7 +220,7 @@
     var formula = el('div', { class: 'lf-formula' });
     state._render = function () {
       while (rows.firstChild) rows.removeChild(rows.firstChild);
-      var thr = state.l1 * 0.18; // higher L1 -> higher activation threshold -> fewer survive
+      var thr = state.l1 * 0.18; // L1 越高 -> 激活阈值越高 -> 保留下来的越少
       var active = 0, recon = 0, total = 0;
       feats.forEach(function (f) { total += f; });
       feats.forEach(function (f, i) {
@@ -246,7 +245,7 @@
     state._render();
   }
 
-  // ── jailbreak-defense: attack success falls but over-refusal rises ─────────
+  // ── jailbreak-defense：攻击成功率下降，但过度拒绝率上升 ───────────────────
   function jailbreakDefense(host) {
     var W = 520, H = 210, PAD = 36;
     var state = { strength: 0.5 };
@@ -254,7 +253,7 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // attack success rate falls with defense; over-refusal on benign prompts rises
+    // 防御增强时攻击成功率下降；对良性提示的过度拒绝率上升
     function asr(s) { return 0.85 * Math.exp(-2.6 * s); }
     function refuse(s) { return 0.02 + 0.6 * Math.pow(s, 2.2); }
     function px(s) { return PAD + s * (W - 2 * PAD); }
@@ -281,7 +280,7 @@
     state._render();
   }
 
-  // ── scalable-oversight: weak judge supervising strong agents via debate ─────
+  // ── scalable-oversight：弱裁判通过辩论监督强智能体 ────────────────────────
   function scalableOversight(host) {
     var W = 520, H = 210, PAD = 36;
     var state = { difficulty: 0.5, mode: 'debate' };
@@ -289,7 +288,7 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // unaided weak judge accuracy decays fast with difficulty; oversight protocols decay slower
+    // 无辅助弱裁判的准确率随难度快速下降；监督协议下降得更慢
     function direct(x) { return 0.5 + 0.45 * Math.exp(-3.2 * x); }
     function debate(x) { return 0.5 + 0.45 * Math.exp(-1.3 * x); }
     function recurse(x) { return 0.5 + 0.45 * Math.exp(-1.0 * x); }

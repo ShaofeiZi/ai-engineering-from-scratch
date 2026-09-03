@@ -1,8 +1,7 @@
-/* figures-infra4.js - animated lesson figures for Phase 17 (Infrastructure and
-   Production): managed platforms, observability wiring, canary rollout,
-   AI SRE, chaos guardrails, secrets rotation, compliance mapping, FinOps.
-   Loads after lesson-figures.js, registers through window.LF. SMIL motion
-   only - no JS loops, no rAF. ES5, no deps, theme via CSS vars. */
+/* figures-infra4.js - Phase 17（基础设施与生产）的动画课程图示：托管平台、
+   可观测性接线、金丝雀发布、AI SRE、混沌防护、密钥轮换、合规映射与 FinOps。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。仅使用 SMIL 动画——
+   不使用 JS 循环和 rAF。ES5，无依赖，主题由 CSS 变量控制。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -44,8 +43,8 @@
   function motion(path, dur, begin) {
     return svgEl('animateMotion', { path: path, dur: dur, begin: begin || '0s', repeatCount: 'indefinite' });
   }
-  // fade+grow entry: opacity 0 and 95% size in over the a..b phase window,
-  // faster exit at 0.94..1. Contents draw relative to (cx, cy).
+  // 淡入并放大的入场效果：在 a..b 阶段窗口内从透明度 0、尺寸 95% 进入，
+  // 在 0.94..1 阶段更快退出。内容相对于 (cx, cy) 绘制。
   function entry(cx, cy, dur, begin, a, b) {
     a = a || 0.02; b = b || 0.12;
     var kt = '0;' + a + ';' + b + ';0.94;1';
@@ -55,7 +54,7 @@
     return g;
   }
 
-  // ── i4-platform-lanes: PTU reserved lane vs shared on-demand lane ──────────
+  // ── i4-platform-lanes：PTU 预留通道与共享按需通道对比 ───────────────
   // 01-managed-llm-platforms
   function platformLanes(host) {
     var s = svg(230);
@@ -75,7 +74,7 @@
     s.appendChild(rect(390, 132, 100, 46, BG, WARN));
     s.appendChild(txt(440, 151, 'shared pool', '9', WARN));
     s.appendChild(txt(440, 165, '~75 ms median', '8', MUTE));
-    // shared lane: other tenants' grey traffic crowds the pipe, ours waits
+    // 共享通道：其他租户的灰色流量挤占通道，我们的流量需要等待
     for (i = 0; i < 3; i++) {
       var o = svgEl('rect', { x: -5, y: -5, width: 10, height: 10, rx: '2', fill: MUTE, opacity: '0.5' });
       o.appendChild(motion('M60 155 L440 155', '2.6s', (i * 0.85) + 's'));
@@ -94,7 +93,7 @@
       'The hyperscaler latency gap is a capacity story, not a model story. Azure PTUs reserve throughput, so requests ride a dedicated lane at ~50 ms median. Bedrock on-demand shares a pool with every other tenant, and the same-scale model reads ~75 ms because your tokens queue behind theirs. Pick the platform for its catalog and FinOps surface, then decide which workloads deserve the reserved lane.');
   }
 
-  // ── i4-otel-glue: gateway spans fan out through OTel to two backends ───────
+  // ── i4-otel-glue：网关 span 经 OTel 扇出到两个后端 ─────────────────
   // 13-llm-observability
   function otelGlue(host) {
     var s = svg(240);
@@ -121,7 +120,7 @@
     var dn = svgEl('path', { d: 'M370 128 L408 174', fill: 'none', stroke: WARN, 'stroke-width': '1.4', 'stroke-dasharray': '4 4' });
     dn.appendChild(anim('stroke-dashoffset', '16;0', '0.8s'));
     s.appendChild(dn);
-    // one request becomes a span; the collector clones it to both sinks
+    // 一个请求生成一个 span；collector 将其复制到两个接收端
     var i;
     for (i = 0; i < 3; i++) {
       var b = (i * 1.4) + 's';
@@ -143,7 +142,7 @@
       'No single observability tool wins both jobs, so the production pattern splits them. The gateway captures every LLM call as an OpenTelemetry span; the collector clones each span to two sinks: a telemetry backend for traces, latency, and cost, and an eval platform for drift and RAG quality. Swapping either side later is a config change, not a re-instrumentation.');
   }
 
-  // ── i4-canary-ramp: shadow mirror first, then gated traffic steps ──────────
+  // ── i4-canary-ramp：先做影子镜像，再按门禁逐级提升流量 ─────────────
   // 20-shadow-canary-progressive
   function canaryRamp(host) {
     var s = svg(250);
@@ -170,7 +169,7 @@
       s.appendChild(r2);
     }
     s.appendChild(txt(120, 128, 'mirrored copy is discarded, never returned', '8', MUTE, 'start'));
-    // canary share meter: steps 10 -> 25 -> 50 -> 100 with gates between
+    // 金丝雀流量比例表：按 10 -> 25 -> 50 -> 100 逐级提升，各级之间设门禁
     var mx = 300, mw = 190, my = 40, mh = 130;
     s.appendChild(txt(mx + mw / 2, 28, 'canary share of live traffic', '9', INKS));
     s.appendChild(svgEl('rect', { x: mx, y: my, width: mw, height: mh, rx: '3', fill: 'none', stroke: SOFT, 'stroke-width': '1.2' }));
@@ -191,7 +190,7 @@
       'Shadow mode duplicates production requests to the candidate and discards its answers, catching cost spikes and distribution shifts at zero user risk. Only then does the canary ramp start: 10, 25, 50, 100 percent, each step gated on latency percentiles, cost per request, refusal rate, output-length distribution, and user feedback. Rollback is a policy flip measured in seconds, never a redeploy.');
   }
 
-  // ── i4-incident-agents: supervisor fans out to agents, human gate acts ─────
+  // ── i4-incident-agents：监督器向多个 agent 扇出，由人工门禁执行操作 ───
   // 23-sre-for-ai
   function incidentAgents(host) {
     var s = svg(250);
@@ -209,7 +208,7 @@
       s.appendChild(rect(ax, ay - 16, 86, 34, BG, BP));
       s.appendChild(txt(ax + 43, ay + 4, agents[i][1] + ' agent', '8.5', BP));
       s.appendChild(svgEl('path', { d: 'M110 112 L' + ax + ' ' + ay, fill: 'none', stroke: SOFT, 'stroke-width': '1', 'stroke-dasharray': '3 4' }));
-      // query out, evidence back
+      // 查询发出，证据返回
       var qd = svgEl('circle', { cx: 0, cy: 0, r: 4, fill: BP });
       qd.appendChild(motion('M70 118 L' + (ax + 43) + ' ' + ay + ' L70 118', '5.4s', (0.6 + i * 0.25) + 's'));
       qd.appendChild(anim('opacity', '0;1;1;0;0', '5.4s', { keyTimes: '0;0.12;0.5;0.55;1', begin: (0.6 + i * 0.25) + 's' }));
@@ -238,7 +237,7 @@
       'The page lands on a supervisor agent that fans queries to specialists: one greps logs, one correlates metrics to deploys, one matches runbooks. Their evidence converges into a hypothesis before anyone opens a dashboard. The remediation still crosses a human approval gate, and the autonomous set stays narrow: restart a pod, revert a deploy, nothing that re-architects the service at 3 a.m.');
   }
 
-  // ── i4-chaos-guard: fault injections land until the burn-rate guard aborts ─
+  // ── i4-chaos-guard：持续注入故障，直至燃烧率防护触发中止 ───────────
   // 24-chaos-engineering-llm
   function chaosGuard(host) {
     var s = svg(240);
@@ -248,7 +247,7 @@
     s.appendChild(rect(230, 90, 130, 60, BG, INK));
     s.appendChild(txt(295, 112, 'target: LLM service', '9', INK));
     s.appendChild(txt(295, 128, 'KV cache, gateway', '8', MUTE));
-    // three faults fire into the target: two land, the third gets aborted
+    // 三个故障依次注入目标：前两个生效，第三个被中止
     var faults = [['429 storm', '0s', BP], ['KV evict', '1.8s', BP], ['net loss', '3.6s', WARN]];
     var i;
     for (i = 0; i < faults.length; i++) {
@@ -262,7 +261,7 @@
         { keyTimes: land ? '0;0.05;0.3;0.34;1' : '0;0.05;0.28;0.32;0.36;1', begin: faults[i][1] }));
       s.appendChild(g);
     }
-    // safety plane: error-budget burn meter fills, crosses 2x, abort drops
+    // 安全平面：错误预算燃烧表持续上升，超过 2 倍阈值后触发中止
     var bx = 410, by = 40, bh = 110;
     s.appendChild(txt(bx + 20, 30, 'budget burn', '8.5', INKS));
     s.appendChild(svgEl('rect', { x: bx, y: by, width: 40, height: bh, rx: '3', fill: 'none', stroke: SOFT, 'stroke-width': '1.2' }));
@@ -282,13 +281,13 @@
       'The control plane schedules faults against the target: a 429 storm, a KV cache eviction, a network drop. The safety plane watches the error-budget burn meter the whole time. When daily burn crosses twice the expected rate, the guard aborts the experiment mid-flight and the last fault never lands. Chaos without that leash is just an outage you signed up for.');
   }
 
-  // ── i4-vault-rotation: key rotates in the vault, gateway picks it up live ──
+  // ── i4-vault-rotation：密钥在 vault 中轮换，网关实时获取新密钥 ──────
   // 25-security-secrets-audit
   function vaultRotation(host) {
     var s = svg(240);
     s.appendChild(rect(40, 80, 90, 70, BG, INK));
     s.appendChild(txt(85, 72, 'vault', '9', INK));
-    // the stored key chip: old key fades out, new key grows in, in place
+    // 存储的密钥块：旧密钥淡出，新密钥在原位置放大进入
     var oldKey = svgEl('g', { transform: 'translate(85 115)' }, [
       svgEl('rect', { x: -30, y: -10, width: 60, height: 20, rx: '3', fill: WARN, opacity: '0.8' }),
       txt(0, 4, 'key v1', '8.5', BG)
@@ -308,12 +307,12 @@
     var pull = svgEl('path', { d: 'M130 115 L220 115', fill: 'none', stroke: BP, 'stroke-width': '1.4', 'stroke-dasharray': '4 4' });
     pull.appendChild(anim('stroke-dashoffset', '16;0', '0.8s'));
     s.appendChild(pull);
-    // key material travels vault -> gateway only; color flips after rotation
+    // 密钥材料只从 vault 流向网关；轮换后颜色发生变化
     var kd = svgEl('rect', { x: -7, y: -5, width: 14, height: 10, rx: '2', fill: WARN });
     kd.appendChild(motion('M115 115 L215 115', '2.8s', '0s'));
     kd.appendChild(anim('fill', WARN + ';' + WARN + ';' + BP + ';' + BP, '5.6s', { keyTimes: '0;0.35;0.44;1' }));
     s.appendChild(kd);
-    // apps call through the gateway and never hold a credential
+    // 应用通过网关调用，始终不直接持有凭据
     var apps = [[55, 'app A'], [115, 'app B'], [175, 'app C']];
     var i;
     for (i = 0; i < apps.length; i++) {
@@ -330,13 +329,13 @@
       'Credentials live in the vault and nowhere else. Apps call the AI gateway, which pulls the current key at runtime, so no service ever holds a static secret. When key v1 rotates to v2, the swap happens in one place and every caller is current within minutes: no redeploys, no 40 config files, no message asking who has the new key. The 90-day rotation policy stops being a migration and becomes a non-event.');
   }
 
-  // ── i4-control-matrix: one control lights its cells across framework rows ──
+  // ── i4-control-matrix：一个控制项点亮多个框架行中的对应单元格 ──────
   // 26-compliance-frameworks
   function controlMatrix(host) {
     var s = svg(250);
     var rows = [['SOC 2 II', 1], ['GDPR', 1], ['HIPAA', 1], ['EU AI Act', 0], ['ISO 42001', 0]];
     var cols = [['access ctl', 140], ['PII redact', 250], ['audit log', 360]];
-    // which controls satisfy which frameworks (1 = cell lights up)
+    // 各控制项满足哪些框架（1 = 单元格点亮）
     var map = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [0, 1, 1], [1, 0, 1]];
     var i, j;
     for (j = 0; j < cols.length; j++) { s.appendChild(txt(cols[j][1] + 40, 38, cols[j][0], '8.5', INKS)); }
@@ -352,7 +351,7 @@
         }
       }
     }
-    // one implemented control sweeps its column, lighting every row it maps to
+    // 一个已实现的控制项扫过其列，点亮映射到的每一行
     var chip = svgEl('g', {}, [
       svgEl('rect', { x: -38, y: -10, width: 76, height: 20, rx: '3', fill: BG, stroke: BP, 'stroke-width': '1.4' }),
       txt(0, 4, 'built once', '8', BP)
@@ -364,7 +363,7 @@
       'Procurement wants a matrix with a row per framework, and the way to survive it is cross-mapping. One access-control implementation lights cells in SOC 2, GDPR Article 32, HIPAA 164.312(a), and ISO alike; PII redaction and audit logging sweep their own columns. You build each control once and claim it many times, so five frameworks cost far less than five audits, and the gaps that remain are visibly framework-specific, not everywhere.');
   }
 
-  // ── i4-spend-ladder: tenant meters fill, one trips the cap and kill switch ─
+  // ── i4-spend-ladder：租户计量表持续填充，其中一个触发上限和熔断开关 ─
   // 27-finops-llms
   function spendLadder(host) {
     var s = svg(250);
@@ -385,13 +384,13 @@
       f.appendChild(anim('height', t.fills, '5.6s', { keyTimes: kt, calcMode: 'spline', keySplines: EASE + ';' + EASE + ';' + EASE + ';0 0 1 1;0.4 0 1 1' }));
       f.appendChild(anim('y', t.fills.split(';').map(function (v) { return by + bh - 3 - Number(v); }).join(';'), '5.6s', { keyTimes: kt, calcMode: 'spline', keySplines: EASE + ';' + EASE + ';' + EASE + ';0 0 1 1;0.4 0 1 1' }));
       s.appendChild(f);
-      // token drops feeding each meter
+      // token 水滴流入各个计量表
       var d = svgEl('circle', { cx: 0, cy: 0, r: 3.5, fill: t.ok ? BP : WARN });
       d.appendChild(motion('M' + (t.x + 28) + ' 40 L' + (t.x + 28) + ' ' + (by + 20), '1.1s', (i * 0.3) + 's'));
       s.appendChild(d);
     }
     s.appendChild(txt(36, by + 27, 'cap', '8', WARN, 'start'));
-    // tenant C crosses the daily cap: kill switch trips, feed gets cut
+    // 租户 C 超过每日上限：熔断开关触发，输入流被切断
     var kill = entry(398, 44, '5.6s', '0s', 0.52, 0.6);
     kill.appendChild(svgEl('rect', { x: -62, y: -12, width: 124, height: 24, rx: '4', fill: SURF, stroke: WARN, 'stroke-width': '1.4' }));
     kill.appendChild(txt(0, 4, 'z > 4: kill switch, 429', '8', WARN));

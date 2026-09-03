@@ -1,8 +1,8 @@
-/* figures-cv3.js — animated SVG lesson figures for Phase 4 (computer vision),
-   second batch. Loads after lesson-figures.js and registers widgets through
-   window.LF. Every figure is a self-running SMIL animation of one CV concept:
-   no JS timers, no compute loops. Vanilla ES5, no deps, theme via CSS vars.
-   Authoring is the same fenced block in docs/en.md:
+/* figures-cv3.js — Phase 4(计算机视觉)的动画 SVG 课程插图,
+   第二批。在 lesson-figures.js 之后加载,并通过 window.LF 注册组件。
+   每个插图都是一个自运行的 SMIL 动画,演示一个 CV 概念:
+   没有 JS 定时器,没有计算循环。纯 ES5,无依赖,通过 CSS 变量设置主题。
+   编写方式与 docs/en.md 中的围栏代码块相同:
        ```figure
        cv3-roialign-sampling
        ``` */
@@ -29,7 +29,7 @@
   }
   var BLUE = 'var(--blueprint,#3553ff)', INK = 'var(--ink,#1a1a1a)', SOFT = 'var(--rule-soft,#ddd)', WARN = 'var(--warn,#b8870f)', MUTE = 'var(--ink-mute,#777)';
 
-  // ── cv3-roialign-sampling (08): a proposal box's sample points sit off-grid ──
+  // ── cv3-roialign-sampling(08):提议框的采样点位于网格之外 ──
   function roialignSampling(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(txt(14, 16, 'feature map · integer pixel grid'));
@@ -37,23 +37,23 @@
     for (r = 0; r < N; r++) for (c = 0; c < N; c++) {
       svg.appendChild(svgEl('rect', { x: gx + c * cell, y: gy + r * cell, width: cell, height: cell, fill: BLUE, opacity: (0.06 + 0.12 * ((r * 2 + c) % 4)).toFixed(3), stroke: SOFT, 'stroke-width': '0.6' }));
     }
-    // a proposal box with fractional corners, sliding slightly to show misalignment
+    // 带小数角点的提议框,轻微滑动以展示错位
     var box = svgEl('rect', { x: 70, y: 64, width: 118, height: 110, fill: 'none', stroke: WARN, 'stroke-width': '2', 'stroke-dasharray': '5 3' });
     box.appendChild(anim('x', '70;78;70', '5s', { keyTimes: '0;0.5;1' }));
     svg.appendChild(box);
     svg.appendChild(txt(70, 60, 'RoI proposal (fractional)', 9));
-    // four bilinear sample points, each pulsing with the four neighbour cells it reads
+    // 四个双线性采样点,每个随其读取的四个相邻单元格一起脉动
     var pts = [[100, 94], [150, 94], [100, 144], [150, 144]];
     pts.forEach(function (p, i) {
       var d = svgEl('circle', { cx: p[0], cy: p[1], r: '4', fill: WARN, opacity: '0' });
       d.appendChild(anim('opacity', '0;0;1;1', '5s', { begin: (i * 0.2) + 's', keyTimes: '0;0.25;0.4;1' }));
       svg.appendChild(d);
-      // crosshair lines to the four surrounding integer cell centres (bilinear weights)
+      // 十字线指向周围四个整数单元格中心(双线性权重)
       var ring = svgEl('circle', { cx: p[0], cy: p[1], r: '14', fill: 'none', stroke: WARN, 'stroke-width': '1', opacity: '0' });
       ring.appendChild(anim('opacity', '0;0;0.6;0;0', '5s', { begin: (i * 0.2) + 's', keyTimes: '0;0.4;0.55;0.8;1' }));
       svg.appendChild(ring);
     });
-    // output: a clean fixed-size 2x2 pooled grid on the right
+    // 输出:右侧干净的固定大小 2x2 池化网格
     svg.appendChild(txt(320, 60, 'aligned 2x2 output', 9));
     var ox = 330, oy = 70, oc = 44, rr, cc;
     for (rr = 0; rr < 2; rr++) for (cc = 0; cc < 2; cc++) {
@@ -61,7 +61,7 @@
       o.appendChild(anim('opacity', '0;0;0.7;0.7', '5s', { keyTimes: '0;0.55;0.75;1' }));
       svg.appendChild(o);
     }
-    // arrow from RoI to output
+    // 从 RoI 到输出的箭头
     var arr = svgEl('line', { x1: 196, y1: 120, x2: 322, y2: 120, stroke: MUTE, 'stroke-width': '1.5', 'stroke-dasharray': '130', 'stroke-dashoffset': '130' });
     arr.appendChild(anim('stroke-dashoffset', '130;130;0;0', '5s', { keyTimes: '0;0.45;0.7;1' }));
     svg.appendChild(arr);
@@ -71,13 +71,13 @@
       'RoIPool snaps a proposal box to the integer feature grid twice, and those roundings smear the mask by fractions of a pixel. RoIAlign keeps the box fractional: it places a fixed set of sample points inside each output bin and reads each one by bilinear interpolation of its four neighbouring cells. No rounding, so the mask lands where the object actually is.'));
   }
 
-  // ── cv3-latent-compression (11): image grid shrinks to a small latent, back ──
+  // ── cv3-latent-compression(11):图像网格缩小为小 latent,再还原 ──
   function latentCompression(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     svg.appendChild(txt(14, 16, '3 x 512 x 512 image'));
     svg.appendChild(txt(220, 16, '4 x 64 x 64 latent'));
     svg.appendChild(txt(380, 16, 'decoded image'));
-    // left big grid (8x8 stand-in), each cell fading as the encoder reads it
+    // 左侧大网格(8x8 替代),每个单元格随编码器读取而淡出
     var i;
     function grid(ox, oy, n, c, fillTarget, begin, kt) {
       var r, cc;
@@ -89,11 +89,11 @@
       }
     }
     grid(14, 30, 8, 21, BLUE, '0s', '0;0.12;0.9;1');
-    // VAE encoder wedge collapsing toward the small grid
+    // VAE 编码器楔形向小网格塌缩
     var enc = svgEl('polygon', { points: '186,40 210,90 210,150 186,200', fill: BLUE, opacity: '0.16', stroke: BLUE });
     svg.appendChild(enc);
     svg.appendChild(txt(186, 218, 'VAE encoder', 9));
-    // small latent grid (4x4), brightens as the wedge fires
+    // 小 latent 网格(4x4),随楔形触发而变亮
     var lx = 224, ly = 70, lc = 22, r, cc;
     for (r = 0; r < 4; r++) for (cc = 0; cc < 4; cc++) {
       var lr = svgEl('rect', { x: lx + cc * lc, y: ly + r * lc, width: lc - 2, height: lc - 2, fill: WARN, opacity: '0' });
@@ -101,7 +101,7 @@
       lr.appendChild(anim('opacity', '0;0;' + v + ';' + v, '5s', { keyTimes: '0;0.3;0.45;1' }));
       svg.appendChild(lr);
     }
-    // decoder wedge expanding back out
+    // 解码器楔形向外扩展还原
     var dec = svgEl('polygon', { points: '326,90 350,40 350,200 326,150', fill: BLUE, opacity: '0.16', stroke: BLUE });
     svg.appendChild(dec);
     svg.appendChild(txt(322, 218, 'VAE decoder', 9));
@@ -111,7 +111,7 @@
       'Pixel-space diffusion backprops through 786,432 values per step. Stable Diffusion trains a VAE that compresses the 3x512x512 image into a 4x64x64 latent (the small orange grid), runs the whole denoising loop there, then decodes back to pixels. The latent is 48x cheaper to attend over, which is what made open-weight text-to-image practical.'));
   }
 
-  // ── cv3-ctc-collapse (19): per-frame char predictions collapse to a string ───
+  // ── cv3-ctc-collapse(19):逐帧字符预测塌缩为字符串 ───
   function ctcCollapse(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     svg.appendChild(txt(14, 16, 'CRNN per-frame predictions (one column per time step)'));
@@ -127,7 +127,7 @@
       t.appendChild(anim('opacity', '0;1;1', '5s', { begin: (i * 0.08) + 's', keyTimes: '0;0.2;1' }));
       svg.appendChild(t);
     }
-    // step 1 label: merge repeats. step 2: drop blanks. animated brackets sweep under
+    // 步骤 1 标签:合并重复。步骤 2:丢弃空白。动画括号在下方扫过
     svg.appendChild(txt(14, 100, 'rule 1 · merge repeated neighbours', 10));
     svg.appendChild(txt(14, 116, 'rule 2 · delete blank ε', 10));
     var sweep = svgEl('rect', { x: x0, y: top, width: cw - 6, height: 34, fill: 'none', stroke: WARN, 'stroke-width': '2.5' });
@@ -136,7 +136,7 @@
     var mp = svgEl('animateMotion', { dur: '5s', repeatCount: 'indefinite', path: path, keyTimes: '0;0.2;0.95;1', keyPoints: '0;0;1;1', calcMode: 'linear' });
     sweep.appendChild(mp);
     svg.appendChild(sweep);
-    // collapsed result, characters dropping in
+    // 塌缩结果,字符依次落下
     var out = 'hello';
     var ox = 180, oy = 175;
     for (i = 0; i < out.length; i++) {
@@ -149,12 +149,12 @@
       'A CRNN emits one character (or a blank ε) per time-step, with no fixed alignment to the input. CTC defines the collapse: merge runs of the same label, then delete the blanks. The blank between the two l-runs is what keeps "hello" from collapsing to "helo". Training sums over every alignment that collapses to the target.'));
   }
 
-  // ── cv3-pose-heatmap (21): a Gaussian peak resolves, the skeleton draws in ───
+  // ── cv3-pose-heatmap(21):高斯峰清晰化,骨架绘制完成 ───
   function poseHeatmap(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     svg.appendChild(txt(14, 16, 'per-keypoint heatmap (argmax = joint)'));
     svg.appendChild(txt(300, 16, 'assembled skeleton'));
-    // left: a blurry heatmap blob sharpening to a peak
+    // 左:模糊热力图团块锐化为峰
     var hx = 90, hy = 110;
     var blob = svgEl('circle', { cx: hx, cy: hy, r: '46', fill: WARN, opacity: '0.18' });
     blob.appendChild(anim('r', '46;46;20;20', '5s', { keyTimes: '0;0.3;0.55;1' }));
@@ -164,7 +164,7 @@
     peak.appendChild(anim('opacity', '0;0;1;1', '5s', { keyTimes: '0;0.5;0.6;1' }));
     svg.appendChild(peak);
     svg.appendChild(txt(60, 180, 'one of K heatmaps', 9));
-    // right: 17-ish joints; we use a compact skeleton of joints + bones
+    // 右:约 17 个关节;我们使用关节 + 骨骼的紧凑骨架
     var J = {
       head: [400, 50], neck: [400, 78], sho_l: [372, 86], sho_r: [428, 86],
       elb_l: [360, 122], elb_r: [440, 122], hip_l: [384, 140], hip_r: [416, 140],
@@ -190,11 +190,11 @@
       'A pose model does not regress coordinates directly. It outputs one heatmap per keypoint, trained so a Gaussian bump sits over the true joint; the argmax pixel is the coordinate. Once all K peaks resolve, the joints are linked into a skeleton by a fixed body graph (top-down) or by association fields (bottom-up).'));
   }
 
-  // ── cv3-gaussian-splat (22): overlapping blobs alpha-composite into a scene ──
+  // ── cv3-gaussian-splat(22):重叠团块 alpha 合成为场景 ──
   function gaussianSplat(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(txt(14, 16, 'a cloud of oriented 3D Gaussians, sorted and alpha-composited'));
-    // a set of elliptical splats, each fading in front-to-back, building a shape
+    // 一组椭圆 splat,从前向后依次淡入,构建一个形状
     var splats = [
       [150, 150, 70, 40, 18, BLUE, 0.22], [210, 110, 55, 34, -22, BLUE, 0.26],
       [280, 150, 64, 38, 8, WARN, 0.24], [330, 110, 46, 30, 30, BLUE, 0.28],
@@ -206,7 +206,7 @@
       g.appendChild(anim('opacity', '0;0;' + s[6] + ';' + s[6], '5s', { begin: (i * 0.18) + 's', keyTimes: '0;0.1;0.4;1' }));
       svg.appendChild(g);
     });
-    // a sweeping "depth sort" line, front-to-back
+    // 一条扫掠的"深度排序"线,从前向后
     var sort = svgEl('line', { x1: 130, y1: 60, x2: 130, y2: 210, stroke: WARN, 'stroke-width': '1.5', opacity: '0.7' });
     sort.appendChild(anim('x1', '130;390;390', '5s', { keyTimes: '0;0.55;1' }));
     sort.appendChild(anim('x2', '130;390;390', '5s', { keyTimes: '0;0.55;1' }));
@@ -221,7 +221,7 @@
       'A scene is millions of 3D Gaussians, each carrying a centre, a rotation+scale covariance, an opacity, and view-dependent colour. Rendering projects every blob to a 2D ellipse, sorts them by depth, and alpha-composites front to back, the same blend NeRF needed hundreds of MLP queries to approximate. That is why splats render at 100+ fps and train in minutes.'));
   }
 
-  // ── cv3-rectified-flow (23): straight line vs curved diffusion noise->data ───
+  // ── cv3-rectified-flow(23):直线 vs 弯曲的扩散噪声→数据 ───
   function rectifiedFlow(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var nx = 70, ny = 180, dx = 440, dy = 70;
@@ -229,23 +229,23 @@
     svg.appendChild(txt(40, 205, 'x_T noise'));
     svg.appendChild(svgEl('circle', { cx: dx, cy: dy, r: '7', fill: BLUE }));
     svg.appendChild(txt(412, 60, 'x_0 data'));
-    // curved DDPM trajectory (many small steps)
+    // 弯曲的 DDPM 轨迹(许多小步)
     var curve = 'M 70 180 C 120 60, 220 230, 300 90 S 400 140, 440 70';
     var cv = svgEl('path', { d: curve, fill: 'none', stroke: MUTE, 'stroke-width': '1.6', 'stroke-dasharray': '5 4', opacity: '0.7' });
     svg.appendChild(cv);
     svg.appendChild(txt(120, 130, 'DDPM: curved path, ~1000 steps', 10));
-    // dot crawling the curve in many little hops
+    // 点沿曲线以许多小跳行进
     var slow = svgEl('circle', { r: '4', fill: MUTE });
     var sm = svgEl('animateMotion', { dur: '5s', repeatCount: 'indefinite', path: curve, keyTimes: '0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1', keyPoints: '0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1', calcMode: 'discrete' });
     slow.appendChild(sm);
     svg.appendChild(slow);
-    // straight rectified-flow line
+    // 笔直的 rectified-flow 线
     var line = 'M 70 180 L 440 70';
     var st = svgEl('path', { d: line, fill: 'none', stroke: BLUE, 'stroke-width': '2.4', 'stroke-dasharray': '388', 'stroke-dashoffset': '388' });
     st.appendChild(anim('stroke-dashoffset', '388;0;0', '5s', { keyTimes: '0;0.5;1' }));
     svg.appendChild(st);
     svg.appendChild(txt(250, 165, 'rectified flow: straight line, ~20 steps', 10));
-    // a few big hops along the straight line
+    // 沿直线的几个大跳
     var fast = svgEl('circle', { r: '5', fill: BLUE });
     var fm = svgEl('animateMotion', { dur: '5s', repeatCount: 'indefinite', path: line, keyTimes: '0;0.25;0.5;0.75;1', keyPoints: '0;0.25;0.5;0.75;1', calcMode: 'discrete' });
     fast.appendChild(fm);
@@ -254,15 +254,15 @@
       'DDPM learns a curved trajectory from noise to data, so faithfully integrating it takes hundreds of small steps. Rectified flow trains the model to follow a straight line between the noise sample and the data point. A straight path needs far fewer integration steps, which is how SD3 and FLUX sample in 20 steps (or 1-4 when distilled) instead of 1000.'));
   }
 
-  // ── cv3-open-vocab (24): a text prompt lights up matching objects in a scene ─
+  // ── cv3-open-vocab(24):文本提示点亮场景中匹配的物体 ─
   function openVocab(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
-    // prompt pill
+    // 提示胶囊
     svg.appendChild(svgEl('rect', { x: 14, y: 18, width: 150, height: 26, rx: '13', fill: BLUE, opacity: '0.16', stroke: BLUE }));
     svg.appendChild(svgEl('text', { x: 26, y: 36, fill: BLUE, 'font-size': '13', 'font-family': 'monospace' }, [document.createTextNode('prompt: "orange"')]));
-    // scene
+    // 场景
     svg.appendChild(svgEl('rect', { x: 14, y: 56, width: 360, height: 160, fill: 'var(--bg-surface,#eee)', stroke: SOFT }));
-    // objects: three oranges (match) and two distractors (apple, box)
+    // 物体:三个橙子(匹配)和两个干扰项(苹果、盒子)
     var objs = [
       [70, 110, 'orange', true], [150, 160, 'orange', true], [250, 100, 'orange', true],
       [320, 170, 'apple', false], [110, 190, 'box', false]
@@ -274,7 +274,7 @@
       } else {
         svg.appendChild(svgEl('circle', { cx: o[0], cy: o[1], r: '18', fill: match ? WARN : MUTE, opacity: '0.4' }));
       }
-      // mask outline that appears only on matches, with an instance id
+      // 仅在匹配项上出现的掩码轮廓,带实例 id
       if (match) {
         var ring = svgEl('circle', { cx: o[0], cy: o[1], r: '22', fill: 'none', stroke: WARN, 'stroke-width': '2.4', 'stroke-dasharray': '138', 'stroke-dashoffset': '138' });
         ring.appendChild(anim('stroke-dashoffset', '138;138;0;0', '5s', { begin: (i * 0.25) + 's', keyTimes: '0;0.3;0.6;1' }));
@@ -284,7 +284,7 @@
         svg.appendChild(id);
       }
     });
-    // single forward pass arrow
+    // 单次前向传播箭头
     svg.appendChild(txt(390, 80, 'one forward', 10));
     svg.appendChild(txt(390, 95, 'pass:', 10));
     svg.appendChild(txt(390, 120, 'all matching', 10));
@@ -295,28 +295,28 @@
       'Promptable Concept Segmentation takes a short noun phrase and returns masks for every matching object plus instance IDs in one pass. The grey apple and box stay unselected; the three oranges get outlined and numbered. Earlier systems chained a text-grounded detector into a separate segmenter, accumulating error at the seam. SAM 3 collapses that cascade into a single model.'));
   }
 
-  // ── cv3-track-assoc (27): detections in frame t match tracks from t-1 by IoU ─
+  // ── cv3-track-assoc(27):帧 t 中的检测按 IoU 匹配 t-1 的轨迹 ─
   function trackAssoc(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(txt(14, 16, 'tracks at t-1 (solid) + detections at t (dashed), matched by IoU'));
-    // three predicted track boxes (solid) with IDs, three detections (dashed) nearby
+    // 三个预测轨迹框(实线)带 ID,附近三个检测(虚线)
     var tracks = [[60, 60, 70, 60, '#1', BLUE], [220, 90, 64, 64, '#2', BLUE], [360, 70, 72, 58, '#3', BLUE]];
     var dets = [[70, 68, 70, 60], [230, 100, 64, 64], [372, 80, 72, 58]];
     tracks.forEach(function (t, i) {
       svg.appendChild(svgEl('rect', { x: t[0], y: t[1], width: t[2], height: t[3], fill: 'none', stroke: t[5], 'stroke-width': '2' }));
       svg.appendChild(svgEl('text', { x: t[0] + 4, y: t[1] - 4, fill: t[5], 'font-size': '11', 'font-family': 'monospace' }, [document.createTextNode(t[4])]));
-      // detection slides from offset into overlap with its track (the match)
+      // 检测从偏移滑入与轨迹重叠(匹配)
       var d = dets[i];
       var box = svgEl('rect', { x: d[0] + 26, y: d[1] + 22, width: d[2], height: d[3], fill: 'none', stroke: WARN, 'stroke-width': '1.6', 'stroke-dasharray': '5 3' });
       box.appendChild(anim('x', (d[0] + 26) + ';' + d[0] + ';' + d[0], '5s', { begin: (i * 0.15) + 's', keyTimes: '0;0.55;1' }));
       box.appendChild(anim('y', (d[1] + 22) + ';' + d[1] + ';' + d[1], '5s', { begin: (i * 0.15) + 's', keyTimes: '0;0.55;1' }));
       svg.appendChild(box);
-      // a "matched" check appears once aligned, ID carried over
+      // 对齐后出现"已匹配"标记,ID 传递过来
       var id = svgEl('text', { x: d[0] + d[2] / 2, y: d[1] + d[3] + 18, fill: WARN, 'font-size': '10', 'font-family': 'monospace', 'text-anchor': 'middle', opacity: '0' }, [document.createTextNode('keep ' + t[4])]);
       id.appendChild(anim('opacity', '0;0;1;1', '5s', { begin: (i * 0.15) + 's', keyTimes: '0;0.6;0.75;1' }));
       svg.appendChild(id);
     });
-    // the cost matrix / Hungarian hint at the bottom
+    // 底部的代价矩阵 / 匈牙利算法提示
     svg.appendChild(txt(14, 196, 'IoU cost matrix -> Hungarian assignment -> persist IDs across frames', 10));
     var bx = 14, by = 206;
     var rr, cc;

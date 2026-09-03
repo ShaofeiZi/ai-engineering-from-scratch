@@ -1,11 +1,10 @@
-// Shared language picker in the reference-manual aesthetic: a mono blueprint
-// button that opens a filterable panel of native language names. Reads the
-// registry from window.AIFS_LANGS (site/langs.js). On a lesson page the host
-// sets window.AIFS_onLangChange to re-render in the chosen language; on the
-// home page selecting a language just stores the preference for later.
+// 共享语言选择器，延续 reference-manual 风格：一个单色 blueprint 按钮会打开
+// 可筛选的语言面板，展示各语言的原生名称。语言注册表来自 window.AIFS_LANGS
+//（site/langs.js）。在 lesson 页面里，宿主通过 window.AIFS_onLangChange
+// 以所选语言重新渲染；在首页里，选择语言只会先把偏好保存下来。
 (function () {
   'use strict';
-  var LANGS = Array.isArray(window.AIFS_LANGS) ? window.AIFS_LANGS : [{ code: 'en', native: 'English' }];
+  var LANGS = Array.isArray(window.AIFS_LANGS) ? window.AIFS_LANGS : [{ code: 'zh', native: '简体中文' }];
   var RTL = { ar: 1, he: 1, fa: 1, ur: 1 };
   var pickerId = 0;
 
@@ -23,18 +22,14 @@
   }
   function current() {
     if (isCertificationLesson()) return 'en';
-    var q = new URLSearchParams(location.search).get('lang');
-    if (supported(q)) return q;
-    var saved = '';
-    try { saved = localStorage.getItem('lang') || ''; } catch (_) {}
-    return supported(saved) ? saved : 'en';
+    return 'zh';
   }
   function nativeOf(code) {
     for (var i = 0; i < LANGS.length; i++) if (LANGS[i].code === code) return LANGS[i].native;
     return 'English';
   }
   function applyDir(code) {
-    document.documentElement.lang = code;
+    document.documentElement.lang = code === 'zh' ? 'zh-CN' : code;
     document.documentElement.dir = RTL[code] ? 'rtl' : 'ltr';
   }
   window.AIFS_currentLang = current;
@@ -62,11 +57,11 @@
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-labelledby', id + 'Title');
     panel.hidden = true;
-    panel.innerHTML = '<div class="lang-panel-head" id="' + id + 'Title">LANGUAGE</div>'
-      + '<input class="lang-filter" type="text" placeholder="filter…" aria-label="Filter languages"'
+    panel.innerHTML = '<div class="lang-panel-head" id="' + id + 'Title">语言</div>'
+      + '<input class="lang-filter" type="text" placeholder="筛选…" aria-label="筛选语言"'
       + ' role="combobox" aria-autocomplete="list" aria-expanded="false"'
       + ' aria-controls="' + id + 'List">'
-      + '<div class="lang-list" id="' + id + 'List" role="listbox" aria-label="Languages"></div>';
+      + '<div class="lang-list" id="' + id + 'List" role="listbox" aria-label="语言列表"></div>';
     host.appendChild(panel);
 
     var currentLabel = btn.querySelector('.lang-current');
@@ -76,7 +71,7 @@
     function updateButton() {
       var label = nativeOf(current());
       currentLabel.textContent = label;
-      btn.setAttribute('aria-label', 'Choose language. Current language: ' + label);
+      btn.setAttribute('aria-label', '选择语言。当前语言：' + label);
     }
 
     function renderList(q) {
@@ -211,7 +206,16 @@
       if (host) host.hidden = true;
       return;
     }
-    if (host) mount(host);
+    try { localStorage.removeItem('lang'); } catch (_) {}
+    try {
+      var url = new URL(location.href);
+      if (url.searchParams.has('lang')) {
+        url.searchParams.delete('lang');
+        history.replaceState(null, '', url);
+      }
+    } catch (_) {}
+    applyDir('zh');
+    if (host) { host.hidden = true; host.innerHTML = ''; }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

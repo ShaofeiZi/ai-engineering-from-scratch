@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Developer resources · AI Engineering from Scratch</title>
-  <meta name="description" content="Machine-readable developer resources, public URLs, OpenAPI description, sitemap, and agent integration notes for AI Engineering from Scratch.">
+  <title>开发者资源 · AI Engineering from Scratch</title>
+  <meta name="description" content="AI Engineering from Scratch 的机器可读开发者资源、公开 URL、OpenAPI 描述、站点地图与智能体集成说明。">
+  <meta property="og:title" content="开发者资源 · AI Engineering from Scratch">
+  <meta property="og:description" content="查看机器可读课程入口、公开 URL、OpenAPI 描述、站点地图与智能体集成说明。">
+  <meta name="twitter:title" content="开发者资源 · AI Engineering from Scratch">
+  <meta name="twitter:description" content="查看机器可读课程入口、公开 URL、OpenAPI 描述、站点地图与智能体集成说明。">
   <link rel="canonical" href="https://aiengineeringfromscratch.com/developer.html">
   <link rel="stylesheet" href="style.css?v=20260802a">
   <style>
@@ -20,30 +24,30 @@
 <body>
   <header class="site-header"><div class="header-inner">
     <a href="index.html" class="logo"><span class="logo-icon" aria-hidden="true"></span> AI / FROM SCRATCH</a>
-    <nav class="header-nav"><a href="index.html#contents">Contents</a><a href="catalog.html">Catalog</a><a href="prereqs.html">Roadmap</a><a href="glossary.html">Glossary</a><a href="about.html">About</a></nav>
-    <div id="langPicker"></div>
+    <nav class="header-nav"><a href="index.html#contents">课程</a><a href="catalog.html">课程目录</a><a href="prereqs.html">路线图</a><a href="glossary.html">术语表</a><a href="about.html">关于</a></nav>
+      <script>window.AIFS_CHINESE_ONLY = true;</script>
   </div></header>
   <main class="container"><article class="trust-page">
     <p class="about-eyebrow">AI Engineering from Scratch</p>
-    <h1>Developer resources</h1>
-    <p>This is the machine-readable entry point for AI Engineering from Scratch. The project is a static, open-source curriculum rather than a hosted application API. Agents and developer tools should start with <a href="llms.txt">llms.txt</a>, which maps the lessons to their canonical pages and raw Markdown sources.</p>
-    <h2>Stable resources</h2>
+    <h1>开发者资源</h1>
+    <p>这里是 AI Engineering from Scratch 面向机器读取的入口。该项目是一个静态开源课程体系，而不是托管型应用 API。智能体和开发工具应从 <a href="llms.txt">llms.txt</a> 开始，它会把课程映射到对应的规范页面和原始 Markdown 来源。</p>
+    <h2>稳定资源</h2>
     <ul>
-      <li><a href="llms.txt"><code>/llms.txt</code></a> is the agent-oriented curriculum map.</li>
-      <li><a href="sitemap.xml"><code>/sitemap.xml</code></a> lists canonical public URLs.</li>
-      <li><a href="openapi.json"><code>/openapi.json</code></a> describes the read-only resource surface.</li>
-      <li><a href="catalog.html"><code>/catalog.html</code></a> is the searchable human catalog.</li>
-      <li><a href="https://github.com/rohitg00/ai-engineering-from-scratch"><code>GitHub</code></a> is the source of truth for lessons, code, quizzes, and reusable artifacts.</li>
+      <li><a href="llms.txt"><code>/llms.txt</code></a> 是面向智能体的课程地图。</li>
+      <li><a href="sitemap.xml"><code>/sitemap.xml</code></a> 列出了规范公开 URL。</li>
+      <li><a href="openapi.json"><code>/openapi.json</code></a> 描述了只读资源接口面。</li>
+      <li><a href="catalog.html"><code>/catalog.html</code></a> 是供人类检索的课程目录。</li>
+      <li><a href="https://github.com/rohitg00/ai-engineering-from-scratch"><code>GitHub</code></a> 是课程、代码、测验和可复用成果的事实来源。</li>
     </ul>
-    <h2>Markdown negotiation</h2>
-    <p>Requests for the homepage or major navigation routes with <code>Accept: text/markdown</code> receive the agent map with <code>Content-Type: text/markdown</code>. Responses vary on <code>Accept</code> so a cache cannot mix the HTML and Markdown representations.</p>
-    <h2>MCP status</h2>
-    <p>The website does not currently expose a hosted MCP server or authenticated product API. The curriculum does teach how to build and operate MCP servers, and those lesson artifacts live in the repository. A remote Streamable HTTP MCP endpoint would require a separate product decision, authentication policy, and operational owner.</p>
+    <h2>Markdown 协商</h2>
+    <p>当首页或主要导航路由收到 <code>Accept: text/markdown</code> 请求时，会返回智能体地图，并带上 <code>Content-Type: text/markdown</code>。响应会随 <code>Accept</code> 变化，因此缓存不会把 HTML 与 Markdown 表示混在一起。</p>
+    <h2>MCP 状态</h2>
+    <p>该网站目前没有对外提供托管型 MCP server，也没有带鉴权的产品 API。不过课程本身会教授如何构建和运维 MCP servers，相应成果都在仓库里。若要提供远程的 Streamable HTTP MCP endpoint，还需要单独的产品决策、鉴权策略和运维责任人。</p>
   </article></main>
-  <footer class="site-footer"><div class="container footer-inner"><p>© 2026 · open source · free forever</p><div class="footer-links"><a href="about.html">About</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="llms.txt">Agents</a></div></div></footer>
+  <footer class="site-footer"><div class="container footer-inner"><p>© 2026 · 开源 · 永久免费</p><div class="footer-links"><a href="about.html">关于</a><a href="contact.html">联系</a><a href="privacy.html">隐私</a><a href="llms.txt">智能体</a></div></div></footer>
   <script src="langs.js?v=fb2840c8aa0a"></script>
   <script src="i18n-data.js?v=7e2dd86ccaad"></script>
-  <script src="ui-i18n.js?v=ed1be68f31e1"></script>
-  <script src="lang-picker.js?v=853069504587" defer></script>
+  <script src="ui-i18n.js?v=f4457ecb8c7e"></script>
+  <script src="lang-picker.js?v=016a5749d9a2" defer></script>
 </body>
 </html>

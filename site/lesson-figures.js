@@ -1,5 +1,5 @@
-/* lesson-figures.js — interactive, theme-aware figures embedded in lessons.
-   Authoring: a fenced block in docs/en.md
+/* lesson-figures.js — 嵌入课程、支持主题的交互图。
+   编写方式：在 docs/en.md 中使用 fenced block
        ```figure
        kv-cache
        ```
@@ -9,7 +9,7 @@
 (function () {
   'use strict';
 
-  // Scoped styles, injected once.
+  // 限定作用域的样式，只注入一次。
   function ensureStyles() {
     if (document.getElementById('lf-styles')) return;
     var s = document.createElement('style');
@@ -628,7 +628,7 @@
     for (var j = 0; j < hosts.length; j++) disposeHost(hosts[j]);
   }
 
-  // ── kv-cache: drag the dims, watch the cache size ──────────────────────
+  // ── kv-cache：拖动维度，观察 cache 大小 ───────────────────────────────
   function kvCache(host, cfg) {
     var GiB = Math.pow(1024, 3);
     var REF = (cfg && cfg.refGiB) || 80; // one H100 / A100 80GB
@@ -650,7 +650,7 @@
       var pct = Math.min(100, gib / REF * 100);
       bar.style.transform = 'scaleX(' + (pct / 100) + ')';
       barWrap.classList.toggle('over', gib > REF);
-      meta.textContent = (gib > REF ? '⚠ exceeds ' : '') + Math.round(gib / REF * 100) + '% of one ' + REF + ' GiB GPU';
+      meta.textContent = (gib > REF ? '⚠ 超过 ' : '') + Math.round(gib / REF * 100) + '% 的单张 ' + REF + ' GiB GPU';
       formula.textContent = '2 · ' + state.layers + ' layers · ' + state.kvHeads + ' kv-heads · ' + state.headDim +
         ' head-dim · ' + fmtInt(state.seq) + ' tokens · ' + state.batch + ' batch · ' + state.dbytes + ' B';
     };
@@ -662,23 +662,23 @@
     dtype.addEventListener('change', function () { state.dbytes = Number(dtype.value); state._render(); });
 
     var grid = el('div', { class: 'lf-grid' }, [
-      slider(state, 'seq', 'sequence length', 256, 131072, 256, fmtSeq),
-      slider(state, 'batch', 'batch size', 1, 128, 1),
-      slider(state, 'layers', 'layers', 1, 128, 1),
-      slider(state, 'kvHeads', 'kv heads (GQA)', 1, 128, 1),
-      slider(state, 'headDim', 'head dim', 32, 256, 8),
-      el('div', { class: 'lf-ctrl' }, [el('label', {}, ['dtype']), dtype])
+      slider(state, 'seq', '序列长度', 256, 131072, 256, fmtSeq),
+      slider(state, 'batch', 'batch 大小', 1, 128, 1),
+      slider(state, 'layers', '层数', 1, 128, 1),
+      slider(state, 'kvHeads', 'kv 头数（GQA）', 1, 128, 1),
+      slider(state, 'headDim', 'head 维度', 32, 256, 8),
+      el('div', { class: 'lf-ctrl' }, [el('label', {}, ['数据类型']), dtype])
     ]);
 
     host.appendChild(el('div', { class: 'lf' }, [
-      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['KV-CACHE SIZER']), el('span', {}, ['drag the dimensions'])]),
+      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['KV CACHE 估算器']), el('span', {}, ['拖动各维度参数'])]),
       el('div', { class: 'lf-body' }, [grid, el('div', { class: 'lf-out' }, [num, barWrap, meta, formula])]),
-      el('div', { class: 'lf-cap' }, ['The cache holds one key and one value per token, per layer, per kv-head. It grows linearly with sequence length and batch — which is why long context at high batch is what fills the GPU, not the weights.'])
+      el('div', { class: 'lf-cap' }, ['缓存会为每个 token、每一层、每个 kv head 各存一份 key 和一份 value。它会随着序列长度和 batch 线性增长，所以真正撑满 GPU 的往往是高 batch 下的长上下文，而不是模型权重本身。'])
     ]));
     state._render();
   }
 
-  // ── gradient-descent: drag the learning rate, watch it converge or blow up ─
+  // ── gradient-descent：拖动学习率，观察收敛或发散 ──────────────────────────
   function gradDescent(host) {
     var state = { lr: 0.1, steps: 12, x0: -2.6 };
     var W = 520, H = 220, PAD = 28;
@@ -703,25 +703,25 @@
       pts.forEach(function (xi, idx) { svg.appendChild(svgEl('circle', { cx: px(xi), cy: py(fx(xi)), r: idx === pts.length - 1 ? '5' : '3', fill: 'var(--blueprint,#3553ff)' })); });
       var last = pts[pts.length - 1];
       var conv = !diverged && Math.abs(last) < 0.05;
-      status.innerHTML = diverged ? 'diverged' : (conv ? 'converged' : 'x = ' + last.toFixed(3));
-      meta.textContent = diverged ? 'lr too large: each step overshoots the minimum and the loss explodes'
-        : 'final loss f(x) = ' + fx(last).toFixed(4) + '  ·  ' + state.steps + ' steps';
+      status.innerHTML = diverged ? '已发散' : (conv ? '已收敛' : 'x = ' + last.toFixed(3));
+      meta.textContent = diverged ? 'lr 过大：每一步都会越过最小值，loss 迅速爆炸'
+        : '最终损失 f(x) = ' + fx(last).toFixed(4) + '  ·  共 ' + state.steps + ' 步';
       formula.textContent = 'x ← x − lr · 2x   (loss f(x) = x²,  diverges when lr > 1)';
     };
     var grid = el('div', { class: 'lf-grid' }, [
-      slider(state, 'lr', 'learning rate', 0.01, 1.2, 0.01),
-      slider(state, 'steps', 'steps', 1, 40, 1),
-      slider(state, 'x0', 'start x', -2.9, 2.9, 0.1)
+      slider(state, 'lr', '学习率', 0.01, 1.2, 0.01),
+      slider(state, 'steps', '步数', 1, 40, 1),
+      slider(state, 'x0', '起始 x', -2.9, 2.9, 0.1)
     ]);
     host.appendChild(el('div', { class: 'lf' }, [
-      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['GRADIENT DESCENT']), el('span', {}, ['drag the learning rate'])]),
+      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['梯度下降']), el('span', {}, ['拖动学习率'])]),
       el('div', { class: 'lf-body' }, [grid, el('div', { class: 'lf-out' }, [svg, el('div', { style: 'margin-top:12px' }, [status]), meta, formula])]),
-      el('div', { class: 'lf-cap' }, ['Each step moves downhill by the gradient times the learning rate. Too small and it crawls; too large and it overshoots and diverges. Training is the search for the rate in between.'])
+      el('div', { class: 'lf-cap' }, ['每一步都会沿着梯度方向下坡，步长由学习率决定。太小会走得很慢，太大又会越过最低点并发散。训练过程本质上就是在寻找两者之间那个合适的速率。'])
     ]));
     state._render();
   }
 
-  // ── softmax-temperature: divide the logits, reshape the distribution ───────
+  // ── softmax-temperature：缩放 logits，重塑分布 ────────────────────────────
   function softmaxTemp(host, cfg) {
     var logits = (cfg && cfg.logits) || [3.1, 2.2, 1.5, 0.8, 0.1];
     var labels = (cfg && cfg.labels) || ['cat', 'dog', 'fox', 'owl', 'elk'];
@@ -743,19 +743,19 @@
           el('div', { class: 'lf-bar' }, [bar])
         ]));
       });
-      meta.textContent = 'entropy ' + ent.toFixed(2) + ' bits  ·  ' + (T < 0.6 ? 'sharp / confident' : T > 1.6 ? 'flat / random' : 'balanced');
+      meta.textContent = '熵 ' + ent.toFixed(2) + ' bits  ·  ' + (T < 0.6 ? '尖锐 / 更自信' : T > 1.6 ? '平坦 / 更随机' : '相对均衡');
       formula.textContent = 'softmax(zᵢ / T),  T = ' + T.toFixed(2) + '   ·   logits [' + logits.join(', ') + ']';
     };
-    var grid = el('div', {}, [slider(state, 'T', 'temperature', 0.1, 3.0, 0.05)]);
+    var grid = el('div', {}, [slider(state, 'T', '温度', 0.1, 3.0, 0.05)]);
     host.appendChild(el('div', { class: 'lf' }, [
-      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['SOFTMAX TEMPERATURE']), el('span', {}, ['drag T'])]),
+      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['SOFTMAX 温度']), el('span', {}, ['拖动 T'])]),
       el('div', { class: 'lf-body' }, [grid, el('div', { class: 'lf-out' }, [rows, meta, formula])]),
-      el('div', { class: 'lf-cap' }, ['Temperature divides the logits before the exponential. Below 1 it sharpens the distribution toward the top token; above 1 it flattens toward uniform. At T→0 it is argmax; at T→∞ it is a coin flip.'])
+      el('div', { class: 'lf-cap' }, ['温度会在指数运算之前先缩放 logits。小于 1 时会把分布压得更尖，概率集中到头部 token；大于 1 时会把分布摊平，逐渐接近均匀分布。T→0 时近似 argmax，T→∞ 时则更像随机掷硬币。'])
     ]));
     state._render();
   }
 
-  // ── bias-variance: slide model complexity across the U-shaped test error ───
+  // ── bias-variance：沿 U 形测试误差曲线滑动模型复杂度 ──────────────────────
   function biasVariance(host) {
     var state = { d: 6 };
     var W = 520, H = 230, PAD = 34, DMAX = 15;
@@ -777,20 +777,20 @@
       svg.appendChild(curve(test, 'var(--blueprint,#3553ff)'));
       svg.appendChild(svgEl('circle', { cx: px(state.d), cy: py(test(state.d)), r: '5', fill: 'var(--blueprint,#3553ff)' }));
       svg.appendChild(svgEl('circle', { cx: px(state.d), cy: py(train(state.d)), r: '4', fill: 'var(--ink-mute,#999)' }));
-      var region = state.d < best - 1 ? 'underfit · high bias' : state.d > best + 1 ? 'overfit · high variance' : 'sweet spot';
-      status.innerHTML = region + ' <small>· degree ' + state.d + '</small>';
-      meta.textContent = 'train err ' + train(state.d).toFixed(2) + '  ·  test err ' + test(state.d).toFixed(2) + '  ·  test min at degree ' + best;
+      var region = state.d < best - 1 ? '欠拟合 · 高偏差' : state.d > best + 1 ? '过拟合 · 高方差' : '最佳平衡区';
+      status.innerHTML = region + ' <small>· 阶数 ' + state.d + '</small>';
+      meta.textContent = '训练误差 ' + train(state.d).toFixed(2) + '  ·  测试误差 ' + test(state.d).toFixed(2) + '  ·  测试最小值出现在阶数 ' + best;
     };
-    var grid = el('div', {}, [slider(state, 'd', 'model complexity (polynomial degree)', 1, DMAX, 1)]);
+    var grid = el('div', {}, [slider(state, 'd', '模型复杂度（多项式阶数）', 1, DMAX, 1)]);
     host.appendChild(el('div', { class: 'lf' }, [
-      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['BIAS – VARIANCE']), el('span', {}, ['drag complexity'])]),
+      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['偏差 / 方差']), el('span', {}, ['拖动复杂度'])]),
       el('div', { class: 'lf-body' }, [grid, el('div', { class: 'lf-out' }, [svg, el('div', { style: 'margin-top:10px' }, [status]), meta])]),
-      el('div', { class: 'lf-cap' }, ['Grey is training error, blue is test error. Simple models miss the signal (high bias); complex models fit the noise (high variance). Test error is their sum, lowest where the two pressures balance.'])
+      el('div', { class: 'lf-cap' }, ['灰线表示训练误差，蓝线表示测试误差。模型太简单会抓不住真实信号，表现为高偏差；模型太复杂又会把噪声也一起记住，表现为高方差。测试误差是两股力量的合成，它在两者平衡处最低。'])
     ]));
     state._render();
   }
 
-  // ── l2-regularization: raise lambda, watch every weight shrink ─────────────
+  // ── l2-regularization：提高 lambda，观察所有权重收缩 ─────────────────────
   function regL2(host) {
     var base = [1.0, -0.8, 0.65, -0.5, 0.4, -0.3];
     var norm0 = Math.sqrt(base.reduce(function (a, x) { return a + x * x; }, 0));
@@ -812,22 +812,22 @@
         ]));
       });
       var shrink = Math.round((1 - norm / norm0) * 100);
-      status.innerHTML = '‖w‖ = ' + norm.toFixed(2) + ' <small>· ' + shrink + '% smaller</small>';
-      meta.textContent = lam < 0.05 ? 'λ ≈ 0: full-strength weights, risk of overfitting'
-        : lam > 5 ? 'λ large: weights crushed toward 0, model underfits'
-          : 'λ shrinks every weight toward zero, trading fit for smoothness';
+      status.innerHTML = '‖w‖ = ' + norm.toFixed(2) + ' <small>· 缩小了 ' + shrink + '%</small>';
+      meta.textContent = lam < 0.05 ? 'λ ≈ 0：权重几乎不受约束，过拟合风险较高'
+        : lam > 5 ? 'λ 很大：权重被强行压向 0，模型会欠拟合'
+          : 'λ 会把每个权重都往 0 拉，实质是在拟合能力和光滑性之间做权衡';
       formula.textContent = 'J(w) + λ‖w‖²   →   wᵢ ≈ wᵢ⁰ / (1 + λ),  λ = ' + lam.toFixed(2);
     };
-    var grid = el('div', {}, [slider(state, 'lam', 'λ  (regularization strength)', 0, 10, 0.1)]);
+    var grid = el('div', {}, [slider(state, 'lam', 'λ（正则强度）', 0, 10, 0.1)]);
     host.appendChild(el('div', { class: 'lf' }, [
-      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['L2 REGULARIZATION']), el('span', {}, ['drag λ'])]),
+      el('div', { class: 'lf-head' }, [el('span', { class: 'lf-label' }, ['L2 正则化']), el('span', {}, ['拖动 λ'])]),
       el('div', { class: 'lf-body' }, [grid, el('div', { class: 'lf-out' }, [rows, el('div', { style: 'margin-top:12px' }, [status]), meta, formula])]),
-      el('div', { class: 'lf-cap' }, ['L2 adds the squared weight norm to the loss. Raising λ pulls every coefficient toward zero, smoothing the model. Too little and it overfits; too much and it forgets the signal.'])
+      el('div', { class: 'lf-cap' }, ['L2 会把权重范数的平方项加到损失里。增大 λ 会把所有系数都拉向 0，让模型更平滑。太弱会过拟合，太强又会把真正的信号一起抹掉。'])
     ]));
     state._render();
   }
 
-  // ── lr-schedule: compare warmup, cosine, step, and exponential decay ───────
+  // ── lr-schedule：比较 warmup、cosine、step 和 exponential decay ───────────
   function lrSchedule(host) {
     var N = 1000;
     var state = { sched: 'warmup-cosine', peak: 50, warmup: 10 };
@@ -873,7 +873,7 @@
     state._render();
   }
 
-  // ── sampling-decoder: temperature, then top-k, then top-p, over the logits ─
+  // ── sampling-decoder：依次对 logits 应用 temperature、top-k 和 top-p ─────
   function samplingDecoder(host, cfg) {
     var logits = (cfg && cfg.logits) || [4.2, 3.6, 3.1, 2.5, 2.0, 1.4, 0.9, 0.4, -0.2, -0.9];
     var labels = (cfg && cfg.labels) || ['the', 'a', 'an', 'this', 'that', 'one', 'some', 'my', 'our', 'its'];
@@ -920,7 +920,7 @@
     state._render();
   }
 
-  // ── scaling-laws: Chinchilla loss and the 20-tokens-per-parameter rule ─────
+  // ── scaling-laws：Chinchilla loss 与每参数 20 token 规则 ──────────────────
   function scalingLaws(host) {
     var state = { logN: 9, logD: 10.3 };
     var num = el('span', { class: 'lf-num' });
@@ -953,7 +953,7 @@
     state._render();
   }
 
-  // ── quantization: bits per weight against model size and precision ─────────
+  // ── quantization：每权重 bit 数与模型大小、精度的关系 ────────────────────
   function quantization(host) {
     var state = { logN: 9.85, bits: 16 };
     var num = el('span', { class: 'lf-num' });
@@ -991,7 +991,7 @@
     state._render();
   }
 
-  // ── rope-explorer: rotary frequencies across position and dimension ────────
+  // ── rope-explorer：旋转频率在位置和维度上的变化 ──────────────────────────
   function ropeExplorer(host) {
     var state = { pos: 16, logBase: 4 };
     var W = 520, H = 220, PAD = 28, D = 64, SEQ = 64;
@@ -1029,7 +1029,7 @@
     state._render();
   }
 
-  // ── lora-params: rank against trainable fraction of a weight matrix ────────
+  // ── lora-params：rank 与权重矩阵可训练比例的关系 ─────────────────────────
   function loraParams(host) {
     var state = { d: 4096, r: 8, layers: 32 };
     var num = el('span', { class: 'lf-num' });
@@ -1061,7 +1061,7 @@
     state._render();
   }
 
-  // ── precision-recall-threshold: slide the cutoff, watch P, R, F1 trade ─────
+  // ── precision-recall-threshold：滑动阈值，观察 P、R、F1 权衡 ──────────────
   function precisionRecall(host) {
     var state = { thr: 0.5 };
     var muP = 0.64, muN = 0.36, sd = 0.13, Npos = 100, Nneg = 100;
@@ -1101,7 +1101,7 @@
     state._render();
   }
 
-  // ── cross-entropy-loss: the price of being confident and wrong ─────────────
+  // ── cross-entropy-loss：自信却错误的代价 ─────────────────────────────────
   function crossEntropy(host) {
     var state = { p: 0.5 };
     var W = 520, H = 200, PAD = 30, LMAX = 5;
@@ -1131,7 +1131,7 @@
     state._render();
   }
 
-  // ── cosine-similarity: the angle is the similarity ─────────────────────────
+  // ── cosine-similarity：夹角即相似度 ──────────────────────────────────────
   function cosineSim(host) {
     var state = { deg: 40 };
     var W = 300, H = 240, CX = 60, CY = 150, R = 110;
@@ -1158,7 +1158,7 @@
     state._render();
   }
 
-  // ── tokenizer-tradeoff: vocabulary size against tokens and table cost ──────
+  // ── tokenizer-tradeoff：词表大小与 token 数、表成本之间的权衡 ────────────
   function tokenizerTradeoff(host) {
     var state = { logV: 15, dim: 768 };
     var num = el('span', { class: 'lf-num' });
@@ -1187,7 +1187,7 @@
     state._render();
   }
 
-  // ── rag-chunking: chunk size and overlap against count and context ─────────
+  // ── rag-chunking：chunk 大小、重叠与数量、上下文之间的权衡 ───────────────
   function ragChunking(host) {
     var state = { chunk: 512, overlap: 64, topk: 5 };
     var corpus = 100000;
@@ -1217,8 +1217,8 @@
     state._render();
   }
 
-  // Interactive widgets defined here. Animated figures live in figures.js and
-  // are reached through window.AIFS_FIGURES (same fenced-block syntax).
+  // 此处定义交互 widget。动画图位于 figures.js，通过 window.AIFS_FIGURES
+  // 访问（使用相同 fenced-block 语法）。
   var FIGS = {
     'kv-cache-sizer': kvCache,
     'gradient-descent': gradDescent,
@@ -1273,8 +1273,8 @@
     });
   }
 
-  // Register more widgets from external module files (figures-<topic>.js).
-  // Modules load after this file and call LF.register({ 'name': fn, ... }).
+  // 从外部模块文件（figures-<topic>.js）注册更多 widget。模块在本文件之后加载，
+  // 并调用 LF.register({ 'name': fn, ... })。
   function register(obj) { for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) FIGS[k] = obj[k]; }
 
   var providerPromises = Object.create(null);
@@ -1334,7 +1334,7 @@
     disposeRoot: disposeRoot,
     requiredProviders: requiredProviders
   };
-  // Shared toolkit for figure module files. Vanilla, no deps, theme via CSS vars.
+  // figure 模块文件共用的工具集。原生实现、无依赖，通过 CSS 变量支持主题。
   window.LF = {
     el: el, svgEl: svgEl, slider: slider, select: select,
     fmtInt: fmtInt, fmtSeq: fmtSeq, clamp: clamp, lerp: lerp, raf: raf,

@@ -30,7 +30,7 @@
 
   --header-offset: 92px;
 
-  /* Blueprint motion grammar: quick feedback, restrained entrances, spatial drawers. */
+  /* Blueprint 动效语法：反馈要快、入场要克制、抽屉感要保留空间层次。 */
   --motion-press: 160ms;
   --motion-feedback: 180ms;
   --motion-enter: 220ms;
@@ -1556,10 +1556,10 @@ body.js-anim .toc-row.in-view {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Command Palette  —  global search  (Cmd/Ctrl+K or search button)
+   Command Palette  —  全局搜索（Cmd/Ctrl+K 或搜索按钮）
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Search trigger button in the header ─────────────────────────────── */
+/* ── Header 中的搜索触发按钮 ─────────────────────────────────────────── */
 .search-toggle {
   background: transparent;
   border: 1px solid var(--rule-soft);
@@ -1583,7 +1583,7 @@ body.js-anim .toc-row.in-view {
   transform: scale(0.97);
 }
 
-/* ── Palette overlay wrapper ─────────────────────────────────────────── */
+/* ── 面板遮罩层容器 ──────────────────────────────────────────────────── */
 #cmdPalette {
   position: fixed;
   inset: 0;
@@ -1591,16 +1591,16 @@ body.js-anim .toc-row.in-view {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  /* push the panel below the fixed header on any viewport */
+  /* 在任意视口下，都把面板压到固定 header 之下。 */
   padding: clamp(68px, 13vh, 150px) 16px 16px;
-  pointer-events: none; /* clicks pass through until open */
+  pointer-events: none; /* 打开前允许点击穿透 */
 }
 
 #cmdPalette.cp-open {
   pointer-events: auto;
 }
 
-/* ── Dimmed backdrop ─────────────────────────────────────────────────── */
+/* ── 变暗的背景遮罩 ─────────────────────────────────────────────────── */
 .cp-backdrop {
   position: fixed;
   inset: 0;
@@ -1613,7 +1613,7 @@ body.js-anim .toc-row.in-view {
   opacity: 1;
 }
 
-/* ── Panel ───────────────────────────────────────────────────────────── */
+/* ── 面板本体 ───────────────────────────────────────────────────────── */
 .cp-panel {
   position: relative;
   z-index: 1;
@@ -1636,7 +1636,7 @@ body.js-anim .toc-row.in-view {
   transform: translateY(0);
 }
 
-/* ── Search row ──────────────────────────────────────────────────────── */
+/* ── 搜索输入行 ─────────────────────────────────────────────────────── */
 .cp-search-row {
   display: flex;
   align-items: center;
@@ -1667,7 +1667,7 @@ body.js-anim .toc-row.in-view {
   color: var(--ink-mute);
 }
 
-/* Strip browser chrome from <input type="search"> */
+/* 去掉浏览器给 <input type="search"> 附带的默认 chrome。 */
 .cp-input[type="search"]::-webkit-search-decoration,
 .cp-input[type="search"]::-webkit-search-cancel-button,
 .cp-input[type="search"]::-webkit-search-results-button,
@@ -1704,7 +1704,7 @@ body.js-anim .toc-row.in-view {
   outline-offset: 2px;
 }
 
-/* ── Results list ────────────────────────────────────────────────────── */
+/* ── 结果列表 ───────────────────────────────────────────────────────── */
 .cp-results {
   list-style: none;
   overflow-y: auto;
@@ -1713,11 +1713,10 @@ body.js-anim .toc-row.in-view {
   overscroll-behavior: contain;
 }
 
-/* ── Global themed scrollbar ─────────────────────────────────────────────
-   One base rule themes every scrollable surface — the page, code blocks, the
-   lesson body, the language list, tables, modals — in both light and dark, so
-   no component has to restyle its scrollbar. More specific rules below (e.g.
-   .cp-results) still override this baseline. */
+/* ── 全站主题滚动条 ────────────────────────────────────────────────────
+   一条基础规则统一给所有可滚动区域上主题样式，包括页面、代码块、lesson
+   正文、语言列表、表格与弹窗，并同时适配浅色和深色，因此各组件不必各自
+   重新定义滚动条。下方更具体的规则（例如 .cp-results）仍可覆盖该基线。 */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--rule-soft) transparent;
@@ -1730,14 +1729,14 @@ body.js-anim .toc-row.in-view {
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-/* background-color, not the shorthand, so the padding-box inset is kept on hover */
+/* 这里用 background-color，而不是 background 简写，避免 hover 时丢掉 padding-box 内缩效果。 */
 *::-webkit-scrollbar-thumb:hover { background-color: var(--ink-mute); }
 
 .cp-results::-webkit-scrollbar       { width: 4px; }
-/* border:0 + border-box so the global 2px inset does not eat the narrow 4px thumb */
+/* 配合 border:0 和 border-box，避免全局 2px 内缩把仅有 4px 的窄 thumb 挤没。 */
 .cp-results::-webkit-scrollbar-thumb { background: var(--rule-soft); border-radius: 2px; border: 0; background-clip: border-box; }
 
-/* ── Empty / no-match state ──────────────────────────────────────────── */
+/* ── 空状态 / 无匹配状态 ───────────────────────────────────────────── */
 .cp-empty {
   display: block;
   padding: 24px 20px;
@@ -1752,7 +1751,7 @@ body.js-anim .toc-row.in-view {
   color: var(--ink-soft);
 }
 
-/* ── Result item ─────────────────────────────────────────────────────── */
+/* ── 结果项 ─────────────────────────────────────────────────────────── */
 .cp-item {
   display: flex;
   align-items: center;
@@ -1776,14 +1775,14 @@ body.js-anim .toc-row.in-view {
 
 .cp-item-body {
   display: grid;
-  /* chip / name / summary / meta — all rows auto-height */
+  /* chip / 名称 / 摘要 / meta 各行都使用自适应高度。 */
   grid-template-rows: auto auto auto auto;
   gap: 1px;
   flex: 1;
   min-width: 0;
 }
 
-/* Phase / Glossary chip */
+/* Phase / Glossary 标签块 */
 .cp-item-chip {
   font-family: var(--font-mono);
   font-size: 0.6rem;
@@ -1798,7 +1797,7 @@ body.js-anim .toc-row.in-view {
   color: var(--ink-mute);
 }
 
-/* Lesson / term name */
+/* Lesson / term 名称 */
 .cp-item-name {
   font-family: var(--font-body);
   font-size: 0.94rem;
@@ -1810,7 +1809,7 @@ body.js-anim .toc-row.in-view {
   line-height: 1.35;
 }
 
-/* One-line summary */
+/* 单行摘要 */
 .cp-item-summary {
   font-family: var(--font-body);
   font-size: 0.8rem;
@@ -1821,7 +1820,7 @@ body.js-anim .toc-row.in-view {
   line-height: 1.3;
 }
 
-/* Type · Language meta line */
+/* Type · Language 元信息行 */
 .cp-item-meta {
   font-family: var(--font-mono);
   font-size: 0.64rem;
@@ -1830,7 +1829,7 @@ body.js-anim .toc-row.in-view {
   line-height: 1.3;
 }
 
-/* Chevron arrow — appears only on hover / active */
+/* Chevron 箭头，仅在 hover / active 状态下出现。 */
 .cp-item-arrow {
   color: var(--ink-mute);
   flex-shrink: 0;
@@ -1844,7 +1843,7 @@ body.js-anim .toc-row.in-view {
   color: var(--blueprint);
 }
 
-/* Highlighted match inside results */
+/* 结果内的命中高亮 */
 .cp-results mark {
   background: var(--blueprint-tint-strong);
   color: var(--blueprint);
@@ -1853,7 +1852,7 @@ body.js-anim .toc-row.in-view {
   border-radius: 2px;
 }
 
-/* ── Footer keyboard hints ───────────────────────────────────────────── */
+/* ── 页脚键盘提示 ───────────────────────────────────────────────────── */
 .cp-footer {
   display: flex;
   align-items: center;
@@ -1896,12 +1895,12 @@ body.js-anim .toc-row.in-view {
   letter-spacing: 0.06em;
 }
 
-/* ── Scroll lock when palette is open ───────────────────────────────── */
+/* ── 面板打开时锁定页面滚动 ─────────────────────────────────────────── */
 body[data-palette-open] {
   overflow: hidden;
 }
 
-/* ── Reduced motion ──────────────────────────────────────────────────── */
+/* ── 减弱动态效果 ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .cp-backdrop,
   .cp-panel {
@@ -1917,10 +1916,10 @@ body[data-palette-open] {
   }
 }
 
-/* ── Mobile: full-width sheet pinned to top ──────────────────────────── */
+/* ── 移动端：吸顶的全宽面板 ─────────────────────────────────────────── */
 @media (max-width: 600px) {
   #cmdPalette {
-    padding: 56px 0 0; /* clear the 56px mobile header */
+    padding: 56px 0 0; /* 给 56px 的移动端 header 留出空间 */
     align-items: flex-start;
   }
 
@@ -1938,14 +1937,14 @@ body[data-palette-open] {
     height: 44px;
   }
 
-  /* Keep only the "navigate" hint on small screens */
+  /* 小屏幕上只保留 “navigate” 这一条提示。 */
   .cp-footer-group:not(:first-child),
   .cp-footer-shortcut {
     display: none;
   }
 }
 
-/* ── language picker (reference-manual aesthetic) ───────────────────── */
+/* ── 语言选择器（reference-manual 风格） ───────────────────────────── */
 .lang-picker { position: relative; display: inline-flex; }
 .lang-picker-btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -2001,7 +2000,7 @@ body[data-palette-open] {
 }
 
 /* ============================================================
-   READ ALOUD (SpeechSynthesis)
+   朗读功能（SpeechSynthesis）
    ============================================================ */
 
 .tts-toggle .tts-wave-1,
@@ -2070,8 +2069,8 @@ body[data-palette-open] {
   transform: translateX(-50%) translateY(0);
 }
 
-/* display:flex would override the UA [hidden] rule, leaving the controls
-   focusable and the live region announced while the bar is invisible. */
+/* 如果这里直接写 display:flex，会覆盖 UA 的 [hidden] 规则，导致控制条虽然
+   看不见，但控件仍可聚焦、live region 仍会被读出来。 */
 .tts-bar[hidden] {
   display: none;
 }
@@ -2264,7 +2263,7 @@ body[data-palette-open] {
   }
 }
 
-/* --- floating: drag anywhere over the article --- */
+/* --- 浮动模式：可在文章区域任意位置拖动 --- */
 
 .tts-bar {
   cursor: grab;
@@ -2277,8 +2276,7 @@ body[data-palette-open] {
   transition: none;
 }
 
-/* Once dragged, the bar is pinned to explicit coordinates instead of the
-   default bottom-centre anchoring. */
+/* 一旦发生拖动，控制条就会固定到明确坐标，而不再停靠在默认的底部居中位置。 */
 .tts-bar.is-placed,
 .tts-bar.is-placed.is-visible {
   bottom: auto;
@@ -2297,7 +2295,7 @@ body[data-palette-open] {
   padding: 6px 8px;
 }
 
-/* --- collapsed: a single speaker puck --- */
+/* --- 折叠模式：收成单个扬声器圆钮 --- */
 
 .tts-bar.is-collapsed {
   padding: 0;
@@ -2332,7 +2330,7 @@ body[data-palette-open] {
 }
 
 @media (max-width: 720px) {
-  /* The mobile rules stretch the bar edge to edge; a puck must not stretch. */
+  /* 移动端规则会把控制条左右拉满，但圆钮绝不能被一起拉伸。 */
   .tts-bar.is-collapsed {
     left: auto;
     right: 12px;
@@ -2356,7 +2354,7 @@ body[data-palette-open] {
   }
 }
 
-/* --- compact header tools keep the language label in the accessibility tree. --- */
+/* --- 紧凑 header 工具区仍需把语言标签保留在无障碍树里。 --- */
 
 @media (max-width: 600px) {
   .lang-current {

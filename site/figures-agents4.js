@@ -1,7 +1,7 @@
-/* figures-agents4.js - animated lesson figures for agent engineering.
-   Loads after lesson-figures.js, registers through window.LF. No deps, ES5,
-   theme via CSS vars. SMIL-only animation: no JS render loops. Authoring: a
-   ```figure block naming one of the widgets below. */
+/* figures-agents4.js - 面向智能体工程的动画课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，使用 ES5，
+   通过 CSS 变量适配主题。仅使用 SMIL 动画，无 JS 渲染循环。编写时使用
+   ```figure 代码块指定下列某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -26,7 +26,7 @@
     return t;
   }
 
-  // -- ae-memory-fusion: a query splitting into three stores, scores fusing ---
+  // -- ae-memory-fusion：查询拆分到三个存储，再融合评分 ------------------------
   function memoryFusion(host) {
     var W = 520, H = 250;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -67,7 +67,7 @@
       'Mem0 writes every memory to three stores at once and fuses them on retrieval. Vector answers semantic similarity, KV answers fact lookup, graph answers relationship reasoning. A weighted score over relevance, importance, and recency blends the three, so the single add/search surface is never wrong for two of three query classes the way one store always is.');
   }
 
-  // -- ae-crew-vs-flow: autonomous role mesh against a deterministic chain ----
+  // -- ae-crew-vs-flow：自主角色网格与确定性链路对比 ---------------------------
   function crewVsFlow(host) {
     var W = 520, H = 250;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -110,7 +110,7 @@
       'CrewAI ships two top-level shapes. A Crew is autonomous role-based collaboration, agents critiquing each other in a loose mesh, good for exploratory work. A Flow is an event-driven deterministic chain you can replay, audit, and cost. The docs are blunt: for any production-ready application, start with a Flow.');
   }
 
-  // -- ae-agent-handoff: a transfer_to tool passing control between agents ----
+  // -- ae-agent-handoff：transfer_to 工具在智能体间移交控制权 ------------------
   function agentHandoff(host) {
     var W = 520, H = 230;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -140,7 +140,7 @@
       'In the OpenAI Agents SDK a handoff is just a tool named transfer_to_<agent>. When the triage agent calls it, control and the running conversation context pass to the target agent, which continues the session. Modeling delegation as an ordinary tool keeps the loop uniform: the model decides to hand off the same way it decides to call any function.');
   }
 
-  // -- ae-subagent-isolation: a parent spawning children with fresh context ---
+  // -- ae-subagent-isolation：父智能体以全新上下文生成子智能体 -----------------
   function subagentIsolation(host) {
     var W = 520, H = 250;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -178,7 +178,7 @@
       'The Claude Agent SDK spawns subagents that each run in their own context window (dashed boundary). The orchestrator keeps its main context clean: children explore in parallel and return only a compact summary. This buys both parallelism and context isolation, so a noisy search does not flood the parent transcript.');
   }
 
-  // -- ae-swebench-gate: a patch run against FAIL_TO_PASS unit tests ----------
+  // -- ae-swebench-gate：用 FAIL_TO_PASS 单元测试检验补丁 ----------------------
   function swebenchGate(host) {
     var W = 520, H = 240;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -221,7 +221,7 @@
       'SWE-bench scores a patch by running the repo test suite, not by asking a model if it looks right. A task counts as resolved only when the FAIL_TO_PASS tests now pass and the PASS_TO_PASS tests still pass. Execution-based grading is why the benchmark resists gaming, and why SWE-bench Verified strips out tasks whose tests were ambiguous or broken.');
   }
 
-  // -- ae-agent-human-gap: two bars closing as the agent line climbs ----------
+  // -- ae-agent-human-gap：智能体曲线上升时两根柱子的差距缩小 ------------------
   function agentHumanGap(host) {
     var W = 520, H = 240, PAD = 44, base = 200;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -246,7 +246,7 @@
       'At release WebArena and OSWorld showed a wide gap: the best agent near 14% where humans sit around 78%. The blue line is climbing year over year, but the two failure modes have not changed. Agents still miss GUI grounding (where to click) and operational knowledge (what the task actually requires), so the score rises faster than reliability.');
   }
 
-  // -- ae-genai-span-tree: nested OTel spans drawing in parent-child order ----
+  // -- ae-genai-span-tree：按父子顺序绘制嵌套 OTel span ------------------------
   function genaiSpanTree(host) {
     var W = 520, H = 240;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -283,7 +283,7 @@
       'OpenTelemetry\'s GenAI conventions give every vendor one schema. An invoke_agent span is the root; each execute_tool span hangs off it; each model chat span hangs off the tool that called it. Because the names and parent-child links are standardized, the same trace reads the same way in Datadog, Grafana, Jaeger, or Honeycomb.');
   }
 
-  // -- ae-eval-three-layers: the eval loop wrapping the build, three rings ----
+  // -- ae-eval-three-layers：三层环形评估循环包围构建过程 ----------------------
   function evalThreeLayers(host) {
     var W = 520, H = 250, cx = 175, cy = 125;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });

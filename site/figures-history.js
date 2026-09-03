@@ -1,4 +1,4 @@
-/* figures-history.js - lesson figures for the language-model history arc: prediction-game (Shannon's 1951 guessing game), chatbot-lineage (scripted-bot timeline), mask-derivation (prefix average to attention). SMIL-authored (animate/animateTransform via LF), ES5, no deps. */
+/* figures-history.js - 语言模型历史脉络的课程图示：prediction-game（香农 1951 年猜字游戏）、chatbot-lineage（脚本机器人时间线）、mask-derivation（从前缀平均到注意力）。使用 SMIL 编写（通过 LF 使用 animate/animateTransform），ES5，无依赖。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -38,7 +38,7 @@
     node.appendChild(anim('opacity', '0;0;1;1', dur, { keyTimes: kt }));
   }
 
-  // ── prediction-game: guess counts reveal letters, entropy bar shrinks ───────
+  // ── prediction-game：猜测次数逐步揭示字母，熵条随之缩短 ───────────────
   function predictionGame(host) {
     var W = 560, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var letters = 'THE·CAT·SAT·ON·THE·MAT'.split('');
@@ -78,7 +78,7 @@
       'A human guesses each hidden letter until correct; the guess counts alone can reconstruct the text, so their statistics bound the information per letter. A 27-symbol alphabet could carry 4.75 bits per letter. Human guessers with context needed close to 1. Every language model since is a mechanical player of this game, and perplexity is its score.');
   }
 
-  // ── chatbot-lineage: fifty years of scripts on one timeline ─────────────────
+  // ── chatbot-lineage：在一条时间线上呈现五十年的脚本演进 ────────────────
   function chatbotLineage(host) {
     var W = 560, H = 240, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var DUR = 10, y = 152;
@@ -119,7 +119,7 @@
       'Every system on this line is one mechanism: match the input, emit a canned response, update a little state. PARRY added affect variables, ALICE added forty thousand categories, SmarterChild added backend lookups. Coverage grew linearly with rules; generality never arrived. That ceiling is why the next three paradigms exist.');
   }
 
-  // ── mask-derivation: prefix average → learned weights → attention ───────────
+  // ── mask-derivation：前缀平均 → 学习得到的权重 → 注意力 ───────────────
   function maskDerivation(host) {
     var W = 560, H = 260, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var DUR = 10, N = 5, CS = 25;

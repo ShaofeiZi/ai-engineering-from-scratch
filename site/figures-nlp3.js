@@ -29,7 +29,7 @@
     return svgEl('text', a, [document.createTextNode(s)]);
   }
 
-  // ── pos-tagger: grammatical tags drop onto tokens one by one ────────────────
+  // ── pos-tagger：语法标签逐个落到 token 上 ───────────────────────────────
   function posTagger(host) {
     var W = 520, H = 220, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var toks = ['The', 'cats', 'were', 'running', 'fast'];
@@ -53,7 +53,7 @@
       'Each token gets one grammatical category. A tagger sweeps the sentence left to right, dropping a label onto every word: determiner, noun, auxiliary, verb, adverb. Those tags are what a lemmatizer and a dependency parser read next.');
   }
 
-  // ── dependency-arcs: labeled head→dependent arcs draw themselves ────────────
+  // ── dependency-arcs：带标签的中心词→依存词弧线依次绘出 ─────────────────
   function depArcs(host) {
     var W = 520, H = 200, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var toks = ['cats', 'were', 'running', 'at', 'dawn'];
@@ -77,7 +77,7 @@
       'Dependency parsing draws one labeled arc from each word to its head. The verb "running" is the root; "cats" is its subject, "were" its auxiliary, and the prepositional phrase hangs off it. Every edge is a (head, dependent, relation) triple.');
   }
 
-  // ── qa-span: an answer span sweeps and highlights inside a passage ──────────
+  // ── qa-span：答案跨度在段落内扫过并高亮 ─────────────────────────────────
   function qaSpan(host) {
     var W = 520, H = 210, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(txt(20, 26, 'Q:  When did the first iPhone launch?', { fill: SOFT, 'font-size': '12' }));
@@ -100,7 +100,7 @@
       'Extractive QA never invents an answer. Two heads predict the start and end token of a span inside the given passage; the model sweeps the text and lights up the contiguous run between them. The answer is lifted verbatim, so it cannot hallucinate.');
   }
 
-  // ── summarize-collapse: a long bar collapses into a short summary bar ────────
+  // ── summarize-collapse：长条收缩成较短的摘要条 ──────────────────────────
   function summarizeCollapse(host) {
     var W = 520, H = 220, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(txt(20, 24, 'document', { fill: SOFT, 'font-size': '11' }));
@@ -126,7 +126,7 @@
       'Extractive summarization ranks every sentence and lifts the few most central ones, in order. The long document collapses to a handful of verbatim lines. Abstractive systems instead rewrite; they read fluently but can fabricate facts the source never stated.');
   }
 
-  // ── topic-drift: scattered words drift into colored topic clusters ──────────
+  // ── topic-drift：散落的词语漂移到彩色主题簇中 ──────────────────────────
   function topicDrift(host) {
     var W = 520, H = 230, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var clusters = [[130, 150], [300, 90], [410, 175]];
@@ -150,7 +150,7 @@
       'Unsupervised topic modeling needs no labels. Scattered vocabulary drifts together by co-occurrence or embedding similarity into a few coherent groups; each cluster, read by its top words, names a latent topic the corpus is "about".');
   }
 
-  // ── coref-links: pronoun mentions animate links back to one entity ──────────
+  // ── coref-links：代词提及项以动画连接回同一个实体 ──────────────────────
   function corefLinks(host) {
     var W = 520, H = 210, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var ment = [['Tim Cook', 40, 60, true], ['He', 230, 60, false], ['the CEO', 330, 130, false], ['Cook', 130, 150, false]];
@@ -173,7 +173,7 @@
       'Three surface forms — "He", "the CEO", "Cook" — all point at the same person. Coreference resolution draws a link from every mention back into one cluster, so downstream NER, QA, and knowledge graphs count them as a single entity.');
   }
 
-  // ── nli-router: a premise/hypothesis pair routes to one of three labels ─────
+  // ── nli-router：前提/假设对被路由到三个标签之一 ────────────────────────
   function nliRouter(host) {
     var W = 520, H = 230, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(txt(20, 30, 't:  The cat is on the mat', { 'font-family': 'var(--font-body,serif)', 'font-size': '14', fill: INK }));
@@ -201,7 +201,7 @@
       'NLI takes a premise t and a hypothesis h and routes the pair to exactly one of three labels: entailment, neutral, or contradiction. The same classifier powers hallucination checks, grounded-QA verification, and zero-shot labeling.');
   }
 
-  // ── relation-triples: text spans snap into a (subject,relation,object) graph ─
+  // ── relation-triples：文本跨度吸附成（主语、关系、宾语）图 ──────────────
   function relationTriples(host) {
     var W = 520, H = 230, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(txt(20, 28, '"Tim Cook became CEO of Apple."', { 'font-family': 'var(--font-body,serif)', 'font-size': '14', fill: INK }));
@@ -230,7 +230,7 @@
       'Relation extraction anchors entity spans in the text, then snaps them into typed edges. "Tim Cook" and "Apple" become nodes; the verb phrase becomes the labeled edge between them. Aggregate the triples and you have a knowledge graph.');
   }
 
-  // ── constrained-decoder: invalid tokens get masked to -inf each step ────────
+  // ── constrained-decoder：每一步都将无效 token 掩蔽为 -inf ──────────────
   function constrainedDecoder(host) {
     var W = 520, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(txt(20, 26, 'emitted:  { "ok":', { 'font-family': MONO, 'font-size': '13', fill: INK }));

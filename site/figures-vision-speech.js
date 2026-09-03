@@ -1,7 +1,7 @@
-/* figures-vision-speech.js — interactive lesson figures for Phase 4 (computer
-   vision) and Phase 6 (speech & audio). Loads after lesson-figures.js and
-   registers widgets through window.LF. Vanilla ES5, no deps, theme via CSS
-   vars. Authoring is the same fenced block in docs/en.md:
+/* figures-vision-speech.js — 第四阶段（计算机
+   视觉）与第六阶段（语音与音频）的交互式课程图示。在 lesson-figures.js 之后加载，
+   通过 window.LF 注册 widget。原生 ES5，无依赖，主题通过 CSS
+   变量。编写方式为 docs/en.md 中的同一围栏块：
        ```figure
        convolution-kernel
        ``` */
@@ -20,7 +20,7 @@
     ]);
   }
 
-  // ── convolution-kernel: slide a 3x3 kernel over a fixed 8x8 image ──────────
+  // ── convolution-kernel：在固定的 8x8 图像上滑动 3x3 卷积核 ──────────
   function convolutionKernel(host) {
     var IMG = [
       [10, 12, 14, 80, 82, 16, 14, 12],
@@ -86,7 +86,7 @@
     state._render();
   }
 
-  // ── pooling: 2x2 max or average pooling over a 4x4 grid, stride 2 ──────────
+  // ── pooling：在 4x4 网格上做 2x2 最大或平均池化，步幅 2 ──────────
   function pooling(host) {
     var GRID = [
       [3, 8, 2, 1],
@@ -144,7 +144,7 @@
     state._render();
   }
 
-  // ── receptive-field: how many input pixels one deep neuron sees ────────────
+  // ── receptive-field：一个深层神经元能看到多少输入像素 ────────────
   function receptiveField(host) {
     var state = { layers: 4, k: 3, stride: 1 };
     var num = el('span', { class: 'lf-num' });
@@ -172,7 +172,7 @@
     state._render();
   }
 
-  // ── conv-output-size: floor((W - K + 2P)/S) + 1 with a strip diagram ───────
+  // ── conv-output-size：floor((W - K + 2P)/S) + 1 及条带示意图 ───────
   function convOutputSize(host) {
     var state = { W: 32, K: 3, S: 1, P: 1 };
     var svg = svgEl('svg', { viewBox: '0 0 520 200' });
@@ -220,7 +220,7 @@
     state._render();
   }
 
-  // ── cnn-param-count: conv weight sharing vs a dense layer ──────────────────
+  // ── cnn-param-count：卷积权重共享 vs 全连接层 ──────────────────
   function cnnParamCount(host) {
     var state = { cin: 64, cout: 128, k: 3, hw: 32 };
     var num = el('span', { class: 'lf-num' });
@@ -253,7 +253,7 @@
     state._render();
   }
 
-  // ── spectrogram-window: STFT window size and the time-frequency tradeoff ───
+  // ── spectrogram-window：STFT 窗口大小与时频权衡 ───
   function spectrogramWindow(host) {
     var state = { win: 256 };
     var SR = 16000;
@@ -290,7 +290,7 @@
     state._render();
   }
 
-  // ── mel-scale: linear Hz against the mel curve ─────────────────────────────
+  // ── mel-scale：线性 Hz 与 mel 曲线对比 ─────────────────────────────
   function melScale(host) {
     var state = { f: 4000 };
     var FMAX = 16000;
@@ -329,7 +329,7 @@
     state._render();
   }
 
-  // ── nyquist-aliasing: sampling above fs/2 folds to a false low frequency ───
+  // ── nyquist-aliasing：高于 fs/2 的采样折叠为虚假的低频 ───
   function nyquistAliasing(host) {
     var state = { f: 7, fs: 20 };
     var W = 520, H = 220, PAD = 28, DUR = 1;

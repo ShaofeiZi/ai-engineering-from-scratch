@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Engineering from Scratch</title>
+  <title>AI Engineering from Scratch 中文课程</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23fafaf5'/><rect x='2' y='2' width='28' height='28' fill='none' stroke='%233553ff' stroke-width='1.2'/><text x='6' y='22' font-size='14' font-family='monospace' fill='%233553ff'>AI</text></svg>">
-  <meta name="description" content="Build AI systems from first principles with 523 free, open-source lessons spanning math, models, tokenizers, agents, evaluation, and production.">
+  <meta name="description" content="通过 523 节免费开源课程，从第一性原理构建 AI 系统，涵盖数学、模型、分词器、智能体、评测与生产。">
   <link rel="canonical" href="https://aiengineeringfromscratch.com/">
   <link rel="alternate" type="text/markdown" href="https://aiengineeringfromscratch.com/llms.txt">
-  <meta property="og:title" content="AI Engineering from Scratch">
-  <meta property="og:description" content="523 lessons. 20 phases. Write the backprop, the tokenizer, the attention mechanism, and the agent loop by hand before any framework gets imported. Python, TypeScript, Rust, Julia.">
+  <meta property="og:title" content="AI Engineering from Scratch 中文课程">
+  <meta property="og:description" content="523 节课程，20 个阶段。先亲手实现反向传播、分词器、注意力机制和智能体循环，再引入框架。涵盖 Python、TypeScript、Rust 和 Julia。">
   <meta property="og:image" content="https://aiengineeringfromscratch.com/og-image.png?v=3">
   <meta property="og:url" content="https://aiengineeringfromscratch.com">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="AI Engineering from Scratch">
-  <meta name="twitter:description" content="523 lessons. 20 phases. Write the backprop, the tokenizer, the attention mechanism, and the agent loop by hand.">
+  <meta name="twitter:title" content="AI Engineering from Scratch 中文课程">
+  <meta name="twitter:description" content="523 节课程，20 个阶段。从基础数学出发，亲手实现反向传播、分词器、注意力机制和智能体循环。">
   <meta name="twitter:image" content="https://aiengineeringfromscratch.com/og-image.png?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +30,7 @@
         "@id": "https://aiengineeringfromscratch.com/#website",
         "url": "https://aiengineeringfromscratch.com",
         "name": "AI Engineering from Scratch",
-        "description": "A free, open-source curriculum that builds every core AI algorithm by hand.",
+        "description": "一套免费开源课程，从零开始亲手构建每一种核心 AI 算法。",
         "potentialAction": {
           "@type": "SearchAction",
           "target": { "@type": "EntryPoint", "urlTemplate": "https://aiengineeringfromscratch.com/catalog.html?q={search_term_string}" },
@@ -41,11 +41,11 @@
         "@type": "Course",
         "@id": "https://aiengineeringfromscratch.com/#course",
         "name": "AI Engineering from Scratch",
-        "description": "523 lessons across 20 phases. Write the backprop, the tokenizer, the attention mechanism, and the agent loop by hand before any framework gets imported.",
+        "description": "20 个阶段、523 节课程。在引入框架之前，先亲手实现反向传播、分词器、注意力机制和智能体循环。",
         "url": "https://aiengineeringfromscratch.com",
         "isAccessibleForFree": true,
-        "inLanguage": "en",
-        "teaches": ["Neural networks", "Backpropagation", "Tokenization", "Attention mechanisms", "LLM training", "Inference optimization", "Agent loops", "Model context protocol"],
+        "inLanguage": "zh-CN",
+        "teaches": ["神经网络", "反向传播", "分词", "注意力机制", "大语言模型训练", "推理优化", "智能体循环", "模型上下文协议"],
         "hasCourseInstance": {
           "@type": "CourseInstance",
           "courseMode": "online"
@@ -2048,7 +2048,7 @@
 </head>
 <body>
 
-  <a href="#main" class="skip-link">Skip to content</a>
+  <a href="#main" class="skip-link">跳转到正文</a>
 
   <header class="site-header">
     <div class="header-inner">
@@ -2056,19 +2056,19 @@
         <span class="logo-icon" aria-hidden="true"></span> AI / FROM SCRATCH
       </a>
       <nav class="header-nav">
-        <a href="#contents">Contents</a>
-        <a href="#books">Books</a>
-        <a href="catalog.html">Catalog</a>
-        <a href="prereqs.html">Roadmap</a>
-        <a href="glossary.html">Glossary</a>
-        <a href="about.html">About</a>
+        <a href="#contents">课程</a>
+        <a href="#books">图书</a>
+        <a href="catalog.html">课程目录</a>
+        <a href="prereqs.html">路线图</a>
+        <a href="glossary.html">术语表</a>
+        <a href="about.html">关于</a>
         <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener" class="header-github">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-          <span class="star-count" data-loading="true" aria-label="GitHub stars">…</span>
+          <span class="star-count" data-loading="true" aria-label="GitHub 星标">…</span>
         </a>
       </nav>
       <button class="search-toggle" type="button" data-cmd-palette
-        aria-label="Search (⌘K)" title="Search (⌘K)">
+        aria-label="搜索（⌘K）" title="搜索（⌘K）">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.5"
           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2076,8 +2076,8 @@
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
       </button>
-      <div id="langPicker"></div>
-      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" type="button">
+      <script>window.AIFS_CHINESE_ONLY = true;</script>
+      <button class="theme-toggle" id="themeToggle" aria-label="切换主题" type="button">
         <span class="theme-icon" id="themeIcon">N</span>
       </button>
     </div>
@@ -2087,59 +2087,59 @@
 
     <section class="manual-masthead container">
       <div class="manual-meta-row">
-        <span>FIG_000 &middot; curriculum v1.0 · 2026</span>
-        <span class="right">open source · MIT</span>
+        <span>FIG_000 · 课程体系 v1.0 · 2026</span>
+        <span class="right">开源 · MIT</span>
       </div>
-      <h1 class="manual-title">AI Engineering<br>from Scratch</h1>
-      <p class="manual-tagline reveal" id="mastheadSummary">556 published lessons. 20 core phases. 16 guided routes.</p>
-      <p class="manual-attribution reveal" style="--stagger-delay: 40ms;">Maintained by Rohit Ghumare and contributors. Run on your own machine.</p>
+      <h1 class="manual-title">AI 工程<br>from Scratch</h1>
+      <p class="manual-tagline reveal" id="mastheadSummary">已发布 556 节课程。20 个核心阶段。16 条专题与认证路线。</p>
+      <p class="manual-attribution reveal" style="--stagger-delay: 40ms;">由 Rohit Ghumare 与贡献者维护。可在你自己的机器上运行。</p>
       <div class="masthead-cta reveal" style="--stagger-delay: 80ms;">
         <a class="masthead-btn masthead-btn--primary" href="lesson?path=phases/00-setup-and-tooling/01-dev-environment">
-          <span>Start the Course</span>
+          <span>开始课程</span>
         </a>
         <a class="masthead-btn" href="learning-paths.html">
-          <span>Explore Learning Paths</span>
+          <span>探索学习路径</span>
         </a>
-        <a class="masthead-btn" href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener" aria-label="Star ai-engineering-from-scratch on GitHub">
+        <a class="masthead-btn" href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener" aria-label="在 GitHub 上为 ai-engineering-from-scratch 点星">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279L12 19.896l-7.416 3.517 1.48-8.279L0 9.306l8.332-1.151z"/></svg>
-          <span>Star on GitHub</span>
+          <span>在 GitHub 上点星</span>
           <span class="masthead-btn-count" data-gh-stars="rohitg00/ai-engineering-from-scratch" data-loading="true">…</span>
         </a>
-        <a class="masthead-btn" href="https://github.com/rohitg00" target="_blank" rel="noopener" aria-label="Follow Rohit Ghumare on GitHub">
+        <a class="masthead-btn" href="https://github.com/rohitg00" target="_blank" rel="noopener" aria-label="在 GitHub 上关注 Rohit Ghumare">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-          <span>Follow @rohitg00</span>
+          <span>关注 @rohitg00</span>
         </a>
       </div>
       <div class="masthead-install reveal" style="--stagger-delay: 120ms;">
         <div class="masthead-install-bar">
-          <span>Learn in your terminal</span>
+          <span>在终端中学习</span>
           <button class="copy-chip" type="button" id="installCopy"
                   data-cmd="npx skills add rohitg00/ai-engineering-from-scratch"
-                  aria-label="Copy the install command">
+                  aria-label="复制安装命令">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
               <rect x="3.5" y="3.5" width="7" height="7"/>
               <path d="M8.5 3.5v-2h-7v7h2"/>
             </svg>
-            <span id="installCopyLabel" role="status" aria-live="polite">copy</span>
+            <span id="installCopyLabel" role="status" aria-live="polite">复制</span>
           </button>
         </div>
         <pre id="installCmd">npx skills add rohitg00/ai-engineering-from-scratch
 <span class="cmd-prompt">&gt;</span> <span class="cmd-skill">Use start-learning to begin the course.</span></pre>
-        <div class="masthead-install-agents" aria-label="Works with any coding agent">
+        <div class="masthead-install-agents" aria-label="适用于任意编程智能体">
           <span class="agent-chip"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg>Claude</span>
           <span class="agent-chip"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg>Cursor</span>
           <span class="agent-chip"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>Codex</span>
-          <span class="agent-chip">+ any SKILL.md agent</span>
+          <span class="agent-chip">+ 任意支持 SKILL.md 的智能体</span>
         </div>
       </div>
-      <p class="masthead-install-caption reveal" style="--stagger-delay: 160ms;">Your agent becomes your tutor: placement quiz, personalized path, lessons taught interactively in your terminal.</p>
-      <figure class="masthead-figure" data-masthead-figure aria-label="Three views of how the course teaches AI engineering">
+      <p class="masthead-install-caption reveal" style="--stagger-delay: 160ms;">你的智能体会成为导师：先做分级测验，再生成个性化路径，并在终端里互动式授课。</p>
+      <figure class="masthead-figure" data-masthead-figure aria-label="课程如何教授 AI Engineering 的三种视图">
         <div class="fig-plate">
-        <div class="fig-panel is-active" data-caption="Every layer of this diagram is a lesson you implement by hand." role="group" aria-label="Plate 1 of 3: Forward pass" aria-hidden="false">
+        <div class="fig-panel is-active" data-caption="Every layer of this diagram is a lesson you implement by hand." role="group" aria-label="第 1 张，共 3 张：前向传播" aria-hidden="false">
           <svg viewBox="0 0 560 380" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect class="fig-frame" x="8" y="8" width="544" height="364"/>
             <path class="fig-tick" d="M8 28 V8 H28 M532 8 H552 V28 M552 352 V372 H532 M28 372 H8 V352"/>
-            <text class="fig-label" x="24" y="34">FIG_001 · FORWARD PASS</text>
+            <text class="fig-label" x="24" y="34">FIG_001 · 前向传播</text>
             <text class="fig-label fig-label--right" x="536" y="34">y = σ(Wx + b)</text>
             <line class="fig-edge fig-l1" x1="90" y1="110" x2="230" y2="100" pathLength="1"/>
             <line class="fig-edge fig-l1" x1="90" y1="110" x2="230" y2="170" pathLength="1"/>
@@ -2204,11 +2204,11 @@
             <text class="fig-axis" x="480" y="345">ŷ</text>
           </svg>
         </div>
-        <div class="fig-panel" data-caption="The first AI-native course: your agent teaches it, quizzes you, and tracks your path." role="group" aria-label="Plate 2 of 3: AI-native lesson" aria-hidden="true">
+        <div class="fig-panel" data-caption="The first AI-native course: your agent teaches it, quizzes you, and tracks your path." role="group" aria-label="第 2 张，共 3 张：AI-native 课程" aria-hidden="true">
           <svg viewBox="0 0 560 380" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect class="fig-frame" x="8" y="8" width="544" height="364"/>
             <path class="fig-tick" d="M8 28 V8 H28 M532 8 H552 V28 M552 352 V372 H532 M28 372 H8 V352"/>
-            <text class="fig-label" x="24" y="34">FIG_002 · AI-NATIVE LESSON</text>
+            <text class="fig-label" x="24" y="34">FIG_002 · AI-NATIVE 课程</text>
             <text class="fig-label fig-label--right" x="536" y="34">/learn</text>
             <rect class="fig-term" x="68" y="76" width="424" height="252"/>
             <line class="fig-term-bar" x1="68" y1="104" x2="492" y2="104"/>
@@ -2216,18 +2216,18 @@
             <circle class="fig-term-dot" cx="98" cy="90" r="3.5"/>
             <circle class="fig-term-dot" cx="112" cy="90" r="3.5"/>
             <text class="fig-line fig-line--cmd" x="92" y="140" style="animation-delay: 0.35s">/learn</text>
-            <text class="fig-line fig-line--agent" x="92" y="184" style="animation-delay: 1.1s">agent: today, attention. why divide by √d?</text>
-            <text class="fig-line fig-line--you" x="92" y="228" style="animation-delay: 1.85s">you: it keeps softmax gradients alive</text>
-            <text class="fig-line fig-line--agent" x="92" y="272" style="animation-delay: 2.6s">agent: exactly. quiz 3/3, next we build it</text>
+            <text class="fig-line fig-line--agent" x="92" y="184" style="animation-delay: 1.1s">智能体：今天讲注意力。为什么要除以 √d？</text>
+            <text class="fig-line fig-line--you" x="92" y="228" style="animation-delay: 1.85s">你：这样能让 softmax 的梯度保持有效</text>
+            <text class="fig-line fig-line--agent" x="92" y="272" style="animation-delay: 2.6s">智能体：没错。测验 3/3 完成，接下来我们亲手把它做出来</text>
             <rect class="fig-caret" x="92" y="304" width="9" height="15" style="animation-delay: 3.5s"/>
           </svg>
         </div>
-        <div class="fig-panel" data-caption="One spine instead of scattered pieces. Skill compounds instead of plateauing." role="group" aria-label="Plate 3 of 3: The learning curve" aria-hidden="true">
+        <div class="fig-panel" data-caption="One spine instead of scattered pieces. Skill compounds instead of plateauing." role="group" aria-label="第 3 张，共 3 张：学习曲线" aria-hidden="true">
           <svg viewBox="0 0 560 380" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect class="fig-frame" x="8" y="8" width="544" height="364"/>
             <path class="fig-tick" d="M8 28 V8 H28 M532 8 H552 V28 M552 352 V372 H532 M28 372 H8 V352"/>
-            <text class="fig-label" x="24" y="34">FIG_003 · THE LEARNING CURVE</text>
-            <text class="fig-label fig-label--right" x="536" y="34">skill vs hours</text>
+            <text class="fig-label" x="24" y="34">FIG_003 · 学习曲线</text>
+            <text class="fig-label fig-label--right" x="536" y="34">能力 vs 时间</text>
             <line class="fig-grid" x1="150" y1="80" x2="150" y2="320"/>
             <line class="fig-grid" x1="220" y1="80" x2="220" y2="320"/>
             <line class="fig-grid" x1="290" y1="80" x2="290" y2="320"/>
@@ -2240,40 +2240,40 @@
             <line class="fig-axis-line" x1="80" y1="320" x2="80" y2="68"/>
             <path class="fig-axis-line" d="M498 315 L504 320 L498 325"/>
             <path class="fig-axis-line" d="M75 74 L80 68 L85 74"/>
-            <text class="fig-axis" x="512" y="342">hours</text>
-            <text class="fig-axis" x="80" y="56">skill</text>
+            <text class="fig-axis" x="512" y="342">时间</text>
+            <text class="fig-axis" x="80" y="56">能力</text>
             <path class="fig-area" d="M80,318 C205,306 255,178 490,92 L490,318 L80,318 Z"/>
             <path class="fig-curve fig-curve--flat" d="M80,318 C180,297 290,288 490,270" pathLength="1"/>
             <path class="fig-curve fig-curve--steep" d="M80,318 C205,306 255,178 490,92" pathLength="1"/>
-            <text class="fig-curve-label fig-curve-label--flat" x="368" y="252">tutorial hopping</text>
+            <text class="fig-curve-label fig-curve-label--flat" x="368" y="252">在教程之间来回跳转</text>
             <rect class="fig-mile" x="188.2" y="268.2" width="7" height="7" style="animation-delay: 2.0s"/>
-            <text class="fig-mile-label" x="203.7" y="261.7" style="animation-delay: 2.1s">backprop</text>
+            <text class="fig-mile-label" x="203.7" y="261.7" style="animation-delay: 2.1s">反向传播</text>
             <rect class="fig-mile" x="284.5" y="196.1" width="7" height="7" style="animation-delay: 2.4s"/>
-            <text class="fig-mile-label" x="300.0" y="189.6" style="animation-delay: 2.5s">transformers</text>
+            <text class="fig-mile-label" x="300.0" y="189.6" style="animation-delay: 2.5s">Transformer</text>
             <rect class="fig-mile" x="403.7" y="123.8" width="7" height="7" style="animation-delay: 2.8s"/>
-            <text class="fig-mile-label" x="421.2" y="151.3" style="animation-delay: 2.9s">agents</text>
+            <text class="fig-mile-label" x="421.2" y="151.3" style="animation-delay: 2.9s">智能体</text>
             <circle class="fig-rider" r="5" style="offset-path: path('M80,318 C205,306 255,178 490,92')"/>
           </svg>
         </div>
         </div>
         <div class="fig-meta">
-          <figcaption class="fig-caption" aria-live="off" aria-atomic="true">Plate 1 of 3. Every layer of this diagram is a lesson you implement by hand.</figcaption>
-          <div class="fig-controls" aria-label="Course explanation controls">
-            <button class="fig-control fig-previous" type="button" aria-label="Show previous explanation" disabled>Previous</button>
-            <div class="fig-dots" role="group" aria-label="Choose an explanation">
-              <button class="fig-dot is-active" type="button" aria-label="Show plate 1: Forward pass" aria-pressed="true"></button>
-              <button class="fig-dot" type="button" aria-label="Show plate 2: AI-native lesson" aria-pressed="false"></button>
-              <button class="fig-dot" type="button" aria-label="Show plate 3: The learning curve" aria-pressed="false"></button>
+          <figcaption class="fig-caption" aria-live="off" aria-atomic="true">第 1 张，共 3 张。这张图里的每一层，都是一节需要你亲手实现的课程。</figcaption>
+          <div class="fig-controls" aria-label="课程说明切换控件">
+            <button class="fig-control fig-previous" type="button" aria-label="显示上一条说明" disabled>上一张</button>
+            <div class="fig-dots" role="group" aria-label="选择一条说明">
+              <button class="fig-dot is-active" type="button" aria-label="显示第 1 张：前向传播" aria-pressed="true"></button>
+              <button class="fig-dot" type="button" aria-label="显示第 2 张：AI-native 课程" aria-pressed="false"></button>
+              <button class="fig-dot" type="button" aria-label="显示第 3 张：学习曲线" aria-pressed="false"></button>
             </div>
-            <button class="fig-control fig-next" type="button" aria-label="Show next explanation">Next</button>
+            <button class="fig-control fig-next" type="button" aria-label="显示下一条说明">下一张</button>
           </div>
         </div>
       </figure>
       <div class="ascii-rule" style="margin-top:48px;"></div>
     </section>
 
-    <section class="learners-strip" aria-label="Where readers learn and where the course is discussed">
-      <div class="learners-eyebrow">Read by engineers and students at</div>
+    <section class="learners-strip" aria-label="读者学习与课程讨论分布">
+      <div class="learners-eyebrow">以下公司的工程师和以下学校的学生都在阅读</div>
       <div class="marquee" data-marquee>
         <div class="marquee-track">
           <div class="marquee-half">
@@ -2292,41 +2292,41 @@
             <span class="marquee-item"><img class="mark-logo" src="logos/amazon.svg" alt="Amazon" loading="lazy"></span>
             <span class="marquee-item"><img class="mark-logo" src="logos/cmu.svg" alt="Carnegie Mellon" loading="lazy"></span>
             <span class="marquee-item"><img class="mark-logo" src="logos/yahoo.svg" alt="Yahoo" loading="lazy"></span>
-            <span class="marquee-item marquee-item--uni">IIT Bombay</span>
+            <span class="marquee-item marquee-item--uni">印度理工学院孟买分校</span>
             <span class="marquee-item"><img class="mark-logo" src="logos/mlh.svg" alt="Major League Hacking" loading="lazy"></span>
-            <span class="marquee-item marquee-item--uni">University of Windsor</span>
+            <span class="marquee-item marquee-item--uni">温莎大学</span>
           </div>
         </div>
       </div>
-      <p class="learners-quote">&ldquo;Obsessed with the AI Engineering from Scratch repo.&rdquo; <span class="learners-quote-attr">- AI engineer at Google</span></p>
+      <p class="learners-quote">“我对 AI Engineering from Scratch 这个仓库完全上头了。” <span class="learners-quote-attr">- Google 的 AI 工程师</span></p>
     </section>
 
     <section class="preface container">
       <div class="preface-grid">
-        <div class="preface-eyebrow reveal reveal--left">How this works</div>
+        <div class="preface-eyebrow reveal reveal--left">这是怎么运作的</div>
         <div class="preface-body reveal" style="--stagger-delay: 120ms;">
-          <p>Most AI material teaches in scattered pieces. A paper here, a fine-tuning post there, a flashy agent demo somewhere else. The pieces rarely line up. You ship a chatbot but can't explain its loss curve. You hook a function to an agent but can't say what attention does inside the model that's calling it.</p>
-          <p id="prefaceCurriculumSummary">The core curriculum has 20 phases and 523 lessons in four languages. Beyond it are 12 focused paths and 4 Claude certification tracks with 33 certification lessons.</p>
-          <p>Linear algebra sits at one end and autonomous swarms at the other. Every algorithm gets built from raw math first: backprop, tokenizer, attention, agent loop. By the time PyTorch shows up, you already know what it is doing under the hood.</p>
-          <p>Each lesson runs the same loop: read the problem, derive the math, write the code, run the test, keep the artifact. No five-minute videos, no copy-paste deploys, no hand-holding. Free, open source, and built to run on your own laptop.</p>
+          <p>大多数 AI 学习材料都是碎片化的。这里一篇论文，那里一篇微调文章，再加上别处一个炫目的智能体演示。这些碎片很少能拼成一体。你也许能上线一个聊天机器人，却解释不清它的损失曲线；你也许能给智能体接上函数调用，却说不清调用它的模型内部，注意力到底在做什么。</p>
+          <p id="prefaceCurriculumSummary">核心课程包含 20 个阶段、523 节课程，覆盖四种编程语言；此外还有 12 条专题路径，以及 4 条 Claude 认证路线、共 33 节认证课程。</p>
+          <p>课程从线性代数一路延伸到自主智能体群。每个算法都先从基础数学开始亲手构建：反向传播、Tokenizer、注意力和智能体循环。等 PyTorch 真正出现时，你已经知道它底层到底做了什么。</p>
+          <p>每节课都走同一个闭环：读问题、推导数学、写代码、跑测试、保留产物。没有五分钟速成视频，没有复制粘贴式部署，也没有手把手喂答案。它免费、开源，而且就是为在你自己的笔记本上跑起来而设计的。</p>
         </div>
       </div>
     </section>
     <section class="course-paths container" id="choose-path" aria-labelledby="coursePathsTitle">
       <header class="course-paths-header">
-        <h2 id="coursePathsTitle">Choose the work you want to do</h2>
+        <h2 id="coursePathsTitle">选择你想做的方向</h2>
         <div class="course-paths-header-copy">
-          <p>AI engineering is larger than model code. Choose one of four core learning paths, then learn from the same source, labs, tests, and artifacts in the browser or on GitHub.</p>
+          <p>AI 工程远不止模型代码。选择四条核心学习路径之一，然后在浏览器或 GitHub 中，通过同一套源码、实验、测试和产物进行学习。</p>
           <div class="course-paths-entry-links">
-            <a href="learning-paths.html">View Learning Paths</a>
-            <a href="learning-paths.html#career-routes">Browse career routes</a>
+            <a href="learning-paths.html">查看学习路径</a>
+            <a href="learning-paths.html#career-routes">浏览职业路线</a>
           </div>
         </div>
       </header>
       <figure class="learning-paths-figure">
         <figcaption class="learning-paths-compact-root">
-          <strong>AI Engineering</strong>
-          <span>4 connected domains</span>
+          <strong>AI 工程</strong>
+          <span>4 个相互关联的领域</span>
         </figcaption>
         <picture>
           <source media="(max-width: 600px)"
@@ -2334,113 +2334,113 @@
                   data-i18n-srcset-zh="assets/figures/006-ai-engineering-learning-paths-mobile.zh-CN.svg">
           <img src="assets/figures/006-ai-engineering-learning-paths.svg"
                data-i18n-src-zh="assets/figures/006-ai-engineering-learning-paths.zh-CN.svg"
-               alt="AI Engineering connects building and deploying AI applications, software engineering fundamentals, agent-assisted engineering, and product judgment and delivery." loading="lazy">
+               alt="AI 工程连接四条核心学习路径：构建与部署 AI 应用、软件工程基础、智能体辅助工程，以及产品判断与交付。" loading="lazy">
         </picture>
-        <a class="learning-paths-node learning-paths-node--applications" href="learning-paths.html#building-and-deploying" aria-label="Explore the competencies for Building and Deploying AI Applications">
-          <span class="learning-paths-node-label">Building and Deploying AI Applications</span>
+        <a class="learning-paths-node learning-paths-node--applications" href="learning-paths.html#building-and-deploying" aria-label="探索构建与部署 AI 应用所需的能力">
+          <span class="learning-paths-node-label">构建与部署 AI 应用</span>
         </a>
-        <a class="learning-paths-node learning-paths-node--software" href="learning-paths.html#software-fundamentals" aria-label="Explore the competencies for Software Engineering Fundamentals">
-          <span class="learning-paths-node-label">Software Engineering Fundamentals</span>
+        <a class="learning-paths-node learning-paths-node--software" href="learning-paths.html#software-fundamentals" aria-label="探索软件工程基础能力">
+          <span class="learning-paths-node-label">软件工程基础</span>
         </a>
-        <a class="learning-paths-node learning-paths-node--agents" href="learning-paths.html#coding-agents" aria-label="Explore the competencies for Agent-Assisted Engineering">
-          <span class="learning-paths-node-label">Agent-Assisted Engineering</span>
+        <a class="learning-paths-node learning-paths-node--agents" href="learning-paths.html#coding-agents" aria-label="探索智能体辅助工程能力">
+          <span class="learning-paths-node-label">智能体辅助工程</span>
         </a>
-        <a class="learning-paths-node learning-paths-node--shaping" href="learning-paths.html#shaping-the-build" aria-label="Explore the competencies for Product Judgment and Delivery">
-          <span class="learning-paths-node-label">Product Judgment and Delivery</span>
+        <a class="learning-paths-node learning-paths-node--shaping" href="learning-paths.html#shaping-the-build" aria-label="探索产品判断与交付能力">
+          <span class="learning-paths-node-label">产品判断与交付</span>
         </a>
       </figure>
       <div class="course-route-list">
         <article class="course-route is-recommended">
-          <div class="course-route-name"><span>Recommended first</span><strong>New to AI engineering</strong></div>
-          <p>Set up a working environment, run the repository, and learn the lesson workflow before choosing a specialization.</p>
+          <div class="course-route-name"><span>推荐先学</span><strong>刚接触 AI 工程</strong></div>
+          <p>先搭好可用环境，跑通仓库，再熟悉课程工作流，然后再决定细分方向。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/00-setup-and-tooling/01-dev-environment">Open lesson</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/00-setup-and-tooling/01-dev-environment" target="_blank" rel="noopener">GitHub source</a>
+            <a class="course-route-link" href="lesson?path=phases/00-setup-and-tooling/01-dev-environment">开发环境</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/00-setup-and-tooling/01-dev-environment" target="_blank" rel="noopener">GitHub 源码</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Core domain</span><strong>Building and Deploying AI Applications</strong></div>
-          <p>Move from prompts, structured outputs, embeddings, and retrieval through evaluation, serving, observability, and safe release.</p>
+          <div class="course-route-name"><span>核心领域</span><strong>构建与部署 AI 应用</strong></div>
+          <p>从提示词、结构化输出、嵌入与检索出发，逐步掌握评测、服务化、可观测性与安全发布。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/11-llm-engineering/01-prompt-engineering&amp;learningPath=building-and-deploying-ai-applications">Start path</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/building-and-deploying-ai-applications.json" target="_blank" rel="noopener">GitHub path</a>
+            <a class="course-route-link" href="lesson?path=phases/11-llm-engineering/01-prompt-engineering&amp;learningPath=building-and-deploying-ai-applications">提示工程：技术与模式</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/building-and-deploying-ai-applications.json" target="_blank" rel="noopener">GitHub 路径</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Core domain</span><strong>Software Engineering Fundamentals</strong></div>
-          <p>Build the repository, environment, interface, debugging, verification, security, release, and operational foundations AI systems depend on.</p>
+          <div class="course-route-name"><span>核心领域</span><strong>软件工程基础</strong></div>
+          <p>打牢 AI 系统所依赖的仓库、环境、接口、调试、验证、安全、发布与运维基础。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/00-setup-and-tooling/01-dev-environment&amp;learningPath=software-engineering-fundamentals">Start path</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/software-engineering-fundamentals.json" target="_blank" rel="noopener">GitHub path</a>
+            <a class="course-route-link" href="lesson?path=phases/00-setup-and-tooling/01-dev-environment&amp;learningPath=software-engineering-fundamentals">开发环境</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/software-engineering-fundamentals.json" target="_blank" rel="noopener">GitHub 路径</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Core domain</span><strong>Agent-Assisted Engineering</strong></div>
-          <p>Frame the task, plan from repository evidence, engineer the loop and harness, isolate delegation, verify the result, and preserve feedback.</p>
+          <div class="course-route-name"><span>核心领域</span><strong>智能体辅助工程</strong></div>
+          <p>界定任务，依据仓库证据制定计划，构建循环与执行框架，隔离委派过程，验证结果并保留反馈。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/14-agent-engineering/31-agent-workbench-why-models-fail&amp;learningPath=using-coding-agents">Start path</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/using-coding-agents.json" target="_blank" rel="noopener">GitHub path</a>
+            <a class="course-route-link" href="lesson?path=phases/14-agent-engineering/31-agent-workbench-why-models-fail&amp;learningPath=using-coding-agents">智能体工作台：高能力模型为何仍会失败</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/using-coding-agents.json" target="_blank" rel="noopener">GitHub 路径</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Core domain</span><strong>Product Judgment and Delivery</strong></div>
-          <p>Turn observed work into outcomes, assumptions, testable slices, executable specifications, measurement plans, staged releases, and owned feedback.</p>
+          <div class="course-route-name"><span>核心领域</span><strong>产品判断与交付</strong></div>
+          <p>将观察到的工作转化为成果、假设、可测试切片、可执行规范、度量计划、分阶段发布和有明确负责人的反馈闭环。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/14-agent-engineering/47-outcomes-before-output&amp;learningPath=shaping-the-build">Start path</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/shaping-the-build.json" target="_blank" rel="noopener">GitHub path</a>
+            <a class="course-route-link" href="lesson?path=phases/14-agent-engineering/47-outcomes-before-output&amp;learningPath=shaping-the-build">先定义成果，再选择输出形式</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/shaping-the-build.json" target="_blank" rel="noopener">GitHub 路径</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Focused path</span><strong>Model Context Protocol (MCP)</strong></div>
-          <p>Build, secure, verify, and operate stateless MCP systems from wire envelopes through release gates.</p>
+          <div class="course-route-name"><span>专项路径</span><strong>模型上下文协议（MCP）</strong></div>
+          <p>从线缆封装到发布闸门，构建、加固、验证并运行无状态 MCP 系统。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/13-tools-and-protocols/06-mcp-fundamentals&amp;learningPath=model-context-protocol">Start path</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/13-tools-and-protocols/06-mcp-fundamentals" target="_blank" rel="noopener">GitHub source</a>
+            <a class="course-route-link" href="lesson?path=phases/13-tools-and-protocols/06-mcp-fundamentals&amp;learningPath=model-context-protocol">MCP 基础：无状态请求与 JSON-RPC</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/13-tools-and-protocols/06-mcp-fundamentals" target="_blank" rel="noopener">GitHub 源码</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Focused path</span><strong>Agent Skills</strong></div>
-          <p>Build, invoke, route, secure, evaluate, package, and verify portable skills in real agent hosts.</p>
+          <div class="course-route-name"><span>专项路径</span><strong>Agent Skills（智能体技能）</strong></div>
+          <p>在真实智能体宿主中构建、调用、路由、加固、评估、打包并验证可移植技能。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="lesson?path=phases/13-tools-and-protocols/22-skills-and-agent-sdks&amp;learningPath=agent-skills">Start path</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/13-tools-and-protocols/22-skills-and-agent-sdks" target="_blank" rel="noopener">GitHub source</a>
+            <a class="course-route-link" href="lesson?path=phases/13-tools-and-protocols/22-skills-and-agent-sdks&amp;learningPath=agent-skills">智能体技能：可移植契约与运行时边界</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/13-tools-and-protocols/22-skills-and-agent-sdks" target="_blank" rel="noopener">GitHub 源码</a>
           </div>
         </article>
         <article class="course-route">
-          <div class="course-route-name"><span>Practice by evidence</span><strong>Certification preparation</strong></div>
-          <p>Choose a certification route, complete practical labs, keep learner-owned artifacts, and use original assessments.</p>
+          <div class="course-route-name"><span>用证据来练习</span><strong>认证备考</strong></div>
+          <p>选择一条认证路线，完成实操实验，保留学习者自有产物，并使用原创评测题。</p>
           <div class="course-route-actions">
-            <a class="course-route-link" href="certifications.html">Explore paths</a>
-            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/certifications/claude/GETTING_STARTED.md" target="_blank" rel="noopener">GitHub tutor</a>
+            <a class="course-route-link" href="certifications.html">查看路径</a>
+            <a class="course-route-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/certifications/claude/GETTING_STARTED.md" target="_blank" rel="noopener">GitHub 导师</a>
           </div>
         </article>
       </div>
     </section>
     <section class="stat-block container">
-      <div class="stat-block-title reveal reveal--left">Current Progress</div>
+      <div class="stat-block-title reveal reveal--left">当前进度</div>
       <div class="stat-rows reveal" style="--stagger-delay: 100ms;" id="statRows">
         <div class="stat-row">
-          <span class="stat-row-label">Finished Core Lessons</span>
+          <span class="stat-row-label">已完成的核心课程</span>
           <span class="stat-row-bar" data-bar="complete" style="--bar-scale:0;" aria-hidden="true">bar</span>
           <span class="stat-row-value" data-stat="complete-frac">0 / 0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-row-label">Core Phases</span>
+          <span class="stat-row-label">核心阶段</span>
           <span class="stat-row-bar" data-bar="phases" style="--bar-scale:0;" aria-hidden="true">bar</span>
           <span class="stat-row-value" data-stat="phases-frac">0 / 0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-row-label">Guided Routes</span>
+          <span class="stat-row-label">专题与认证路线</span>
           <span class="stat-row-bar" data-bar="routes" style="--bar-scale:0;" aria-hidden="true">bar</span>
           <span class="stat-row-value" data-stat="routes-count">0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-row-label">Languages</span>
+          <span class="stat-row-label">语言</span>
           <span class="stat-row-bar" data-bar="languages" style="--bar-scale:1;" aria-hidden="true">bar</span>
           <span class="stat-row-value">4</span>
         </div>
         <div class="stat-row">
-          <span class="stat-row-label">Glossary Terms</span>
+          <span class="stat-row-label">术语条目</span>
           <span class="stat-row-bar" data-bar="glossary" style="--bar-scale:1;" aria-hidden="true">bar</span>
           <span class="stat-row-value" data-stat="glossary-count">···</span>
         </div>
@@ -2448,13 +2448,13 @@
     </section>
 
     <section class="toc container" id="contents">
-      <div class="toc-title reveal reveal--left" id="curriculumTocTitle">Curriculum · 20 phases · 523 lessons</div>
-      <div class="toc-subtitle reveal" style="--stagger-delay: 80ms;">Tap a phase to expand its lessons. Each one ships when its math, code, and test are all written.</div>
+      <div class="toc-title reveal reveal--left" id="curriculumTocTitle">课程体系 · 20 个阶段 · 523 节课</div>
+      <div class="toc-subtitle reveal" style="--stagger-delay: 80ms;">点击一个阶段即可展开其课程。只有当数学、代码和测试都写完后，它才会发布。</div>
       <div class="toc-list" id="phasesGrid"></div>
       <div class="legend">
-        <span class="legend-item"><span class="toc-status complete"></span> Complete</span>
-        <span class="legend-item"><span class="toc-status in-progress"></span> In progress</span>
-        <span class="legend-item"><span class="toc-status planned"></span> Planned</span>
+        <span class="legend-item"><span class="toc-status complete"></span> 已完成</span>
+        <span class="legend-item"><span class="toc-status in-progress"></span> 进行中</span>
+        <span class="legend-item"><span class="toc-status planned"></span> 已规划</span>
       </div>
     </section>
 
@@ -2470,18 +2470,18 @@
         </div>
         <div class="modal-lessons" id="modalLessons"></div>
         <div class="modal-footer">
-          <span class="modal-footer-note">Progress saved in browser only</span>
-          <button class="modal-reset" id="modalReset" type="button">Reset progress</button>
+          <span class="modal-footer-note">进度仅保存在浏览器中</span>
+          <button class="modal-reset" id="modalReset" type="button">重置进度</button>
         </div>
       </div>
     </div>
 
 
     <section class="books container" id="books">
-      <div class="toc-title reveal reveal--left">The book edition · six volumes</div>
-      <div class="toc-subtitle reveal" style="--stagger-delay: 80ms;">The course, compiled. EPUB and PDF built from the same lessons and attached to every GitHub release. The site stays the living edition. Every chapter links back here for the animated figures, quizzes, and code.</div>
+      <div class="toc-title reveal reveal--left">图书版 · 六卷</div>
+      <div class="toc-subtitle reveal" style="--stagger-delay: 80ms;">这是课程的编排成书版。EPUB 和 PDF 由同一套课程内容构建，并附在每次 GitHub release 中。网站则保持为持续更新的在线版本。每一章都会链接回这里，查看动画图示、测验和代码。</div>
       <div class="books-grid" id="booksGrid"></div>
-      <div class="books-note">Links resolve to the newest <a href="https://github.com/rohitg00/ai-engineering-from-scratch/releases" target="_blank" rel="noopener">GitHub release</a> · rebuilt by CI from the lessons on every release · <a href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/book/README.md" target="_blank" rel="noopener">how it's made</a></div>
+      <div class="books-note">链接指向最新的 <a href="https://github.com/rohitg00/ai-engineering-from-scratch/releases" target="_blank" rel="noopener">GitHub 发布版本</a> · 每次发布时由 CI 根据课程重新构建 · <a href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/book/README.md" target="_blank" rel="noopener">制作方式</a></div>
     </section>
 
     <section class="certification-spotlight container" id="certifications" aria-labelledby="certification-spotlight-title">
@@ -2494,20 +2494,20 @@
         </figure>
 
         <div class="certification-copy">
-          <span class="certification-eyebrow">Independent certification preparation</span>
-          <h2 id="certification-spotlight-title">Prepare by building the real systems</h2>
-          <p class="certification-intro">Four Claude certification paths taught the same way as the course: step by step, with interactive labs, practical artifacts, and an AI tutor that works from the GitHub repo.</p>
-          <div class="certification-proof" aria-label="Certification curriculum coverage">
-            <span><strong>4</strong> tracks</span>
-            <span><strong>33</strong> certification lessons</span>
-            <span><strong>295</strong> original practice questions</span>
+          <span class="certification-eyebrow">独立认证备考</span>
+          <h2 id="certification-spotlight-title">通过亲手构建真实系统来备考</h2>
+          <p class="certification-intro">四条 Claude 认证路线采用与主课程相同的教学方式：循序渐进，配合交互式实验、实用产物，以及一个基于 GitHub 仓库运行的 AI 导师。</p>
+          <div class="certification-proof" aria-label="认证课程覆盖范围">
+            <span><strong>4</strong> 条路线</span>
+            <span><strong>33</strong> 节认证课程</span>
+            <span><strong>295</strong> 道原创练习题</span>
           </div>
-          <p class="certification-disclaimer">Not affiliated with, endorsed by, sponsored by, or authorized by Anthropic. This curriculum does not issue credentials or guarantee a passing result.</p>
+          <p class="certification-disclaimer">本课程与 Anthropic 无关联，未获其认可、赞助或授权。本课程不发放任何证书，也不保证通过考试。</p>
         </div>
 
         <div class="certification-actions">
-          <a class="masthead-btn masthead-btn--primary" href="certifications.html">Explore certifications</a>
-          <a class="certification-github-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/certifications/claude/GETTING_STARTED.md" target="_blank" rel="noopener" aria-label="Use the certification tutor on GitHub (opens in a new tab)">Learn with the GitHub tutor</a>
+          <a class="masthead-btn masthead-btn--primary" href="certifications.html">查看认证路线</a>
+          <a class="certification-github-link" href="https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/certifications/claude/GETTING_STARTED.md" target="_blank" rel="noopener" aria-label="在 GitHub 上使用认证导师（会在新标签页打开）">使用 GitHub 导师学习</a>
         </div>
       </div>
     </section>
@@ -2544,17 +2544,17 @@
 
     <section class="colophon container">
       <div class="colophon-grid">
-        <div class="colophon-eyebrow reveal reveal--left">Colophon</div>
+        <div class="colophon-eyebrow reveal reveal--left">版权说明</div>
         <div class="reveal" style="--stagger-delay: 80ms;">
-          <p>The entire curriculum is on GitHub. Clone it, fork it, learn at your own pace. No paywall, no signup. Every lesson has runnable code in Python, TypeScript, Rust, or Julia, depending on what fits the concept best.</p>
+          <p>整套课程都在 GitHub 上。你可以 clone、fork，并按自己的节奏学习。没有付费墙，也无需注册。每节课都提供可运行代码，语言会根据概念最合适的形式选择 Python、TypeScript、Rust 或 Julia。</p>
           <div class="colophon-cmd">
             <code id="cloneCmd">git clone https://github.com/rohitg00/ai-engineering-from-scratch.git</code>
-            <button class="copy-chip" id="copyBtn" aria-label="Copy command" type="button">
+            <button class="copy-chip" id="copyBtn" aria-label="复制命令" type="button">
               <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
                 <rect x="3.5" y="3.5" width="7" height="7"/>
                 <path d="M8.5 3.5v-2h-7v7h2"/>
               </svg>
-              <span id="copyBtnLabel" role="status" aria-live="polite">copy</span>
+              <span id="copyBtnLabel" role="status" aria-live="polite">复制</span>
             </button>
           </div>
         </div>
@@ -2565,14 +2565,14 @@
 
   <footer class="site-footer">
     <div class="container footer-inner">
-      <p>© 2026 · open source · free forever</p>
+      <p>© 2026 · 开源 · 永久免费</p>
       <div class="footer-links">
         <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">GitHub</a>
-        <a href="about.html">About</a>
-        <a href="certifications.html">Certifications</a>
-        <a href="catalog.html">Catalog</a>
-        <a href="glossary.html">Glossary</a>
-        <a href="https://github.com/rohitg00/ai-engineering-from-scratch/issues/new/choose" target="_blank" rel="noopener">Report</a>
+        <a href="about.html">关于</a>
+        <a href="certifications.html">认证</a>
+        <a href="catalog.html">课程目录</a>
+        <a href="glossary.html">术语表</a>
+        <a href="https://github.com/rohitg00/ai-engineering-from-scratch/issues/new/choose" target="_blank" rel="noopener">反馈</a>
       </div>
     </div>
   </footer>
@@ -2650,13 +2650,13 @@
 
   <script src="langs.js?v=fb2840c8aa0a"></script>
   <script src="i18n-data.js?v=7e2dd86ccaad"></script>
-  <script src="ui-i18n.js?v=ed1be68f31e1"></script>
-  <script src="lang-picker.js?v=853069504587" defer></script>
+  <script src="ui-i18n.js?v=f4457ecb8c7e"></script>
+  <script src="lang-picker.js?v=016a5749d9a2" defer></script>
   <script src="data.js?v=5c1c014aea05"></script>
   <script src="progress.js?v=20260828a"></script>
-  <script src="header.js?v=191a713c8dc5" defer></script>
-  <script src="cmdpalette.js?v=42dbbdb18dee" defer></script>
-  <script src="app.js?v=80509a5244d4"></script>
+  <script src="header.js?v=e3c97f011603" defer></script>
+  <script src="cmdpalette.js?v=82121b9ee852" defer></script>
+  <script src="app.js?v=26a8d0a5f05c"></script>
   <script defer src="https://va.vercel-scripts.com/v1/script.js"></script>
 </body>
 </html>

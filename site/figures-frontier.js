@@ -1,7 +1,7 @@
-/* figures-frontier.js - interactive lesson figures for autonomous systems
-   (Phase 15) and the capstone projects (Phase 19). Loads after
-   lesson-figures.js and registers through window.LF. No deps, ES5, theme via
-   CSS vars. Authoring: a ```figure block naming one of the widgets below. */
+/* figures-frontier.js - 面向自主系统（第 15 阶段）和综合项目（第 19 阶段）的
+   交互式课程图示。在 lesson-figures.js 之后加载，并通过 window.LF 注册。
+   无依赖，使用 ES5，通过 CSS 变量适配主题。编写时使用 ```figure 代码块指定
+   下列某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -29,7 +29,7 @@
     return t;
   }
 
-  // ── task-decomposition: a goal fans out into sub-tasks (a planning tree) ────
+  // ── task-decomposition：目标展开为多个子任务（规划树）──────────────────────
   function taskDecomposition(host) {
     var state = { branch: 3, depth: 2 };
     var W = 520, H = 250;
@@ -76,7 +76,7 @@
     state._render();
   }
 
-  // ── reflection-loop: act -> evaluate -> critique -> revise, quality climbs ──
+  // ── reflection-loop：行动 -> 评估 -> 批评 -> 修订，质量逐步提升 ────────────
   function reflectionLoop(host) {
     var state = { iter: 3 };
     var stages = ['ACT', 'EVALUATE', 'CRITIQUE', 'REVISE'];
@@ -116,7 +116,7 @@
     state._render();
   }
 
-  // ── memory-consolidation: episodic events compress into a semantic summary ──
+  // ── memory-consolidation：情景事件压缩为语义摘要 ───────────────────────────
   function memoryConsolidation(host) {
     var state = { events: 24, threshold: 8 };
     var W = 520, H = 150;
@@ -156,7 +156,7 @@
     state._render();
   }
 
-  // ── world-model-rollout: imagine future states with a learned model ────────
+  // ── world-model-rollout：用学习得到的模型推演未来状态 ─────────────────────
   function worldModelRollout(host) {
     var state = { rollout: 2, branch: 2 };
     var W = 520, H = 240;
@@ -202,7 +202,7 @@
     state._render();
   }
 
-  // ── autonomy-oversight: a risk dial routes actions to auto or a human gate ──
+  // ── autonomy-oversight：风险表盘将行动分流至自动执行或人工关卡 ─────────────
   function autonomyOversight(host) {
     var state = { autonomy: 50 };
     var actions = [
@@ -240,7 +240,7 @@
     state._render();
   }
 
-  // ── pass-at-k: pass@k = 1 - (1-p)^k rises toward 1 as k grows ───────────────
+  // ── pass-at-k：随着 k 增大，pass@k = 1 - (1-p)^k 趋近于 1 ─────────────────
   function passAtK(host) {
     var state = { p: 0.3, k: 5 };
     var W = 520, H = 210, PAD = 34, KMAX = 20;
@@ -276,11 +276,11 @@
     state._render();
   }
 
-  // ── eval-harness-matrix: tasks x variants grid, aggregate per variant ──────
+  // ── eval-harness-matrix：任务 x 变体网格，按变体聚合 ───────────────────────
   function evalHarnessMatrix(host) {
     var state = { variant: '0' };
     var tasks = ['parse-json', 'sort-list', 'sql-join', 'regex-extract', 'recursion', 'edge-cases'];
-    // deterministic pass(1)/fail(0) per [variant][task]
+    // 每个 [variant][task] 使用确定性的通过(1)/失败(0)结果
     var grids = [
       [1, 1, 0, 1, 1, 0],
       [1, 1, 1, 1, 1, 1],
@@ -329,7 +329,7 @@
     state._render();
   }
 
-  // ── canary-rollout: traffic split, error rate, rollback trigger ────────────
+  // ── canary-rollout：流量拆分、错误率与回滚触发器 ──────────────────────────
   function canaryRollout(host) {
     var state = { canary: 10 };
     var stableErr = 0.4, canaryErr = 2.6, sla = 1.5;
@@ -363,9 +363,9 @@
     state._render();
   }
 
-  // ── trace-spans: nested spans on a timeline, expand one to see children ────
+  // ── trace-spans：时间线上的嵌套 span，展开一个可查看其子项 ─────────────────
   function traceSpans(host) {
-    // each span: name, start, dur (ms), depth
+    // 每个 span：名称、开始时间、持续时间（ms）和深度
     var spans = [
       { name: 'handle_request', start: 0, dur: 1200, depth: 0 },
       { name: 'llm_call (plan)', start: 40, dur: 420, depth: 1 },

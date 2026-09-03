@@ -1,8 +1,7 @@
-/* figures-llmstack5.js: SMIL-animated lesson figures for Phase 10 (LLMs from
-   scratch), Phase 11 (LLM engineering) and Phase 12 (multimodal AI).
-   Loads after lesson-figures.js and registers through window.LF.register.
-   Vanilla ES5, no deps, theme via CSS vars. Each figure is a self-driving
-   animated SVG (SMIL only, no JS loops driving frames). Authoring:
+/* figures-llmstack5.js：阶段 10（从零构建 LLM）、阶段 11（LLM 工程）和阶段 12
+   （多模态 AI）的 SMIL 动画课程图示。在 lesson-figures.js 之后加载，并通过
+   window.LF.register 注册。原生 ES5，无依赖，通过 CSS 变量应用主题。每个图示
+   都是自动运行的动画 SVG（仅使用 SMIL，无 JS 循环驱动帧）。编写方式：
        ```figure
        l5-data-pipeline
        ``` */
@@ -37,8 +36,8 @@
   function box(x, y, w, h, stroke, fill, sw) {
     return svgEl('rect', { x: x, y: y, width: w, height: h, rx: 4, fill: fill || 'none', stroke: stroke, 'stroke-width': sw || 1.3 });
   }
-  // One-shot mount entry: fade in from opacity 0 while growing 95% -> 100%
-  // about the figure center (cx, cy). Runs once, then the loops take over.
+  // 一次性挂载入场：以图示中心 (cx, cy) 为基准，在从 95% 放大到 100% 的同时
+  // 从不透明度 0 淡入。仅运行一次，随后由循环动画接管。
   function entry(g, cx, cy) {
     var common = { dur: '0.7s', begin: '0s', fill: 'freeze', repeatCount: '1', calcMode: 'spline', keyTimes: '0;1', keySplines: EASE };
     g.setAttribute('opacity', '0');
@@ -61,7 +60,7 @@
     ]));
   }
 
-  // ── l5-data-pipeline: docs stream through filters, only survivors batch ──
+  // ── l5-data-pipeline：文档流经筛选器，仅通过者进入批次 ─────────────────
   function dataPipeline(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var g = svgEl('g');
@@ -103,7 +102,7 @@
       'Terabytes of raw text stream through deduplication and quality filters before being packed into fixed-length sequences. Only a fraction survives, and the pipeline has to produce batches faster than the GPUs consume them, or the whole cluster waits on the dataloader.');
   }
 
-  // ── l5-spec-decode-eagle: draft proposes, one verifier pass stamps ──
+  // ── l5-spec-decode-eagle：草稿模型提出候选，单次验证器轮次给出判定 ─────
   function specDecode(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var g = svgEl('g');
@@ -152,7 +151,7 @@
       'The draft head proposes four cheap tokens. One verifier forward pass scores all of them at once: the agreeing prefix is accepted, the first disagreement is rejected and replaced by a sample from the residual distribution, and everything after it is discarded. On a full accept the verifier emits a bonus token, so one big-model pass can yield N+1 tokens with the verifier distribution preserved exactly.');
   }
 
-  // ── l5-prod-app-paths: cache miss pays the full path, cache hit is free ──
+  // ── l5-prod-app-paths：缓存未命中需走完整路径，命中则无需额外计算 ───────
   function prodApp(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var g = svgEl('g');
@@ -198,7 +197,7 @@
       'One request misses every cache and pays the full path: guardrails, retrieval, the model itself. Seconds of latency and full token cost. An identical request moments later short-circuits at the cache and returns in milliseconds for nearly nothing. Production LLM engineering is largely the work of making the second path the common one.');
   }
 
-  // ── l5-state-graph-ledger: explicit graph, every edge writes a checkpoint ──
+  // ── l5-state-graph-ledger：显式图结构，每条边都会写入检查点 ─────────────
   function stateGraph(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var g = svgEl('g');
@@ -236,7 +235,7 @@
       'The same ReAct loop drawn as an explicit graph. The walker crosses model, tools, and human-approval nodes, and every transition writes a checkpoint to the ledger below. At the human node execution simply stops: state is already persisted, so the graph can resume later, or rewind to any earlier checkpoint and branch down a different path.');
   }
 
-  // ── l5-framework-fit: four whiteboards, one per core abstraction ──
+  // ── l5-framework-fit：四块白板，各对应一种核心抽象 ─────────────────────
   function frameworkFit(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     var g = svgEl('g');
@@ -281,7 +280,7 @@
       'Each framework has one core abstraction, and it is the thing you would draw on a whiteboard. LangGraph draws a state graph, CrewAI an org chart, AutoGen a conversation, Agno a single agent with tools attached. Pick the one whose drawing matches your problem; forcing the wrong shape means writing the missing abstraction yourself, twice.');
   }
 
-  // ── l5-vlm-recipe-knobs: five faders, data mix rises highest ──
+  // ── l5-vlm-recipe-knobs：五个推子，其中数据混合比例升得最高 ───────────
   function vlmRecipe(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var g = svgEl('g');
@@ -312,7 +311,7 @@
       'The ranking that survives across the MM1, Idefics2, Cambrian-1, and Prismatic ablation tables. Data mixture moves benchmarks most, the image encoder is next, and the connector, the knob most papers obsess over, matters least. When a VLM underperforms, reach for the tallest fader first.');
   }
 
-  // ── l5-onevision-budget: one fixed budget, three packings ──
+  // ── l5-onevision-budget：同一固定预算下的三种装填方式 ──────────────────
   function onevisionBudget(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var g = svgEl('g');
@@ -341,7 +340,7 @@
       'LLaVA-OneVision holds the visual-token budget roughly constant at a few thousand tokens per sample and just repacks it: one image at high AnyRes resolution, several images at moderate resolution, or 32 video frames pooled down to 81 tokens each. Because every scenario costs about the same, one model trains on all three without any of them dominating.');
   }
 
-  // ── l5-native-pretrain: bolted-on wall vs interleaved wall ──
+  // ── l5-native-pretrain：对比外挂式墙面与交错式墙面 ─────────────────────
   function nativePretrain(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var g = svgEl('g');
@@ -375,7 +374,7 @@
       'Post-hoc training lays down trillions of text tokens first and glues vision on at the end; the seam is alignment debt, visible as catastrophic forgetting, answer drift, and visual-text inconsistency. InternVL3 lays text, interleaved, and caption data together from the first step, so visual tokens are native citizens of the wall rather than an extension bolted on.');
   }
 
-  // ── l5-emu3-next-token: one cursor writes text, image, and video tokens ──
+  // ── l5-emu3-next-token：同一个光标写出文本、图像和视频 token ───────────
   function emuNextToken(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var g = svgEl('g');
@@ -406,7 +405,7 @@
       'Emu3 trains a single Llama-style decoder with next-token prediction over one shared vocabulary in which text, VQ image tokens, and 3D video tokens are all just entries. No diffusion schedule, no CLIP loss, no second objective. The same sweep of the same head writes a sentence, an image, or a video clip, which is why one model can be Emu3-Chat and Emu3-Gen at once.');
   }
 
-  // ── l5-janus-decouple: two front doors, one shared hall ──
+  // ── l5-janus-decouple：两个前门，共用一个大厅 ──────────────────────────
   function janusDecouple(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var g = svgEl('g');
@@ -452,7 +451,7 @@
       'Understanding wants semantic features, generation wants reconstruction-friendly codes, and one encoder cannot serve both. Janus-Pro routes understanding through SigLIP and generation through a VQ tokenizer while both tasks share the same transformer body. Two front doors, one hall, and neither task pays the other\'s quality tax.');
   }
 
-  // ── l5-thinker-talker: speech streams while the text is still writing ──
+  // ── l5-thinker-talker：文本仍在生成时，语音已开始流式输出 ──────────────
   function thinkerTalker(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var g = svgEl('g');

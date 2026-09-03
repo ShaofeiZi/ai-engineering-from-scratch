@@ -1,7 +1,6 @@
-/* figures-llms2.js: a second batch of interactive lesson figures for Phase 10
-   (LLMs from scratch). Loads after lesson-figures.js and registers through
-   window.LF.register. Vanilla ES5, no deps, theme via CSS vars. Authoring is
-   the same fenced block:
+/* figures-llms2.js：阶段 10（从零构建 LLM）的第二批交互式课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF.register 注册。原生 ES5，
+   无依赖，通过 CSS 变量应用主题。编写方式使用相同的围栏代码块：
        ```figure
        rmsnorm-vs-layernorm
        ``` */
@@ -11,7 +10,7 @@
   if (!LF) { return; }
   var el = LF.el, svgEl = LF.svgEl, slider = LF.slider, select = LF.select, fmtInt = LF.fmtInt;
 
-  // ── rmsnorm-vs-layernorm: center+scale vs scale-only over a feature vector ─
+  // ── rmsnorm-vs-layernorm：对特征向量进行居中并缩放，或仅缩放 ────────────
   function rmsnormVsLayernorm(host) {
     var feats = [2.4, -1.2, 0.8, 3.1, -0.6, 1.7];
     var state = { mode: 'rmsnorm', shift: 0 };
@@ -60,7 +59,7 @@
     state._render();
   }
 
-  // ── swiglu-ffn: a gate path modulates a value path, vs plain ReLU ──────────
+  // ── swiglu-ffn：门控路径调制值路径，并与普通 ReLU 对比 ─────────────────
   function swigluFfn(host) {
     var state = { x: 1.2, mode: 'swiglu' };
     var W = 520, H = 200, PAD = 30;
@@ -108,7 +107,7 @@
     state._render();
   }
 
-  // ── rlhf-pipeline: SFT → reward model → PPO, three stages with data flow ────
+  // ── rlhf-pipeline：SFT → 奖励模型 → PPO，包含数据流的三个阶段 ───────────
   function rlhfPipeline(host) {
     var state = { stage: 0 };
     var W = 520, H = 210, PAD = 18;
@@ -173,7 +172,7 @@
     state._render();
   }
 
-  // ── dpo-loss: margin between chosen and rejected, scaled by beta ───────────
+  // ── dpo-loss：经 beta 缩放的已选与被拒响应之间的间隔 ───────────────────
   function dpoLoss(host) {
     var state = { beta: 0.3, gap: 0.0 };
     var W = 520, H = 200, PAD = 32, GMAX = 6;
@@ -214,7 +213,7 @@
     state._render();
   }
 
-  // ── paged-kv-cache: fixed pages vs contiguous, fragmentation and waste ─────
+  // ── paged-kv-cache：对比固定分页与连续分配的碎片和浪费 ─────────────────
   function pagedKvCache(host) {
     var state = { seq: 70, page: 16 };
     var W = 520, H = 210, PAD = 18;
@@ -224,17 +223,17 @@
     var barWrap = el('div', { class: 'lf-bar' }, [bar]);
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    var SLOTS = 128; // a contiguous reservation must over-allocate to max length
+    var SLOTS = 128; // 连续预留必须按最大长度超额分配
     var MAXLEN = 128;
     state._render = function () {
       var seq = state.seq, page = state.page;
       var pages = Math.ceil(seq / page);
       var paged = pages * page;
       var pagedWaste = paged - seq;
-      var contigWaste = MAXLEN - seq; // contiguous reserves the full max up front
+      var contigWaste = MAXLEN - seq; // 连续分配会预先保留完整的最大长度
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var cols = 32, cw = (W - 2 * PAD) / cols, ch = 12;
-      // contiguous row: one reservation of MAXLEN, used part blue, reserved-but-empty grey
+      // 连续分配行：一次预留 MAXLEN，已用部分为蓝色，已预留但为空的部分为灰色
       var rowY = 40, i;
       var ttop = svgEl('text', { x: PAD, y: (rowY - 8).toFixed(1), 'font-family': 'monospace', 'font-size': '10', fill: 'var(--ink-mute,#777)' });
       ttop.appendChild(document.createTextNode('contiguous: reserve max length up front'));
@@ -244,7 +243,7 @@
         svg.appendChild(svgEl('rect', { x: cx.toFixed(1), y: cy.toFixed(1), width: (cw - 2).toFixed(1), height: ch, rx: '1',
           fill: i < seq ? 'var(--blueprint,#3553ff)' : 'var(--rule-soft,#ccc)', opacity: i < seq ? '0.9' : '0.5' }));
       }
-      // paged row: pages allocated on demand, only the last page partly wasted
+      // 分页行：按需分配页面，仅最后一页存在部分浪费
       var rowY2 = rowY + 4 * (ch + 2) + 30;
       var tbot = svgEl('text', { x: PAD, y: (rowY2 - 8).toFixed(1), 'font-family': 'monospace', 'font-size': '10', fill: 'var(--ink-mute,#777)' });
       tbot.appendChild(document.createTextNode('paged: ' + pages + ' pages of ' + page + ', only the last partly free'));
@@ -278,7 +277,7 @@
     state._render();
   }
 
-  // ── expert-capacity: capacity factor vs tokens, dropped vs wasted slots ─────
+  // ── expert-capacity：容量因子与 token 数，以及丢弃量与槽位浪费的对比 ────
   function expertCapacity(host) {
     var state = { cap: 1.25, tokens: 64 };
     var W = 520, H = 200, PAD = 24, E = 8;
@@ -286,14 +285,14 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // deterministic skewed routing: expert e gets a fixed share of tokens
+    // 确定性的偏斜路由：专家 e 获得固定比例的 token
     var SHARE = [0.22, 0.18, 0.15, 0.13, 0.11, 0.09, 0.07, 0.05];
     state._render = function () {
       var T = state.tokens, cap = state.cap;
-      var perExpert = Math.floor(cap * T / E); // capacity slots per expert
+      var perExpert = Math.floor(cap * T / E); // 每位专家的容量槽位数
       var loads = SHARE.map(function (s) { return Math.round(s * T); });
       var sum = loads.reduce(function (a, b) { return a + b; }, 0);
-      loads[0] += (T - sum); // keep total exactly T
+      loads[0] += (T - sum); // 保证总数恰好为 T
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var bw = (W - 2 * PAD) / E - 8, dropped = 0, wasted = 0, e;
       var maxBar = H - 2 * PAD;
@@ -330,7 +329,7 @@
     state._render();
   }
 
-  // ── sliding-window-attention: banded mask of width w vs full O(N^2) ────────
+  // ── sliding-window-attention：对比宽度为 w 的带状掩码与完整 O(N^2) 掩码 ─
   function slidingWindowAttention(host) {
     var state = { window: 4 };
     var W = 520, H = 240, PAD = 24, N = 16;
@@ -375,7 +374,7 @@
     state._render();
   }
 
-  // ── differential-attention: two softmax maps subtracted, λ cancels noise ────
+  // ── differential-attention：两个 softmax 图相减，由 λ 抵消噪声 ──────────
   function differentialAttention(host) {
     var state = { lambda: 0.6 };
     var W = 520, H = 200, PAD = 30, N = 8;
@@ -383,7 +382,7 @@
     var num = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // map1: a real signal peak at token 2 plus broad noise; map2: the same broad noise
+    // map1：token 2 处的真实信号峰值加宽带噪声；map2：相同的宽带噪声
     var sig = [0.04, 0.06, 0.55, 0.07, 0.05, 0.07, 0.06, 0.10];
     var noise = [0.10, 0.13, 0.11, 0.14, 0.12, 0.15, 0.13, 0.12];
     function norm(a) { var s = a.reduce(function (x, y) { return x + y; }, 0); return a.map(function (v) { return v / s; }); }
@@ -426,7 +425,7 @@
     state._render();
   }
 
-  // ── weight-tying: reuse the embedding matrix as the output projection ──────
+  // ── weight-tying：复用嵌入矩阵作为输出投影 ──────────────────────────────
   function weightTying(host) {
     var state = { logV: 15, dim: 768 };
     var W = 520, H = 190, PAD = 22;
@@ -449,7 +448,7 @@
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.appendChild(box(PAD, 30, 150, 44, 'input embedding', 'var(--blueprint,#3553ff)'));
       svg.appendChild(box(W - PAD - 150, 116, 150, 44, 'output projection', 'var(--blueprint,#3553ff)'));
-      // tie arrow: same matrix reused (transposed)
+      // 绑定箭头：复用同一个矩阵（转置后）
       svg.appendChild(svgEl('line', { x1: PAD + 75, y1: 74, x2: W - PAD - 75, y2: 116, stroke: 'var(--warn,#b8870f)', 'stroke-width': '2', 'stroke-dasharray': '5 3' }));
       var tt = svgEl('text', { x: (W / 2).toFixed(1), y: '100', 'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': '10', fill: 'var(--warn,#b8870f)' });
       tt.appendChild(document.createTextNode('tied: same V×d matrix, transposed'));

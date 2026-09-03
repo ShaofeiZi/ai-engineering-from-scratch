@@ -1,9 +1,8 @@
-/* figures-setup.js: animated lesson figures for Phase 00 (Setup and Tooling),
-   dev environments, git, GPUs, keys, notebooks, envs, docker, editors, data,
-   shell, linux, profiling. Loads after lesson-figures.js and registers through
-   window.LF.register. Vanilla ES5, no deps, theme via CSS vars. Animation is
-   SMIL only (animate / animateMotion / animateTransform). Authoring is the
-   same fenced block:
+/* figures-setup.js：Phase 00（Setup and Tooling）的课程动画图。
+   涵盖开发环境、git、GPU、密钥、notebook、env、docker、编辑器、数据、shell、
+   linux 和性能分析。在 lesson-figures.js 之后加载，并通过 window.LF.register
+   注册。原生 ES5、无依赖，通过 CSS 变量支持主题。动画仅使用 SMIL
+   （animate / animateMotion / animateTransform）。编写方式使用相同的围栏块：
        ```figure
        s0-commit-dag
        ``` */
@@ -41,8 +40,8 @@
     (kids || []).forEach(function (k) { g.appendChild(k); });
     return g;
   }
-  // Entry: fade + grow from 95%, hold, exit faster than entry, shared loop.
-  // `at` is the entry start as a fraction of `dur`.
+  // 入场：从 95% 淡入并放大，停留后以更快速度退场，共用同一循环。
+  // `at` 是入场开始时间，占 `dur` 的比例。
   function pop(g, dur, at) {
     var kt = '0;' + at + ';' + (at + 0.08) + ';0.93;1';
     var ks = '0 0 1 1;' + EASE + ';0 0 1 1;0.4 0 1 1';
@@ -51,14 +50,14 @@
     g.appendChild(svgEl('animateTransform', { attributeName: 'transform', type: 'scale', additive: 'sum', values: '0.95;0.95;1;1;0.95', keyTimes: kt, dur: dur, repeatCount: 'indefinite', calcMode: 'spline', keySplines: ks }));
     return g;
   }
-  // Edge that draws on at `at`, un-draws quickly at loop end.
+  // 在 `at` 时开始绘制的边，并在循环末尾快速反向擦除。
   function wire(x1, y1, x2, y2, dur, at, len, col) {
     var L = len || 300;
     var p = svgEl('path', { d: 'M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2, fill: 'none', stroke: col || INKS, 'stroke-width': 1.5, 'stroke-dasharray': L + ' ' + L, 'stroke-dashoffset': L });
     p.appendChild(svgEl('animate', { attributeName: 'stroke-dashoffset', values: L + ';' + L + ';0;0;' + L, keyTimes: '0;' + at + ';' + (at + 0.07) + ';0.93;1', dur: dur, repeatCount: 'indefinite', calcMode: 'spline', keySplines: '0 0 1 1;' + EASE + ';0 0 1 1;0.4 0 1 1' }));
     return p;
   }
-  // Windowed travel along a path: hidden, appears, moves a..b, hides again.
+  // 沿路径进行窗口化移动：隐藏、出现、从 a 移至 b、再次隐藏。
   function travel(node, path, dur, a, b) {
     node.setAttribute('opacity', '0');
     node.appendChild(svgEl('animateMotion', { path: path, dur: dur, repeatCount: 'indefinite', calcMode: 'linear', keyPoints: '0;0;1;1', keyTimes: '0;' + a + ';' + b + ';1' }));
@@ -66,7 +65,7 @@
     return node;
   }
 
-  // ── s0-env-stack: the four-layer dev stack assembles bottom-up ────────────
+  // ── s0-env-stack：四层开发栈自底向上组装 ─────────────────────────────────
   // 01-dev-environment
   function envStack(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
@@ -92,7 +91,7 @@
       'The environment builds bottom-up: the OS and GPU driver first, then package managers, then language runtimes, then the AI libraries that depend on all three. When import torch fails, walk the stack downward, the broken layer is almost never the one that raised the error.');
   }
 
-  // ── s0-commit-dag: a commit DAG grows, a branch merges back to main ───────
+  // ── s0-commit-dag：commit DAG 增长，分支最终合并回 main ───────────────────
   // 02-git-and-collaboration
   function commitDag(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 210' });
@@ -122,7 +121,7 @@
       'Every commit points at its parent, so history is a graph, not a list. A branch is just a diverging path of commits: main keeps moving while the experiment grows on its own line, and the merge commit joins both parents. This is why you can try a risky change without ever touching main.');
   }
 
-  // ── s0-gpu-dispatch: the same matmul batch on CPU vs GPU lanes ────────────
+  // ── s0-gpu-dispatch：同一批 matmul 在 CPU 与 GPU 通道上的对比 ─────────────
   // 03-gpu-setup-and-cloud
   function gpuDispatch(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
@@ -165,7 +164,7 @@
       'The GPU wins because matmuls are thousands of independent multiply-adds, exactly what its cores parallelize. The same batch trickles through the CPU one chunk at a time but streams through the GPU, which is why a training run that takes 8 hours on CPU takes about 10 minutes on a T4. Verify the lane exists first: nvidia-smi, then torch.cuda.is_available().');
   }
 
-  // ── s0-secret-inject: the key flows from .env into the request header ─────
+  // ── s0-secret-inject：密钥从 .env 流入请求 header ─────────────────────────
   // 04-apis-and-keys
   function secretInject(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
@@ -209,7 +208,7 @@
       'The code that gets committed only names the variable; the value lives in a gitignored .env file and is injected into the process environment at runtime, then sent as an Authorization header. If the key ever appears in the source, it ships with every clone of the repo, and a leaked key bills to your account.');
   }
 
-  // ── s0-cell-order: cells run in order until a re-run leaves stale state ───
+  // ── s0-cell-order：cell 顺序运行，直到重新运行留下过期 state ──────────────
   // 05-jupyter-notebooks
   function cellOrder(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
@@ -237,7 +236,7 @@
       'The bracket number records when a cell ran, not where it sits. Re-running cell 2 turns [2] into [4], but cell 3 still holds the result of the old order, hidden state the file on disk never shows. When the counters stop reading top to bottom, Restart and Run All is the only honest check.');
   }
 
-  // ── s0-env-isolation: per-project envs stay calm, global site-packages collides ─
+  // ── s0-env-isolation：项目级 env 相互隔离，全局 site-packages 会冲突 ───────
   // 06-python-environments
   function envIsolation(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
@@ -276,7 +275,7 @@
       'Both pins are correct, they just cannot share one interpreter. Installed globally, the second pip install overwrites the first and both projects break. A per-project virtual environment gives each its own site-packages, so torch 2.4 and torch 2.1 coexist on the same machine without ever meeting.');
   }
 
-  // ── s0-image-layers: layers stack into an image, identical containers everywhere ─
+  // ── s0-image-layers：各层堆叠为 image，各处 container 保持一致 ─────────────
   // 07-docker-for-ai
   function imageLayers(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
@@ -312,7 +311,7 @@
       'Each Dockerfile instruction adds a read-only layer: CUDA base, Python, torch, then your code on top. The finished image is the whole stack frozen, so docker run produces the same container on your laptop and on a rented GPU box, and the works-on-my-machine failure mode disappears with it.');
   }
 
-  // ── s0-lsp-roundtrip: a keystroke round-trips through the language server ─
+  // ── s0-lsp-roundtrip：一次按键经过 language server 往返 ──────────────────
   // 08-editor-setup
   function lspRoundtrip(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
@@ -348,7 +347,7 @@
       'The editor does not understand Python; the language server does. Each edit ships a didChange notification across the wire, the server re-checks the file, and diagnostics come back to be drawn as squiggles and hovers. Install the Python and Pylance extensions and this loop runs on every keystroke; skip them and the editor is a text box.');
   }
 
-  // ── s0-data-pipeline: raw file to typed format to seeded, versioned splits ─
+  // ── s0-data-pipeline：原始文件转为类型化格式，再生成带 seed、可版本化的切分 ─
   // 09-data-management
   function dataPipeline(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
@@ -385,7 +384,7 @@
       'The raw CSV is never edited in place: it flows into a typed, compressed Parquet artifact, then into train, val, and test splits cut with a fixed seed. Because each arrow is a script and the seed is pinned, anyone can regenerate the exact rows your metrics were computed on, and that is what makes an experiment comparable.');
   }
 
-  // ── s0-shell-pipeline: a stream narrows as it passes through each pipe ────
+  // ── s0-shell-pipeline：数据流经过每个 pipe 时逐渐收窄 ─────────────────────
   // 10-terminal-and-shell
   function shellPipeline(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 200' });
@@ -419,7 +418,7 @@
       'A pipe hands one command\'s stdout to the next command\'s stdin, no temp files in between. The log stream enters whole, grep drops every line without "loss", and awk keeps only column 8, so a firehose of training output becomes a clean series of numbers you can watch or plot live.');
   }
 
-  // ── s0-process-fork: the process tree forks down to your training run ─────
+  // ── s0-process-fork：进程树逐级 fork 到训练任务 ──────────────────────────
   // 11-linux-for-ai
   function processFork(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
@@ -465,7 +464,7 @@
       'On a Linux GPU box everything is a process forked from a parent: init spawns sshd, your login spawns bash, bash spawns the training run. SIGINT from Ctrl-C, or kill against the pid you find with ps aux, ends the leaf and frees its GPU memory, which is how you reclaim a box a dead run is still holding.');
   }
 
-  // ── s0-flame-hot: the profile widens on the real bottleneck ───────────────
+  // ── s0-flame-hot：profile 在真实瓶颈处变宽 ───────────────────────────────
   // 12-debugging-and-profiling
   function flameHot(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });

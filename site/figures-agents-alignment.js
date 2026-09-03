@@ -1,7 +1,6 @@
-/* figures-agents-alignment.js - interactive lesson figures for agent
-   engineering, multi-agent swarms, and alignment. Loads after
-   lesson-figures.js and registers through window.LF. No deps, ES5, theme via
-   CSS vars. Authoring: a ```figure block naming one of the widgets below. */
+/* figures-agents-alignment.js - 面向智能体工程、多智能体集群和对齐的交互式课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，使用 ES5，
+   通过 CSS 变量适配主题。编写时使用 ```figure 代码块指定下列某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -24,7 +23,7 @@
     return svgEl('line', { x1: x1, y1: y1, x2: x2, y2: y2, stroke: 'var(--ink-soft,#555)', 'stroke-width': '1.4', 'marker-end': 'url(#lf-aa-arrow)', 'stroke-dasharray': dash || '' });
   }
 
-  // ── agent-loop: persistent causal trace with evidence flowing into context ─
+  // ── agent-loop：持久化因果轨迹，证据流入上下文 ─────────────────────────────
   function agentLoop(host) {
     var state = { step: 0 };
     var W = 620, H = 330;
@@ -178,7 +177,7 @@
     state._render();
   }
 
-  // ── react-trace: Thought / Action / Observation rows unfold by step ────────
+  // ── react-trace：思考 / 行动 / 观察行按步骤展开 ─────────────────────────────
   function reactTrace(host) {
     var state = { step: 1 };
     var trace = [
@@ -217,7 +216,7 @@
     state._render();
   }
 
-  // ── tool-routing: a query maps to one registered tool by description match ─
+  // ── tool-routing：查询通过描述匹配映射到一个已注册工具 ─────────────────────
   function toolRouting(host) {
     var tools = [
       { name: 'search_web', desc: 'find facts and current events' },
@@ -260,7 +259,7 @@
     state._render();
   }
 
-  // ── swarm-messages: all-to-all O(N^2) vs hub/supervisor O(N) ───────────────
+  // ── swarm-messages：全互联 O(N^2) 与中心节点/监督者 O(N) 对比 ──────────────
   function swarmMessages(host) {
     var state = { n: 6 };
     var W = 520, H = 240, R = 78;
@@ -313,7 +312,7 @@
     state._render();
   }
 
-  // ── supervisor-hierarchy: branching factor and depth → total agents ────────
+  // ── supervisor-hierarchy：分支因子和深度决定智能体总数 ─────────────────────
   function supervisorHierarchy(host) {
     var state = { b: 3, depth: 2 };
     var W = 520, H = 240;
@@ -360,7 +359,7 @@
     state._render();
   }
 
-  // ── rlhf-reward-kl: reward − beta·KL; small beta lets the policy drift ─────
+  // ── rlhf-reward-kl：奖励 − beta·KL；beta 较小时策略会发生漂移 ──────────────
   function rlhfRewardKL(host) {
     var state = { beta: 0.2 };
     var W = 520, H = 220, PAD = 34, SMAX = 200;
@@ -404,7 +403,7 @@
     state._render();
   }
 
-  // ── dpo-margin: chosen vs rejected log-probs and the DPO loss curve ────────
+  // ── dpo-margin：chosen 与 rejected 的对数概率及 DPO 损失曲线 ───────────────
   function dpoMargin(host) {
     var state = { margin: 1.0, beta: 1.0 };
     var W = 520, H = 200, PAD = 34, MMAX = 6;
@@ -440,7 +439,7 @@
     state._render();
   }
 
-  // ── context-budget: tokens/turn × turns filling a fixed window ─────────────
+  // ── context-budget：每轮 token 数 × 轮数逐步填满固定窗口 ───────────────────
   function contextBudget(host) {
     var state = { perTurn: 1200, turns: 14, windowK: 32 };
     var num = el('span', { class: 'lf-num' });
@@ -473,7 +472,7 @@
     state._render();
   }
 
-  // ── guardrail-gates: ordered safety gates, one trips → blocked ─────────────
+  // ── guardrail-gates：依次通过安全关卡，任一触发即被阻止 ────────────────────
   function guardrailGates(host) {
     var state = { trip: '0' };
     var W = 520, H = 150;

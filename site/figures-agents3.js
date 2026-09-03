@@ -1,7 +1,7 @@
-/* figures-agents3.js - animated lesson figures for agent engineering.
-   Loads after lesson-figures.js, registers through window.LF. No deps, ES5,
-   theme via CSS vars. SMIL-only animation: no JS render loops. Authoring: a
-   ```figure block naming one of the widgets below. */
+/* figures-agents3.js - 面向智能体工程的动画课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。无依赖，使用 ES5，
+   通过 CSS 变量适配主题。仅使用 SMIL 动画，无 JS 渲染循环。编写时使用
+   ```figure 代码块指定下列某个组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -26,7 +26,7 @@
     return t;
   }
 
-  // ── htn-tree-expand: a task tree decomposing node by node ──────────────────
+  // ── htn-tree-expand：逐节点分解的任务树 ────────────────────────────────────
   function htnTree(host) {
     var W = 520, H = 250;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -65,7 +65,7 @@
       'An HTN planner expands a compound task into methods, each method into subtasks, recursing until every leaf is a primitive operator whose preconditions hold. The tree is grown top-down; the plan is the left-to-right reading of the primitive leaves.');
   }
 
-  // ── workflow-chain: prompt chaining links lighting up in sequence ──────────
+  // ── workflow-chain：提示链路依次亮起 ───────────────────────────────────────
   function workflowChain(host) {
     var W = 520, H = 210;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -94,7 +94,7 @@
       'The simplest workflow: a fixed linear path of model calls where each output is the next input, with optional programmatic gates between steps. Engineers own the graph, so it is cheap to debug and predictable to run. Reach for an agent only when the steps cannot be known in advance.');
   }
 
-  // ── actor-mailbox: messages flying into actor inboxes, async ───────────────
+  // ── actor-mailbox：消息异步飞入 actor 收件箱 ───────────────────────────────
   function actorMailbox(host) {
     var W = 520, H = 240;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -125,7 +125,7 @@
       'Each agent is an actor: private state, a mailbox, a handler. Actors never share memory; they only send messages, and the runtime decouples delivery from handling. A crash isolates to one actor, concurrency is native, and moving to a distributed deployment is just a change of transport.');
   }
 
-  // ── debate-converge: N proposers exchanging critiques, answers converging ──
+  // ── debate-converge：N 个提议者交换批评，答案逐步收敛 ─────────────────────
   function debateConverge(host) {
     var W = 520, H = 240, cx = 260, cy = 120, R = 78;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -159,7 +159,7 @@
       'Independent model instances each propose an answer, then read and critique each other over several rounds, updating toward agreement. Disagreement, not a single chain of thought, surfaces errors. A sparse topology (not the full mesh shown) can match accuracy at a fraction of the token cost.');
   }
 
-  // ── computer-use-cursor: a cursor gliding across a mock UI ─────────────────
+  // ── computer-use-cursor：光标滑过模拟 UI ───────────────────────────────────
   function computerUse(host) {
     var W = 520, H = 230;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -183,7 +183,7 @@
       'Vision-based computer use reads pixels from a screenshot and emits resolution-independent coordinates, then keyboard and mouse commands - no accessibility API. Everything on screen is untrusted input; only the direct user instruction counts as permission, which is why per-step safety checks gate each action.');
   }
 
-  // ── voice-pipeline: a waveform morphing into a text token ──────────────────
+  // ── voice-pipeline：波形变形为文本 token ───────────────────────────────────
   function voicePipeline(host) {
     var W = 520, H = 220;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -218,7 +218,7 @@
       'A voice agent is a frame-based pipeline, not text with TTS bolted on: voice activity detection, speech-to-text, the LLM, then text-to-speech, all under a brutal ~600ms budget. Partial audio is the default and barge-in cancellation flows upstream, so every stage must stream rather than wait for a full turn.');
   }
 
-  // ── injection-hijack: a malicious token glowing red, hijacking flow ────────
+  // ── injection-hijack：恶意 token 发出红光并劫持流程 ────────────────────────
   function injectionHijack(host) {
     var W = 520, H = 230;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -253,7 +253,7 @@
       'Indirect prompt injection plants instructions in content the agent retrieves. The model cannot reliably separate user intent from retrieved text, so the malicious token (red) redirects the agent toward an attacker-chosen tool. Treat all retrieved content as arbitrary code on the tool-use surface and validate before any call commits.');
   }
 
-  // ── failure-cascade: an error tumbling down a chain of agents ──────────────
+  // ── failure-cascade：错误沿智能体链逐级传播 ────────────────────────────────
   function failureCascade(host) {
     var W = 520, H = 240;
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });

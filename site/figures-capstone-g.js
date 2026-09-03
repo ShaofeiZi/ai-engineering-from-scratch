@@ -33,7 +33,7 @@
       'font-family': 'var(--font-mono,monospace)', 'text-anchor': anchor || 'middle'
     }, [svgEl('tspan', {}, [document.createTextNode(s)])]);
   }
-  // entry that fades in from opacity 0 and grows from 95% around (cx, cy)
+  // 色率从0变微,从95%左右增长的输入 (cx, cy)
   function pop(cx, cy, dur, kt, kids) {
     var inner = svgEl('g', {}, kids);
     inner.appendChild(animT('scale', '0.95;0.95;1;1', dur, { keyTimes: kt, calcMode: 'spline', keySplines: SPL3 }));
@@ -41,7 +41,7 @@
     return svgEl('g', { transform: 'translate(' + cx + ' ' + cy + ')' }, [inner]);
   }
 
-  // ── 24: plan-execute-replan — a failed step hands the cursor back ──────────
+  // 计划执行计划 计划重建 失败步骤将校路器转移到后面
   function planReplan(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var D = '5s';
@@ -86,7 +86,7 @@
       'The plan is an ordered list of typed steps the executor can walk, not prose the loop has to parse. When step 3 fails, the executor does not improvise: it hands the cursor and the error back to the planner, which returns a fresh tail from that position. The revision arrives as a diff a tracer can display, and two hard ceilings, one on steps and one on replans, keep the loop from planning forever.');
   }
 
-  // ── 25: verification gate chain — first DENY wins, ledger meters the rest ──
+  // 首先是拒绝的,剩下的是账本计数.
   function gateChain(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var D = '5.5s';
@@ -132,7 +132,7 @@
       'The chain is four deterministic gates with short-circuit semantics: the first DENY ends the walk and the reason is logged for the model to read. An allowed call is not free either. Its output is metered into the observation ledger, and once the cumulative tokens shown to the model would cross the budget, the budget gate at the front of the chain starts refusing calls on its own.');
   }
 
-  // ── 26: sandbox path jail — traversal bounces off the root fence ───────────
+  // 穿越从根跳下来
   function pathJail(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var D = '5s';
@@ -182,7 +182,7 @@
       'Two refusal surfaces sit between the model and the operating system. Every path argument resolves through realpath and must keep the project root as a prefix, so a ../../ traversal bounces off the jail wall instead of reaching /etc. Alongside it, a denylist refuses executables by name and an argv inspector catches interpreters smuggling shell through -c flags. Output is truncated and a wall-clock timeout kills whatever runs away.');
   }
 
-  // ── 29: end-to-end harness — one run token weaving through four strata ─────
+  // :一个线索,穿过四层.
   function harnessWeave(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     var D = '5.5s';
@@ -217,7 +217,7 @@
       'The end-to-end run is one token weaving through four strata on every step: the gate chain rules on the call, the sandbox executes it, a span wraps the whole exchange, and the eval harness scores the finished trajectory. The components stop disagreeing because the budgets live in one place and every layer reads the same ledger. The fixture bug falls in nine steps, under the twelve-step ceiling, with zero gate trips on legal tools.');
   }
 
-  // ── 41: eval pipeline — four gauges fold into one report ───────────────────
+  // 报告将四个测量器折叠成一个报告.
   function evalQuadrant(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     var D = '4.5s';
@@ -261,7 +261,7 @@
       'Perplexity tracks fit to the language distribution but never asks a question. Exact match scores facts and punishes paraphrase; token F1 forgives paraphrase and is fooled by overlap; the mock judge scores open answers on a rubric without a network call. No single number describes a language model, so the pipeline runs all four on shaped held-out subsets and folds them into one weighted report a reviewer can read at a glance.');
   }
 
-  // ── 48: DDP collectives — gradients meet in the middle, mean returns ───────
+  // 梯度在中间相遇,平均回报 ───────
   function allreduceRing(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var D = '5s';
@@ -306,7 +306,7 @@
       'Data parallel is two collectives and a rule. Parameters broadcast from rank 0 once at construction so every replica starts identical. After each backward pass the per-rank gradients meet in an all-reduce and every rank receives the same mean, so the optimizer steps can never disagree. FSDP extends the same discipline to memory: each rank keeps only a shard of every parameter and gathers the full tensor just long enough for the layer that needs it.');
   }
 
-  // ── 50: hypothesis generator — ramp the temperature, reject the cluster ────
+  // 升温度,拒绝集群
   function noveltyRamp(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var D = '5s';
@@ -347,7 +347,7 @@
       'One pass through the sampler yields one hypothesis; the loop wants a ranked queue with depth. Each pass raises the temperature a notch so the next draft wanders further from the last, and an embedding filter rejects anything that lands inside the cosine radius of a survivor. What remains is scored on novelty, specificity, and testability, and because every step is seeded, the same seed always rebuilds the same queue.');
   }
 
-  // ── 51: literature retrieval — lexical hits plus citation hops, one union ──
+  // 文献检索 词汇热点加上引用跳跃,一个联盟
   function citationHops(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     var D = '5s';
@@ -397,7 +397,7 @@
       'BM25 over abstracts returns the papers that share vocabulary with the query, and misses the foundational work that named the idea differently. The second pass starts from a known anchor and walks the citation graph a hop or two in each direction, surfacing follow-ups no keyword would catch. The two hit sets union, deduplicate on stable paper id, and rank, so the anchor that appeared in both passes is counted once.');
   }
 
-  // ── 52: experiment runner — two meters on the child, one kill path ─────────
+  // 试验跑者 两米对孩子,一条杀伤路
   function runnerLimits(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var D = '6s';
@@ -451,7 +451,7 @@
       'The runner serialises the spec to a child process and watches two meters: a hard wall-clock timeout and a polled memory cap. Run A stays under both, exits cleanly, and its stdout carries a structured metrics blob into the result record. Run B grows past the cap and takes the kill path; the record says oom instead of pretending a number exists. Same seed, same spec, same numbers on every rerun.');
   }
 
-  // ── 53: result evaluator — per-seed differences carry the verdict ──────────
+  // 结果评价者 种子差异导致判决
   function pairedVerdict(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var D = '5s';

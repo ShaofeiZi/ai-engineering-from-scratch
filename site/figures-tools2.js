@@ -1,7 +1,6 @@
-/* figures-tools2.js - animated lesson figures for Phase 13 tools and
-   protocols. Loads after lesson-figures.js and registers through window.LF.
-   No deps, ES5 only, theme via CSS vars, SMIL animation only. Authoring: a
-   ```figure block naming one of the tp- widgets below. */
+/* figures-tools2.js - Phase 13 工具与协议的动画课程图示。在 lesson-figures.js
+   之后加载，并通过 window.LF 注册。无依赖，仅使用 ES5，主题由 CSS 变量控制，
+   仅使用 SMIL 动画。编写方式：使用 ```figure 代码块指定下方某个 tp- 组件。 */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -31,7 +30,7 @@
     return svgEl('animate', a);
   }
 
-  // tp-tool-loop: describe -> decide -> execute -> observe, a packet circling
+  // tp-tool-loop：描述 -> 决策 -> 执行 -> 观察，数据包循环流转
   function toolLoop(host) {
     var W = 520, H = 240, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var nodes = [
@@ -60,7 +59,7 @@
     ]));
   }
 
-  // tp-parallel-fanout: one turn fans out to three calls, then collapses
+  // tp-parallel-fanout：一个回合扇出为三个调用，随后汇聚
   function parallelFanout(host) {
     var W = 520, H = 230, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(svgEl('rect', { x: 30, y: 96, width: 90, height: 38, rx: '4', fill: 'var(--blueprint,#3553ff)' }));
@@ -86,7 +85,7 @@
     ]));
   }
 
-  // tp-schema-routing: a query beam swings to the best-matching tool
+  // tp-schema-routing：查询光束转向最匹配的工具
   function schemaRouting(host) {
     var W = 520, H = 240, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var qx = 50, qy = 120;
@@ -113,7 +112,7 @@
     ]));
   }
 
-  // tp-client-merge: three servers' tool lists flatten into one namespace
+  // tp-client-merge：三个 server 的工具列表展平到一个命名空间
   function clientMerge(host) {
     var W = 520, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var servers = [
@@ -147,10 +146,10 @@
     ]));
   }
 
-  // tp-transport-handshake: stdio vs stateless Streamable HTTP requests
+  // tp-transport-handshake：stdio 与无状态 Streamable HTTP 请求对比
   function transportHandshake(host) {
     var W = 520, H = 250, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
-    // stdio lane
+    // stdio 通道
     svg.appendChild(txt(20, 30, 'stdio (local)', '10', 'var(--ink-mute,#777)', 'start'));
     svg.appendChild(svgEl('rect', { x: 20, y: 42, width: 90, height: 34, rx: '4', fill: 'var(--bg-surface,#eee)', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1.3' }));
     svg.appendChild(txt(65, 63, 'client', '10', 'var(--ink,#1a1a1a)'));
@@ -160,7 +159,7 @@
     p1.appendChild(anim('cx', '110;410', '0;1', '2.2s'));
     svg.appendChild(p1);
     svg.appendChild(txt(260, 50, 'stdin / stdout', '8', 'var(--ink-mute,#777)'));
-    // http lane: independent request packets cross one endpoint
+    // HTTP 通道：独立请求包通过同一个 endpoint
     svg.appendChild(txt(20, 130, 'Streamable HTTP (remote)', '10', 'var(--ink-mute,#777)', 'start'));
     svg.appendChild(svgEl('rect', { x: 20, y: 142, width: 90, height: 34, rx: '4', fill: 'var(--bg-surface,#eee)', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1.3' }));
     svg.appendChild(txt(65, 163, 'client', '10', 'var(--ink,#1a1a1a)'));
@@ -180,7 +179,7 @@
     ]));
   }
 
-  // tp-task-lifecycle: working -> input_required -> completed/failed, a token walks
+  // tp-task-lifecycle：working -> input_required -> completed/failed，token 逐步移动
   function taskLifecycle(host) {
     var W = 520, H = 220, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     var states = [
@@ -214,7 +213,7 @@
     ]));
   }
 
-  // tp-router-failover: a request tries providers in priority order until one answers
+  // tp-router-failover：请求按优先级依次尝试提供方，直到收到响应
   function routerFailover(host) {
     var W = 520, H = 230, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(svgEl('rect', { x: 20, y: 92, width: 90, height: 40, rx: '4', fill: 'var(--blueprint,#3553ff)' }));
@@ -229,7 +228,7 @@
       svg.appendChild(txt(430, py[i] + 36, down[i] ? 'down' : 'ok', '9', okstroke));
       svg.appendChild(svgEl('line', { x1: 110, y1: 112, x2: 360, y2: py[i] + 22, stroke: 'var(--rule-soft,#ccc)', 'stroke-width': '1.3' }));
     }
-    // request packet retries A, B, then sticks to C
+    // 请求包依次重试 A、B，最终停在 C
     var motions = [
       { path: 'M110 112 L360 52', begin: '0s' },
       { path: 'M110 112 L360 114', begin: '2s' },
@@ -250,7 +249,7 @@
     ]));
   }
 
-  // tp-tool-poisoning: a hidden instruction rides inside a tool description
+  // tp-tool-poisoning：隐藏指令夹带在工具描述中
   function toolPoisoning(host) {
     var W = 520, H = 230, svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
     svg.appendChild(svgEl('rect', { x: 30, y: 30, width: 460, height: 96, rx: '5', fill: 'var(--bg-surface,#eee)', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1.4' }));

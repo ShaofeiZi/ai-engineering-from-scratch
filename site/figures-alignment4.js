@@ -1,6 +1,6 @@
-/* figures-alignment4.js — animated lesson figures for Phase 18 (ethics,
-   safety, alignment), lessons 19-30. Loads after lesson-figures.js and
-   registers through window.LF. SMIL only, no deps, ES5, theme via CSS vars. */
+/* figures-alignment4.js — 第 18 阶段（伦理、安全、对齐）第 19-30 课的动画课程图示。
+   在 lesson-figures.js 之后加载，并通过 window.LF 注册。仅使用 SMIL，无依赖，
+   使用 ES5，通过 CSS 变量适配主题。 */
 (function(){'use strict';var LF=window.LF;if(!LF){return;}
 
   var el = LF.el, svgEl = LF.svgEl;
@@ -32,13 +32,13 @@
       el('div', { class: 'lf-cap' }, [caption])
     ]));
   }
-  // window: invisible until fraction a, ease in by b, ease out from c to 1
+  // 窗口：在比例 a 之前不可见，在 b 前缓入，从 c 到 1 缓出
   function winKT(a, b, c) { return '0;' + a + ';' + b + ';' + c + ';1'; }
   var WINSPL = '0 0 1 1;' + EASE + ';0 0 1 1;0.4 0 1 1';
   function fadeWin(dur, a, b, c) {
     return anim('opacity', '0;0;1;1;0', dur, { calcMode: 'spline', keyTimes: winKT(a, b, c), keySplines: WINSPL });
   }
-  // fade + grow from 95% around (x, y); kids are drawn relative to the origin
+  // 淡入并从 (x, y) 周围的 95% 尺寸放大；子元素相对于原点绘制
   function pop(x, y, kids, dur, a, b, c) {
     var inner = svgEl('g', { opacity: '0' }, kids);
     inner.appendChild(fadeWin(dur, a, b, c));
@@ -46,7 +46,7 @@
     return svgEl('g', { transform: 'translate(' + x + ' ' + y + ')' }, [inner]);
   }
 
-  // ── model welfare: distress gauge fills, the model ends the conversation ────
+  // ── 模型福祉：痛苦仪表逐渐填满，模型结束对话 ─────────────────────────────
   function anWelfare(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var D = '5.5s';
@@ -84,7 +84,7 @@
       'Claude Opus 4 and 4.1 can end a conversation in extreme edge cases such as repeated CSAM or mass-violence requests after refusals. Pre-deployment tests showed a strong preference against harmful requests and patterns of apparent distress. The gauge is behavioural evidence, not a consciousness claim: self-reports track perceived user expectations, so they are treated as evidence, never ground truth.');
   }
 
-  // ── bias: identical resumes, one scorer, unequal scores ─────────────────────
+  // ── 偏见：相同的简历、同一个评分器，却得到不同分数 ────────────────────────
   function anBiasScore(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var D = '5s';
@@ -130,7 +130,7 @@
       'Two resumes with identical content and different names go through the same LLM scorer and come out with different scores. That is allocational harm: unequal material outcomes. Representational harm, by contrast, lives in portrayals and stereotypes. An et al. 2025 measured exactly this resume gap across frontier models, and found it sharpest for intersectional identities that single-axis tests never see.');
   }
 
-  // ── fairness: three criteria, unequal base rates, pick two ──────────────────
+  // ── 公平性：三个标准、不同的基础比率，只能选取其中两个 ────────────────────
   function anFairTriangle(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var pts = [[260, 46], [104, 208], [416, 208]];
@@ -160,7 +160,7 @@
       'The marker slides along one edge of the triangle at a time: whichever pair of group-fairness criteria it connects can be satisfied together, and the far corner dims. Chouldechova and Kleinberg-Mullainathan-Raghavan showed that under unequal base rates demographic parity, equalized odds, and calibration cannot all hold at once. Choosing which corner to give up is a policy decision, not a statistical one.');
   }
 
-  // ── differential privacy: clip each gradient, then add calibrated noise ─────
+  // ── 差分隐私：裁剪每个梯度，然后加入校准噪声 ─────────────────────────────
   function anDpClip(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var D = '5.5s';
@@ -209,7 +209,7 @@
       'DP-SGD bounds what any single example can say about itself: each per-example gradient is clipped to norm C, the amber bars are trimmed to the line, then Gaussian noise scaled to sigma times C is added before the update. A privacy accountant converts sigma and the sampling rate into an epsilon-delta guarantee. Lower epsilon means more noise and more utility loss, which is why LoRA plus DP-SGD is the common configuration.');
   }
 
-  // ── watermarking: green-list bias at sampling, z-score at detection ─────────
+  // ── 水印：采样时施加绿名单偏置，检测时计算 z-score ───────────────────────
   function anWatermark(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var D = '5.5s';
@@ -247,7 +247,7 @@
       'SynthID-style text watermarking hashes the previous K tokens into a pseudorandom green and red split of the vocabulary, then nudges sampling toward green by adding a small delta to green logits. The text reads normally, but it carries more green tokens than chance. The detector rehashes each prefix, recounts, and a z-score well above zero flags the generation. Paraphrase destroys the signal, which is why C2PA metadata rides alongside it.');
   }
 
-  // ── EU AI Act: obligations arrive in dated waves ────────────────────────────
+  // ── 欧盟《人工智能法案》：各项义务按日期分批生效 ─────────────────────────
   function anRegTimeline(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 220' });
     var D = '6s';
@@ -278,7 +278,7 @@
       'The EU AI Act entered into force on 1 August 2024, but its obligations arrive in waves: prohibited practices and AI literacy in February 2025, GPAI model duties in August 2025, full applicability with Article 50 transparency and penalties up to 15M EUR or 3 percent of global turnover in August 2026, then legacy GPAI and embedded high-risk systems in August 2027. Deployers map technical controls to whichever wave has already landed.');
   }
 
-  // ── EchoLeak: zero-click packet crosses the org trust boundary ──────────────
+  // ── EchoLeak：零点击数据包穿过组织信任边界 ────────────────────────────────
   function anEcholeak(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var D = '6s';
@@ -313,7 +313,7 @@
       'EchoLeak was the first production zero-click prompt injection CVE, CVSS 9.3. A crafted email waits in the victim mailbox until a routine Copilot query retrieves it as RAG context. Hidden instructions then steer the model to gather sensitive data and embed it in a URL on a CSP-approved Microsoft domain, so the exfiltration request is allowed. Untrusted input driving privileged data access is what Aim Labs named an LLM Scope Violation.');
   }
 
-  // ── cards: dataset, model, and system scopes telescope outward ──────────────
+  // ── 卡片：数据集、模型和系统的范围逐层向外扩展 ───────────────────────────
   function anCards(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var D = '5.5s';
@@ -336,7 +336,7 @@
       'Transparency documentation telescopes: a datasheet describes how one dataset was collected and with what consent, a model card wraps that with intended use and metrics disaggregated by demographic factors, and a system card wraps both with the deployed pipeline, its guardrails, and its failure handling. Adoption is the weak link: an audit of Hugging Face model cards found only 0.3 percent document ethical considerations.');
   }
 
-  // ── provenance: data enters the weights through a gate, never comes back ────
+  // ── 溯源：数据通过关卡进入权重，此后再也无法返回 ─────────────────────────
   function anProvenance(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var D = '6s';
@@ -378,7 +378,7 @@
       'Cookie-consent frameworks assume tracking is reversible. Training is not: once data dissolves into model weights there is no practical GDPR right to erasure, so the only compliance window is the consent gate at collection time. That is why the EU mandates machine-readable opt-outs for GPAI, California AB 2013 demands per-dataset disclosure, and the Data Provenance Initiative found publishers slamming robots.txt shut on the AI data commons.');
   }
 
-  // ── moderation: input, model, output layers each get a turn ─────────────────
+  // ── 内容审核：输入、模型、输出各层依次接受审核 ───────────────────────────
   function anModeration(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var D = '5.5s';
@@ -414,7 +414,7 @@
       'Production moderation runs in layers. An input check screens the prompt before generation, so the amber request never reaches the model. An output check screens what the model produced, the ring pulse, catching harm the input layer could not predict. Custom domain rules stack on top. OpenAI omni-moderation returns 13 category flags per call, Llama Guard covers the 14 MLCommons hazards, and async parallel calls hide the added latency.');
   }
 
-  // ── dual use: relative uplift for novices, absolute reach for experts ───────
+  // ── 双重用途：新手获得相对提升，专家扩展绝对能力边界 ─────────────────────
   function anUplift(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     var D = '5s';

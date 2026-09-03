@@ -1,15 +1,15 @@
-/* figures-dl.js — interactive lesson figures for Phase 3 (deep learning core).
-   Loaded after lesson-figures.js; registers nine widgets via LF.register.
-   No deps, ES5 only, theme through CSS vars. */
+/* figures-dl.js — 第三阶段（深度学习核心）的交互式课程图示。
+   在 lesson-figures.js 之后加载；通过 LF.register 注册九个 widget。
+   无依赖，仅 ES5，主题通过 CSS 变量。 */
 (function () {
   'use strict';
   var LF = window.LF;
   if (!LF) { return; }
   var el = LF.el, svgEl = LF.svgEl, slider = LF.slider, select = LF.select, clamp = LF.clamp;
 
-  // ── perceptron-boundary: drag the weights, move the decision line ──────────
+  // ── perceptron-boundary：拖动权重，移动决策线 ──────────
   function perceptronBoundary(host) {
-    // Two linearly separable clusters (deterministic, data space x,y in [-3,3]).
+    // 两个线性可分的簇（确定性，数据空间 x,y 在 [-3,3]）。
     var pos = [[1.4, 1.2], [2.0, 0.6], [1.0, 2.1], [2.4, 1.7], [0.7, 1.0], [1.8, 2.4]];
     var neg = [[-1.3, -1.0], [-2.0, -0.5], [-0.8, -1.8], [-2.3, -1.6], [-0.6, -0.7], [-1.7, -2.2]];
     var state = { w1: 1, w2: 1, b: 0 };
@@ -23,10 +23,10 @@
     function score(p) { return state.w1 * p[0] + state.w2 * p[1] + state.b; }
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
-      // axes
+      // 坐标轴
       svg.appendChild(svgEl('line', { x1: px(-RNG), y1: py(0), x2: px(RNG), y2: py(0), stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
       svg.appendChild(svgEl('line', { x1: px(0), y1: py(-RNG), x2: px(0), y2: py(RNG), stroke: 'var(--rule-soft,#eee)', 'stroke-width': '1' }));
-      // decision line w1 x + w2 y + b = 0 → y = -(w1 x + b)/w2 (or vertical)
+      // 决策线 w1 x + w2 y + b = 0 → y = -(w1 x + b)/w2（或垂直）
       if (Math.abs(state.w2) > 1e-6) {
         var xa = -RNG, xb = RNG;
         var ya = -(state.w1 * xa + state.b) / state.w2;
@@ -65,9 +65,9 @@
     state._render();
   }
 
-  // ── mlp-forward: drag the inputs, watch a 2-3-1 net fire ───────────────────
+  // ── mlp-forward：拖动输入，观察 2-3-1 网络激活 ───────────────────
   function mlpForward(host) {
-    // Fixed weights: W1 is 3x2, b1 length 3; w2 length 3, b2 scalar. tanh hidden + output.
+    // 固定权重：W1 为 3x2，b1 长度 3；w2 长度 3，b2 为标量。tanh 隐藏层 + 输出。
     var W1 = [[1.2, -0.8], [-0.5, 1.4], [0.9, 0.7]], b1 = [0.1, -0.2, 0.0];
     var w2 = [1.1, -1.3, 0.8], b2 = 0.2;
     var state = { x1: 0.6, x2: -0.4 };
@@ -77,7 +77,7 @@
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
     function tanh(z) { var e = Math.exp(2 * z); return (e - 1) / (e + 1); }
-    function actFill(a) { // a in [-1,1] → blueprint at +1, bg at -1
+    function actFill(a) { // a 在 [-1,1] → blueprint 于 +1，bg 于 -1
       var t = (a + 1) / 2;
       return 'rgba(53,83,255,' + (0.12 + 0.78 * t).toFixed(3) + ')';
     }
@@ -90,16 +90,16 @@
       for (j = 0; j < 3; j++) { var z = b1[j]; for (i = 0; i < 2; i++) z += W1[j][i] * x[i]; h[j] = tanh(z); }
       var zo = b2; for (j = 0; j < 3; j++) zo += w2[j] * h[j];
       var out = tanh(zo);
-      // edges input→hidden
+      // 输入→隐藏层的边
       for (j = 0; j < 3; j++) for (i = 0; i < 2; i++) {
         var wgt = W1[j][i];
         svg.appendChild(svgEl('line', { x1: inX, y1: inY[i], x2: hidX, y2: hidY[j], stroke: wgt >= 0 ? 'var(--blueprint,#3553ff)' : 'var(--warn,#b8870f)', 'stroke-width': (0.4 + Math.abs(wgt)).toFixed(2), opacity: '0.45' }));
       }
-      // edges hidden→output
+      // 隐藏层→输出层的边
       for (j = 0; j < 3; j++) {
         svg.appendChild(svgEl('line', { x1: hidX, y1: hidY[j], x2: outX, y2: outY, stroke: w2[j] >= 0 ? 'var(--blueprint,#3553ff)' : 'var(--warn,#b8870f)', 'stroke-width': (0.4 + Math.abs(w2[j])).toFixed(2), opacity: '0.45' }));
       }
-      // nodes: input (raw, scaled to [-1,1] for fill cue), hidden, output
+      // 节点：输入（原始，缩放到 [-1,1] 作为填充提示）、隐藏、输出
       [0, 1].forEach(function (i2) {
         svg.appendChild(svgEl('circle', { cx: inX, cy: inY[i2], r: '15', fill: actFill(clamp(x[i2], -1, 1)), stroke: 'var(--ink-soft,#555)', 'stroke-width': '1.2' }));
       });
@@ -123,7 +123,7 @@
     state._render();
   }
 
-  // ── backprop-vanishing: product of activation derivatives across depth ─────
+  // ── backprop-vanishing：激活导数沿深度的乘积 ─────
   function backpropVanishing(host) {
     var state = { act: 'sigmoid', depth: 10 };
     var W = 520, H = 220, PAD = 34;
@@ -131,14 +131,14 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // representative per-layer derivative magnitude (typical mid-activation regime)
+    // 每层导数幅度的代表值（典型中间激活区）
     function dPerLayer() {
-      if (state.act === 'sigmoid') return 0.25;   // max sigmoid'(x) = 0.25
-      if (state.act === 'tanh') return 0.42;       // typical |tanh'| away from 0
-      return 1.0;                                  // relu derivative = 1 for active units
+      if (state.act === 'sigmoid') return 0.25;   // sigmoid'(x) 最大值 = 0.25
+      if (state.act === 'tanh') return 0.42;       // 远离 0 处的典型 |tanh'|
+      return 1.0;                                  // relu 导数对激活单元 = 1
     }
     function px(layer) { return PAD + (state.depth <= 1 ? 0 : (layer / (state.depth)) * (W - 2 * PAD)); }
-    function py(logmag) { // logmag in [-9, 0] → bottom..top
+    function py(logmag) { // logmag 在 [-9, 0] → 底部..顶部
       var t = clamp((logmag + 9) / 9, 0, 1);
       return H - PAD - t * (H - 2 * PAD);
     }
@@ -148,7 +148,7 @@
       var per = dPerLayer(), mag = 1, d = '', l;
       var lastLog = 0;
       for (l = 0; l <= state.depth; l++) {
-        var lg = l * Math.log(per) / Math.LN10; // log10 of mag after l layers
+        var lg = l * Math.log(per) / Math.LN10; // l 层后的 mag 的 log10
         lastLog = lg;
         d += (l ? 'L' : 'M') + px(l).toFixed(1) + ' ' + py(lg).toFixed(1) + ' ';
       }
@@ -175,7 +175,7 @@
     state._render();
   }
 
-  // ── optimizer-trajectory: SGD vs Momentum vs Adam on an ill-conditioned bowl
+  // ── optimizer-trajectory：在病态条件碗上的 SGD vs Momentum vs Adam
   function optimizerTrajectory(host) {
     var state = { opt: 'momentum', lr: 0.08 };
     var W = 520, H = 230, PAD = 26, STEPS = 30;
@@ -183,15 +183,15 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // f(x,y) = 0.5*(a x^2 + b y^2), ravine: a small, b large → ill-conditioned
+    // f(x,y) = 0.5*(a x^2 + b y^2)，沟谷：a 小，b 大 → 病态条件
     var A = 1.0, B = 20.0, X0 = -2.6, Y0 = 0.9;
     var RX = 3, RY = 1.2;
     function px(x) { return PAD + (x + RX) / (2 * RX) * (W - 2 * PAD); }
     function py(y) { return H / 2 - (y / RY) * (H / 2 - PAD); }
     function run() {
       var x = X0, y = Y0, pts = [[x, y]];
-      var beta = 0.9, vx = 0, vy = 0;          // momentum / adam first moment
-      var b2 = 0.999, sx = 0, sy = 0, t = 0;   // adam second moment
+      var beta = 0.9, vx = 0, vy = 0;          // momentum / adam 一阶矩
+      var b2 = 0.999, sx = 0, sy = 0, t = 0;   // adam 二阶矩
       var eps = 1e-8;
       for (var s = 0; s < STEPS; s++) {
         var gx = A * x, gy = B * y;
@@ -216,7 +216,7 @@
     }
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
-      // ravine contours (ellipses)
+      // 沟谷等高线（椭圆）
       [0.3, 0.7, 1.2].forEach(function (lvl) {
         svg.appendChild(svgEl('ellipse', { cx: px(0), cy: py(0), rx: (px(Math.sqrt(2 * lvl / A)) - px(0)).toFixed(1), ry: (py(0) - py(Math.sqrt(2 * lvl / B))).toFixed(1), fill: 'none', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1' }));
       });
@@ -244,7 +244,7 @@
     state._render();
   }
 
-  // ── weight-init-variance: activation std across depth for three schemes ────
+  // ── weight-init-variance：三种方案的激活标准差沿深度变化 ────
   function weightInitVariance(host) {
     var state = { scheme: 'xavier', fanin: 256 };
     var L = 10;
@@ -253,17 +253,17 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // Variance recursion for a linear/tanh stack: var_out = n * w_var * var_in.
-    // gain g = n * w_var. naive: w_var = 1 (g = n, explodes). xavier: w_var=1/n (g≈1).
-    // he: w_var=2/n with relu halving → effective g≈1.
+    // 线性/tanh 堆叠的方差递推：var_out = n * w_var * var_in。
+    // 增益 g = n * w_var。朴素：w_var = 1（g = n，爆炸）。xavier：w_var=1/n（g≈1）。
+    // he：w_var=2/n 配 relu 折半 → 有效 g≈1。
     function gain() {
       var n = state.fanin;
-      if (state.scheme === 'naive') return n * 1.0 / 50;        // scaled so it visibly grows
+      if (state.scheme === 'naive') return n * 1.0 / 50;        // 缩放以使其可见地增长
       if (state.scheme === 'xavier') return n * (1.0 / n);      // = 1
-      return 0.5 * n * (2.0 / n);                               // he with relu halving = 1
+      return 0.5 * n * (2.0 / n);                               // he 配 relu 折半 = 1
     }
     function px(l) { return PAD + l / L * (W - 2 * PAD); }
-    function py(logstd) { // log10(std) in [-4,4]
+    function py(logstd) { // log10(std) 在 [-4,4]
       var t = clamp((logstd + 4) / 8, 0, 1);
       return H - PAD - t * (H - 2 * PAD);
     }
@@ -298,7 +298,7 @@
     state._render();
   }
 
-  // ── dropout-mask: drag p, drop a deterministic fraction of units ───────────
+  // ── dropout-mask：拖动 p，丢弃确定性比例的单元 ───────────
   function dropoutMask(host) {
     var state = { p: 0.3 };
     var N = 24;
@@ -337,7 +337,7 @@
     state._render();
   }
 
-  // ── batchnorm-effect: shift the input, watch BN re-center it ───────────────
+  // ── batchnorm-effect：移动输入，观察 BN 将其重新中心化 ───────────────
   function batchnormEffect(host) {
     var state = { shift: 1.4, scaleIn: 1.8 };
     var W = 520, H = 220, PAD = 30;
@@ -354,10 +354,10 @@
       svg.appendChild(svgEl('line', { x1: px(0), y1: PAD, x2: px(0), y2: H - PAD, stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1', 'stroke-dasharray': '3 3' }));
       var muIn = state.shift, sdIn = Math.max(0.2, state.scaleIn);
       var i, d1 = '', d2 = '';
-      // pre-activation distribution (shifted and scaled)
+      // 激活前分布（平移并缩放）
       for (i = 0; i <= 140; i++) { var x = -RNG + 2 * RNG * i / 140; d1 += (i ? 'L' : 'M') + px(x).toFixed(1) + ' ' + py(gauss(x, muIn, sdIn), 1).toFixed(1) + ' '; }
       svg.appendChild(svgEl('path', { d: d1, fill: 'none', stroke: 'var(--ink-mute,#999)', 'stroke-width': '2' }));
-      // after BN: zero mean, unit variance
+      // BN 后：零均值，单位方差
       for (i = 0; i <= 140; i++) { var x2 = -RNG + 2 * RNG * i / 140; d2 += (i ? 'L' : 'M') + px(x2).toFixed(1) + ' ' + py(gauss(x2, 0, 1), 1).toFixed(1) + ' '; }
       svg.appendChild(svgEl('path', { d: d2, fill: 'none', stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '2' }));
       status.innerHTML = 'μ ' + muIn.toFixed(2) + ' → 0 <small>· σ ' + sdIn.toFixed(2) + ' → 1</small>';
@@ -376,7 +376,7 @@
     state._render();
   }
 
-  // ── learning-curves: capacity vs train/val loss, mark early stopping ───────
+  // ── learning-curves：容量 vs 训练/验证损失，标记早停 ───────
   function learningCurves(host) {
     var state = { cap: 6 };
     var W = 520, H = 230, PAD = 34, CMAX = 14;
@@ -384,7 +384,7 @@
     var status = el('span', { class: 'lf-num' });
     var meta = el('div', { class: 'lf-meta' });
     var formula = el('div', { class: 'lf-formula' });
-    // train falls monotonically; val is U-shaped (bias term down, variance term up)
+    // 训练单调下降；验证呈 U 形（偏差项下降，方差项上升）
     function train(c) { return 0.3 + 4.5 / (c + 0.5); }
     function val(c) { return 4.5 / (c + 0.5) + 0.11 * c + 0.45; }
     var best = 1, bv = 1e9, c;
@@ -414,7 +414,7 @@
     state._render();
   }
 
-  // ── gradient-clipping: tame an exploding update by capping the norm ────────
+  // ── gradient-clipping：通过限制范数驯服爆炸的更新 ────────
   function gradientClipping(host) {
     var state = { thresh: 1.0, norm: 4.0 };
     var W = 520, H = 200, PAD = 32, GMAX = 8;
@@ -428,17 +428,17 @@
     function py(g) { return H - PAD - g / GMAX * (H - 2 * PAD); }
     state._render = function () {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
-      // identity line y = x (clipped output before threshold)
+      // 恒等线 y = x（阈值前的裁剪输出）
       svg.appendChild(svgEl('line', { x1: px(0), y1: py(0), x2: px(GMAX), y2: py(GMAX), stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1', 'stroke-dasharray': '3 3' }));
-      // clip response: out = min(g, thresh)
+      // 裁剪响应：out = min(g, thresh)
       var t = state.thresh;
       var d = 'M' + px(0) + ' ' + py(0) + ' L' + px(t) + ' ' + py(t) + ' L' + px(GMAX) + ' ' + py(t);
       svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: 'var(--blueprint,#3553ff)', 'stroke-width': '2' }));
-      // threshold marker
+      // 阈值标记
       svg.appendChild(svgEl('line', { x1: px(t), y1: PAD, x2: px(t), y2: H - PAD, stroke: 'var(--warn,#b8870f)', 'stroke-width': '1', 'stroke-dasharray': '2 3' }));
       var clipped = Math.min(state.norm, t);
       var raw = state.norm;
-      // current point
+      // 当前点
       svg.appendChild(svgEl('circle', { cx: px(raw), cy: py(clipped), r: '5', fill: 'var(--blueprint,#3553ff)' }));
       var scale = raw > t ? t / raw : 1;
       status.innerHTML = clipped.toFixed(2) + ' <small>clipped norm</small>';

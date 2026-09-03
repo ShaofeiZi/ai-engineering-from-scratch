@@ -1,9 +1,4 @@
-/* figures-capstone-h.js - animated lesson figures for Phase 19 capstone
-   projects (paper writer, critic loop, iteration scheduler, research demo,
-   vision patches, ViT encoder, projection alignment, cross-attention,
-   vision-language pretraining, multimodal eval).
-   Loads after lesson-figures.js, registers through window.LF. SMIL motion
-   only - no JS loops, no rAF. ES5, no deps, theme via CSS vars. */
+/*figures-capstone-h.js - - 动画课程图像用于19期的顶点项目 (纸写作,评论循环,演变安排器,研究演示,视觉补丁,ViT编码器,投影对齐,交叉注意力,视觉语言预训练,多模拟评估).课程后载-figures.js,通过窗口.LF. SMIL 运动只 - 无 JS 循环,无 rAF. ES5,无 deps,通过 vars CSS 进行主题. */
 (function () {
   'use strict';
   var LF = window.LF;
@@ -29,8 +24,8 @@
   function rect(x, y, w, h, fill, stroke) {
     return svgEl('rect', { x: x, y: y, width: w, height: h, rx: '4', fill: fill || 'var(--bg-surface,#eee)', stroke: stroke || 'var(--rule-soft,#ddd)', 'stroke-width': '1.4' });
   }
-  // fade+grow entry from opacity 0 and 95% size; a..b is the entry phase
-  // window, exit runs 0.94..1 which is faster than any entry window here.
+  // 入场动画从透明度 0、缩放 95% 开始；a..b 表示入场阶段
+  // 退场阶段为 0.94..1，比这里的任何入场窗口都短。
   function entry(cx, cy, dur, begin, a, b) {
     a = a || 0.02; b = b || 0.12;
     var kt = '0;' + a + ';' + b + ';0.94;1';
@@ -40,7 +35,7 @@
     return g;
   }
 
-  // ── ch-paper-skeleton (54): slots declared as data, prose ink arrives later ──
+  // ── ch-paper-skeleton (54)：先以数据声明论文骨架槽位，再逐步填入正文 ──
   function chPaper(host) {
     var s = svg(250), px = 40, py = 24, pw = 170;
     s.appendChild(svgEl('rect', { x: px, y: py, width: pw, height: 208, rx: '3', fill: 'var(--bg,#fafaf5)', stroke: 'var(--ink-soft,#555)', 'stroke-width': '1.4' }));
@@ -75,7 +70,7 @@
       'The skeleton declares sections, figure slots, and bibliography keys as data before any prose exists. The harness validates that contract first: every referenced figure has a slot, every citation has an entry, every section lands in the table of contents. Only then does the generator write prose into each slot, so structural debt never accumulates.');
   }
 
-  // ── ch-critic-converge (55): five score trajectories settle into the target band ─
+  // ──ch-critical-converge (55):五个分数轨迹进入目标范围 ─
   function chCritic(host) {
     var s = svg(250), Y0 = 200, X = [110, 210, 310, 410];
     s.appendChild(svgEl('line', { x1: 70, y1: 40, x2: 70, y2: Y0, stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1' }));
@@ -111,7 +106,7 @@
       'Each round the critic returns a five-dimension score vector, the revision applies as a structured diff, and the trajectories climb toward the target band. Convergence is engineered, not hoped for: the loop stops on plateau, on target met, or on budget exhausted, and a dimension that regresses is caught because the score is a vector, not a paragraph.');
   }
 
-  // ── ch-ucb-scheduler (56): hypothesis queue feeds slots, results loop back, low UCB pruned ─
+  // ─ch-ucb-scheduler (56):假设队列提供插槽,结果循环回归,低的UCB剪切 ─
   function chScheduler(host) {
     var s = svg(250), qx = 36, qw = 110, sx = 220, sw = 100, ys = [58, 104, 150];
     s.appendChild(txt(qx, 44, 'hypothesis queue', '9', 'var(--ink-soft,#555)', 'start'));
@@ -152,7 +147,7 @@
       'The queue holds hypotheses scored by upper confidence bound. When a slot frees, the scheduler dispatches the highest-UCB branch; finished experiments fan onto the result bus and loop back to update the statistics, so a finding from one experiment reorders everything behind it. A branch whose bound collapses is pruned instead of burning a slot.');
   }
 
-  // ── ch-research-pipeline (57): a baton crosses five stages through contract gates ─
+  // ── 管 (57):一个棒通过合同门穿过五个阶段 ─
   function chPipeline(host) {
     var s = svg(220), names = ['seed', 'scheduler', 'runner', 'critic', 'writer'];
     var i, bx = [20, 124, 228, 332, 436], cy = 108;
@@ -182,7 +177,7 @@
       'The demo threads one run through every stage built in the earlier Track D lessons: seed hypotheses, the UCB scheduler, the experiment runner, the critic loop, the paper writer. Each hand-off passes a contract gate that validates the shape before the next stage runs, and the loop self-terminates into a single demo report. If any contract leaks, this is the lesson that catches it.');
   }
 
-  // ── ch-patch-tokenizer (58): a pixel grid is cut into a strip of tokens ──────
+  // 片符号化器 (58):一个像素格格被切成一个代币条
   function chPatches(host) {
     var s = svg(250), gx = 40, gy = 54, c = 24, p = 26;
     s.appendChild(txt(gx, 40, '224x224 image, 16x16 patches', '9', 'var(--ink-soft,#555)', 'start'));
@@ -214,7 +209,7 @@
       'Reading every pixel as a token gives a 150,528-token sequence no 12-layer transformer can afford. Cutting the image into 16x16 squares gives 196 patches; each is flattened to 768 values and projected through one linear layer into the hidden dimension, and a 2D sinusoidal signal restores where each square sat. The transformer sees a short sequence it can chew on.');
   }
 
-  // ── ch-cls-funnel (59): patch pulses rise through the block stack into CLS ───
+  // ── ch-cls-funnel (59)：图像块脉冲逐层穿过块堆栈并汇入 CLS ──
   function chVit(host) {
     var s = svg(260), cx = 260, cy = 62;
     var bands = [[160, 'block 1'], [124, '...'], [88, 'block 12']];
@@ -249,7 +244,7 @@
       'Patch tokens enter with no awareness of each other. Twelve pre-LN blocks of multi-head self-attention let every patch exchange information with every other, and the CLS token accumulates whole-image features layer by layer; its final hidden state is the pooled summary the rest of the stack reads. This block recipe is the spine of CLIP, SigLIP, and DINOv2.');
   }
 
-  // ── ch-projection-bridge (60): an image vector crosses the MLP into text space ─
+  // ──ch投影桥 (60):一个图像向量穿越MLP进入文本空间 ─
   function chProjection(host) {
     var s = svg(250);
     s.appendChild(svgEl('ellipse', { cx: 110, cy: 122, rx: 80, ry: 66, fill: 'none', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1.2', 'stroke-dasharray': '4 4' }));
@@ -288,7 +283,7 @@
       'The vision encoder and the text table live in unrelated bases. A two-layer MLP, about 1.3M parameters, carries the pooled image vector across into the text embedding space, and a cosine alignment loss against the paired caption pulls the projected point onto its partner. Encoder and text table stay frozen; the bridge is the only piece that learns.');
   }
 
-  // ── ch-crossattn-fan (61): one text token fans queries across the image memory ─
+  // ── 通过图像内存查询一个文本代币粉丝 ─
   function chCross(host) {
     var s = svg(260), mts = [130, 176, 222, 268, 314, 360], my = 48;
     s.appendChild(txt(260, 34, 'image memory tokens (computed once per image)', '9', 'var(--ink-soft,#555)'));
@@ -322,7 +317,7 @@
       'In late fusion the decoder runs on text-only tokens and reaches into the image stream at every layer: the highlighted token sends a query to every memory token, unmasked, and the weighted answer flows back into its residual stream. Self-attention along the bottom row stays causal. The image side is encoded once and reused for every decode step, so long captions stay cheap.');
   }
 
-  // ── ch-infonce-diagonal (62): matching pairs light the diagonal, both losses fall ─
+  // ──ch-infonce-diagonal (62):相匹配的对照照亮了对角,两个损失都下降 ─
   function chInfoNCE(host) {
     var s = svg(250), mx = 70, my = 60, pitch = 36;
     s.appendChild(txt(mx + 2 * pitch, 46, 'captions', '9', 'var(--ink-soft,#555)'));
@@ -362,7 +357,7 @@
       'For a batch of N image-caption pairs the similarity matrix has N matching cells on the diagonal and N squared minus N mismatches off it; InfoNCE runs cross-entropy over each row and column so the diagonal brightens while everything else dims. The LM loss trains the same weights to caption each image, and both curves fall together in the 50-step demo loop.');
   }
 
-  // ── ch-recall-window (63): the matching image climbs into the R@K window ─────
+  // ── ch-recall-window (63):相匹配的图像爬进了R@K窗口 ──────
   function chEval(host) {
     var s = svg(260), rx = 56, rw = 150;
     s.appendChild(txt(rx, 34, 'retrieval: rank every image', '9', 'var(--ink-soft,#555)', 'start'));

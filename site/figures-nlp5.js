@@ -48,7 +48,7 @@
       { keyTimes: '0;' + tf(t0) + ';' + tf(t1) + ';1', calcMode: 'spline', keySplines: LIN + ';' + EASE + ';' + LIN }));
   }
 
-  // ── n5-subword-merge: BPE lattice, frequent pairs merge upward ─────────────
+  // ── n5-subword-merge：BPE 格结构，高频对向上合并 ───────────────────────
   function subwordMerge(host) {
     var D = 6, svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(txt(20, 26, 'merge queue: (l,o) (e,r) (lo,w) (low,er)', { fill: SOFT, 'font-size': '11' }));
@@ -80,7 +80,7 @@
       'Byte-pair encoding starts from characters and repeatedly merges the most frequent adjacent pair: (l,o) and (e,r) first, then (lo,w), then (low,er). Frequent words end up as single tokens while rare words split into familiar pieces, so no input is ever out of vocabulary.');
   }
 
-  // ── n5-crosslingual-bridge: a task head travels the shared-space bridge ────
+  // ── n5-crosslingual-bridge：任务头跨越共享空间桥梁 ─────────────────────
   function crosslingualBridge(host) {
     var D = 5, svg = svgEl('svg', { viewBox: '0 0 520 220' });
     svg.appendChild(txt(260, 20, 'fine-tuned task head', { 'text-anchor': 'middle', fill: SOFT, 'font-size': '10' }));
@@ -109,7 +109,7 @@
       'A single encoder pretrained across a hundred languages puts sentences with the same meaning near each other in one shared space. Fine-tune a task head on English labels and carry it across the bridge: it scores Urdu text with zero Urdu labels, and a few hundred target-language examples close most of the remaining gap.');
   }
 
-  // ── n5-chunk-cuts: three cut rules slice the same document bar ─────────────
+  // ── n5-chunk-cuts：三种切分规则切割同一文档条 ──────────────────────────
   function chunkCuts(host) {
     var D = 5.5, svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(txt(20, 24, 'same document, three ways to cut', { fill: SOFT, 'font-size': '11' }));
@@ -138,7 +138,7 @@
       'The document is identical in every row; only the cut points differ. Fixed windows are cheap but split mid-sentence (the marked cut), recursive splitting backs off from paragraph breaks to sentences to spaces, and semantic splitting cuts where adjacent-sentence similarity drops. Recursive 512-token chunks remain the benchmark default.');
   }
 
-  // ── n5-judge-gauge: (query, context, answer) in, needle sweeps to a score ──
+  // ── n5-judge-gauge：输入（查询、上下文、答案），指针扫向评分 ─────────────
   function judgeGauge(host) {
     var D = 5, svg = svgEl('svg', { viewBox: '0 0 520 200' });
     ['query', 'context', 'answer'].forEach(function (s, i) {
@@ -184,7 +184,7 @@
       'A judge model reads the query, the retrieved context, and the answer, applies a rubric, and returns a score between 0 and 1. RAGAS, DeepEval, and G-Eval are all built on this loop; the trust work is freezing the judge version and auditing its bias toward long answers.');
   }
 
-  // ── n5-slot-tracker: chat turns edit a slot-value dict, corrections included ─
+  // ── n5-slot-tracker：对话轮次编辑槽位值字典，并包含纠正操作 ────────────
   function slotTracker(host) {
     var D = 6, svg = svgEl('svg', { viewBox: '0 0 520 260' });
     var turns = [
@@ -228,7 +228,7 @@
       'Three turns, three edits to one slot-value dictionary: price and area fill first, then a correction overwrites cheap with moderate, then cuisine arrives. Joint goal accuracy scores a turn only when every slot matches, which makes mid-dialogue corrections the hardest part of tracking.');
   }
 
-  // ── n5-patch-stream: an image grid unrolls into a token sequence ───────────
+  // ── n5-patch-stream：图像网格展开成 token 序列 ─────────────────────────
   function patchStream(host) {
     var D = 5, svg = svgEl('svg', { viewBox: '0 0 520 260' });
     svg.appendChild(txt(110, 32, 'image, 3 x 3 patches', { 'text-anchor': 'middle', fill: SOFT, 'font-size': '10' }));
@@ -260,7 +260,7 @@
       'A vision transformer never convolves: the image is cut into fixed patches, each patch is flattened and linearly projected, and the patches queue up as tokens behind a learned [CLS] token. Position embeddings are the only memory of the original grid; from there it is the standard transformer encoder.');
   }
 
-  // ── n5-mel-decode: waveform to mel columns to typed transcript ─────────────
+  // ── n5-mel-decode：波形转为梅尔频谱列，再转为逐字显示的转录文本 ────────
   function melDecode(host) {
     var D = 5, svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var pts = [], x;
@@ -294,7 +294,7 @@
       'Whisper hears with its eyes: the waveform becomes a log-mel spectrogram, the encoder reads spectrogram frames the way a ViT reads patches, and the decoder types the transcript one token at a time, steered by special tokens that select the language and the task.');
   }
 
-  // ── n5-block-stack: the capstone assembles itself bottom-up ────────────────
+  // ── n5-block-stack：综合项目从底部向上自行组装 ──────────────────────────
   function blockStack(host) {
     var D = 5, svg = svgEl('svg', { viewBox: '0 0 520 260' });
     svg.appendChild(txt(200, 252, 'characters in (B, N)', { 'text-anchor': 'middle', fill: MUTE, 'font-size': '9' }));

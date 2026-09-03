@@ -32,7 +32,7 @@
       'font-family': 'var(--font-mono,monospace)', 'text-anchor': anchor || 'middle'
     }, [svgEl('tspan', {}, [document.createTextNode(s)])]);
   }
-  // one-time entry: fade in from 95% size about (cx, cy), strong ease-out
+  // 一次性输入:从大约95%的尺寸 (cx, cy) 消失,强度缓解
   function entry(g, cx, cy, begin) {
     var dx = (cx * 0.05).toFixed(1), dy = (cy * 0.05).toFixed(1);
     var e = { dur: '0.8s', begin: begin, fill: 'freeze', calcMode: 'spline', keySplines: EASE, keyTimes: '0;1' };
@@ -42,7 +42,7 @@
     g.appendChild(anim('opacity', '0;1', '0.8s', { begin: begin, fill: 'freeze', calcMode: 'spline', keySplines: EASE, keyTimes: '0;1', repeatCount: '1' }));
   }
 
-  // ── 01: plan / act / observe / recover circuit with hooks and truncation ───
+  // ── 01: 计划/行动/观察/恢复电路,用和切断 ──
   function ceAgentLoop(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     var track = 'M130 70 L330 70 A20 20 0 0 1 350 90 L350 160 A20 20 0 0 1 330 180 L130 180 A20 20 0 0 1 110 160 L110 90 A20 20 0 0 1 130 70 Z';
@@ -57,7 +57,7 @@
       g.appendChild(anim('opacity', '0.45;1;0.45;0.45', '5s', { begin: st[3], keyTimes: '0;0.08;0.2;1' }));
       svg.appendChild(g);
     }
-    // hook pins on the edges the tool call crosses
+    // 针在边缘上,工具调用交叉
     svg.appendChild(txt(230, 52, 'PreToolUse', MUTE, 8));
     var pin1 = svgEl('circle', { cx: 230, cy: 70, r: 4, fill: BP });
     pin1.appendChild(anim('opacity', '0.25;1;0.25;0.25', '5s', { begin: '0.55s', keyTimes: '0;0.06;0.14;1' }));
@@ -66,7 +66,7 @@
     var pin2 = svgEl('circle', { cx: 230, cy: 180, r: 4, fill: BP });
     pin2.appendChild(anim('opacity', '0.25;1;0.25;0.25', '5s', { begin: '3.0s', keyTimes: '0;0.06;0.14;1' }));
     svg.appendChild(pin2);
-    // one turn = one lap
+    // 一轮交互对应沿环路运行一圈
     var token = svgEl('circle', { r: 5, fill: WARN });
     token.appendChild(svgEl('animateMotion', { dur: '5s', repeatCount: 'indefinite', path: track }));
     svg.appendChild(token);
@@ -75,7 +75,7 @@
     var budget = svgEl('rect', { x: 180, y: 130, width: 10, height: 6, rx: 3, fill: BP });
     budget.appendChild(anim('width', '10;94', '5s'));
     svg.appendChild(budget);
-    // an oversized observation truncated before re-entering context
+    // 在重新进入文本之前缩短过大的观察
     svg.appendChild(txt(296, 218, 'observe:', MUTE, 8, 'end'));
     var obs = svgEl('rect', { x: 300, y: 208, width: 6, height: 12, rx: 2, fill: SURF, stroke: RULE, 'stroke-width': '1' });
     obs.appendChild(anim('width', '6;150;150;26;26', '5s', { keyTimes: '0;0.3;0.55;0.62;1' }));
@@ -89,7 +89,7 @@
       'The harness runs a plan, act, observe, recover circuit, and every lap burns one turn of the 50-turn budget. PreToolUse and PostToolUse hooks fire as each tool call crosses the edge, and an oversized observation, like 8MB of ripgrep output, is truncated before it re-enters the context window.');
   }
 
-  // ── 02: dense + BM25 fire in parallel, union merges, re-ranker reorders ────
+  // ── 02：稠密检索与 BM25 并行执行，合并候选后由重排器重新排序 ──
   function ceHybridRetrieval(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     svg.appendChild(svgEl('rect', { x: 20, y: 103, width: 64, height: 34, rx: 5, fill: BG, stroke: BP, 'stroke-width': '2' }));
@@ -104,7 +104,7 @@
     var dn = svgEl('path', { d: 'M84 128 C110 128,104 177,130 177', fill: 'none', stroke: WARN, 'stroke-width': '1.5', 'stroke-dasharray': '5 4' });
     dn.appendChild(anim('stroke-dashoffset', '18;0', '1s', { begin: '0.2s' }));
     svg.appendChild(dn);
-    // candidates stream from both indexes into the union
+    // 候选人从两个指数流入联盟
     var routes = [['M226 63 C252 63,256 112,280 114', BP, '0s'], ['M226 63 C252 63,256 112,280 114', BP, '1s'],
       ['M226 177 C252 177,256 128,280 126', WARN, '0.5s'], ['M226 177 C252 177,256 128,280 126', WARN, '1.5s']];
     var i;
@@ -121,7 +121,7 @@
     svg.appendChild(mid);
     svg.appendChild(txt(432, 46, 'cross-encoder rerank', MUTE, 9));
     svg.appendChild(svgEl('rect', { x: 366, y: 54, width: 132, height: 150, rx: 6, fill: 'none', stroke: RULE, 'stroke-width': '1.4', 'stroke-dasharray': '4 4' }));
-    // merged order a, b, c; the re-ranker lifts c to the top
+    // 合并序列a,b,c;重新排名的升级器将c升到顶部
     var chips = [['chunk a  0.31', 70, '0 0;0 0;0 32;0 32', RULE, SOFT],
       ['chunk b  0.58', 102, '0 0;0 0;0 32;0 32', RULE, SOFT],
       ['chunk c  0.87', 134, '0 0;0 0;0 -64;0 -64', BP, BP]];
@@ -141,13 +141,13 @@
       'The query fires both searches at once: dense nearest-neighbor over embeddings and sparse BM25 over terms. Their union feeds the cross-encoder, which reorders the list, and the chunk that BM25 alone would have buried rises to the top. The synthesizer must cite file and line from what survives.');
   }
 
-  // ── 03: streaming voice pipeline as a latency waterfall under 800ms ────────
+  // 作为一个800ms以下的延迟布.
   function ceVoiceLatency(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 240' });
     var rows = [['mic in', 54], ['asr partial', 86], ['turn detect', 118], ['llm tokens', 150], ['tts out', 182]];
     var i;
     for (i = 0; i < rows.length; i++) svg.appendChild(txt(62, rows[i][1] + 12, rows[i][0], MUTE, 8, 'end'));
-    // each stage starts before the previous one ends: pipelined, not sequential
+    // 每个阶段都在前一个阶段结束之前开始:管道,而不是连续
     var bars = [[78, 54, 200, SURF, '0;0.015;0.333;0.93;1', MUTE],
       [104, 86, 202, BP, '0;0.053;0.373;0.93;1', ''],
       [305, 118, 34, BP, '0;0.373;0.427;0.93;1', ''],
@@ -166,7 +166,7 @@
     svg.appendChild(txt(410, 40, '800ms budget', WARN, 8, 'start'));
     svg.appendChild(svgEl('line', { x1: 398, y1: 202, x2: 398, y2: 214, stroke: BP, 'stroke-width': '2' }));
     svg.appendChild(txt(370, 228, 'first audio 780ms', SOFT, 8));
-    // barge-in: user speaks again, tts cancels mid-utterance
+    // 入:用户再次说话, tts取消中发言
     var burst = svgEl('rect', { x: 448, y: 54, width: 0, height: 16, rx: 3, fill: WARN, opacity: '0.85' });
     burst.appendChild(anim('width', '0;0;42;42;0', '6s', { keyTimes: '0;0.6;0.667;0.93;1' }));
     svg.appendChild(burst);
@@ -182,7 +182,7 @@
       'Every stage streams into the next before it finishes: ASR emits partials while the user still speaks, the turn detector fires on completion cues, and TTS starts within the 800ms first-audio budget. When the user barges in at 900ms the TTS cancels instantly and ASR takes over again.');
   }
 
-  // ── 04: late interaction, each query token picks its max-scoring patch ─────
+  // 后期交互,每个查询代币选择其最高分数补丁 ────
   function ceLateInteraction(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     svg.appendChild(txt(266, 44, 'pdf page as patch grid', MUTE, 9));
@@ -198,7 +198,7 @@
       svg.appendChild(svgEl('rect', { x: 30, y: chips[i][1], width: 64, height: 22, rx: 4, fill: BG, stroke: BP, 'stroke-width': '1.5' }));
       svg.appendChild(txt(62, chips[i][1] + 15, chips[i][0], SOFT, 9));
     }
-    // every token scores every patch; the cone hints at the full pairing
+    // 每个符号都会分分每一个补丁;子暗示了完整的对合
     var cone = svgEl('polygon', { points: '94,75 193,55 193,197', fill: BP, opacity: '0.04' });
     cone.appendChild(anim('opacity', '0.03;0.08;0.03', '4s'));
     svg.appendChild(cone);
@@ -231,7 +231,7 @@
       'No OCR and no pooled vector: the page stays an image, embedded as thousands of patch vectors. Each query token scores against every patch, keeps only its maximum, and the per-token maxima sum into the page score. Tables, charts, and handwriting match directly at the patch level.');
   }
 
-  // ── 05: best-first tree search over experiments under a dollar budget ──────
+  // 五:最好的第一棵树搜索在美元预算下的实验
   function ceExperimentTree(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     svg.appendChild(txt(200, 26, 'best-first expansion', MUTE, 9));
@@ -257,7 +257,7 @@
       g.appendChild(animT('translate', '0 5;0 5;0 0;0 0;0 5', '6s', { keyTimes: n[3] }));
       svg.appendChild(g);
     }
-    // the top-scoring node is the one that gets expanded
+    // 最高分点节点是扩展的节点
     var ring = svgEl('circle', { cx: 304, cy: 118, r: 18, fill: 'none', stroke: BP, 'stroke-width': '2.4', opacity: '0' });
     ring.appendChild(anim('opacity', '0;0;1;1;0', '6s', { keyTimes: '0;0.28;0.34;0.96;1' }));
     svg.appendChild(ring);
@@ -281,7 +281,7 @@
       'Each node is a sandboxed experiment scored after it runs. The search expands the best-scoring node, not the newest, so the 0.71 branch earns children while its siblings stall. The budget gauge drains with every run, and when it empties the best branch is written up as the paper.');
   }
 
-  // ── 06: alert on a pod, graph walk to root cause, gated remediation ────────
+  // 警报在一个子,图表走到根源,关闭补救 ───────
   function ceRootcauseWalk(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     svg.appendChild(txt(100, 30, 'knowledge graph walk', MUTE, 9));
@@ -304,7 +304,7 @@
     var al = txt(100, 214, 'alert: OOMKilled', WARN, 9);
     al.appendChild(anim('opacity', '0;1;1;0.2', '6s', { keyTimes: '0;0.05;0.6;1' }));
     svg.appendChild(al);
-    // the agent walks ownership edges up, then the scheduling edge out
+    // 经纪人走上了所有权边缘,然后排名边缘走了
     var walker = svgEl('circle', { r: 4.5, fill: BP });
     walker.appendChild(svgEl('animateMotion', { dur: '6s', repeatCount: 'indefinite', begin: '0.4s', path: 'M100 176 L100 116 L100 56 L100 116 L100 176 L210 176' }));
     svg.appendChild(walker);
@@ -333,7 +333,7 @@
       'An OOMKilled alert lands on the pod. The agent walks ownership edges up to the deployment and the scheduling edge out to the node, pulling a telemetry slice at each hop. Hypotheses rank by evidence weight, and the winner still waits behind a human approval gate before any remediation runs.');
   }
 
-  // ── 07: one artifact rides data, sft, dpo, quantize, serve ─────────────────
+  // 作为一个文物,它可以运载数据,
   function ceFinetuneStages(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 230' });
     svg.appendChild(svgEl('line', { x1: 30, y1: 150, x2: 500, y2: 150, stroke: RULE, 'stroke-width': '1.5' }));
@@ -344,7 +344,7 @@
       svg.appendChild(txt(st[i][0], 172, st[i][1], SOFT, 9));
       svg.appendChild(txt(st[i][0], 186, st[i][2], MUTE, 7));
     }
-    // the model block transforms at each station: learns, aligns, shrinks
+    // 模型块在每个站点都变化:学习,排列,缩小
     var blk = svgEl('g', {});
     var outer = svgEl('rect', { x: 40, y: 96, width: 44, height: 36, rx: 4, fill: BG, stroke: BP, 'stroke-width': '2' });
     outer.appendChild(anim('width', '44;44;26;26', '6s', { keyTimes: '0;0.58;0.68;1' }));
@@ -372,7 +372,7 @@
       'One artifact rides the whole pipeline. Clean data feeds SFT, which fills the base model with task behavior; DPO deepens the alignment tint; quantization shrinks the block to 4-bit without changing what it learned; and the served endpoint streams tokens with speculative decoding.');
   }
 
-  // ── 09: recipes fix most files fast, the agent loop churns on the rest ─────
+  // ── 09：规则化迁移快速修复大多数文件，剩余文件进入代理迭代循环 ──
   function ceMigrationFunnel(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 250' });
     svg.appendChild(svgEl('rect', { x: 28, y: 96, width: 72, height: 48, rx: 5, fill: BG, stroke: BP, 'stroke-width': '1.8' }));
@@ -393,7 +393,7 @@
       dot.appendChild(svgEl('animateMotion', { dur: '3s', repeatCount: 'indefinite', begin: i + 's', path: 'M104 120 L288 120 L420 94' }));
       svg.appendChild(dot);
     }
-    // the ambiguous file diverts into the build, classify, fix cycle
+    // 模糊的文件转向构建,分类,修复周期
     var hard = svgEl('circle', { r: 4, fill: WARN });
     hard.appendChild(svgEl('animateMotion', { dur: '6s', repeatCount: 'indefinite', begin: '0.5s', path: 'M104 120 L250 120 C290 124,306 148,316 168', calcMode: 'linear', keyPoints: '0;0.55;0.55;1;1', keyTimes: '0;0.3;0.4;0.55;1' }));
     svg.appendChild(hard);
@@ -416,7 +416,7 @@
       'Most files flow straight through the deterministic recipes and land in a green-CI branch. The ambiguous minority diverts into the agent loop, which builds, classifies the failure, applies a fix, and reruns under hard caps. What still fails gets filed in the taxonomy with an exemplar diff.');
   }
 
-  // ── 10: architect fans out to parallel worktrees, handoffs are the risk ────
+  // 建筑师的粉丝们走向平行工作树,
   function ceTeamHandoff(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 270' });
     var arch = svgEl('g', {});
@@ -429,7 +429,7 @@
     svg.appendChild(feed);
     svg.appendChild(svgEl('rect', { x: 140, y: 58, width: 240, height: 20, rx: 4, fill: BP, opacity: '0.08', stroke: BP, 'stroke-width': '1.3', 'stroke-dasharray': '4 3' }));
     svg.appendChild(txt(260, 72, 'task board', BP, 9));
-    // four coders drain the board at different speeds
+    // 四个编码器以不同的速度排水板
     var lanes = [[95, 'coder a', 0.42], [205, 'coder b', 0.58], [315, 'coder c', 0.5], [425, 'coder d', 0.68]];
     var i;
     for (i = 0; i < lanes.length; i++) {
@@ -469,7 +469,7 @@
       'The architect freezes a plan onto the task board and four coders drain it in parallel worktrees, each finishing at its own pace. The merge is where handoffs fail: two coders touched the same file, the conflict flashes, and only then does the diff pass the reviewer gate and the isolated test run.');
   }
 
-  // ── 11: span stream in, eval sparkline down, alert inside five minutes ─────
+  // ── 11：span 流持续进入，评估曲线下跌，并在五分钟内触发告警 ──
   function ceOtelDrift(host) {
     var svg = svgEl('svg', { viewBox: '0 0 520 260' });
     var srcs = [['openai sdk', 40], ['anthropic sdk', 76], ['langchain', 112]];
@@ -495,7 +495,7 @@
     svg.appendChild(svgEl('ellipse', { cx: 318, cy: 104, rx: 30, ry: 7, fill: 'none', stroke: BP, 'stroke-width': '1.5' }));
     svg.appendChild(txt(318, 95, 'clickhouse', SOFT, 8));
     svg.appendChild(txt(412, 120, 'eval jobs sample traces', MUTE, 8));
-    // the injected regression drops into the eval stream, then the score falls
+    // 注射的回归下降到评估流,然后得分下降
     var drop = svgEl('circle', { cx: 318, r: 3.5, fill: WARN, opacity: '0' });
     drop.appendChild(anim('cy', '112;112;168;168', '6s', { keyTimes: '0;0.32;0.42;1' }));
     drop.appendChild(anim('opacity', '0;0;1;0;0', '6s', { keyTimes: '0;0.32;0.42;0.5;1' }));

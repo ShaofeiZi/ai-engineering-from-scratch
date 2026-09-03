@@ -1,28 +1,27 @@
 /**
- * Command palette — global search triggered by Cmd/Ctrl+K or the search button.
+ * 命令面板：由 Cmd/Ctrl+K 或搜索按钮触发的全局搜索。
  *
- * Searches focused paths, lesson titles, summaries, phase names, languages,
- * types, and glossary terms. The Chinese search overlay is fetched once, on
- * demand, when the palette first opens in Chinese. No external dependencies.
+ * 可搜索 focused path、lesson 标题、摘要、phase 名称、语言、类型和 glossary
+ * 术语。中文搜索覆盖层会在面板第一次以中文打开时按需抓取一次。无外部依赖。
  *
- * API (attached to window.CmdPalette):
- *   CmdPalette.open()   — open the palette
- *   CmdPalette.close()  — close the palette
+ * API（挂载到 window.CmdPalette）：
+ *   CmdPalette.open()   — 打开面板
+ *   CmdPalette.close()  — 关闭面板
  *
- * Trigger buttons: any element with the [data-cmd-palette] attribute.
+ * 触发按钮：任意带有 [data-cmd-palette] 属性的元素。
  */
 (function () {
   'use strict';
 
-  // ── Constants ────────────────────────────────────────────────────────
+  // ── 常量 ─────────────────────────────────────────────────────────────
   var PALETTE_ID  = 'cmdPalette';
   var MAX_RESULTS = 12;
   var BODY_ATTR   = 'data-palette-open';
   var LANGUAGE_EVENT = 'aifs:language-change';
   var LANG_STORAGE_KEY = 'lang';
 
-  // ── Module state ─────────────────────────────────────────────────────
-  var _index      = null;   // lazy-built flat array of searchable items
+  // ── 模块状态 ─────────────────────────────────────────────────────────
+  var _index      = null;   // 延迟构建的可搜索条目平铺数组
   var _indexLang  = '';
   var _activeIdx  = -1;
   var _isOpen     = false;
@@ -49,6 +48,7 @@
     var params;
     var value = '';
     if (isCertificationSurface()) return 'en';
+    if (typeof window !== 'undefined' && window.AIFS_CHINESE_ONLY) return 'zh';
     if (api && typeof api.current === 'string' && api.current) return api.current;
     if (typeof window !== 'undefined' && typeof window.AIFS_currentLang === 'function') {
       value = window.AIFS_currentLang();
@@ -326,7 +326,7 @@
     return routes && typeof routes.adaptHref === 'function' ? routes.adaptHref(href) : href;
   }
 
-  // ── Search index ─────────────────────────────────────────────────────
+  // ── 搜索索引 ─────────────────────────────────────────────────────────
   function certificationData() {
     var data = null;
     if (typeof CLAUDE_CERTIFICATION_DATA !== 'undefined' && CLAUDE_CERTIFICATION_DATA) {
@@ -350,8 +350,8 @@
   }
 
   /**
-   * Build the flat search index once from window.PHASES and window.GLOSSARY.
-   * Idempotent: subsequent calls return the cached array.
+   * 基于 window.PHASES 和 window.GLOSSARY 构建一次平铺搜索索引。
+   * 该过程是幂等的：后续调用直接返回缓存数组。
    */
   function buildIndex() {
     var lang = currentLang();
@@ -402,7 +402,7 @@
         for (var j = 0; j < phase.lessons.length; j++) {
           var lesson = phase.lessons[j];
 
-          // Extract the phases/…/… path used for lesson?path=
+          // 提取供 lesson?path= 使用的 phases/…/… 路径
           var lessonPath = '';
           if (lesson.url) {
             var m = lesson.url.match(/(phases\/[^/?#]+\/[^/?#]+)/);
@@ -510,9 +510,8 @@
       }
     }
 
-    // Certification data is optional. Index it only on pages that already
-    // loaded one of the supported globals; never fetch the large data bundle
-    // solely for search.
+    // Certification 数据是可选的。只有当前页面已经加载了受支持的全局变量时
+    // 才把它编入索引，不要仅为了搜索而额外抓取那份较大的数据包。
     var certs = certificationData();
     if (certs) {
       var tracks = Array.isArray(certs.tracks) ? certs.tracks : [];
@@ -577,9 +576,9 @@
     renderResults(query ? search(query) : []);
   }
 
-  // ── Scoring ──────────────────────────────────────────────────────────
+  // ── 评分 ─────────────────────────────────────────────────────────────
   function scoreItem(item, q) {
-    // q is already lowercased + trimmed by the caller
+    // q 在调用方里已经完成小写化和 trim
     var name     = (item.searchName || item.name || '').toLowerCase();
     var summary  = (item.searchSummary  || item.summary  || '').toLowerCase();
     var keywords = (item.searchKeywords || item.keywords || '').toLowerCase();
@@ -590,29 +589,29 @@
 
     var s = 0;
 
-    // Exact full-name match — highest priority
+    // 全名精确匹配：最高优先级
     if (name === q) return 200;
 
-    // Substring matches in name (most important signal)
+    // 名称中的子串匹配（最重要的信号）
     if (name.startsWith(q))          s += 100;
     else if (name.indexOf(q) !== -1) s +=  70;
     if (item.kind === 'learning-path' && name.startsWith(q)) s += 100;
 
-    // Multi-word query: every word must appear somewhere in name
+    // 多词查询：每个词都必须出现在名称中
     var words = q.split(/\s+/).filter(Boolean);
     if (words.length > 1) {
       var allInName = words.every(function (w) { return name.indexOf(w) !== -1; });
       if (allInName) {
         s += (s === 0 ? 65 : 20);
       } else {
-        // Weaker: every word spread across name + summary + keywords + phase
+        // 较弱信号：每个词分别散落在 name、summary、keywords、phase 中
         var blob = name + ' ' + summary + ' ' + keywords + ' ' + phase;
         var allInBlob = words.every(function (w) { return blob.indexOf(w) !== -1; });
         if (allInBlob) s += 15;
       }
     }
 
-    // Supporting fields — ordered by expected relevance
+    // 辅助字段，按预期相关度排序
     if (summary.indexOf(q)  !== -1) s += 25;
     if (keywords.indexOf(q) !== -1) s += 22; // H3 headings: dense vocabulary
     if (says.indexOf(q)     !== -1) s += 22; // glossary "what people say"
@@ -620,13 +619,13 @@
     if (lang.indexOf(q)     !== -1) s += 14;
     if (type.indexOf(q)     !== -1) s += 10;
 
-    // Single-word fallback: word-boundary prefix match on name tokens
+    // 单词查询的回退策略：在名称 token 上做词边界前缀匹配
     if (s === 0 && words.length === 1) {
       var nameParts = name.split(/[\s\-–—:,]+/).filter(Boolean);
       for (var i = 0; i < nameParts.length; i++) {
         if (nameParts[i].startsWith(q)) { s += 30; break; }
       }
-      // Last resort: single word anywhere in keywords or summary
+      // 最后兜底：单词只要出现在 keywords 或 summary 任意位置即可
       if (s === 0 && keywords.indexOf(q) !== -1) s += 18;
       if (s === 0 && summary.indexOf(q)  !== -1) s += 12;
     }
@@ -650,7 +649,7 @@
     return results.slice(0, MAX_RESULTS).map(function (r) { return r.item; });
   }
 
-  // ── Utilities ────────────────────────────────────────────────────────
+  // ── 工具函数 ─────────────────────────────────────────────────────────
   function escHtml(str) {
     var d = document.createElement('div');
     d.textContent = (str == null) ? '' : String(str);
@@ -658,8 +657,8 @@
   }
 
   /**
-   * Highlight the first occurrence of `query` (or its first matching word)
-   * inside `text`. Returns an HTML-safe string with a <mark> around the match.
+   * 在 `text` 中高亮 `query` 的首次出现位置（或第一个匹配到的查询词）。
+   * 返回的是 HTML 安全字符串，并在命中处包裹 <mark>。
    */
   function highlight(text, query) {
     if (!text) return '';
@@ -671,7 +670,7 @@
     var matchLen = q.length;
 
     if (idx === -1) {
-      // Try each word individually
+      // 逐个尝试每个单词
       var words = q.split(/\s+/).filter(Boolean);
       for (var i = 0; i < words.length; i++) {
         idx = lower.indexOf(words[i]);
@@ -694,22 +693,30 @@
     return (cut.length > max * 0.6 ? cut : str.slice(0, max)) + '…';
   }
 
-  // ── Palette DOM (created lazily on first open) ────────────────────────
+  // ── 面板 DOM（首次打开时延迟创建） ───────────────────────────────────
   function createPaletteDOM() {
     if (document.getElementById(PALETTE_ID)) return;
 
-    // Detect platform for the footer shortcut hint
+    // 识别平台，用于页脚快捷键提示
     var isMac = /Mac|iPhone|iPod|iPad/.test(
       (navigator.userAgentData && navigator.userAgentData.platform) ||
       navigator.platform || ''
     );
     var shortcutLabel = isMac ? '⌘K' : 'Ctrl+K';
+    var paletteLabel = currentLang() === 'zh' ? '搜索学习路径、课程与术语表' : 'Search learning paths, lessons, and glossary';
+    var searchPlaceholder = currentLang() === 'zh' ? '搜索学习路径、课程与术语表…' : 'Search paths, lessons, and glossary…';
+    var searchLabel = currentLang() === 'zh' ? '搜索' : 'Search';
+    var closeSearchLabel = currentLang() === 'zh' ? '关闭搜索' : 'Close search';
+    var resultsLabel = currentLang() === 'zh' ? '搜索结果' : 'Search results';
+    var navigateLabel = currentLang() === 'zh' ? '切换' : 'navigate';
+    var openLabel = currentLang() === 'zh' ? '打开' : 'open';
+    var closeLabel = currentLang() === 'zh' ? '关闭' : 'close';
 
     var el = document.createElement('div');
     el.id = PALETTE_ID;
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Search learning paths, lessons, and glossary');
+    el.setAttribute('aria-label', paletteLabel);
     el.setAttribute('aria-hidden', 'true');
     el.inert = true;
 
@@ -724,29 +731,29 @@
             '<line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
           '</svg>' +
           '<input class="cp-input" id="cpInput" type="search"' +
-          ' placeholder="Search paths, lessons, and glossary…"' +
+          ' placeholder="' + escHtml(searchPlaceholder) + '"' +
           ' autocomplete="off" autocorrect="off"' +
           ' autocapitalize="off" spellcheck="false"' +
-          ' role="combobox" aria-label="Search" aria-autocomplete="list"' +
+          ' role="combobox" aria-label="' + escHtml(searchLabel) + '" aria-autocomplete="list"' +
           ' aria-haspopup="listbox" aria-expanded="false"' +
           ' aria-controls="cpResults">' +
           '<button class="cp-kbd-esc" id="cpClose" type="button"' +
-          ' aria-label="Close search">Esc</button>' +
+          ' aria-label="' + escHtml(closeSearchLabel) + '">Esc</button>' +
         '</div>' +
         '<ul class="cp-results" id="cpResults"' +
-        ' role="listbox" aria-label="Search results"></ul>' +
+        ' role="listbox" aria-label="' + escHtml(resultsLabel) + '"></ul>' +
         '<div class="cp-footer">' +
           '<span class="cp-footer-group">' +
             '<kbd>↑</kbd><kbd>↓</kbd>' +
-            '<span class="cp-footer-label">navigate</span>' +
+            '<span class="cp-footer-label">' + escHtml(navigateLabel) + '</span>' +
           '</span>' +
           '<span class="cp-footer-group">' +
             '<kbd>↵</kbd>' +
-            '<span class="cp-footer-label">open</span>' +
+            '<span class="cp-footer-label">' + escHtml(openLabel) + '</span>' +
           '</span>' +
           '<span class="cp-footer-group">' +
             '<kbd>Esc</kbd>' +
-            '<span class="cp-footer-label">close</span>' +
+            '<span class="cp-footer-label">' + escHtml(closeLabel) + '</span>' +
           '</span>' +
           '<span class="cp-footer-shortcut">' + shortcutLabel + '</span>' +
         '</div>' +
@@ -754,7 +761,7 @@
 
     document.body.appendChild(el);
 
-    // Wire up internal interactions
+    // 绑定内部交互
     document.getElementById('cpBackdrop').addEventListener('click', close);
     document.getElementById('cpClose').addEventListener('click', close);
     el.addEventListener('keydown', _onDialogKeyDown);
@@ -773,10 +780,10 @@
     if (input) input.removeAttribute('aria-activedescendant');
   }
 
-  // ── Open / close ─────────────────────────────────────────────────────
+  // ── 打开 / 关闭 ──────────────────────────────────────────────────────
   function open() {
     if (_isOpen) {
-      // Already open — make sure the input is focused
+      // 已经打开时，只需确保输入框获得焦点
       var inp = _inputEl();
       if (inp) inp.focus();
       return;
@@ -823,16 +830,16 @@
     _clearActiveDescendant();
     document.body.removeAttribute(BODY_ATTR);
 
-    // Return focus to wherever the user was before
+    // 焦点还给用户打开面板前所在的位置
     try {
       if (_prevFocus && typeof _prevFocus.focus === 'function') {
         _prevFocus.focus();
       }
-    } catch (_) { /* element may have been removed from DOM */ }
+    } catch (_) { /* 元素可能已经从 DOM 中移除 */ }
     _prevFocus = null;
   }
 
-  // ── Render results ───────────────────────────────────────────────────
+  // ── 渲染结果 ─────────────────────────────────────────────────────────
   function renderResults(results) {
     var list = _listEl();
     if (!list) return;
@@ -892,7 +899,7 @@
         chip = t('Learning path');
         chipClass += ' cp-item-chip--alt';
       } else if (r.kind === 'lesson') {
-        // Prefer the in-site reader; fall back to GitHub URL
+        // 优先跳到站内阅读器；否则退回到 GitHub URL
         dest = r.lessonPath
           ? 'lesson?path=' + encodeURIComponent(r.lessonPath)
           : r.url;
@@ -906,7 +913,7 @@
         chip = r.examCode || 'Certification';
         chipClass += ' cp-item-chip--alt';
       } else if (r.kind === 'artifact') {
-        // Jump to the lesson that produced this artifact
+        // 跳到产出该 artifact 的 lesson
         dest = r.lessonPath
           ? 'lesson?path=' + encodeURIComponent(r.lessonPath)
           : ('https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/' + r.file);
@@ -914,8 +921,8 @@
         chip = t(ak.charAt(0).toUpperCase() + ak.slice(1));
         chipClass += ' cp-item-chip--alt';
       } else {
-        // Prefer the canonical term anchor. Legacy generated data falls back
-        // to the exact-name query until the next site build.
+        // 优先使用标准术语锚点。旧版生成数据则回退到 exact-name 查询，
+        // 直到下一次 site build 为止。
         dest      = r.slug
           ? 'glossary.html#' + encodeURIComponent(r.slug)
           : 'glossary.html?q=' + encodeURIComponent(r.displayName || r.name);
@@ -968,7 +975,7 @@
     _activeIdx = -1;
     _clearActiveDescendant();
 
-    // Attach interaction handlers
+    // 绑定交互处理器
     var items = list.querySelectorAll('.cp-item');
     for (var j = 0; j < items.length; j++) {
       items[j].addEventListener('click',     _onItemClick);
@@ -976,7 +983,7 @@
     }
   }
 
-  // ── Event handlers ───────────────────────────────────────────────────
+  // ── 事件处理 ─────────────────────────────────────────────────────────
   function _onInput(e) {
     var query = e.target.value;
     renderResults(search(query));
@@ -1073,13 +1080,13 @@
     window.location.href = navigationDestination(href);
   }
 
-  // ── Global keyboard shortcut (Cmd/Ctrl+K) ────────────────────────────
+  // ── 全局键盘快捷键（Cmd/Ctrl+K） ────────────────────────────────────
   if (typeof document !== 'undefined') {
     document.addEventListener('keydown', function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         if (_isOpen) {
-          // Palette is already open — just refocus the input
+          // 面板已经打开时，只重新聚焦输入框
           var inp = _inputEl();
           if (inp) inp.focus();
         } else {
@@ -1089,9 +1096,9 @@
     });
   }
 
-  // ── Init: wire trigger buttons + eagerly build index ─────────────────
+  // ── 初始化：绑定触发按钮，并预先构建索引 ──────────────────────────────
   function _init() {
-    // Any element with [data-cmd-palette] opens the palette on click
+    // 任意带有 [data-cmd-palette] 的元素在点击时打开面板
     var triggers = document.querySelectorAll('[data-cmd-palette]');
     for (var i = 0; i < triggers.length; i++) {
       triggers[i].addEventListener('click', function (e) {
@@ -1100,11 +1107,10 @@
       });
     }
 
-    // Build the core index now so the first keystroke is instant. The Chinese
-    // overlay stays lazy until the user opens the palette. On lesson
-    // pages, certification-data.js is loaded on demand and may still be in
-    // flight. Rebuild after it settles so an early core-only cache cannot
-    // permanently hide certification tracks and lessons.
+    // 现在就构建核心索引，确保用户第一次输入时立即响应。中文覆盖层仍保持
+    // 延迟加载，直到用户真正打开面板。在 lesson 页面中，certification-data.js
+    // 是按需加载的，可能仍在请求中；等它稳定后重新构建索引，避免过早生成的
+    // 纯核心缓存永久隐藏 certification tracks 与 lessons。
     buildIndex();
 
     var certificationReady = window.__AIFS_CERTIFICATION_DATA_READY;
@@ -1113,8 +1119,8 @@
         rebuildIndex();
         refreshOpenPalette();
       }).catch(function () {
-        // Keep the already-built core index available when the optional
-        // certification bundle cannot be loaded.
+        // 如果可选的 certification bundle 加载失败，也保留已经构建好的
+        // 核心索引可用。
       });
     }
 
@@ -1139,7 +1145,7 @@
     }
   }
 
-  // ── Public API ────────────────────────────────────────────────────────
+  // ── 对外 API ────────────────────────────────────────────────────────
   if (typeof window !== 'undefined') {
     window.CmdPalette = { open: open, close: close };
   }

@@ -1,8 +1,8 @@
-/* figures-multimodal2.js — animated lesson figures for Phase 12 (multimodal AI),
-   second set. Loads after lesson-figures.js, uses the shared LF toolkit, and
-   registers via LF.register. No deps, ES5 only, theme via CSS vars. Each figure
-   is a self-running SMIL animation (no JS loops, no real compute). Authoring is
-   the same fenced ```figure block in docs/en.md. */
+/* figures-multimodal2.js — Phase 12（多模态 AI）的第二组动画课程图示。
+   在 lesson-figures.js 之后加载，使用共享的 LF 工具集，通过 LF.register 注册。
+   无依赖，仅 ES5，通过 CSS 变量实现主题。每个图示都是自动运行的 SMIL 动画
+   （无 JS 循环，无真实计算）。编写方式与 docs/en.md 中的
+   围栏 ```figure 代码块相同。*/
 (function () {
   'use strict';
   var LF = window.LF;
@@ -25,13 +25,13 @@
     host.classList.add('lf');
   }
 
-  // ── mm-patch-n-pack: variable-res images flow into one packed sequence ───────
+  // ── mm-patch-n-pack：变分辨率图像汇入一条打包序列 ────────
   function patchNPack(host) {
     var svg = svgFor(250), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)';
     var imgs = [
-      { x: 18, y: 30, w: 70, h: 54, n: 4, col: B },     // landscape, 4 patches
-      { x: 18, y: 96, w: 40, h: 80, n: 3, col: W },      // portrait, 3 patches
-      { x: 18, y: 188, w: 56, h: 40, n: 2, col: B }      // small, 2 patches
+      { x: 18, y: 30, w: 70, h: 54, n: 4, col: B },     // 横向图，4 个 patch
+      { x: 18, y: 96, w: 40, h: 80, n: 3, col: W },      // 纵向图，3 个 patch
+      { x: 18, y: 188, w: 56, h: 40, n: 2, col: B }      // 小图，2 个 patch
     ];
     svg.appendChild(txt(53, 18, 'variable-resolution images', 'middle', 'var(--ink-mute,#777)', 10));
     svg.appendChild(txt(360, 18, 'one packed sequence (block-diagonal mask)', 'middle', 'var(--ink-mute,#777)', 10));
@@ -50,7 +50,7 @@
         slot++;
       }
     });
-    // sequence track
+    // 序列轨道
     svg.appendChild(svgEl('rect', { x: seqX, y: 110, width: total * cw, height: 36, fill: 'none', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1' }));
     var s2;
     for (s2 = 1; s2 < total; s2++) {
@@ -62,26 +62,26 @@
       'Each image keeps its native aspect ratio and contributes its own count of patches: a wide chart, a tall receipt, a small icon. Patch-n-pack concatenates all of them into a single transformer sequence with a block-diagonal mask, so an image only attends to its own patches. No square-resize, no padding tokens wasted.');
   }
 
-  // ── mm-llava-projector: ViT patch dim 1024 maps through MLP to LLM dim 4096 ──
+  // ── mm-llava-projector：ViT patch 维度 1024 经 MLP 映射到 LLM 维度 4096 ──
   function llavaProjector(host) {
     var svg = svgFor(220), B = 'var(--blueprint,#3553ff)';
     svg.appendChild(txt(60, 20, 'ViT patches', 'middle', 'var(--ink-mute,#777)', 10));
     svg.appendChild(txt(260, 20, '2-layer MLP', 'middle', 'var(--ink-mute,#777)', 10));
     svg.appendChild(txt(450, 20, 'LLM tokens', 'middle', 'var(--ink-mute,#777)', 10));
     var i;
-    // left: short vectors (dim 1024)
+    // 左侧：短向量（dim 1024）
     for (i = 0; i < 4; i++) {
       var ly = 50 + i * 38;
       svg.appendChild(svgEl('rect', { x: 30, y: ly, width: 60, height: 14, fill: B, 'fill-opacity': '0.7' }));
     }
     svg.appendChild(txt(60, 200, 'dim 1024', 'middle', 'var(--ink-soft,#555)', 10));
-    // mlp box with pulsing fill
+    // MLP 方框，带脉动填充
     var mlp = svgEl('rect', { x: 200, y: 50, width: 120, height: 142, rx: '4', fill: B, 'fill-opacity': '0.12', stroke: B, 'stroke-width': '1.4' });
     mlp.appendChild(anim('fill-opacity', '0.10;0.30;0.10', '0;0.5;1', '2.4s'));
     svg.appendChild(mlp);
     svg.appendChild(txt(260, 116, '1024 -> 4096', 'middle', B, 11));
     svg.appendChild(txt(260, 132, 'GELU -> 4096', 'middle', B, 11));
-    // flowing token along path into the LLM
+    // 沿路径流向 LLM 的 token
     for (i = 0; i < 4; i++) {
       var sy = 57 + i * 38, ey = 57 + i * 38;
       var p = svgEl('circle', { r: '4', fill: B });
@@ -89,7 +89,7 @@
       p.appendChild(mo);
       svg.appendChild(p);
     }
-    // right: long vectors (dim 4096)
+    // 右侧：长向量（dim 4096）
     for (i = 0; i < 4; i++) {
       var ry = 50 + i * 38;
       svg.appendChild(svgEl('rect', { x: 400, y: ry, width: 100, height: 14, fill: B, 'fill-opacity': '0.85' }));
@@ -100,7 +100,7 @@
       'LLaVA replaced the Q-Former bottleneck with the simplest possible bridge: a 2-layer MLP that maps each frozen ViT patch embedding from the vision dimension up to the language model embedding dimension. Every patch becomes one token the LLM reads in its own input sequence, trained directly on the language-model loss. Simpler won.');
   }
 
-  // ── mm-mrope-axes: three rotary axes (time, height, width) spin at own rate ──
+  // ── mm-mrope-axes：三个旋转轴（时间、高度、宽度）以各自速率旋转 ──
   function mropeAxes(host) {
     var svg = svgFor(220), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)';
     var axes = [
@@ -125,19 +125,19 @@
       'Qwen2-VL gives every token a three-part position and rotates each part on its own axis: temporal, height, and width. The temporal axis turns slowly so a frame an hour later still sits at a distinct phase, while the spatial axes turn faster to encode a patch grid. One absolute-table-free scheme covers a single image, a multi-image batch, and a long video at once.');
   }
 
-  // ── mm-video-token-budget: rising FPS multiplies tokens past the context line ─
+  // ── mm-video-token-budget：升高的 FPS 让 token 数越过上下文线 ─
   function videoTokenBudget(host) {
     var svg = svgFor(230), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)';
     var PAD = 40, W0 = 520, H0 = 230, baseY = 190, topY = 30;
     svg.appendChild(svgEl('line', { x1: PAD, y1: baseY, x2: W0 - 20, y2: baseY, stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1' }));
     svg.appendChild(svgEl('line', { x1: PAD, y1: baseY, x2: PAD, y2: topY, stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1' }));
-    // context window ceiling line
+    // 上下文窗口上限线
     var ceil = 78;
     svg.appendChild(svgEl('line', { x1: PAD, y1: ceil, x2: W0 - 20, y2: ceil, stroke: W, 'stroke-width': '1.2', 'stroke-dasharray': '5 4' }));
     svg.appendChild(txt(W0 - 24, ceil - 5, 'context limit', 'end', W, 10));
     svg.appendChild(txt(PAD - 6, topY + 6, 'tokens', 'end', 'var(--ink-mute,#777)', 9));
     svg.appendChild(txt(W0 - 20, baseY + 16, 'frames per second', 'end', 'var(--ink-mute,#777)', 10));
-    // growing bars, heights animate up to show multiplication with FPS
+    // 增长的柱条，高度向上动画，展示随 FPS 倍增
     var fps = [1, 2, 4, 8, 16], bw = 56, gap = 30;
     fps.forEach(function (f, i) {
       var bx = PAD + 24 + i * (bw + gap);
@@ -155,12 +155,12 @@
       'Visual tokens scale with sampled frames, and frames scale with FPS times duration. Doubling the sampling rate doubles the token count, so an hour-long clip races past any fixed context window. The three escape routes are brute-force million-token context, ring attention split across devices, and aggressive pooling or agentic retrieval that never loads the whole video at once.');
   }
 
-  // ── mm-action-tokens: continuous joint signal snaps into 256 discrete bins ───
+  // ── mm-action-tokens：连续关节信号被切分为 256 个离散桶 ──
   function actionTokens(host) {
     var svg = svgFor(220), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)';
     var PAD = 40, W0 = 520, midY = 96;
     svg.appendChild(txt(W0 / 2, 20, 'continuous joint target -> discrete action token', 'middle', 'var(--ink-mute,#777)', 10));
-    // continuous sine path (joint angle over time)
+    // 连续正弦路径（关节角随时间变化）
     var d = '', i;
     for (i = 0; i <= 120; i++) {
       var x = PAD + (W0 - 2 * PAD) * i / 120;
@@ -168,13 +168,13 @@
       d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
     }
     svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: 'var(--rule-soft,#ccc)', 'stroke-width': '1.5' }));
-    // horizontal bin gridlines
+    // 水平的分桶网格线
     var b;
     for (b = -2; b <= 2; b++) {
       var by = midY + b * 23;
       svg.appendChild(svgEl('line', { x1: PAD, y1: by, x2: W0 - PAD, y2: by, stroke: 'var(--rule-soft,#eee)', 'stroke-width': '0.8' }));
     }
-    // sampling points that snap from the curve to the nearest bin
+    // 采样点从曲线吸附到最近的桶
     var samples = [10, 30, 50, 70, 90, 110];
     samples.forEach(function (si, k) {
       var x = PAD + (W0 - 2 * PAD) * si / 120;
@@ -196,10 +196,10 @@
       'A vision-language-action model has to emit motor commands, but a transformer speaks in tokens. RT-2 discretizes each normalized joint target into one of 256 bins and maps the bin to a vocabulary ID, so a 10-DOF action becomes ten ordinary tokens. The same decoder that captions an image now writes a control trajectory, which is what lets web-scale knowledge transfer to the robot.');
   }
 
-  // ── mm-doc-layout: a page resolves into typed layout regions one by one ──────
+  // ── mm-doc-layout：一张页面逐个解析为带类型的布局区域 ─────
   function docLayout(host) {
     var svg = svgFor(250), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)', G = 'var(--ink-mute,#999)';
-    // page outline
+    // 页面轮廓
     svg.appendChild(svgEl('rect', { x: 150, y: 20, width: 220, height: 210, fill: 'var(--bg,#fafaf5)', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1.2' }));
     svg.appendChild(txt(260, 14, 'OCR-free model emits typed regions', 'middle', 'var(--ink-mute,#777)', 10));
     var regions = [
@@ -228,7 +228,7 @@
       'A document is not a photo. Title, body text, figures, and tables each carry meaning from where they sit on the page. OCR-free models like Donut and Nougat read the page image and emit structured markup directly, while layout-aware encoders fuse three input streams at once: the text content, the bounding-box layout, and the image patches. The position of "Total: $1,245" is part of the answer.');
   }
 
-  // ── mm-maxsim: query terms each grab their best-matching page patch ──────────
+  // ── mm-maxsim：每个 query term 各自抓取匹配度最高的页面 patch ──────────
   function maxSim(host) {
     var svg = svgFor(240), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)';
     svg.appendChild(txt(110, 18, 'query term vectors', 'middle', 'var(--ink-mute,#777)', 10));
@@ -244,20 +244,20 @@
     patches.forEach(function (p) {
       svg.appendChild(svgEl('rect', { x: p.x, y: p.y, width: 26, height: 26, fill: B, 'fill-opacity': '0.12', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '0.6' }));
     });
-    var best = [5, 10, 14]; // each query term's argmax patch index
+    var best = [5, 10, 14]; // 每个 query term 的 argmax patch 索引
     var terms = ['Q3', 'revenue', 'chart'];
     qY.forEach(function (y, k) {
       svg.appendChild(svgEl('circle', { cx: qX, cy: y, r: '7', fill: W, 'fill-opacity': '0.85' }));
       svg.appendChild(txt(qX - 14, y + 4, terms[k], 'end', 'var(--ink-soft,#555)', 10));
       var tp = patches[best[k]];
       var tx = tp.x + 13, ty = tp.y + 13;
-      // connector line that grows from query to its MaxSim patch
+      // 从 query 延伸到 MaxSim patch 的连接线
       var ln = svgEl('line', { x1: qX, y1: y, x2: qX, y2: y, stroke: W, 'stroke-width': '1.6', 'stroke-opacity': '0.7' });
       var bg = (k * 0.6).toFixed(2) + 's';
       ln.appendChild(anim('x2', qX + ';' + tx, '0;1', '3s', { begin: bg, fill: 'freeze' }));
       ln.appendChild(anim('y2', y + ';' + ty, '0;1', '3s', { begin: bg, fill: 'freeze' }));
       svg.appendChild(ln);
-      // patch lights up as MaxSim winner
+      // patch 点亮为 MaxSim 胜者
       var winner = svgEl('rect', { x: tp.x, y: tp.y, width: 26, height: 26, fill: W, 'fill-opacity': '0', stroke: W, 'stroke-width': '1.6', 'stroke-opacity': '0' });
       winner.appendChild(anim('fill-opacity', '0;0;0.55;0.55', '0;0.7;0.85;1', '3s', { begin: bg }));
       winner.appendChild(anim('stroke-opacity', '0;0;1;1', '0;0.7;0.85;1', '3s', { begin: bg }));
@@ -269,7 +269,7 @@
       'Text-RAG collapses a page into one vector and loses charts and tables. ColPali keeps one vector per image patch and one per query term, then scores by MaxSim: each query term takes the maximum similarity over all page patches, and the page score is the sum of those maxima. A query about a chart can latch onto the exact patch that holds it, with no OCR step in between.');
   }
 
-  // ── mm-agent-loop: perceive -> reason -> act -> observe cycles forever ───────
+  // ── mm-agent-loop：perceive -> reason -> act -> observe 循环往复 ───────
   function agentLoop(host) {
     var svg = svgFor(240), B = 'var(--blueprint,#3553ff)', W = 'var(--warn,#b8870f)';
     var CX = 260, CY = 130, R = 78;
@@ -280,7 +280,7 @@
       { a: 180, lab: 'observe', sub: 'new state' }
     ];
     svg.appendChild(txt(CX, 20, 'multimodal agent loop', 'middle', 'var(--ink-mute,#777)', 11));
-    // ring
+    // 环形
     svg.appendChild(svgEl('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: 'var(--rule-soft,#ddd)', 'stroke-width': '1.2', 'stroke-dasharray': '4 4' }));
     var pts = nodes.map(function (n) {
       var rad = n.a * Math.PI / 180;
@@ -294,7 +294,7 @@
       svg.appendChild(txt(p.x.toFixed(1), ly.toFixed(1), p.lab, 'middle', 'var(--ink-soft,#555)', 11));
       svg.appendChild(txt(p.x.toFixed(1), (ly + (p.y < CY ? -12 : 13)).toFixed(1), p.sub, 'middle', 'var(--ink-mute,#999)', 9));
     });
-    // a token traveling around the cycle clockwise
+    // 一个沿环路顺时针行进的 token
     var path = 'M ' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1) +
       ' A ' + R + ' ' + R + ' 0 0 1 ' + pts[1].x.toFixed(1) + ' ' + pts[1].y.toFixed(1) +
       ' A ' + R + ' ' + R + ' 0 0 1 ' + pts[2].x.toFixed(1) + ' ' + pts[2].y.toFixed(1) +

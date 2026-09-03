@@ -1,9 +1,9 @@
 /**
- * Local-only progress tracker.
+ * 仅保存在本地的学习进度跟踪器。
  *
- * Stores everything in the learner's browser. No account, server, or network
- * request is involved. Version 2 keeps lesson work and quiz understanding as
- * separate signals while preserving version 1 completion history.
+ * 所有数据都存放在学习者自己的浏览器里，不依赖账号、服务端或网络请求。
+ * Version 2 把课程实践进度和测验理解情况拆成两类信号，同时保留 Version 1
+ * 的完成历史。
  *
  *   aifs:progress:v2 = {
  *     schemaVersion: 2,
