@@ -170,22 +170,22 @@ def main():
     rng = random.Random(7)
     theta, w, log = actor_critic(episodes, lam=0.95, rng=rng)
 
-    print(f"=== A2C-style actor-critic with GAE(lam=0.95) on 4x4 GridWorld ===")
+    print("=== 4x4 GridWorld 上结合 GAE(lam=0.95) 的 A2C 风格 Actor-Critic ===")
     print()
-    print(f"learning curve (mean return per 150 episodes):")
+    print("学习曲线（每 150 个回合的平均回报）：")
     for i, m in enumerate(block_mean(log, 150)):
-        print(f"  block {i+1}: mean return = {m:6.2f}")
+        print(f"  分组 {i+1}：平均回报 = {m:6.2f}")
 
     print()
     print_policy(greedy_policy(theta), "greedy policy from actor")
     print()
-    print("critic values V_phi(s):")
+    print("Critic 价值 V_phi(s)：")
     for r in range(GRID):
         row = " ".join(f"{value(w, features((r, c))):7.2f}" for c in range(GRID))
         print("   " + row)
 
     print()
-    print(f"final mean return (last 150 eps) = {sum(log[-150:]) / 150:.2f}  (optimal = -6.0)")
+    print(f"最终平均回报（最后 150 个回合）= {sum(log[-150:]) / 150:.2f}  （最优值 = -6.0）")
 
 
 if __name__ == "__main__":
