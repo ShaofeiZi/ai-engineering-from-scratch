@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the localized book transform contract."""
+"""本地化图书转换契约的回归测试。"""
 
 import hashlib
 import json
@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD_BOOK = ROOT / "scripts" / "build_book.py"
 sys.path.insert(0, str(ROOT / "scripts"))
 import build_book  # noqa: E402
+import translate_lessons  # noqa: E402
 
 
 TEST_VOLUME = {
@@ -129,7 +130,7 @@ Practice.
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("docs/zh.md", result.stderr)
-        self.assertIn("expected 3 H2 headings, found 2", result.stderr)
+        self.assertIn("预期 3 个 H2 标题，实际为 2 个", result.stderr)
 
     def test_extra_h2_prevents_build(self) -> None:
         canonical = """# Lesson
@@ -155,7 +156,7 @@ Practice.
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("docs/zh.md", result.stderr)
-        self.assertIn("expected 3 H2 headings, found 4", result.stderr)
+        self.assertIn("预期 3 个 H2 标题，实际为 4 个", result.stderr)
 
     def test_equal_count_h2_replacement_prevents_role_misalignment(self) -> None:
         localized = """# 课程
@@ -172,7 +173,7 @@ Practice.
         result = run_transform_fixture(self.CANONICAL, localized)
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("H2 section mismatch", result.stderr)
+        self.assertIn("H2 章节不匹配", result.stderr)
         self.assertIn("Ship It", result.stderr)
 
     def test_reordered_h2_sections_prevent_role_misalignment(self) -> None:
@@ -190,7 +191,7 @@ Practice.
         result = run_transform_fixture(self.CANONICAL, localized)
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("H2 section mismatch", result.stderr)
+        self.assertIn("H2 章节不匹配", result.stderr)
         self.assertIn("Ship It", result.stderr)
 
     def test_localized_h2_titles_keep_canonical_roles(self) -> None:
@@ -296,7 +297,7 @@ References.
         )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("H2 section mismatch", result.stderr)
+        self.assertIn("H2 章节不匹配", result.stderr)
 
 
 class BookMetadataLanguageTest(unittest.TestCase):
@@ -334,6 +335,21 @@ class BookMetadataLanguageTest(unittest.TestCase):
                     line for line in metadata_text.splitlines() if line.startswith("lang:")
                 ]
                 self.assertEqual(lang_lines, [f"lang: {book_lang}"])
+
+    def test_titlepage_template_uses_english_copy_for_english_pdf(self) -> None:
+        template = build_book.titlepage_template("en")
+
+        self.assertIn("REFERENCE\\ MANUAL", template)
+        self.assertIn("AI\\ ENGINEERING", template)
+        self.assertIn("FROM\\ SCRATCH.", template)
+        self.assertNotIn("参考手册", template)
+        self.assertNotIn("从零开始", template)
+
+    def test_titlepage_template_keeps_chinese_copy_for_chinese_pdf(self) -> None:
+        template = build_book.titlepage_template("zh")
+
+        self.assertIn("参考手册", template)
+        self.assertIn("从零开始。", template)
 
 
 class BookTranslationCoverageTest(unittest.TestCase):
@@ -381,7 +397,7 @@ class BookTranslationCoverageTest(unittest.TestCase):
         with mock.patch.object(
             build_book, "translation_coverage", return_value=(0, 12)
         ), self.assertRaisesRegex(
-            SystemExit, "no zh lesson translations found"
+            SystemExit, "未找到 zh 课程译文"
         ):
             build_book.require_translation_coverage(TEST_VOLUME, "zh")
 
@@ -389,7 +405,7 @@ class BookTranslationCoverageTest(unittest.TestCase):
         with mock.patch.object(
             build_book, "translation_coverage", return_value=(9, 12)
         ), self.assertRaisesRegex(
-            SystemExit, r"incomplete zh translation coverage \(9/12\)"
+            SystemExit, r"zh 翻译覆盖不完整 \(9/12\)"
         ):
             build_book.require_translation_coverage(TEST_VOLUME, "zh")
 
@@ -403,6 +419,29 @@ class BookTranslationCoverageTest(unittest.TestCase):
 class BookTranslationProvenanceTest(unittest.TestCase):
     MANUAL_SOURCE = "# English title\n\n## Build It\n\nExplain the source.\n"
     MANUAL_TRANSLATION = "# 中文标题\n\n## 构建它\n\n解释源内容。\n"
+
+    def setUp(self) -> None:
+        self._language_registry = dict(translate_lessons.LANGUAGE_REGISTRY)
+        self._lang_names = dict(translate_lessons.LANG_NAMES)
+        self._nllb_codes = dict(translate_lessons.NLLB_CODES)
+        spanish = {
+            "code": "es",
+            "name": "Spanish",
+            "native": "Español",
+            "nllb": "spa_Latn",
+            "ci": True,
+        }
+        translate_lessons.LANGUAGE_REGISTRY["es"] = spanish
+        translate_lessons.LANG_NAMES["es"] = spanish["name"]
+        translate_lessons.NLLB_CODES["es"] = spanish["nllb"]
+
+    def tearDown(self) -> None:
+        translate_lessons.LANGUAGE_REGISTRY.clear()
+        translate_lessons.LANGUAGE_REGISTRY.update(self._language_registry)
+        translate_lessons.LANG_NAMES.clear()
+        translate_lessons.LANG_NAMES.update(self._lang_names)
+        translate_lessons.NLLB_CODES.clear()
+        translate_lessons.NLLB_CODES.update(self._nllb_codes)
 
     def test_english_build_skips_translation_provenance(self) -> None:
         with mock.patch.dict(sys.modules, {"audit_translations": None}):

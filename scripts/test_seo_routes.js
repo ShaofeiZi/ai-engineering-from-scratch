@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const lessonApi = require('../api/lesson');
+const markdownApi = require('../api/markdown');
 const certificationApi = require('../api/certification');
 
 function makeAssets() {
@@ -33,6 +34,12 @@ function makeAssets() {
             fromTrackIds: ['claude-example'],
             sourceUrl: 'https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/phases/01-math/01-vectors',
             canonicalUrl: 'https://aiengineeringfromscratch.com/lesson?path=phases%2F01-math%2F01-vectors',
+            zh: {
+              title: '向量与矩阵 - 数学基础',
+              seoTitle: '向量与矩阵 - AI Engineering from Scratch',
+              description: '从第一性原理构建向量运算。',
+              excerpt: '理解方向与大小如何成为有用的模型输入。',
+            },
           },
           'phases/07-transformers/09-vectors': {
             path: 'phases/07-transformers/09-vectors',
@@ -46,6 +53,12 @@ function makeAssets() {
             learningPathIds: [],
             fromTrackIds: [],
             canonicalUrl: 'https://aiengineeringfromscratch.com/lesson?path=phases%2F07-transformers%2F09-vectors',
+            zh: {
+              title: '向量与矩阵 - Transformer 深入',
+              seoTitle: 'Transformer 中的向量与矩阵',
+              description: '在 Transformer 表示中应用向量运算。',
+              excerpt: '把向量几何与注意力和表示学习联系起来。',
+            },
           },
           'certifications/claude/lessons/01-models': {
             path: 'certifications/claude/lessons/01-models',
@@ -129,22 +142,140 @@ test('lesson route renders unique crawlable HTML with a path-only canonical', fu
   const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
   const response = invoke(handler, {
     method: 'GET',
-    url: '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math&lang=hi',
-    query: { path: 'phases/01-math/01-vectors', learningPath: 'math', lang: 'hi' },
+    url: '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math',
+    query: { path: 'phases/01-math/01-vectors', learningPath: 'math' },
   });
 
   assert.equal(response.statusCode, 200);
   assert.match(response.headers['cache-control'], /s-maxage=86400/);
-  assert.match(response.body, /<title>Vectors &amp; Matrices - AI Engineering from Scratch<\/title>/);
+  assert.match(response.body, /<title>向量与矩阵 - AI Engineering from Scratch<\/title>/);
   assert.match(response.body, /rel="canonical" href="https:\/\/aiengineeringfromscratch\.com\/lesson\?path=phases%2F01-math%2F01-vectors"/);
   assert.doesNotMatch(response.body, /canonical"[^>]+learningPath=/);
   assert.equal((response.body.match(/<h1(?:\s|>)/g) || []).length, 1);
-  assert.match(response.body, /<h1>Vectors &amp; &lt;Matrices&gt; - Math Foundations<\/h1>/);
+  assert.match(response.body, /<h1>向量与矩阵 - 数学基础<\/h1>/);
   assert.match(response.body, /"@type":"LearningResource"/);
   assert.match(response.body, /"@type":"BreadcrumbList"/);
   assert.doesNotMatch(response.body, /"@type":"Person"|#person|rohitghumare\.com/);
   assert.doesNotMatch(response.body, /<script>Vectors/);
   assert.match(response.body, /path=phases%2F01-math%2F02-calculus/);
+});
+
+test('course lesson route strips language overrides and emits Chinese metadata', function () {
+  const assets = makeAssets();
+  assets.lesson.manifest.lessons['phases/01-math/01-vectors'].zh = {
+    title: '向量与矩阵',
+    description: '从第一性原理学习向量与矩阵。',
+  };
+  const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
+  const redirected = invoke(handler, {
+    method: 'GET',
+    url: '/lesson?path=phases%2F01-math%2F01-vectors&lang=en',
+  });
+  assert.equal(redirected.statusCode, 308);
+  assert.equal(redirected.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors');
+
+  const response = invoke(handler, { method: 'GET', query: { path: 'phases/01-math/01-vectors' } });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /<html lang="zh-CN"/);
+  assert.match(response.body, /<title>向量与矩阵 - AI Engineering from Scratch<\/title>/);
+  assert.match(response.body, /"inLanguage":"zh-CN"/);
+  assert.match(response.body, /从第一性原理学习向量与矩阵。/);
+});
+
+test('course lesson SSR fails closed in Chinese when localized metadata is missing', function () {
+  const assets = makeAssets();
+  delete assets.lesson.manifest.lessons['phases/01-math/01-vectors'].zh;
+  const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
+  const response = invoke(handler, { method: 'GET', query: { path: 'phases/01-math/01-vectors' } });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /<html lang="zh-CN"/);
+  assert.match(response.body, /<title>中文课程 - AI Engineering from Scratch<\/title>/);
+  assert.match(response.body, /<h1>中文课程暂不可用<\/h1>/);
+  assert.match(response.body, /"name":"AI Engineering from Scratch 中文课程"/);
+  assert.match(response.body, /下一课/);
+  assert.doesNotMatch(response.body, /Vectors|Matrices|Math Foundations|Build vector operations|direction and magnitude|Previous|Next|Calculus/);
+});
+
+test('course lesson SSR does not fill partial Chinese metadata with English fields', function () {
+  const assets = makeAssets();
+  assets.lesson.manifest.lessons['phases/01-math/01-vectors'].zh = { title: '向量与矩阵' };
+  const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
+  const response = invoke(handler, { method: 'GET', query: { path: 'phases/01-math/01-vectors' } });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /<title>向量与矩阵 - AI Engineering from Scratch<\/title>/);
+  assert.match(response.body, /<h1>向量与矩阵<\/h1>/);
+  assert.match(response.body, /下一课/);
+  assert.doesNotMatch(response.body, /Vectors|Matrices|Math Foundations|Build vector operations|direction and magnitude|Previous|Next|Calculus/);
+});
+
+test('certification lesson route remains English-only', function () {
+  const assets = makeAssets();
+  const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
+  const response = invoke(handler, {
+    method: 'GET',
+    query: { path: 'certifications/claude/lessons/01-models', track: 'claude-example' },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /<html lang="en"/);
+  assert.match(response.body, /"inLanguage":"en"/);
+  assert.match(response.body, /Model Decisions/);
+  assert.match(response.body, /Independent Claude Certification Preparation/);
+  assert.match(response.body, /Choose model boundaries from requirements and evidence/);
+  assert.match(response.body, /Next &rarr;/);
+  assert.match(response.body, /Tool Decisions/);
+  assert.doesNotMatch(response.body, /[\p{Script=Han}]/u);
+  assert.doesNotMatch(response.body, /中文课程|课程目录|切换主题|测试你的理解/);
+});
+
+test('lesson errors use Chinese for course requests and English for certification requests', function () {
+  const assets = makeAssets();
+  const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
+
+  for (const response of [
+    invoke(handler, { method: 'GET', query: { path: 'invalid' } }),
+    invoke(handler, { method: 'GET', query: { path: 'phases/01-math/99-missing' } }),
+  ]) {
+    assert.equal(response.statusCode, 404);
+    assert.match(response.body, /<html lang="zh-CN"/);
+    assert.match(response.body, /未找到课程/);
+    assert.doesNotMatch(response.body, /Lesson not found|Course catalog|Recovery links/);
+  }
+
+  const brokenCourseAssets = makeAssets();
+  brokenCourseAssets.lesson.template = '<!DOCTYPE html><html><body>marker missing</body></html>';
+  const brokenCourse = invoke(
+    lessonApi.createHandler({ loadAssets: function () { return brokenCourseAssets.lesson; } }),
+    { method: 'GET', query: { path: 'phases/01-math/01-vectors' } }
+  );
+  assert.equal(brokenCourse.statusCode, 500);
+  assert.match(brokenCourse.body, /<html lang="zh-CN"/);
+  assert.match(brokenCourse.body, /课程页面暂不可用/);
+
+  for (const response of [
+    invoke(handler, { method: 'GET', query: { path: 'certifications/claude/lessons/99-missing' } }),
+    invoke(handler, { method: 'GET', query: { path: 'certifications/claude/lessons/../secret' } }),
+  ]) {
+    assert.equal(response.statusCode, 404);
+    assert.match(response.body, /<html lang="en"/);
+    assert.match(response.body, /Lesson not found/);
+    assert.doesNotMatch(response.body, /未找到课程|课程目录/);
+  }
+
+  const brokenCertificationAssets = makeAssets();
+  brokenCertificationAssets.lesson.template = '<!DOCTYPE html><html><body>marker missing</body></html>';
+  const brokenCertification = invoke(
+    lessonApi.createHandler({ loadAssets: function () { return brokenCertificationAssets.lesson; } }),
+    {
+      method: 'GET',
+      query: { path: 'certifications/claude/lessons/01-models', track: 'claude-example' },
+    }
+  );
+  assert.equal(brokenCertification.statusCode, 200);
+  assert.match(brokenCertification.body, /<html lang="en"/);
+  assert.match(brokenCertification.body, /Model Decisions/);
+  assert.doesNotMatch(brokenCertification.body, /[\p{Script=Han}]/u);
 });
 
 test('lesson route keeps certification navigation inside the selected track', function () {
@@ -171,8 +302,8 @@ test('lesson route disambiguates duplicate H1 values across pages', function () 
   const secondHeading = second.body.match(/<h1>(.*?)<\/h1>/)[1];
 
   assert.notEqual(firstHeading, secondHeading);
-  assert.equal(firstHeading, 'Vectors &amp; &lt;Matrices&gt; - Math Foundations');
-  assert.equal(secondHeading, 'Vectors &amp; &lt;Matrices&gt; - Transformers Deep Dive');
+  assert.equal(firstHeading, '向量与矩阵 - 数学基础');
+  assert.equal(secondHeading, '向量与矩阵 - Transformer 深入');
 });
 
 test('production lesson manifest yields one distinct server heading per URL', function () {
@@ -191,7 +322,7 @@ test('production lesson manifest yields one distinct server heading per URL', fu
   });
 });
 
-test('production lesson route preserves human-maintained languages from the registry', function () {
+test('production lesson route strips explicit language parameters', function () {
   const repoRoot = path.join(__dirname, '..');
   const registry = JSON.parse(fs.readFileSync(path.join(repoRoot, 'languages.json'), 'utf8'));
   const manualLanguage = registry.languages.find(function (language) {
@@ -214,8 +345,8 @@ test('production lesson route preserves human-maintained languages from the regi
     url: `/lesson?${query.toString()}`,
   });
 
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.headers.location, undefined);
+  assert.equal(response.statusCode, 308);
+  assert.equal(response.headers.location, `/lesson?path=${encodeURIComponent(lessonPath)}`);
 });
 
 test('legacy lesson route keeps one navigation mode plus language and local TTS state', function () {
@@ -237,7 +368,7 @@ test('legacy lesson route keeps one navigation mode plus language and local TTS 
   });
 
   assert.equal(response.statusCode, 308);
-  assert.equal(response.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math&lang=hi&ttsTest=silent');
+  assert.equal(response.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math&ttsTest=silent');
   assert.equal(response.body, '');
 });
 
@@ -249,7 +380,7 @@ test('lesson route normalizes unknown or unsupported query context before cachin
     url: '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math&lang=hi&ttsTest=silent&utm_source=random',
   });
   assert.equal(unknown.statusCode, 308);
-  assert.equal(unknown.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math&lang=hi');
+  assert.equal(unknown.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math');
   assert.equal(unknown.body, '');
 
   const unsupported = invoke(handler, {
@@ -301,7 +432,7 @@ test('lesson route canonicalizes valid query parameter order before caching HTML
   });
 
   assert.equal(response.statusCode, 308);
-  assert.equal(response.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math&lang=hi');
+  assert.equal(response.headers.location, '/lesson?path=phases%2F01-math%2F01-vectors&learningPath=math');
   assert.equal(response.body, '');
 });
 
@@ -310,11 +441,23 @@ test('lesson route keeps certification return context on supplemental course les
   const handler = lessonApi.createHandler({ loadAssets: function () { return assets.lesson; } });
   const response = invoke(handler, {
     method: 'GET',
-    url: '/lesson?path=phases%2F01-math%2F01-vectors&fromTrack=claude-example&lang=hi',
+    url: '/lesson?path=phases%2F01-math%2F01-vectors&fromTrack=claude-example',
   });
 
   assert.equal(response.statusCode, 200);
-  assert.match(response.body, /fromTrack=claude-example&amp;lang=hi/);
+  assert.match(response.body, /fromTrack=claude-example/);
+  assert.doesNotMatch(response.body, /[?&]lang=/);
+});
+
+test('markdown API serves Chinese metadata copy for public pages', function () {
+  const response = invoke(markdownApi, {
+    method: 'GET',
+    query: { path: '/about' },
+    headers: { accept: 'text/markdown' },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /中文课程/);
+  assert.doesNotMatch(response.body, /The agent-oriented curriculum index is available/);
 });
 
 test('lesson route rejects certification return context outside its actual supplemental lessons', function () {

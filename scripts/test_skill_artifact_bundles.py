@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for flat and directory-bundled lesson artifacts."""
+"""扁平及目录打包课程产物的回归测试。"""
 
 from __future__ import annotations
 
@@ -724,7 +724,7 @@ class SkillArtifactBundleTest(unittest.TestCase):
                 result = install_skills.main([str(target)])
 
             self.assertEqual(result, 1)
-            self.assertIn("error: unsafe artifact name", errors.getvalue())
+            self.assertIn("error: 不安全的 artifact 名称", errors.getvalue())
             self.assertFalse((root / "escape.md").exists())
 
     def test_catalog_surfaces_bundle_metadata_files_and_skill_entrypoint_once(self) -> None:
@@ -792,6 +792,39 @@ class SkillArtifactBundleTest(unittest.TestCase):
             self.assertEqual(
                 bundle_record["files"],
                 ["SKILL.md", "references/guide.md", "scripts/check.py"],
+            )
+
+    def test_catalog_ignores_localized_flat_artifact_companions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outputs = self.make_outputs(root)
+            for filename, name in (
+                ("skill-reviewer.md", "reviewer"),
+                ("skill-reviewer.zh-CN.md", "reviewer"),
+                ("prompt-review.md", "review"),
+                ("prompt-review.zh-CN.md", "review"),
+            ):
+                write_markdown(
+                    outputs / filename,
+                    name=name,
+                    description=f"Artifact {name}.",
+                    version="1.0.0",
+                )
+
+            with patch.object(build_catalog, "ROOT", root), patch.object(
+                build_catalog, "PHASES_DIR", root / "phases"
+            ):
+                catalog = build_catalog.build_catalog()
+
+            self.assertEqual(catalog["totals"]["skills"], 1)
+            self.assertEqual(catalog["totals"]["prompts"], 1)
+            outputs = catalog["phases"][0]["lessons"][0]["outputs"]
+            self.assertEqual(
+                [artifact["path"] for artifact in outputs],
+                [
+                    "phases/14-agent-engineering/22-skill-runtime/outputs/prompt-review.md",
+                    "phases/14-agent-engineering/22-skill-runtime/outputs/skill-reviewer.md",
+                ],
             )
 
     def test_catalog_rejects_a_bundle_that_resolves_outside_the_repository(self) -> None:

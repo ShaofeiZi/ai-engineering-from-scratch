@@ -10,10 +10,10 @@ const learningPathsCss = fs.readFileSync(path.join(__dirname, 'learning-paths.cs
 const learningPathsJs = fs.readFileSync(path.join(__dirname, 'learning-paths.js'), 'utf8');
 
 const domains = [
-  { id: 'building-and-deploying', title: 'Building and Deploying AI Applications', children: 6 },
-  { id: 'software-fundamentals', title: 'Software Engineering Fundamentals', children: 5 },
-  { id: 'coding-agents', title: 'Agent-Assisted Engineering', children: 8 },
-  { id: 'shaping-the-build', title: 'Product Judgment and Delivery', children: 8 },
+  { id: 'building-and-deploying', title: '构建与部署 AI 应用', children: 6 },
+  { id: 'software-fundamentals', title: '软件工程基础', children: 5 },
+  { id: 'coding-agents', title: '智能体辅助工程', children: 8 },
+  { id: 'shaping-the-build', title: '产品判断与交付', children: 8 },
 ];
 
 const expectedCareerTitles = new Map([
@@ -24,10 +24,36 @@ const expectedCareerTitles = new Map([
   ['applied-ai-engineer', 'LLM Product Engineering'],
   ['ai-evaluation-reliability-engineer', 'AI Evaluation and Reliability'],
 ]);
+const expectedCareerPageCopy = new Map([
+  ['forward-deployed-ai-engineer', {
+    title: '客户侧 AI 部署',
+    commonTitles: ['前沿部署 AI 工程师', '现场 AI 工程师', 'AI 解决方案工程师'],
+  }],
+  ['ai-developer-relations-engineer', {
+    title: '开发者体验与教育',
+    commonTitles: ['AI 开发者关系工程师', 'AI 开发者布道师', '开发者体验工程师'],
+  }],
+  ['ai-data-engineer', {
+    title: 'AI 数据系统',
+    commonTitles: ['AI 数据工程师', '机器学习数据工程师', '检索工程师'],
+  }],
+  ['agentic-ai-engineer', {
+    title: '智能体系统工程',
+    commonTitles: ['智能体系统工程师', '智能体 AI 工程师', 'AI 智能体工程师'],
+  }],
+  ['applied-ai-engineer', {
+    title: 'LLM 产品工程',
+    commonTitles: ['应用 AI 工程师', 'LLM 工程师', 'AI 产品工程师'],
+  }],
+  ['ai-evaluation-reliability-engineer', {
+    title: 'AI 评测与可靠性',
+    commonTitles: ['AI 评测工程师', 'AI 可靠性工程师', '机器学习站点可靠性工程师'],
+  }],
+]);
 
 const careerRoutes = Array.from(expectedCareerTitles, ([id, title]) => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'learning-paths', `${id}.json`), 'utf8'));
-  return { id, title, manifest };
+  return { id, title, pageCopy: expectedCareerPageCopy.get(id), manifest };
 });
 
 function sectionSource(id) {
@@ -47,11 +73,18 @@ function careerSectionSource() {
 }
 
 test('homepage nodes open the expanded learning paths domains', () => {
-  assert.match(homepage, /href="learning-paths\.html"[\s\S]*?>\s*<span>Explore Learning Paths<\/span>/);
+  assert.match(homepage, /href="learning-paths\.html"[\s\S]*?>\s*<span>探索学习路径<\/span>/);
   assert.match(homepage, /srcset="assets\/figures\/006-ai-engineering-learning-paths-mobile\.svg"[\s\S]*?data-i18n-srcset-zh="assets\/figures\/006-ai-engineering-learning-paths-mobile\.zh-CN\.svg"/);
   assert.match(homepage, /src="assets\/figures\/006-ai-engineering-learning-paths\.svg"[\s\S]*?data-i18n-src-zh="assets\/figures\/006-ai-engineering-learning-paths\.zh-CN\.svg"/);
-  assert.match(homepage, /href="learning-paths\.html#career-routes">Browse career routes<\/a>/);
-  assert.match(homepage, /<figcaption class="learning-paths-compact-root">\s*<strong>AI Engineering<\/strong>\s*<span>4 connected domains<\/span>\s*<\/figcaption>/);
+  assert.match(homepage, /href="learning-paths\.html#career-routes">浏览职业路线<\/a>/);
+  assert.match(homepage, /<figcaption class="learning-paths-compact-root">\s*<strong>AI 工程<\/strong>\s*<span>4 个相互关联的领域<\/span>\s*<\/figcaption>/);
+  const structuredData = JSON.parse(homepage.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  const website = structuredData['@graph'].find(entry => entry['@type'] === 'WebSite');
+  const course = structuredData['@graph'].find(entry => entry['@type'] === 'Course');
+  assert.match(website.description, /[\u3400-\u9fff]/);
+  assert.match(course.description, /[\u3400-\u9fff]/);
+  assert.equal(course.inLanguage, 'zh-CN');
+  assert.equal(course.teaches.every(topic => /[\u3400-\u9fff]/.test(topic)), true);
   assert.match(homepage, /@media \(max-width: 600px\)[\s\S]*?\.learning-paths-figure\s*\{[\s\S]*?display: grid;[\s\S]*?gap: 8px;[\s\S]*?padding: 12px;/);
   assert.match(homepage, /@media \(max-width: 600px\)[\s\S]*?\.learning-paths-figure picture\s*\{\s*display: none;\s*\}/);
   assert.match(homepage, /@media \(max-width: 600px\)[\s\S]*?\.learning-paths-node\s*\{[\s\S]*?position: relative;[\s\S]*?min-height: 48px;/);
@@ -78,24 +111,24 @@ test('every core learning path exposes clickable child competencies', () => {
 test('software foundations follows five capability branches backed by lessons', () => {
   const source = sectionSource('software-fundamentals');
   for (const branch of [
-    'End-to-End Application Delivery',
-    'Data Lifecycle and Storage',
-    'System Architecture and Boundaries',
-    'Secure and Resilient Systems',
-    'Production Scale and Service Ownership',
+    '端到端应用交付',
+    '数据生命周期与存储',
+    '系统架构与边界',
+    '安全与韧性系统',
+    '生产规模化与服务责任',
   ]) {
     assert.match(source, new RegExp(`<strong>${branch}</strong>`));
   }
   assert.match(source, /class="skills-domain-children skills-domain-children--five"/);
-  assert.match(source, /Open representative lesson/);
-  assert.match(source, /13-lesson foundation path · 730 minutes/);
+  assert.match(source, /打开代表性课程/);
+  assert.match(source, /13 节课基础路径 · 730 分钟/);
   assert.match(source, /17-infrastructure-and-production\/25-security-secrets-audit/);
 });
 
 test('domain route totals match their canonical manifests', () => {
-  assert.match(sectionSource('building-and-deploying'), /12-lesson path · 780 minutes/);
-  assert.match(sectionSource('software-fundamentals'), /13-lesson foundation path · 730 minutes/);
-  assert.match(sectionSource('coding-agents'), /16-lesson path · 900 minutes/);
+  assert.match(sectionSource('building-and-deploying'), /12 节课学习路径 · 780 分钟/);
+  assert.match(sectionSource('software-fundamentals'), /13 节课基础路径 · 730 分钟/);
+  assert.match(sectionSource('coding-agents'), /16 节课学习路径 · 900 分钟/);
 });
 
 test('every child node resolves to a real local lesson', () => {
@@ -122,8 +155,8 @@ test('career chooser opens detailed work-family guides before lessons', () => {
   const source = careerSectionSource();
   assert.equal((source.match(/<details class="career-guide"/g) || []).length, careerRoutes.length);
   assert.equal((source.match(/data-career-choice=/g) || []).length, careerRoutes.length);
-  assert.equal((source.match(/>Study specialist lessons<\/a>/g) || []).length, careerRoutes.length);
-  assert.doesNotMatch(source, /career-path-card|Start path/);
+  assert.equal((source.match(/<a class="career-guide-cta"[^>]+learningPath=/g) || []).length, careerRoutes.length);
+  assert.doesNotMatch(source, /career-path-card|开始路径/);
 
   for (const career of careerRoutes) {
     const manifest = career.manifest;
@@ -132,9 +165,9 @@ test('career chooser opens detailed work-family guides before lessons', () => {
     const href = `lesson?path=${firstLesson}&amp;learningPath=${career.id}`;
     assert.equal(source.includes(`href="#${guideId}" data-career-choice="${career.id}"`), true, `${career.id} chooser link is missing`);
     assert.equal(source.includes(`id="${guideId}" data-career-guide="${career.id}"`), true, `${career.id} guide is missing`);
-    assert.equal(source.includes(`<strong>${career.title}</strong>`), true, `${career.id} work-family title is missing`);
-    assert.equal(source.includes(manifest.commonTitles.join(' · ')), true, `${career.id} search titles drifted from its manifest`);
-    assert.equal(source.includes(`${manifest.lessons.length} specialist lessons · ${manifest.estimatedMinutes} minutes`), true, `${career.id} guided time is missing`);
+    assert.equal(source.includes(`<strong>${career.pageCopy.title}</strong>`), true, `${career.id} localized work-family title is missing`);
+    assert.equal(source.includes(career.pageCopy.commonTitles.join(' · ')), true, `${career.id} localized search titles are missing`);
+    assert.equal(source.includes(`${manifest.lessons.length} 节专业课程 · ${manifest.estimatedMinutes} 分钟`), true, `${career.id} guided time is missing`);
     assert.equal(source.includes(`href="${href}"`), true, `${career.id} guide does not open its specialist lessons`);
   }
 });
@@ -190,23 +223,22 @@ test('career route manifests are honest evidence-building overlays', () => {
 
 test('career guidance states the prerequisite and employment boundaries', () => {
   const source = careerSectionSource();
-  assert.match(source, /specialist overlays after shared foundations/i);
-  assert.match(source, /does not guarantee a job/i);
-  assert.match(source, /guided lesson time only/i);
-  assert.match(source, /exclude foundation work, independent projects, and professional experience/i);
-  assert.match(source, /href="#software-fundamentals">Engineering foundations<\/a>/);
-  assert.match(source, /href="#building-and-deploying">AI application foundations<\/a>/);
-  assert.match(source, /Which work would you want to repeat every week\?/);
-  assert.match(source, /What you would own/);
-  assert.match(source, /Portfolio proof/);
-  assert.match(source, /Course coverage and gaps/);
-  assert.doesNotMatch(source, /[–—]/);
+  assert.match(source, /在共享基础课程之上设置的专业方向/);
+  assert.match(source, /并不保证获得工作机会/);
+  assert.match(source, /显示的时长仅为课程指导时间/);
+  assert.match(source, /不包括基础学习、独立项目和职业实践/);
+  assert.match(source, /href="#software-fundamentals">工程基础<\/a>/);
+  assert.match(source, /href="#building-and-deploying">AI 应用基础<\/a>/);
+  assert.match(source, /哪类工作是你每周都愿意反复投入的？/);
+  assert.match(source, /你将负责什么/);
+  assert.match(source, /作品集证明/);
+  assert.match(source, /课程覆盖范围与能力缺口/);
 });
 
 test('learning paths stays navigable on narrow screens and uses a neutral root', () => {
-  assert.match(learningPaths, /<title>AI Engineering Learning Paths - AI Engineering from Scratch<\/title>/);
-  assert.match(learningPaths, /<span class="learning-paths-eyebrow">4 core paths · 6 career routes<\/span>/);
-  assert.match(learningPaths, /<h1 id="learningPathsTitle">AI Engineering Learning Paths<\/h1>/);
+  assert.match(learningPaths, /<title>AI 工程学习路径 - AI Engineering from Scratch<\/title>/);
+  assert.match(learningPaths, /<span class="learning-paths-eyebrow">4 条核心路径 · 6 条职业路线<\/span>/);
+  assert.match(learningPaths, /<h1 id="learningPathsTitle">AI 工程学习路径<\/h1>/);
   assert.match(learningPaths, /class="learning-paths-entry-nav"[\s\S]*?href="#overview"[\s\S]*?href="#career-routes"/);
   assert.match(learningPathsCss, /@media \(max-width: 600px\)[\s\S]*?\.skills-domain-children\s*\{[\s\S]*?grid-template-columns: 1fr/);
   assert.match(learningPathsCss, /\.skills-domain-children\s*\{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);[\s\S]*?min-width: 0;/);

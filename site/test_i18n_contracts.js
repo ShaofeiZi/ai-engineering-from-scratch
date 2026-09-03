@@ -45,6 +45,35 @@ test('human-maintained Chinese remains published but is excluded from NLLB', () 
   assert.ok(!automatic.includes('zh'));
 });
 
+test('language registry exposes only canonical English and default public Chinese', () => {
+  const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'languages.json'), 'utf8'));
+  assert.deepEqual(registry.languages.map(language => language.code), ['en', 'zh']);
+  assert.equal(registry.languages[0].source, true);
+  assert.equal(registry.languages[1].manual, true);
+  assert.equal(registry.languages[1].public, true);
+  assert.equal(registry.languages[1].default, true);
+});
+
+test('Chinese-only lesson reader fails closed instead of rendering English course fallbacks', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'site', 'lesson.html'), 'utf8');
+  assert.doesNotMatch(
+    source,
+    /fetch\(translatedUrl\)[\s\S]*?catch\(function \(\) \{[\s\S]*?fetchRepositoryFile\(enPath\)/,
+    'translated fetch must not fall back to English'
+  );
+  assert.ok(source.includes("showError('中文课程暂不可用'"));
+  assert.ok(source.includes('if (!asset) return Promise.resolve(null)'));
+  assert.ok(source.includes('if (sourceSha256 !== asset.sourceSha256) return null'));
+});
+
+test('fixed locale controller ignores persisted and query language overrides', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'site', 'lang-picker.js'), 'utf8');
+  assert.match(source, /if \(isCertificationLesson\(\)\) return 'en';[\s\S]*?return 'zh';/);
+  assert.ok(source.includes("localStorage.removeItem('lang')"));
+  assert.ok(source.includes("url.searchParams.delete('lang')"));
+  assert.ok(!source.includes('if (host) mount(host)'));
+});
+
 test('translation workflow excludes manual locales from automatic and requested jobs', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github', 'workflows', 'translate.yml'),
@@ -57,26 +86,33 @@ test('translation workflow excludes manual locales from automatic and requested 
   assert.ok(workflow.includes(
     'select(.ci == true and .manual != true) | .code'
   ));
-  assert.ok(workflow.includes('no machine-managed languages selected'));
+  assert.ok(workflow.includes('未选中任何机器管理的语言'));
 });
 
-test('GitHub Pages mirror deploys only main with least-privilege jobs', () => {
+test('GitHub Pages mirror deploys only the Chinese release branch with least-privilege jobs', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github', 'workflows', 'deploy-pages.yml'),
     'utf8'
   );
 
-  assert.match(workflow, /branches: \[main\]/);
-  assert.equal((workflow.match(/if: github\.ref == 'refs\/heads\/main'/g) || []).length, 2);
+  assert.match(workflow, /branches: \[codex\/chinese-only-full-localization\]/);
+  assert.equal((workflow.match(/if: github\.ref == 'refs\/heads\/codex\/chinese-only-full-localization'/g) || []).length, 2);
   assert.match(workflow, /build:[\s\S]*?permissions:\n      contents: read/);
   assert.match(workflow, /deploy:[\s\S]*?permissions:\n      pages: write\n      id-token: write/);
   assert.match(workflow, /AIFS_TRANSLATION_REPOSITORY: \${{ vars\.AIFS_TRANSLATION_REPOSITORY \|\| github\.repository }}/);
-  assert.match(workflow, /AIFS_TRANSLATION_REF: \${{ vars\.AIFS_TRANSLATION_REF \|\| 'translations' }}/);
-  assert.match(workflow, /name: Validate the configured translation branch/);
+  assert.ok(workflow.includes('AIFS_TRANSLATION_REF: ${{ github.ref_name }}'));
+  assert.match(workflow, /name: (?:Validate the configured translation branch|验证配置的翻译分支)/);
   assert.match(workflow, /git check-ref-format "refs\/heads\/\$AIFS_TRANSLATION_REF"/);
   assert.match(workflow, /run: node site\/build\.js/);
   assert.match(workflow, /path: site/);
   assert.doesNotMatch(workflow, /^permissions:/m);
+});
+
+test('GitHub Pages publishes the Chinese release branch and reads translations from that branch', () => {
+  const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'deploy-pages.yml'), 'utf8');
+  assert.ok(workflow.includes('branches: [codex/chinese-only-full-localization]'));
+  assert.equal((workflow.match(/refs\/heads\/codex\/chinese-only-full-localization/g) || []).length, 2);
+  assert.ok(workflow.includes('AIFS_TRANSLATION_REF: ${{ github.ref_name }}'));
 });
 
 test('curriculum audit and site share configurable translation source names', () => {
@@ -121,7 +157,7 @@ test('curriculum audit skips only an unpublished translation branch', () => {
   assert.ok(fetch > probe, 'translation fetch must happen after a successful probe');
   assert.ok(audit > fetch, 'the auditor must read the fetched translation source');
   assert.ok(workflow.includes('[ "$translation_status" -eq 2 ]'));
-  assert.ok(workflow.includes('translation branch has not been published yet'));
+  assert.ok(workflow.includes('翻译分支尚未发布'));
   assert.ok(workflow.includes('[ "$translation_status" -ne 0 ]'));
   assert.ok(workflow.includes('exit "$translation_status"'));
   assert.ok(!workflow.includes('--translation-ref origin/translations'));

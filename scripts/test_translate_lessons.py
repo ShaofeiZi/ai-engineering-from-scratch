@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the prose-only lesson translation walker."""
+"""仅处理正文的课程翻译遍历器回归测试。"""
 
 from __future__ import annotations
 
@@ -19,6 +19,42 @@ import translate_lessons
 
 
 class TranslationWalkerTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._language_registry = dict(translate_lessons.LANGUAGE_REGISTRY)
+        self._lang_names = dict(translate_lessons.LANG_NAMES)
+        self._nllb_codes = dict(translate_lessons.NLLB_CODES)
+        machine_languages = {
+            "fr": {
+                "code": "fr",
+                "name": "French",
+                "native": "Français",
+                "nllb": "fra_Latn",
+                "ci": True,
+            },
+            "es": {
+                "code": "es",
+                "name": "Spanish",
+                "native": "Español",
+                "nllb": "spa_Latn",
+                "ci": True,
+            },
+        }
+        translate_lessons.LANGUAGE_REGISTRY.update(machine_languages)
+        translate_lessons.LANG_NAMES.update(
+            {code: entry["name"] for code, entry in machine_languages.items()}
+        )
+        translate_lessons.NLLB_CODES.update(
+            {code: entry["nllb"] for code, entry in machine_languages.items()}
+        )
+
+    def tearDown(self) -> None:
+        translate_lessons.LANGUAGE_REGISTRY.clear()
+        translate_lessons.LANGUAGE_REGISTRY.update(self._language_registry)
+        translate_lessons.LANG_NAMES.clear()
+        translate_lessons.LANG_NAMES.update(self._lang_names)
+        translate_lessons.NLLB_CODES.clear()
+        translate_lessons.NLLB_CODES.update(self._nllb_codes)
+
     def test_translation_lock_serializes_independent_processes(self) -> None:
         helper = """
 import sys
@@ -26,6 +62,9 @@ from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import translate_lessons
 translate_lessons.OUT_ROOT = Path(sys.argv[2])
+translate_lessons.LANGUAGE_REGISTRY["fr"] = {
+    "code": "fr", "name": "French", "nllb": "fra_Latn", "ci": True
+}
 print("ready", flush=True)
 with translate_lessons.translation_lock("fr"):
     print("acquired", flush=True)
@@ -208,9 +247,9 @@ with translate_lessons.translation_lock("fr"):
 
             with mock.patch.object(translate_lessons, "ROOT", root), \
                     mock.patch.object(translate_lessons, "OUT_ROOT", output_root):
-                with self.assertRaisesRegex(ValueError, "symlink|outside"):
+                with self.assertRaisesRegex(ValueError, "符号链接|仓库之外|symlink|outside"):
                     translate_lessons.cache_path("es")
-                with self.assertRaisesRegex(ValueError, "symlink|outside"):
+                with self.assertRaisesRegex(ValueError, "符号链接|仓库之外|symlink|outside"):
                     translate_lessons.out_path(doc, "es")
 
     def test_safe_language_path_rejects_every_symlink_component(self) -> None:
@@ -238,7 +277,7 @@ with translate_lessons.translation_lock("fr"):
                 link.symlink_to(target, target_is_directory=target_is_dir)
 
                 with mock.patch.object(translate_lessons, "OUT_ROOT", output_root):
-                    with self.assertRaisesRegex(ValueError, "contains a symlink"):
+                    with self.assertRaisesRegex(ValueError, "包含符号链接|contains a symlink"):
                         translate_lessons._safe_language_path(
                             "fr", *request_parts
                         )
@@ -252,7 +291,7 @@ with translate_lessons.translation_lock("fr"):
             output_root.symlink_to(real_output, target_is_directory=True)
 
             with mock.patch.object(translate_lessons, "OUT_ROOT", output_root):
-                with self.assertRaisesRegex(ValueError, "output root is a symlink"):
+                with self.assertRaisesRegex(ValueError, "输出根目录是符号链接|output root is a symlink"):
                     translate_lessons._safe_language_path(
                         "fr", "phases", "00-test", "01-lesson", "docs", "fr.md"
                     )
@@ -301,7 +340,7 @@ with translate_lessons.translation_lock("fr"):
 
                 with mock.patch.object(translate_lessons, "PHASES", phases):
                     with self.assertRaisesRegex(
-                        ValueError, "source lesson path contains a symlink"
+                        ValueError, "源课程路径包含符号链接"
                     ):
                         list(translate_lessons.lesson_docs())
 
@@ -319,7 +358,7 @@ with translate_lessons.translation_lock("fr"):
 
             with mock.patch.object(translate_lessons, "ROOT", root), \
                     mock.patch.object(translate_lessons, "OUT_ROOT", output_root):
-                with self.assertRaisesRegex(ValueError, "contains a symlink"):
+                with self.assertRaisesRegex(ValueError, "包含符号链接|contains a symlink"):
                     translate_lessons.remove_orphan_phase_outputs(
                         "fr", "00-test", {current.resolve()}
                     )
@@ -417,7 +456,7 @@ with translate_lessons.translation_lock("fr"):
             self.assertEqual(original_cache, cache_file.read_text(encoding="utf-8"))
             self.assertTrue(
                 any(
-                    "would remove orphan translation" in str(call)
+                    "将删除孤立译文" in str(call)
                     for call in stdout.write.call_args_list
                 )
             )
@@ -695,8 +734,8 @@ print("keep this code")
                         )
                     )
 
-        # These formats remain audit-compatible provenance, but cannot prove
-        # which output/model/prompt produced the destination and must refresh.
+        # 这些格式仍是审计兼容的来源记录，但无法证明目标文件由哪个
+        # output/model/prompt 生成，因此必须刷新。
         for legacy in (
             source_digest,
             {"source_sha256": source_digest, "provider": "openai"},
@@ -905,24 +944,24 @@ print("keep this code")
         )
 
         corruptions = (
-            "译文 " + translate_lessons.SENTINEL.format(0) + " 中间 结束。",  # dropped
+            "译文 " + translate_lessons.SENTINEL.format(0) + " 中间 结束。",  # 丢失
             "译文 "
             + translate_lessons.SENTINEL.format(0)
             + " 中间 "
             + translate_lessons.SENTINEL.format(1)
             + " 额外 "
-            + translate_lessons.SENTINEL.format(1),  # repeated
+            + translate_lessons.SENTINEL.format(1),  # 重复
             "译文 "
             + translate_lessons.SENTINEL.format(1)
             + " 中间 "
             + translate_lessons.SENTINEL.format(0)
-            + " 结束。",  # reordered
+            + " 结束。",  # 顺序颠倒
             "译文 "
             + translate_lessons.SENTINEL.format(0)
             + " 中间 "
             + translate_lessons.SENTINEL.format(9)
-            + " 结束。",  # unknown
-            "译文 ⁣PROTECT 中间 " + translate_lessons.SENTINEL.format(1) + " 结束。",  # broken
+            + " 结束。",  # 未知编号
+            "译文 ⁣PROTECT 中间 " + translate_lessons.SENTINEL.format(1) + " 结束。",  # 格式损坏
         )
         for corrupted in corruptions:
             with self.subTest(corrupted=corrupted):
@@ -2015,6 +2054,18 @@ This English code example stays unchanged.
                 self.assertFalse(
                     translate_lessons.translation_contract_is_preserved(
                         source, translated.replace("/guide", "/other"), provider="manual"
+                    )
+                )
+
+    def test_non_manual_contract_does_not_allow_zh_path_rewrites(self) -> None:
+        source = "Read [next](../../02-linked/docs/en.md)."
+        translated = "Lire [suivant](../../02-linked/docs/zh.md)."
+
+        for provider in ("manual", "openai", "nllb"):
+            with self.subTest(provider=provider):
+                self.assertFalse(
+                    translate_lessons.translation_contract_is_preserved(
+                        source, translated, provider=provider
                     )
                 )
 

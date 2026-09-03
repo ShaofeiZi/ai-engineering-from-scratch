@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression checks for the translation registry and workflow publisher."""
+"""翻译注册表与 workflow 发布器的回归检查。"""
 
 from __future__ import annotations
 
@@ -26,12 +26,12 @@ CURRICULUM_WORKFLOW = ROOT / ".github" / "workflows" / "curriculum.yml"
 LANGUAGES = ROOT / "languages.json"
 PREPARE_STEP = "      - id: set"
 LANGUAGE_CODE = re.compile(r"^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$")
-TRANSLATION_TARGET_STEP = "      - name: Enforce the translation publication boundary"
-CONFIGURE_REMOTE_STEP = "      - name: Configure translation publication remote"
-RESTORE_STEP = "      - name: Restore this language's cache + output from configured branch"
-PUBLISH_STEP = "      - name: Publish this phase slice to configured branch (race-safe)"
-CLEANUP_STEP = "      - name: Prune deleted translation artifacts (race-safe)"
-CURRICULUM_AUDIT_STEP = "      - name: audit published Simplified Chinese lessons"
+TRANSLATION_TARGET_STEP = "      - name: 强制执行翻译发布边界"
+CONFIGURE_REMOTE_STEP = "      - name: 配置翻译发布远端"
+RESTORE_STEP = "      - name: 从配置分支恢复当前语言的 cache 与输出"
+PUBLISH_STEP = "      - name: 将当前阶段分片发布到配置分支（竞态安全）"
+CLEANUP_STEP = "      - name: 清理已删除的翻译产物（竞态安全）"
+CURRICULUM_AUDIT_STEP = "      - name: 审计已发布的简体中文课程"
 TEST_REPOSITORY = "example/curriculum"
 TEST_TRANSLATION_REF = "localized-content"
 
@@ -219,23 +219,35 @@ class TranslateWorkflowContractTest(unittest.TestCase):
 
         codes: list[str] = []
         sources: list[dict[str, object]] = []
+        public: list[dict[str, object]] = []
+        defaults: list[dict[str, object]] = []
+        manual: list[dict[str, object]] = []
         for index, language in enumerate(languages):
             code = language.get("code") if isinstance(language, dict) else None
             with self.subTest(index=index, code=code):
                 self.assertIsInstance(language, dict)
-                for field in ("code", "name", "native", "nllb"):
+                for field in ("code", "name", "native"):
                     self.assertIn(field, language)
                     self.assertIsInstance(language[field], str)
                     self.assertTrue(language[field].strip())
                 self.assertRegex(language["code"], LANGUAGE_CODE)
-                if "source" in language:
-                    self.assertIsInstance(language["source"], bool)
-                if "ci" in language:
-                    self.assertIsInstance(language["ci"], bool)
+                for field in ("source", "ci", "manual", "public", "default"):
+                    if field in language:
+                        self.assertIsInstance(language[field], bool)
+                if language.get("ci") is True:
+                    self.assertIn("nllb", language)
+                    self.assertIsInstance(language["nllb"], str)
+                    self.assertTrue(language["nllb"].strip())
 
                 codes.append(language["code"])
                 if language.get("source") is True:
                     sources.append(language)
+                if language.get("public") is True:
+                    public.append(language)
+                if language.get("default") is True:
+                    defaults.append(language)
+                if language.get("manual") is True:
+                    manual.append(language)
 
         self.assertEqual(len(codes), len(set(codes)), "language codes must be unique")
         self.assertEqual(len(sources), 1, "exactly one source language is required")
@@ -243,6 +255,11 @@ class TranslateWorkflowContractTest(unittest.TestCase):
             sources[0].get("ci", False),
             "the source language must not enter the translation matrix",
         )
+        self.assertEqual(sources[0]["code"], "en")
+        self.assertNotIn("nllb", sources[0], "the canonical source does not need an NLLB target code")
+        self.assertEqual([language["code"] for language in public], ["zh"])
+        self.assertEqual([language["code"] for language in defaults], ["zh"])
+        self.assertEqual([language["code"] for language in manual], ["zh"])
 
     def test_default_translation_matrix_fits_github_limit(self) -> None:
         registry = json.loads(LANGUAGES.read_text(encoding="utf-8"))
@@ -256,7 +273,6 @@ class TranslateWorkflowContractTest(unittest.TestCase):
             for path in (ROOT / "phases").iterdir()
             if path.is_dir() and re.fullmatch(r"[0-9]{2}-[a-z0-9-]+", path.name)
         ]
-        self.assertTrue(enabled)
         self.assertTrue(phases)
         self.assertLessEqual(
             len(enabled) * len(phases),
@@ -442,7 +458,7 @@ class TranslateWorkflowContractTest(unittest.TestCase):
             )
 
             self.assertIn("publish_enabled=false", output.read_text(encoding="utf-8"))
-            self.assertIn("external read-only source", result.stdout)
+            self.assertIn("外部只读源", result.stdout)
 
     def test_current_repository_enables_publication_and_rejects_invalid_ref(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -485,7 +501,7 @@ class TranslateWorkflowContractTest(unittest.TestCase):
                     )
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn(
-                        "AIFS_TRANSLATION_REF must name a branch", result.stdout
+                        "AIFS_TRANSLATION_REF 必须使用短引用命名一个分支", result.stdout
                     )
 
     def test_manual_phase_rejects_traversal_that_resolves_to_a_directory(self) -> None:
@@ -517,7 +533,7 @@ class TranslateWorkflowContractTest(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("unknown phase", result.stderr)
+            self.assertIn("未知阶段", result.stderr)
 
     def test_manual_language_cannot_enter_machine_translation_matrix(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -550,7 +566,7 @@ class TranslateWorkflowContractTest(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("no machine-managed languages selected", result.stderr)
+            self.assertIn("未选中任何机器管理的语言", result.stderr)
 
     def test_requested_languages_keep_only_machine_managed_entries(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -619,9 +635,8 @@ class TranslateWorkflowContractTest(unittest.TestCase):
             env = publisher_env(remote, runner_temp)
             configure_translation_remote(source, env)
 
-            # Seed two machine-managed locales and a manual locale with an old
-            # phase. Once canonical main deletes it, every non-source locale is
-            # pruned; the active phase must survive a publication racing cleanup.
+            # 为两个机器管理的 locale 和一个人工 locale 写入旧阶段。规范 main 删除它后，
+            # 每个非源 locale 都会被清理；活动阶段必须经受住发布与清理之间的竞态。
             for lang in ("en", "fr", "de", "zh", "xx"):
                 stale_slice = translated_doc(source, lang, "01-deleted", "01-old")
                 stale_slice.parent.mkdir(parents=True, exist_ok=True)
@@ -719,9 +734,8 @@ class TranslateWorkflowContractTest(unittest.TestCase):
             )
             run("git", "push", "origin", "main", cwd=source)
 
-            # Delay cleanup's first push after it has read the publication
-            # branch. Publishing v2 then forces cleanup to retry from the new
-            # remote tip instead of overwriting the concurrent slice update.
+            # 清理读取发布分支后延迟其第一次 push。随后发布 v2，迫使清理从新的远端尖端
+            # 重试，而不是覆盖并发的分片更新。
             cleanup_ready = root / "cleanup-ready"
             release_cleanup = root / "release-cleanup"
             cleanup_once = remote / "delay-cleanup-once"
@@ -783,7 +797,7 @@ class TranslateWorkflowContractTest(unittest.TestCase):
                 release_cleanup.touch()
                 stdout, stderr = cleaner.communicate(timeout=10)
                 self.assertEqual(cleaner.returncode, 0, stdout + stderr)
-                self.assertIn("cleanup push race, retrying", stdout)
+                self.assertIn("清理推送竞争,正在重试", stdout)
             finally:
                 release_cleanup.touch()
                 if cleaner.poll() is None:
@@ -887,8 +901,7 @@ class TranslateWorkflowContractTest(unittest.TestCase):
                 cwd=source,
                 env=publish_env,
             )
-            # The slice publisher intentionally excludes the legacy combined
-            # cache, so seed it into the real publication branch explicitly.
+            # 分片发布器有意排除旧版合并 cache，因此在真实发布分支中显式写入它。
             seed = root / "combined-cache-seed"
             run("git", "clone", "--branch", TEST_TRANSLATION_REF, str(remote), str(seed), cwd=root)
             run("git", "config", "user.name", "test", cwd=seed)
@@ -1090,8 +1103,8 @@ class TranslateWorkflowContractTest(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("could not commit translation slice", result.stderr)
-            self.assertIn("could not publish after retries", result.stderr)
+            self.assertIn("无法提交翻译切片", result.stderr)
+            self.assertIn("重试后仍无法发布", result.stderr)
             branch = run(
                 "git",
                 f"--git-dir={remote}",

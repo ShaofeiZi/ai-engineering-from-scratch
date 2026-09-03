@@ -17,6 +17,7 @@ const {
   discoverFigureProviderOrder,
   discoverUsedFigureIds,
   discoverArtifacts,
+  githubSourceUrl,
   lessonDocumentSeo,
   parseLearningPaths,
   parseCertifications,
@@ -107,6 +108,7 @@ function extractLessonFunctionSource(name) {
 function loadLessonInlineFormatter(options = {}) {
   const repository = options.repository || 'example/fork';
   const ref = options.ref || 'feature-images';
+  const lang = options.lang || 'zh';
   const source = Object.prototype.hasOwnProperty.call(options, 'contentSource')
     ? options.contentSource
     : loadContentSource({
@@ -124,13 +126,20 @@ function loadLessonInlineFormatter(options = {}) {
     document: createEscapingDocument(),
     window: {
       AIFSContentSource: source,
+      AIFS_currentLang() { return lang; },
     },
   };
   const runtimeSource = [
     extractLessonFunctionSource('escapeHtml'),
     extractLessonFunctionSource('escapeAttr'),
     extractLessonFunctionSource('lessonMarkdownBaseUrl'),
+    extractLessonFunctionSource('markdownCanonicalLessonPath'),
+    extractLessonFunctionSource('markdownInternalDocPath'),
+    extractLessonFunctionSource('markdownCanonicalAssetPath'),
+    extractLessonFunctionSource('markdownRawRepoUrl'),
+    extractLessonFunctionSource('normalizeMarkdownRepoPath'),
     extractLessonFunctionSource('resolveMarkdownImageUrl'),
+    extractLessonFunctionSource('resolveMarkdownLessonHref'),
     extractLessonFunctionSource('inlineFormat'),
     extractLessonFunctionSource('slugify'),
     extractLessonFunctionSource('highlightSyntax'),
@@ -265,7 +274,7 @@ function lessonResponse(body, ok = true) {
 }
 
 function loadLessonFetchRuntime(options = {}) {
-  const calls = { fetch: [], lesson: [], quiz: [], localizedQuiz: [] };
+  const calls = { fetch: [], lesson: [], quiz: [], localizedQuiz: [], error: [] };
   const lessonPath = options.lessonPath || 'phases/01-math-foundations/01-linear-algebra-intuition';
   const contentSource = {
     isLocal() { return false; },
@@ -305,7 +314,7 @@ function loadLessonFetchRuntime(options = {}) {
     },
     renderLesson(markdown, lang) { calls.lesson.push({ markdown, lang }); },
     renderQuiz(quiz, lang) { calls.quiz.push({ quiz, lang }); },
-    showError() { assert.fail('fetchLesson unexpectedly reached showError'); },
+    showError(title, message) { calls.error.push({ title, message }); },
     escapeAttr(value) { return value; },
     escapeHtml(value) { return value; },
   };
@@ -558,11 +567,14 @@ function workflowRunScript(stepName) {
     'utf8'
   );
   const lines = workflow.split(/\r?\n/);
-  const marker = `      - name: ${stepName}`;
-  const start = lines.indexOf(marker);
-  assert.ok(start >= 0, `curriculum workflow is missing ${stepName}`);
+  const stepNames = Array.isArray(stepName) ? stepName : [stepName];
+  const start = stepNames.reduce((found, candidate) => {
+    if (found >= 0) return found;
+    return lines.indexOf(`      - name: ${candidate}`);
+  }, -1);
+  assert.ok(start >= 0, `curriculum workflow is missing ${stepNames.join(' / ')}`);
   const runLine = lines.indexOf('        run: |', start);
-  assert.ok(runLine > start, `${stepName} is missing a multiline run script`);
+  assert.ok(runLine > start, `${stepNames[0]} is missing a multiline run script`);
   const body = [];
   for (const line of lines.slice(runLine + 1)) {
     if (line && !line.startsWith('          ')) break;
@@ -729,7 +741,17 @@ test('build metadata recognizes GitHub Actions repository and branch variables',
     VERCEL_ENV: 'production',
     VERCEL_GIT_COMMIT_SHA: previewSha,
     VERCEL_GIT_COMMIT_REF: 'vercel-preview',
-  }), 'main');
+  }), previewSha);
+  assert.equal(
+    githubSourceUrl('phases/01-math/docs/en.md', 'blob', {
+      VERCEL_ENV: 'production',
+      VERCEL_GIT_COMMIT_SHA: previewSha,
+      VERCEL_GIT_COMMIT_REF: 'vercel-preview',
+      VERCEL_GIT_REPO_OWNER: 'example',
+      VERCEL_GIT_REPO_SLUG: 'pages-fork',
+    }),
+    `https://github.com/example/pages-fork/blob/${previewSha}/phases/01-math/docs/en.md`
+  );
   const previewMetadata = serializeBuildMeta({
     VERCEL_ENV: 'preview',
     VERCEL_GIT_COMMIT_SHA: previewSha,
@@ -877,7 +899,7 @@ test('fetchLesson renders a successful Chinese translation and localized quiz as
   assert.equal(runtime.document.documentElement.lang, 'zh');
 });
 
-test('fetchLesson falls back to English prose without losing localized quiz language', async () => {
+test('fetchLesson fails closed when Chinese prose is unavailable', async () => {
   const localizedQuiz = { questions: [{ question: '中文题目' }] };
   const runtime = loadLessonFetchRuntime({
     lang: 'zh',
@@ -887,18 +909,19 @@ test('fetchLesson falls back to English prose without losing localized quiz lang
         return Promise.resolve(lessonResponse('{"questions":[{"question":"English"}]}'));
       }
       if (url.startsWith('translation:')) return Promise.resolve(lessonResponse('', false));
-      if (url.endsWith('/docs/en.md')) return Promise.resolve(lessonResponse('# English lesson'));
       assert.fail(`unexpected fetch: ${url}`);
     },
   });
 
-  runtime.fetchLesson(runtime.lessonPath);
+  runtime.fetchLesson(runtime.lessonPath, true);
+  await flushLessonFetch();
   await flushLessonFetch();
 
-  assert.deepEqual(runtime.calls.lesson, [{ markdown: '# English lesson', lang: 'en' }]);
-  assert.equal(runtime.calls.quiz.length, 1);
-  assert.equal(runtime.calls.quiz[0].quiz, localizedQuiz);
-  assert.equal(runtime.calls.quiz[0].lang, 'zh');
+  assert.deepEqual(runtime.calls.lesson, []);
+  assert.deepEqual(runtime.calls.quiz, []);
+  assert.equal(runtime.calls.error.length, 1);
+  assert.match(runtime.calls.error[0].title, /^(?:中文课程暂不可用|未找到中文课程)$/);
+  assert.doesNotMatch(runtime.calls.error[0].message, /English lesson/);
 });
 
 test('lesson markdown renders relative images against the active fork repository and ref', () => {
@@ -915,6 +938,24 @@ test('lesson markdown renders relative images against the active fork repository
   assert.equal(
     inlineFormat('![Actor flow](../assets/diagram.svg)'),
     '<img src="https://raw.githubusercontent.com/example/fork/feature-i18n/phases/14-agent-engineering/16-openai-agents-sdk/assets/diagram.svg" alt="Actor flow" loading="lazy" decoding="async">'
+  );
+});
+
+test('lesson markdown accepts canonical same-lesson asset backreferences from zh docs only', () => {
+  const { inlineFormat, resolveMarkdownImageUrl } = loadLessonInlineFormatter({
+    repository: 'example/fork',
+    ref: 'feature-i18n',
+    lessonPath: 'phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment',
+  });
+
+  const longAssetPath = '../../../../../../phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/assets/nli.svg';
+  assert.equal(
+    resolveMarkdownImageUrl(longAssetPath),
+    'https://raw.githubusercontent.com/example/fork/feature-i18n/phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/assets/nli.svg'
+  );
+  assert.equal(
+    inlineFormat(`![NLI flow](${longAssetPath})`),
+    '<img src="https://raw.githubusercontent.com/example/fork/feature-i18n/phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/assets/nli.svg" alt="NLI flow" loading="lazy" decoding="async">'
   );
 });
 
@@ -935,6 +976,10 @@ test('lesson markdown falls back to the active repository root for certification
     '<img src="https://raw.githubusercontent.com/example/fork/feature-certifications/certifications/claude/lessons/16-multi-agent-orchestration-and-delegation/assets/orchestration.svg" alt="Orchestration flow" loading="lazy" decoding="async">'
   );
   assert.equal(resolveMarkdownImageUrl('../../../../../../outside.svg'), null);
+  assert.equal(
+    resolveMarkdownImageUrl('../../../../../../phases/14-agent-engineering/16-openai-agents-sdk/assets/diagram.svg'),
+    null
+  );
 });
 
 test('the production Markdown parser renders lesson images', () => {
@@ -950,7 +995,20 @@ test('the production Markdown parser renders lesson images', () => {
   );
 });
 
-test('lesson markdown renders external https images and preserves ordinary links', () => {
+test('the production Markdown parser accepts same-lesson canonical asset backreferences', () => {
+  const { parseMd } = loadLessonInlineFormatter({
+    repository: 'example/fork',
+    ref: 'feature-images',
+    lessonPath: 'phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment',
+  });
+  const html = parseMd('# NLI\n\n![NLI flow](../../../../../../phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/assets/nli.svg)');
+  assert.match(
+    html,
+    /<p><img src="https:\/\/raw\.githubusercontent\.com\/example\/fork\/feature-images\/phases\/05-nlp-foundations-to-advanced\/21-nli-textual-entailment\/assets\/nli\.svg" alt="NLI flow" loading="lazy" decoding="async"><\/p>/
+  );
+});
+
+test('lesson markdown renders external https images and preserves safe lesson links', () => {
   const { inlineFormat } = loadLessonInlineFormatter();
 
   assert.equal(
@@ -960,6 +1018,14 @@ test('lesson markdown renders external https images and preserves ordinary links
   assert.equal(
     inlineFormat('[Docs](https://example.com/docs?q=1&lang=en)'),
     '<a href="https://example.com/docs?q=1&amp;lang=en" target="_blank" rel="noopener">Docs</a>'
+  );
+  assert.equal(
+    inlineFormat('[Same phase lesson](../../16-mcp-security-oauth-2-1/docs/zh.md)'),
+    '<a href="lesson?path=phases%2F14-agent-engineering%2F16-mcp-security-oauth-2-1&amp;lang=zh">Same phase lesson</a>'
+  );
+  assert.equal(
+    inlineFormat('[Cross phase lesson](../../../13-tools-and-protocols/28-mcp-tool-contracts-and-content/docs/zh.md)'),
+    '<a href="lesson?path=phases%2F13-tools-and-protocols%2F28-mcp-tool-contracts-and-content&amp;lang=zh">Cross phase lesson</a>'
   );
   assert.equal(
     inlineFormat('[Local lesson](../README.md)'),
@@ -974,6 +1040,26 @@ test('lesson markdown rejects unsafe image URLs and escapes alt text safely', ()
   assert.equal(resolveMarkdownImageUrl('data:image/png;base64,abc'), null);
   assert.equal(resolveMarkdownImageUrl('//cdn.example.com/agent.png'), null);
   assert.equal(resolveMarkdownImageUrl('/absolute/path.png'), null);
+  assert.equal(
+    resolveMarkdownImageUrl('../../../../../../phases/05-nlp-foundations-to-advanced/22-embedding-models-deep-dive/assets/embedding-modes.svg'),
+    null
+  );
+  assert.equal(
+    resolveMarkdownImageUrl('../../../../../../phases/05-nlp-foundations-to-advanced/21-nli-textual-entailment/docs/en.md'),
+    null
+  );
+  assert.equal(
+    inlineFormat('[Cross lesson asset](../../../../../../phases/05-nlp-foundations-to-advanced/22-embedding-models-deep-dive/assets/embedding-modes.svg)'),
+    'Cross lesson asset'
+  );
+  assert.equal(
+    inlineFormat('[English lesson doc](../../16-mcp-security-oauth-2-1/docs/en.md)'),
+    'English lesson doc'
+  );
+  assert.equal(
+    inlineFormat('[Cross lesson markdown](../../16-mcp-security-oauth-2-1/README.md)'),
+    'Cross lesson markdown'
+  );
   assert.equal(
     inlineFormat('![x < y & "quoted"](javascript:alert1)'),
     'x &lt; y &amp; &quot;quoted&quot;'
@@ -999,20 +1085,18 @@ test('roadmap lesson links preserve a valid non-English deep-link language', () 
   );
 });
 
-test('site publishes human-maintained locales without machine-translation CI', () => {
+test('site publishes only explicitly public locales', () => {
   assert.deepEqual(
     publishedLanguages({
       languages: [
         { code: 'en', native: 'English', source: true },
-        { code: 'zh', native: '简体中文', manual: true },
+        { code: 'zh', native: '简体中文', manual: true, public: true },
         { code: 'fr', native: 'Français', ci: true },
         { code: 'de', native: 'Deutsch' },
       ],
     }),
     [
-      { code: 'en', native: 'English' },
       { code: 'zh', native: '简体中文' },
-      { code: 'fr', native: 'Français' },
     ]
   );
 });
@@ -1685,7 +1769,7 @@ test('README autosync rebuilds after a push race and stages only README outputs'
   const origin = path.join(root, 'origin.git');
   const checkout = path.join(root, 'checkout');
   const racer = path.join(root, 'racer');
-  const script = workflowRunScript('commit + push if README changed');
+  const script = workflowRunScript(['commit + push if README changed', 'README 变化时提交并推送']);
 
   try {
     runChecked('git', ['init', '--bare', '--initial-branch=main', origin], root);
@@ -1750,7 +1834,7 @@ test('README autosync rebuilds after a push race and stages only README outputs'
       BOT_COMMIT_PREFIX: 'chore(readme): sync counts',
       GITHUB_REF: 'refs/heads/main',
     });
-    assert.match(syncOutput, /push attempt 1 rejected; rebuilding from origin\/main/);
+    assert.match(syncOutput, /第 1 次推送被拒绝;基于 origin\/main 重新构建/);
     assert.equal(fs.readFileSync(path.join(checkout, 'README.md'), 'utf8'), 'readme:raced\n');
     assert.equal(fs.readFileSync(path.join(checkout, 'i18n', 'zh', 'README.md'), 'utf8'), 'zh:raced\n');
     assert.deepEqual(
@@ -1764,7 +1848,7 @@ test('README autosync rebuilds after a push race and stages only README outputs'
       BOT_COMMIT_PREFIX: 'chore(readme): sync counts',
       GITHUB_REF: 'refs/heads/main',
     });
-    assert.match(settledOutput, /README.md \+ translations already in sync/);
+    assert.match(settledOutput, /README.md 及其翻译已同步/);
     assert.equal(runChecked('git', ['rev-list', '--count', 'HEAD'], checkout).trim(), commitsBefore);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -1776,7 +1860,7 @@ test('README autosync fails when every push attempt is rejected', () => {
   const origin = path.join(root, 'origin.git');
   const checkout = path.join(root, 'checkout');
   const bin = path.join(root, 'bin');
-  const script = workflowRunScript('commit + push if README changed');
+  const script = workflowRunScript(['commit + push if README changed', 'README 变化时提交并推送']);
 
   try {
     runChecked('git', ['init', '--bare', '--initial-branch=main', origin], root);
@@ -1825,7 +1909,7 @@ test('README autosync fails when every push attempt is rejected', () => {
       PATH: bin + path.delimiter + process.env.PATH,
     });
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.match(result.stderr, /push failed after 5 attempts; README translations remain stale/);
+    assert.match(result.stderr, /5 次尝试后推送失败;README 翻译仍为旧版/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -1836,7 +1920,7 @@ test('site autosync stages all tracked build outputs, pushes, and then stays cle
   const origin = path.join(root, 'origin.git');
   const checkout = path.join(root, 'checkout');
   const racer = path.join(root, 'racer');
-  const script = workflowRunScript('commit + push if generated site artifacts changed');
+  const script = workflowRunScript(['commit + push if generated site artifacts changed', '生成产物变化时提交并推送']);
 
   try {
     runChecked('git', ['init', '--bare', '--initial-branch=main', origin], root);
@@ -1890,7 +1974,7 @@ test('site autosync stages all tracked build outputs, pushes, and then stays cle
       BOT_COMMIT_PREFIX: 'chore(site): rebuild generated artifacts',
       GITHUB_REF: 'refs/heads/main',
     });
-    assert.match(syncOutput, /push attempt 1 rejected; rebuilding from origin\/main/);
+    assert.match(syncOutput, /第 1 次推送被拒绝;基于 origin\/main 重新构建/);
     assert.equal(runChecked('git', ['log', '-1', '--pretty=%s'], checkout).trim(), 'chore(site): rebuild generated artifacts');
     assert.equal(
       runChecked('git', ['rev-parse', 'HEAD'], checkout).trim(),
@@ -1909,7 +1993,7 @@ test('site autosync stages all tracked build outputs, pushes, and then stays cle
       BOT_COMMIT_PREFIX: 'chore(site): rebuild generated artifacts',
       GITHUB_REF: 'refs/heads/main',
     });
-    assert.match(settledOutput, /generated site artifacts already in sync/);
+    assert.match(settledOutput, /生成的站点产物已同步/);
     assert.equal(runChecked('git', ['rev-list', '--count', 'HEAD'], checkout).trim(), commitsBefore);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -1921,7 +2005,7 @@ test('site autosync fails when every push attempt is rejected', () => {
   const origin = path.join(root, 'origin.git');
   const checkout = path.join(root, 'checkout');
   const bin = path.join(root, 'bin');
-  const script = workflowRunScript('commit + push if generated site artifacts changed');
+  const script = workflowRunScript(['commit + push if generated site artifacts changed', '生成产物变化时提交并推送']);
 
   try {
     runChecked('git', ['init', '--bare', '--initial-branch=main', origin], root);
@@ -1961,7 +2045,7 @@ test('site autosync fails when every push attempt is rejected', () => {
       PATH: bin + path.delimiter + process.env.PATH,
     });
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.match(result.stderr, /push failed after 5 attempts; generated site artifacts remain stale/);
+    assert.match(result.stderr, /5 次尝试后推送失败;生成的站点产物仍为旧版/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -2037,6 +2121,7 @@ test('build-time SEO manifests cover every readable lesson and expose canonical 
     expectedKeys.push('learningPathIds');
     expectedKeys.push('fromTrackIds');
     expectedKeys.push('sourceUrl', 'canonicalUrl');
+    if (entry.context.kind === 'course') expectedKeys.push('zh');
     assert.deepEqual(
       Object.keys(entry),
       expectedKeys
@@ -2882,18 +2967,18 @@ test('repository exposes the four core AI engineering learning paths', () => {
   const learningPaths = parseLearningPaths(root, phases);
   const homepage = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const domains = [
-    ['building-and-deploying-ai-applications', 'Building and Deploying AI Applications', 12],
-    ['software-engineering-fundamentals', 'Software Engineering Fundamentals', 13],
-    ['using-coding-agents', 'Agent-Assisted Engineering', 16],
-    ['shaping-the-build', 'Product Judgment and Delivery', 8],
+    ['building-and-deploying-ai-applications', 'Building and Deploying AI Applications', '构建与部署 AI 应用', 12],
+    ['software-engineering-fundamentals', 'Software Engineering Fundamentals', '软件工程基础', 13],
+    ['using-coding-agents', 'Agent-Assisted Engineering', '智能体辅助工程', 16],
+    ['shaping-the-build', 'Product Judgment and Delivery', '产品判断与交付', 8],
   ];
 
-  for (const [id, title, lessonCount] of domains) {
+  for (const [id, title, publishedTitle, lessonCount] of domains) {
     const learningPath = learningPaths.find(entry => entry.id === id);
     assert.ok(learningPath, `${id} manifest is missing`);
     assert.equal(learningPath.title, title);
     assert.equal(learningPath.lessons.length, lessonCount);
-    assert.match(homepage, new RegExp(`>${title}<`, 'i'));
+    assert.match(homepage, new RegExp(`>${publishedTitle}<`, 'i'));
     assert.match(homepage, new RegExp(`learningPath=${id}`));
     assert.match(homepage, new RegExp(`learning-paths/${id}\\.json`));
   }
@@ -2916,16 +3001,16 @@ test('repository exposes the four core AI engineering learning paths', () => {
   assert.match(homepage, /assets\/figures\/006-ai-engineering-learning-paths-mobile\.svg/);
   assert.equal((homepage.match(/class="learning-paths-node /g) || []).length, domains.length);
   const homepageTargets = new Map([
-    ['building-and-deploying-ai-applications', ['Building and Deploying AI Applications', 'building-and-deploying']],
-    ['software-engineering-fundamentals', ['Software Engineering Fundamentals', 'software-fundamentals']],
-    ['using-coding-agents', ['Agent-Assisted Engineering', 'coding-agents']],
-    ['shaping-the-build', ['Product Judgment and Delivery', 'shaping-the-build']],
+    ['building-and-deploying-ai-applications', ['探索构建与部署 AI 应用所需的能力', 'building-and-deploying']],
+    ['software-engineering-fundamentals', ['探索软件工程基础能力', 'software-fundamentals']],
+    ['using-coding-agents', ['探索智能体辅助工程能力', 'coding-agents']],
+    ['shaping-the-build', ['探索产品判断与交付能力', 'shaping-the-build']],
   ]);
   for (const [id] of domains) {
-    const [title, anchor] = homepageTargets.get(id);
+    const [ariaLabel, anchor] = homepageTargets.get(id);
     assert.match(
       homepage,
-      new RegExp(`class="learning-paths-node [^"]+"[^>]+href="learning-paths\\.html#${anchor}"[^>]+aria-label="Explore the competencies for ${title}"`)
+      new RegExp(`class="learning-paths-node [^"]+"[^>]+href="learning-paths\\.html#${anchor}"[^>]+aria-label="${ariaLabel}"`)
     );
   }
   assert.match(readme, /<!-- STATS:START[\s\S]*?<p align="center"><sub><b>[^<]+<\/b> readers[\s\S]*?<!-- STATS:END -->/);
@@ -2943,16 +3028,16 @@ test('homepage preserves live GitHub CTAs and the motion-aware learner marquee',
   const learnerStyles = homepage.match(/\/\* Learner organization index \*\/([\s\S]*?)\.masthead-install-caption/);
 
   assert.ok(mastheadCta, 'prominent masthead CTA row is missing');
-  assert.match(mastheadCta[0], /<span>Start the Course<\/span>/);
-  assert.match(mastheadCta[0], /href="learning-paths\.html"[\s\S]*?<span>Explore Learning Paths<\/span>/);
+  assert.match(mastheadCta[0], /<span>开始课程<\/span>/);
+  assert.match(mastheadCta[0], /href="learning-paths\.html"[\s\S]*?<span>探索学习路径<\/span>/);
   assert.doesNotMatch(mastheadCta[0], /Start (?:MCP Engineering|Agent Skills)/i);
   assert.match(
     mastheadCta[0],
-    /<a class="masthead-btn" href="https:\/\/github\.com\/rohitg00\/ai-engineering-from-scratch"[^>]*aria-label="Star ai-engineering-from-scratch on GitHub"[^>]*>[\s\S]*?<span>Star on GitHub<\/span>[\s\S]*?<span class="masthead-btn-count" data-gh-stars="rohitg00\/ai-engineering-from-scratch" data-loading="true">/
+    /<a class="masthead-btn" href="https:\/\/github\.com\/rohitg00\/ai-engineering-from-scratch"[^>]*aria-label="在 GitHub 上为 ai-engineering-from-scratch 点星"[^>]*>[\s\S]*?<span>在 GitHub 上点星<\/span>[\s\S]*?<span class="masthead-btn-count" data-gh-stars="rohitg00\/ai-engineering-from-scratch" data-loading="true">/
   );
   assert.match(
     mastheadCta[0],
-    /<a class="masthead-btn" href="https:\/\/github\.com\/rohitg00"[^>]*aria-label="Follow Rohit Ghumare on GitHub"[^>]*>[\s\S]*?<span>Follow @rohitg00<\/span>/
+    /<a class="masthead-btn" href="https:\/\/github\.com\/rohitg00"[^>]*aria-label="在 GitHub 上关注 Rohit Ghumare"[^>]*>[\s\S]*?<span>关注 @rohitg00<\/span>/
   );
   assert.match(homepage, /<script src="header\.js\?v=[^"]+" defer><\/script>/);
   assert.match(headerSource, /\[data-gh-stars="' \+ REPO \+ '"\]/);
@@ -3041,7 +3126,13 @@ test('shared header progressively compacts without hiding GitHub stars or search
   assert.match(headerSource, /var COMPACT_HEADER_QUERY = '\(max-width: 1400px\)'/);
   assert.match(headerSource, /var NARROW_HEADER_QUERY = '\(max-width: 820px\)'/);
   assert.match(headerSource, /priorityNav\.className = 'header-priority-nav'/);
-  assert.match(headerSource, /label !== 'contents' && label !== 'catalog' && label !== 'learning paths'/);
+  assert.match(headerSource, /function isPriorityRouteLink\(link\) \{/);
+  ['index.html', 'catalog.html', 'learning-paths.html'].forEach(filename => {
+    assert.match(
+      headerSource,
+      new RegExp(`file === '${filename.replace('.', '\\.')}'`)
+    );
+  });
   assert.match(headerSource, /ensureNavigationLink\(nav, 'learning-paths\.html', 'Learning Paths', ''\)/);
   assert.match(headerSource, /if \(isNarrow\) restorePriorityLinks\(\);[\s\S]*?else movePriorityLinksOut\(\)/);
 
@@ -3272,7 +3363,7 @@ test('lesson reader keeps learning-path context and renders a copyable full-dept
   assert.match(lessonHtml, /btn\.setAttribute\('aria-expanded', expanded \? 'true' : 'false'\)/);
   assert.match(lessonHtml, /currentLessonIndex - 1/);
   assert.doesNotMatch(lessonHtml, /currentLessonIndex - 2/);
-  assert.match(lessonHtml, /Requires a local clone/);
+  assert.match(lessonHtml, /需要先在本地克隆仓库/);
   assert.doesNotMatch(lessonHtml, /git rev-parse --show-toplevel/);
   assert.match(lessonHtml, /lessonQuizCorrectAnswers\[qid\] = q\.correct/);
   assert.doesNotMatch(lessonHtml, /data-correct=/);
@@ -3289,7 +3380,7 @@ test('lesson reader keeps learning-path context and renders a copyable full-dept
   assert.match(lessonHtml, /lessonUiFormat\('\{count\}' \+ suffix, \{ count: count \}\)/);
   assert.match(lessonHtml, /lessonUiFormat\('Ready for Phase \{number\}: \{name\}'/);
   assert.doesNotMatch(lessonHtml, /currentLang\(\) === 'zh'/);
-  assert.match(lessonHtml, /Act on this lesson/);
+  assert.match(lessonHtml, /动手完成这节课/);
   assert.match(lessonHtml, /data-checkpoint="read"/);
   assert.match(lessonHtml, /data-checkpoint="built"/);
   assert.match(lessonHtml, /data-checkpoint="ran"/);
@@ -3325,7 +3416,7 @@ test('lesson reader keeps learning-path context and renders a copyable full-dept
   assert.match(lessonHtml, /@media \(max-width: 768px\) \{[\s\S]*?\.output-cards,[\s\S]*?\.code-cards \{ grid-template-columns: 1fr; \}/);
   assert.match(lessonHtml, /@media \(max-width: 480px\) \{[\s\S]*?\.code-card-actions,[\s\S]*?\.output-actions \{[\s\S]*?grid-template-columns: 1fr;/);
   assert.match(lessonHtml, /Run from the repository root, the folder containing README\.md/);
-  assert.match(lessonHtml, /Run copied commands from the repository root, the directory containing README\.md and phases\//);
+  assert.match(lessonHtml, /复制后的命令应在仓库根目录执行，也就是包含 `README\.md` 和 `phases\/` 的目录/);
   assert.doesNotMatch(lessonHtml, /shell is anywhere inside the repository/);
   assert.match(lessonHtml, /inferLearningPath\(lessonPath\)/);
   assert.match(lessonHtml, /preferredIds = \['agent-skills', 'model-context-protocol'\]/);

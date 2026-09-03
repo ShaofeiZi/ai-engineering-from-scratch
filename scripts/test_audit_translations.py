@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic tests for the translation completeness auditor."""
+"""翻译完整性审计器的确定性测试。"""
 
 from __future__ import annotations
 
@@ -189,8 +189,8 @@ class TranslationAuditTest(unittest.TestCase):
             self.assertEqual(result.cache_file_count, 1)
             self.assertEqual(result.found_cache_key_count, 1)
             report = audit_translations.render_report(result)
-            self.assertIn("1 found / 1 expected (1 content-checked)", report)
-            self.assertIn("PASS: translation audit clean", report)
+            self.assertIn("找到 1 / 预期 1 （已检查内容 1）", report)
+            self.assertIn("通过：翻译审计无错误", report)
 
     def test_combined_local_cache_is_supported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -319,7 +319,7 @@ class TranslationAuditTest(unittest.TestCase):
             report = audit_translations.render_report(result)
             self.assertIn(TARGET_REL, report)
             self.assertIn(extra_target, report)
-            self.assertIn("FAIL: translation audit found errors", report)
+            self.assertIn("失败：翻译审计发现错误", report)
 
     def test_cache_hash_must_be_current_sha256(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -604,7 +604,9 @@ class TranslationAuditTest(unittest.TestCase):
                             "output_sha256": hashlib.sha256(translated.encode()).hexdigest(),
                             "provider": "openai",
                             "model": "reviewed-model",
-                            "pipeline_version": audit_translations.TRANSLATION_PIPELINE_VERSION,
+                            "pipeline_version": (
+                                audit_translations.TRANSLATION_PIPELINE_VERSION
+                            ),
                         }
                     }
                 )
@@ -717,6 +719,49 @@ class TranslationAuditTest(unittest.TestCase):
             self.assertIn("cache-provider", issue_rules(result))
             self.assertIn("structure-protected-content", issue_rules(result))
 
+    def test_non_manual_audit_does_not_allow_zh_path_rewrites(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            audit_translations.LANGUAGE_REGISTRY,
+            {"zz": {"code": "zz", "name": "Test", "nllb": "eng_Latn"}},
+        ):
+            root = Path(tmp)
+            source = ENGLISH.replace(
+                "This paragraph should be translated.",
+                "Read [the next lesson](../../02-linked/docs/en.md).",
+            )
+            translated = CHINESE.replace(
+                "这一段应该翻译。",
+                "Lire [la leçon suivante](../../02-linked/docs/zh.md).",
+            )
+            target_rel = TARGET_REL.replace("i18n/zh/", "i18n/zz/").replace(
+                "/zh.md", "/zz.md"
+            )
+            cache_rel = CACHE_REL.replace("i18n/zh/", "i18n/zz/")
+            write(root / SOURCE_REL, source)
+            write(root / target_rel, translated)
+            write(root / "i18n/zz/README.md", "# Test\n")
+            write(
+                root / cache_rel,
+                json.dumps(
+                    {
+                        SOURCE_REL: {
+                            "source_sha256": source_digest(source),
+                            "output_sha256": output_digest(translated),
+                            "provider": "openai",
+                            "model": "test-model",
+                            "pipeline_version": audit_translations.TRANSLATION_PIPELINE_VERSION,
+                        }
+                    }
+                )
+                + "\n",
+            )
+
+            result = audit_translations.audit_translations(
+                root, "zz", audit_translations.LocalTranslationSource(root)
+            )
+
+            self.assertIn("structure-protected-content", issue_rules(result))
+
     def test_structured_nllb_cache_uses_full_strict_contract(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
             audit_translations.LANGUAGE_REGISTRY,
@@ -807,8 +852,8 @@ class TranslationAuditTest(unittest.TestCase):
             make_valid_tree(root)
             crlf_english = ENGLISH.replace("\n", "\r\n")
             write(root / SOURCE_REL, crlf_english.encode("utf-8"))
-            # translate_lessons.py calls read_text() before hashing, which
-            # normalizes CRLF to LF. The auditor must use the same contract.
+            # translate_lessons.py 在哈希前调用 read_text()，会把 CRLF 规范化为 LF。
+            # 审计器必须采用相同契约。
             write(
                 root / CACHE_REL,
                 json.dumps({SOURCE_REL: manual_cache_entry()}) + "\n",
@@ -864,7 +909,7 @@ class TranslationAuditTest(unittest.TestCase):
 
             self.assertIn("translation-untranslated-prose", issue_rules(result))
             report = audit_translations.render_report(result)
-            self.assertIn("target line 11 retains source line 11", report)
+            self.assertIn("目标第 11 行保留了源第 11", report)
             self.assertIn("This paragraph should be translated.", report)
 
     def test_missing_substantive_visible_paragraph_is_reported(self) -> None:
@@ -1019,6 +1064,132 @@ print(\"leave this alone\")
             result = audit_local(root)
 
             self.assertNotIn("structure-protected-content", issue_rules(result))
+
+    def test_manual_zh_audit_allows_verified_lesson_and_asset_rewrites(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = ENGLISH.replace(
+                "This paragraph should be translated.",
+                "Read [the next lesson](../../02-linked/docs/en.md).\n\n"
+                "![Architecture](../assets/architecture.svg)",
+            )
+            translated = CHINESE.replace(
+                "这一段应该翻译。",
+                "阅读[下一课](../../02-linked/docs/zh.md)。\n\n"
+                "![架构](../../../../../../phases/00-test-phase/"
+                "01-test-lesson/assets/architecture.svg)",
+            )
+            linked_source_rel = (
+                "phases/00-test-phase/02-linked/docs/en.md"
+            )
+            linked_target_rel = (
+                "i18n/zh/phases/00-test-phase/02-linked/docs/zh.md"
+            )
+            linked_source = "# Linked lesson\n"
+            linked_translation = "# 已链接课程\n"
+            write(root / SOURCE_REL, source)
+            write(root / TARGET_REL, translated)
+            write(root / linked_source_rel, linked_source)
+            write(root / linked_target_rel, linked_translation)
+            write(
+                root
+                / "phases/00-test-phase/01-test-lesson/assets/architecture.svg",
+                "<svg/>\n",
+            )
+            write(root / "i18n/zh/README.md", "# 中文课程\n")
+            write(
+                root / CACHE_REL,
+                json.dumps(
+                    {
+                        SOURCE_REL: manual_cache_entry(source, translated),
+                        linked_source_rel: manual_cache_entry(
+                            linked_source, linked_translation
+                        ),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+            )
+
+            result = audit_local(root)
+
+            self.assertNotIn("structure-protected-content", issue_rules(result))
+
+            (root / linked_target_rel).unlink()
+            missing_target = audit_local(root)
+            self.assertIn(
+                "structure-protected-content", issue_rules(missing_target)
+            )
+
+    def test_manual_zh_audit_rejects_cross_lesson_asset_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = ENGLISH.replace(
+                "This paragraph should be translated.",
+                "![Architecture](../assets/architecture.svg)",
+            )
+            translated = CHINESE.replace(
+                "这一段应该翻译。",
+                "![架构](../../../../../../phases/00-test-phase/"
+                "02-other/assets/architecture.svg)",
+            )
+            make_valid_tree(root)
+            write(root / SOURCE_REL, source)
+            write(root / TARGET_REL, translated)
+            for lesson in ("01-test-lesson", "02-other"):
+                write(
+                    root
+                    / f"phases/00-test-phase/{lesson}/assets/architecture.svg",
+                    "<svg/>\n",
+                )
+            write(
+                root / CACHE_REL,
+                json.dumps({SOURCE_REL: manual_cache_entry(source, translated)})
+                + "\n",
+            )
+
+            result = audit_local(root)
+
+            self.assertIn("structure-protected-content", issue_rules(result))
+
+    def test_manual_zh_audit_rejects_arbitrary_link_and_url_changes(self) -> None:
+        cases = (
+            (
+                "[Next](../../02-linked/docs/en.md)",
+                "[下一课](../../02-linked/README.md)",
+            ),
+            (
+                "[API](https://example.com/v1)",
+                "[接口](https://evil.example/v1)",
+            ),
+        )
+        for source_link, translated_link in cases:
+            with self.subTest(translated_link=translated_link), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                source = ENGLISH.replace(
+                    "This paragraph should be translated.", source_link
+                )
+                translated = CHINESE.replace("这一段应该翻译。", translated_link)
+                make_valid_tree(root)
+                write(root / SOURCE_REL, source)
+                write(root / TARGET_REL, translated)
+                write(
+                    root / "phases/00-test-phase/02-linked/docs/en.md",
+                    "# Linked\n",
+                )
+                write(
+                    root / CACHE_REL,
+                    json.dumps(
+                        {SOURCE_REL: manual_cache_entry(source, translated)}
+                    )
+                    + "\n",
+                )
+
+                result = audit_local(root)
+
+                self.assertIn(
+                    "structure-protected-content", issue_rules(result)
+                )
 
     def test_human_translation_must_preserve_technical_content(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1215,7 +1386,7 @@ print(\"leave this alone\")
 
             self.assertIn("translation-untranslated-prose", issue_rules(result))
             self.assertIn(
-                "target line 12 retains source line 11",
+                "目标第 12 行保留了源第 11",
                 audit_translations.render_report(result),
             )
 
@@ -1326,7 +1497,7 @@ print(\"leave this alone\")
 
             self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
             self.assertIn("source=git ref origin/translations", completed.stdout)
-            self.assertIn("PASS: translation audit clean", completed.stdout)
+            self.assertIn("通过：翻译审计无错误", completed.stdout)
             self.assertFalse((root / "i18n").exists())
 
     def test_cli_returns_nonzero_and_lists_local_errors(self) -> None:
@@ -1356,7 +1527,7 @@ print(\"leave this alone\")
             self.assertEqual(completed.returncode, 1)
             self.assertIn("[translation-no-han]", completed.stdout)
             self.assertIn("[structure-headings]", completed.stdout)
-            self.assertIn("errors:", completed.stdout)
+            self.assertIn("错误：", completed.stdout)
 
 
 if __name__ == "__main__":

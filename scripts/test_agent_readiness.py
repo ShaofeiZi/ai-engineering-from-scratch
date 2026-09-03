@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract checks for the site's agent-facing discovery surfaces."""
+"""检查站点面向 Agent 的发现入口契约。"""
 
 import json
 import re
@@ -206,7 +206,7 @@ def main() -> None:
     assert "/llms.txt" in not_found and "/sitemap.xml" in not_found
     assert (ROOT / "api" / "markdown.js").is_file()
     assert "Vary" in (ROOT / "api" / "markdown.js").read_text()
-    print("agent readiness contracts: ok")
+    print("Agent 就绪契约：通过")
 
 
 if __name__ == "__main__":

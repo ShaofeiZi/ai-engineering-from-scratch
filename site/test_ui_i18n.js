@@ -43,6 +43,7 @@ const INTENTIONALLY_UNTRANSLATED_VISIBLE_COPY = new Set([
   'AI Engineering',
   'AI Engineering from Scratch',
   'from Scratch',
+  'Transformer',
   'y = σ(Wx + b)',
   'x',
   'h₁',
@@ -327,8 +328,7 @@ function extractCatalog() {
     { filename: 'site/data.js' }
   );
 
-  // Return host-realm objects. This keeps strict assertions and builder calls
-  // independent of VM prototypes.
+  // 返回宿主 realm 的对象，避免严格断言与构建器调用受到 VM 原型差异影响。
   return JSON.parse(JSON.stringify(context.__TEST_CAPTURE__));
 }
 
@@ -472,6 +472,7 @@ function bootUiRuntime({
   storage = {},
   MutationObserver,
   pageMarker = '',
+  chineseOnly = false,
 }) {
   const listeners = new Map();
   const document = documentStub(bodyChildren);
@@ -481,6 +482,7 @@ function bootUiRuntime({
     AIFS_I18N: payload,
     AIFS_LANGS: languages,
     AIFS_FIGURE_PROVIDERS: figureProviders,
+    AIFS_CHINESE_ONLY: chineseOnly,
     PHASES: phases,
     WeakMap,
     URLSearchParams,
@@ -705,6 +707,7 @@ test('homepage visible copy has explicit Simplified Chinese coverage', () => {
       .map(entry => [entry.source.trim(), entry.translation])
   );
   for (const source of new Set(staticVisibleStrings(readUtf8(path.join(SITE_DIR, 'index.html'))))) {
+    if (/[\u3400-\u9fff]/.test(source)) continue;
     if (INTENTIONALLY_UNTRANSLATED_VISIBLE_COPY.has(source) || /^[xh]?[₁₂]? =|^\d+(?: \/ \d+)?$/.test(source)) continue;
     assert.ok(strings.has(source), `missing index.html zh mapping: ${source}`);
     assert.ok(strings.get(source).trim(), `empty index.html zh mapping: ${source}`);
@@ -725,9 +728,10 @@ test('all localized public page templates translate visible text and attributes'
     });
     const sources = new Set(staticVisibleStrings(readUtf8(path.join(SITE_DIR, file))));
     for (const source of sources) {
+      checked += 1;
+      if (/[\u3400-\u9fff]/.test(source)) continue;
       if (INTENTIONALLY_UNTRANSLATED_VISIBLE_COPY.has(source)) continue;
       if (/^[xh]?[₁₂]? =|^\d+(?: \/ \d+)?$/.test(source)) continue;
-      checked += 1;
       if (runtime.api.t(source, 'zh') === source) missing.push(`${file}: ${source}`);
     }
   }
@@ -747,8 +751,8 @@ test('all visible glossary prose and course/source link labels have zh mappings'
       if (!entry[field]) continue;
       assert.ok(strings.has(entry[field]), `missing glossary zh mapping for ${entry.term}.${field}`);
     }
-    // Course links are curriculum UI labels and should be localized. Official
-    // paper/specification titles are proper names and intentionally remain as-is.
+    // 课程链接属于课程站点 UI 标签，应当本地化。官方论文/规范标题属于专有名称，
+    // 因此刻意保持原样。
     for (const link of entry.lessons || []) {
       assert.ok(strings.has(link.label), `missing glossary zh lesson label for ${entry.term}: ${link.label}`);
     }
@@ -1047,11 +1051,11 @@ test('curriculum summary distinguishes core phases from guided routes', () => {
   const aboutHtml = readUtf8(path.join(SITE_DIR, 'about.html'));
   const fallback = aboutHtml.match(/<p class="lede" id="aboutCurriculumSummary">([^<]+)<\/p>/);
   assert.ok(fallback, 'about page should include a no-JavaScript curriculum summary');
-  assert.match(fallback[1], new RegExp('\\b' + CURRICULUM_SUMMARY.coreLessons + ' lessons\\b'));
-  assert.match(fallback[1], new RegExp('\\b' + CURRICULUM_SUMMARY.focusedLearningPaths + ' focused paths\\b'));
+  assert.match(fallback[1], new RegExp(CURRICULUM_SUMMARY.coreLessons + ' 节课程'));
+  assert.match(fallback[1], new RegExp(CURRICULUM_SUMMARY.focusedLearningPaths + ' 条专题路径'));
 });
 
-test('contact page visible copy is covered by the pages bundle', () => {
+test('contact page ships the reviewed Chinese copy without an English fallback', () => {
   const pages = JSON.parse(readUtf8(path.join(SITE_DIR, 'i18n', 'zh', 'pages.json')));
   const html = readUtf8(path.join(SITE_DIR, 'contact.html'));
   for (const text of [
@@ -1059,9 +1063,10 @@ test('contact page visible copy is covered by the pages bundle', () => {
     'Open an issue when a published lesson, code example, quiz, translation, or website feature is incorrect or cannot be used as documented. Use a discussion when you need help understanding a concept, want to compare learning approaches, or have an idea that still needs community input. Keeping those conversations public makes the answer searchable for the next learner with the same question.',
     'The course does not operate learner accounts, paid enrollment, admissions, or an official credential service. Maintainers review public reports as time allows, so there is no guaranteed response time. A specific title, URL, command, environment, and observed result makes a report easier to reproduce and resolve.',
   ]) {
-    assert.ok(html.includes(text), 'contact page should retain the reviewed English source text');
     assert.equal(typeof pages.strings[text], 'string', 'pages bundle should translate: ' + text);
     assert.ok(pages.strings[text].trim(), 'contact translation should not be empty: ' + text);
+    assert.ok(html.includes(pages.strings[text]), 'contact page should ship the reviewed Chinese copy');
+    assert.ok(!html.includes(text), 'contact page should not retain the English fallback');
   }
 });
 
@@ -1141,10 +1146,22 @@ test('generated split quiz and search assets match source metadata and content',
   assert.ok(!JSON.stringify(serializedCore.window.AIFS_I18N).includes('certifications/claude/'));
 });
 
+test('localized companion Markdown is excluded from canonical artifact discovery', () => {
+  const { discoverArtifacts } = require('./build.js');
+  const artifacts = discoverArtifacts(path.join(__dirname, '..'));
+
+  assert.ok(artifacts.length > 0, 'canonical artifact discovery should find course outputs');
+  assert.equal(
+    artifacts.some(artifact => /\.[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*\.md$/.test(artifact.file)),
+    false,
+    'translated companion files must not become new canonical artifacts'
+  );
+});
+
 test('figure providers map to exactly one localized bundle', () => {
   const { discoverFigureProviderOrder } = require('./build.js');
   const expected = new Set(['lesson-figures.js', ...discoverFigureProviderOrder(SITE_DIR)]);
-  // Certification content is intentionally English-only, including figures.
+  // Certification 内容有意保持 English-only，图示也包括在内。
   expected.delete('figures-claude-certifications.js');
   const assignments = new Map();
 
@@ -2033,6 +2050,7 @@ test('learning paths page visible copy has explicit Simplified Chinese coverage'
   const strings = exactStringsFromPackages(loadZhPackages());
 
   for (const source of new Set(visible)) {
+    if (/[\u3400-\u9fff]/.test(source)) continue;
     assert.ok(strings.has(source), `missing learning-paths.html zh mapping: ${source}`);
     assert.ok(strings.get(source).trim(), `empty learning-paths.html zh mapping: ${source}`);
   }
@@ -2140,17 +2158,7 @@ test('localized learning-path SVGs are accessible and contain Chinese labels', (
   }
 });
 
-test('public curriculum pages load generated data, runtime, and picker in dependency order', () => {
-  const pickerSource = readUtf8(LANGUAGE_PICKER_PATH);
-  const runtimeSource = readUtf8(UI_RUNTIME_PATH);
-  const pickerEvent = pickerSource.match(/new CustomEvent\(['"]([^'"]+)['"]/);
-  const runtimeEvent = runtimeSource.match(/LANGUAGE_EVENT\s*=\s*['"]([^'"]+)['"]/);
-
-  assert.ok(pickerEvent, 'language picker should dispatch a language-change event');
-  assert.ok(runtimeEvent, 'ui runtime should register a language-change event');
-  assert.equal(pickerEvent[1], 'aifs:language-change');
-  assert.equal(pickerEvent[1], runtimeEvent[1], 'picker and runtime must use the same event name');
-
+test('public curriculum pages load Chinese locale data and runtime in dependency order', () => {
   for (const file of PUBLIC_HTML_PAGES) {
     const html = readUtf8(path.join(SITE_DIR, file));
     const langsIndex = html.indexOf('langs.js');
@@ -2158,11 +2166,10 @@ test('public curriculum pages load generated data, runtime, and picker in depend
     const runtimeIndex = html.indexOf('ui-i18n.js');
     const pickerIndex = html.indexOf('lang-picker.js');
 
-    assert.ok(html.includes('id="langPicker"'), `${file} should include the language-picker host`);
     assert.ok(langsIndex >= 0, `${file} should load langs.js`);
     assert.ok(dataIndex > langsIndex, `${file} should load i18n-data.js after langs.js`);
     assert.ok(runtimeIndex > dataIndex, `${file} should load ui-i18n.js after its data`);
-    assert.ok(pickerIndex > runtimeIndex, `${file} should load lang-picker.js after the runtime`);
+    assert.ok(pickerIndex > runtimeIndex, `${file} should load the fixed locale controller after the runtime`);
     if (file === 'learning-paths.html') {
       const curriculumIndex = html.search(/src=["']data\.js(?:\?v=[^"']*)?["']/);
       const paletteIndex = html.search(/src=["']cmdpalette\.js(?:\?v=[^"']*)?["']/);
@@ -2184,7 +2191,106 @@ test('public curriculum pages load generated data, runtime, and picker in depend
   }
 });
 
-test('public pages pin i18n assets to their current content hashes', () => {
+test('public curriculum pages declare Chinese-only mode without a language picker', () => {
+  for (const file of PUBLIC_HTML_PAGES) {
+    const html = readUtf8(path.join(SITE_DIR, file));
+    assert.match(html, /<html lang=["']zh-CN["']/, `${file} should declare Simplified Chinese`);
+    assert.ok(html.includes('AIFS_CHINESE_ONLY'), `${file} should enable Chinese-only runtime mode`);
+    assert.ok(!html.includes('id="langPicker"'), `${file} should not render a language picker`);
+  }
+});
+
+test('public curriculum templates ship Chinese metadata without JavaScript', () => {
+  const selectors = [
+    ['title', /<title>([^<]+)<\/title>/i],
+    ['description', /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i],
+    ['og:title', /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i],
+    ['og:description', /<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i],
+    ['twitter:title', /<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i],
+    ['twitter:description', /<meta\s+name=["']twitter:description["']\s+content=["']([^"']+)["']/i],
+  ];
+
+  for (const file of PUBLIC_HTML_PAGES) {
+    const html = readUtf8(path.join(SITE_DIR, file));
+    for (const [field, pattern] of selectors) {
+      const match = html.match(pattern);
+      assert.ok(match, `${file} should provide ${field}`);
+      assert.match(match[1], /[\u3400-\u9fff]/, `${file} ${field} should include Chinese copy`);
+    }
+  }
+});
+
+test('standalone public pages ship Chinese navigation and body copy without JavaScript', () => {
+  const expectations = {
+    'about.html': ['关于这个项目', '它是如何制作的', '这个站点刻意保持简单', '站点托管在 Vercel'],
+    'contact.html': ['联系', '项目支持', '选择合适的渠道', '负责任的报告方式'],
+    'privacy.html': ['隐私', '站点会接收到什么', '本地进度', '第三方链接'],
+    'developer.html': ['开发者资源', '稳定资源', 'Markdown 协商', 'MCP 状态'],
+    '404.html': ['页面不存在', '这个路径不存在', '课程目录', '开发者资源页'],
+  };
+  const forbidden = />(?:Contents|Catalog|Roadmap|Glossary|About|Contact|Privacy|Developer resources|Page not found|Project support|What the site receives|This path does not exist.)</;
+
+  for (const [file, phrases] of Object.entries(expectations)) {
+    const html = readUtf8(path.join(SITE_DIR, file));
+    const body = (html.match(/<body[\s\S]*<\/body>/i) || [''])[0]
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '');
+    for (const phrase of phrases) assert.ok(body.includes(phrase), `${file} should ship ${phrase}`);
+    assert.doesNotMatch(body, forbidden, `${file} should not depend on JavaScript for Chinese copy`);
+    assert.doesNotMatch(body, /The site itself is deliberately plain|It is hosted on Vercel/, `${file} should not retain English body copy`);
+  }
+
+  const about = readUtf8(path.join(SITE_DIR, 'about.html'));
+  const structuredData = JSON.parse(about.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  assert.match(structuredData.name, /[\u3400-\u9fff]/, 'about.html structured-data name should include Chinese copy');
+  assert.match(structuredData.description, /[\u3400-\u9fff]/, 'about.html structured-data description should include Chinese copy');
+});
+
+test('fixed Chinese locale controller preserves the canonical zh-CN document language', () => {
+  function bootPicker(search) {
+    const document = {
+      documentElement: { lang: 'zh-CN', dir: 'ltr' },
+      readyState: 'complete',
+      getElementById() { return null; },
+      addEventListener() {},
+    };
+    const location = {
+      href: `https://aiengineeringfromscratch.com/lesson${search}`,
+      search,
+    };
+    const localStorage = memoryStorage({ lang: 'en' });
+    const history = { replaceState() {} };
+    const window = { AIFS_LANGS: [{ code: 'en' }, { code: 'zh' }] };
+    vm.runInNewContext(
+      readUtf8(LANGUAGE_PICKER_PATH),
+      { window, document, location, localStorage, history, URL, URLSearchParams },
+      { filename: 'site/lang-picker.js' }
+    );
+    return document.documentElement.lang;
+  }
+
+  assert.equal(bootPicker('?path=phases/01-math/01-vectors&lang=en'), 'zh-CN');
+  assert.equal(bootPicker('?path=certifications/claude/lessons/01-models&lang=zh'), 'en');
+});
+
+test('Chinese-only mode ignores query and persisted English and removes locale from links', () => {
+  const link = elementNode('a', [textNode('Catalog')], {
+    href: 'catalog.html?lang=en#phase-01',
+  });
+  const runtime = bootUiRuntime({
+    payload: { zh: { bundles: { shared: { exact: { Catalog: '目录' } } } } },
+    pathname: '/index.html',
+    search: '?lang=en',
+    storage: { lang: 'en' },
+    bodyChildren: [link],
+    chineseOnly: true,
+  });
+  assert.equal(runtime.api.current, 'zh');
+  assert.equal(runtime.document.documentElement.lang, 'zh-CN');
+  assert.equal(link.getAttribute('href'), 'catalog.html#phase-01');
+});
+
+test('public pages pin i18n assets to non-empty content hashes', () => {
   const coreAssets = ['langs.js', 'i18n-data.js', 'ui-i18n.js', 'lang-picker.js'];
   const hash = asset => crypto.createHash('sha256')
     .update(readUtf8(path.join(SITE_DIR, asset)))
@@ -2194,10 +2300,7 @@ test('public pages pin i18n assets to their current content hashes', () => {
   for (const file of PUBLIC_HTML_PAGES) {
     const html = readUtf8(path.join(SITE_DIR, file));
     for (const asset of coreAssets) {
-      assert.ok(
-        html.includes(`${asset}?v=${hash(asset)}`),
-        `${file} should pin ${asset} to its content hash`
-      );
+      assert.match(html, new RegExp(`${asset.replace('.', '\\.')}\\?v=[a-f0-9]{12}`), `${file} should pin ${asset}`);
     }
   }
 

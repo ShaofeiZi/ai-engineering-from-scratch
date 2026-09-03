@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for exact README translation coverage."""
+"""README 精确翻译覆盖率的回归测试。"""
 import io
 import json
 import re
@@ -42,7 +42,7 @@ class ReadmeTranslationCoverageTest(unittest.TestCase):
             README_TEXT, {"zh": table}
         )
 
-        self.assertIn("missing 1 current span key(s)", error)
+        self.assertIn("缺少 1 个当前 span key", error)
         self.assertIn(repr(missing_key), error)
 
     def test_stale_zh_key_fails(self):
@@ -53,7 +53,7 @@ class ReadmeTranslationCoverageTest(unittest.TestCase):
             README_TEXT, {"zh": table}
         )
 
-        self.assertIn("stale 1 translation key(s)", error)
+        self.assertIn("存在 1 个过期翻译 key", error)
         self.assertIn(repr("Removed English copy."), error)
 
     def test_complete_zh_table_passes(self):
@@ -129,7 +129,7 @@ Introductory prose.
                     sys.modules, {"readme_translations": translations_module}
                 ), patch("sys.stderr", new_callable=io.StringIO) as stderr:
                     self.assertEqual(1, build_readme_i18n.main(argv))
-                    self.assertIn("refusing to fall back to English", stderr.getvalue())
+                self.assertIn("拒绝回退到英文", stderr.getvalue())
                 self.assertFalse(out_root.exists())
 
     def test_zh_catalog_must_cover_every_lesson_and_phase(self):
@@ -155,7 +155,7 @@ Introductory prose.
                 readme, phases, lessons, {"lineTranslations": {}, "allowedEnglishLines": []}
             )
 
-        self.assertTrue(any("missing 1 zh lesson title" in error for error in errors))
+        self.assertTrue(any("缺少 1 个 zh 课程标题" in error for error in errors))
 
     def test_catalog_render_translates_labels_but_preserves_target(self):
         line = "| 01 | [First Lesson](phases/00-test-phase/01-first/) | Build | Python |"
