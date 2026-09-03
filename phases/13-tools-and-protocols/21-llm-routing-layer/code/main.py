@@ -1,11 +1,11 @@
-"""Phase 13 Lesson 21 - LLM routing gateway, stdlib.
+"""Phase 13 第21课 - LLM 路由网关，标准库。
 
-OpenAI-compatible request in; priority fallback chain picks a backend; cost
-tracker accumulates spend per-request. PII redaction runs pre-dispatch.
+OpenAI-compatible 请求进入；优先级回退链选择后端；成本
+追踪器累计支出 per-request. PII 脱敏运行 pre-dispatch.
 
-Backend providers are stubs. Switching one to "outage" shows fallback.
+后端提供者均为桩实现。将某个切换为 "outage" 即可观察回退行为。
 
-Run: python code/main.py
+运行：python code/main.py
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 
-# cost per 1M tokens (input, output); fake rates for demo
+# 每100万token的成本（输入、输出）；演示用模拟费率
 PRICES = {
     "openai/gpt-4o":           (5.0, 15.0),
     "openai/gpt-4o-mini":      (0.15, 0.60),
@@ -31,7 +31,7 @@ OUTAGE: set[str] = set()
 
 def provider_call(model: str, messages: list[dict]) -> dict:
     if model in OUTAGE:
-        raise RuntimeError(f"simulated 5xx from {model}")
+        raise RuntimeError(f"{model} 返回模拟的 5xx 错误")
     time.sleep(0.01)
     last = messages[-1]["content"]
     out_toks = max(20, len(last) // 3)
@@ -39,12 +39,12 @@ def provider_call(model: str, messages: list[dict]) -> dict:
         "id": f"resp_{model.replace('/', '_')}",
         "model": model,
         "choices": [{"message": {"role": "assistant",
-                                 "content": f"[{model}] echoed: {last[:60]}"}}],
+                                 "content": f"[{model}] 回显：{last[:60]}"}}],
         "usage": {"prompt_tokens": len(last) // 4, "completion_tokens": out_toks},
     }
 
 
-# aliases -> fallback chain
+# 别名 -> 回退链
 ROUTES = {
     "smart": ["openai/gpt-4o", "anthropic/claude-sonnet", "google/gemini-pro"],
     "fast":  ["openai/gpt-4o-mini", "anthropic/claude-haiku"],
@@ -53,7 +53,7 @@ ROUTES = {
 
 PII_PATTERNS = [
     re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),  # SSN
-    re.compile(r"\b\d{16}\b"),               # credit card
+    re.compile(r"\b\d{16}\b"),               # 信用卡
 ]
 
 
@@ -81,7 +81,7 @@ class Invocation:
 
 def route(alias: str, messages: list[dict]) -> Invocation:
     inv = Invocation(alias=alias)
-    # redact pii on inputs
+    # 对输入进行PII脱敏
     new_msgs = []
     for m in messages:
         txt, r = redact_pii(m["content"])
@@ -104,42 +104,42 @@ def route(alias: str, messages: list[dict]) -> Invocation:
             return inv
         except RuntimeError as e:
             continue
-    inv.error = "all providers failed"
+    inv.error = "所有提供者均失败"
     return inv
 
 
 def demo() -> None:
     print("=" * 72)
-    print("PHASE 13 LESSON 20 - LLM ROUTING GATEWAY")
+    print("第 13 阶段第 21 课 - LLM 路由网关")
     print("=" * 72)
 
-    print("\n--- scenario 1: smart route, primary available ---")
-    inv = route("smart", [{"role": "user", "content": "explain MCP"}])
-    print(f"  chosen  : {inv.chosen_model}")
-    print(f"  attempts: {inv.attempts}")
-    print(f"  tokens  : in={inv.input_tokens} out={inv.output_tokens}")
-    print(f"  cost    : ${inv.cost_usd:.6f}")
-    print(f"  reply   : {inv.response['choices'][0]['message']['content']}")
+    print("\n--- 场景1：智能路由，主后端可用 ---")
+    inv = route("smart", [{"role": "user", "content": "解释 MCP"}])
+    print(f"  选择    : {inv.chosen_model}")
+    print(f"  尝试    : {inv.attempts}")
+    print(f"  token数 : 输入={inv.input_tokens} 输出={inv.output_tokens}")
+    print(f"  成本    : ${inv.cost_usd:.6f}")
+    print(f"  回复    : {inv.response['choices'][0]['message']['content']}")
 
-    print("\n--- scenario 2: openai/gpt-4o OUTAGE -> falls back to Claude ---")
+    print("\n--- 场景2：openai/gpt-4o 故障 -> 回退到 Claude ---")
     OUTAGE.add("openai/gpt-4o")
-    inv = route("smart", [{"role": "user", "content": "same request"}])
-    print(f"  chosen  : {inv.chosen_model}")
-    print(f"  attempts: {inv.attempts}")
-    print(f"  cost    : ${inv.cost_usd:.6f}")
+    inv = route("smart", [{"role": "user", "content": "相同的请求"}])
+    print(f"  选择    : {inv.chosen_model}")
+    print(f"  尝试    : {inv.attempts}")
+    print(f"  成本    : ${inv.cost_usd:.6f}")
     OUTAGE.clear()
 
-    print("\n--- scenario 3: PII in input gets redacted pre-dispatch ---")
+    print("\n--- 场景3：在分发前对输入中的 PII 脱敏 ---")
     inv = route("fast", [{"role": "user",
-                           "content": "contact me at SSN 123-45-6789 please"}])
-    print(f"  redacted: {inv.redacted}")
-    print(f"  reply   : {inv.response['choices'][0]['message']['content']}")
+                           "content": "请通过 SSN 123-45-6789 联系我"}])
+    print(f"  脱敏后  : {inv.redacted}")
+    print(f"  回复    : {inv.response['choices'][0]['message']['content']}")
 
-    print("\n--- scenario 4: all providers down ---")
+    print("\n--- 场景4：所有提供者均不可用 ---")
     OUTAGE.update(ROUTES["fast"])
     inv = route("fast", [{"role": "user", "content": "help"}])
-    print(f"  attempts: {inv.attempts}")
-    print(f"  error   : {inv.error}")
+    print(f"  尝试    : {inv.attempts}")
+    print(f"  错误    : {inv.error}")
 
 
 if __name__ == "__main__":
