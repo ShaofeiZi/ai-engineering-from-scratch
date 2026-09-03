@@ -1,11 +1,10 @@
-"""Toy token-watermark (SynthID-text-style) — stdlib Python.
+"""token 水印玩具示例（SynthID-text 风格）——仅使用 Python 标准库。
 
-Vocabulary: integers 0..N-1. Each decoding step hashes the previous k tokens
-modulo N to partition the vocabulary into green (even hash) and red (odd
-hash). Sampling is biased toward green. Detector computes green-token
-z-score; reported at 1000 tokens.
+词表：整数 0..N-1。每个解码步骤对前 k 个 token 求哈希并对 N 取模，将词表
+划分为绿色（偶数哈希）和红色（奇数哈希）集合。采样偏向绿色集合。检测器
+计算绿色 token 的 z-score，并在 1000 个 token 时报告结果。
 
-Usage: python3 code/main.py
+用法：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -19,15 +18,15 @@ random.seed(61)
 
 
 VOCAB = 200
-K = 4  # hash context length
+K = 4  # 哈希上下文长度。
 
 
 def green_set(prev_tokens: list[int]) -> set[int]:
-    """Pseudorandom partition of the vocabulary into green (half of it)."""
+    """将词表伪随机划分出绿色集合（占一半）。"""
     seed = ",".join(str(t) for t in prev_tokens[-K:])
     digest = hashlib.sha256(seed.encode()).hexdigest()
     h = int(digest, 16)
-    # partition: token is green iff (token + h) mod 2 == 0
+    # 划分规则：当且仅当 (token + h) mod 2 == 0 时，token 为绿色。
     return {t for t in range(VOCAB) if (t + h) % 2 == 0}
 
 
@@ -39,7 +38,7 @@ def unwatermarked_sample(n: int, seed_prefix: list[int]) -> list[int]:
 
 
 def watermarked_sample(n: int, seed_prefix: list[int], bias: float = 0.9) -> list[int]:
-    """Bias = probability of sampling from the green set."""
+    """Bias = 从绿色集合中采样的概率。"""
     out = list(seed_prefix)
     for _ in range(n):
         greens = green_set(out)
@@ -50,7 +49,7 @@ def watermarked_sample(n: int, seed_prefix: list[int], bias: float = 0.9) -> lis
 
 
 def detect(tokens: list[int]) -> float:
-    """Returns z-score: (green count - expected) / sqrt(expected * p(1-p))."""
+    """返回 z-score：(绿色计数 - 期望值) / sqrt(期望值 * p(1-p))。"""
     if len(tokens) <= K:
         return 0.0
     green_count = 0
@@ -65,7 +64,7 @@ def detect(tokens: list[int]) -> float:
 
 
 def paraphrase(tokens: list[int], ratio: float = 0.3) -> list[int]:
-    """Replace ratio of tokens at random with random tokens."""
+    """随机将指定比例的 token 替换为随机 token。"""
     out = list(tokens)
     for i in range(len(out)):
         if random.random() < ratio:
@@ -75,7 +74,7 @@ def paraphrase(tokens: list[int], ratio: float = 0.3) -> list[int]:
 
 def main() -> None:
     print("=" * 70)
-    print("TOY TOKEN WATERMARK (Phase 18, Lesson 23)")
+    print("TOKEN 水印玩具示例（阶段 18，第 23 课）")
     print("=" * 70)
 
     seed = [random.randrange(VOCAB) for _ in range(K)]
@@ -83,27 +82,26 @@ def main() -> None:
     watermarked = watermarked_sample(1000, seed)
     plain = unwatermarked_sample(1000, seed)
 
-    print(f"\nwatermarked z-score       : {detect(watermarked):.2f}")
-    print(f"unwatermarked z-score     : {detect(plain):.2f}")
-    print("(z >= 4 is very strong evidence of watermark.)")
+    print(f"\n带水印文本的 z-score：{detect(watermarked):.2f}")
+    print(f"无水印文本的 z-score：{detect(plain):.2f}")
+    print("（z >= 4 是存在水印的有力证据。）")
 
-    # Paraphrase attack
+    # 改写攻击。
     para = paraphrase(watermarked, ratio=0.3)
-    print(f"after 30% paraphrase      : {detect(para):.2f}")
+    print(f"改写 30% 后：{detect(para):.2f}")
     para2 = paraphrase(watermarked, ratio=0.6)
-    print(f"after 60% paraphrase      : {detect(para2):.2f}")
+    print(f"改写 60% 后：{detect(para2):.2f}")
 
-    # FPR on human-text
+    # 人类文本上的 FPR。
     fprs = [detect(unwatermarked_sample(1000, seed)) for _ in range(100)]
     fpr_above_4 = sum(1 for z in fprs if z >= 4) / len(fprs)
-    print(f"\nFPR (z >= 4) over 100 human draws : {fpr_above_4:.3f}")
+    print(f"\n100 次人类文本抽样中的 FPR（z >= 4）：{fpr_above_4:.3f}")
 
     print("\n" + "=" * 70)
-    print("TAKEAWAY: the text watermark is detectable at >=1000 tokens with")
-    print("strong z-scores and <1% FPR at z=4. paraphrase of 30% weakens the")
-    print("signal; 60% destroys it. text watermarks do not survive paraphrase.")
-    print("C2PA metadata + watermark is the deployment combination: watermark")
-    print("survives compression, metadata survives (as long as it is not stripped).")
+    print("要点：文本达到 1000 个 token 时，可以凭借较高的 z-score 检测水印，")
+    print("且 z=4 时 FPR <1%。改写 30% 会削弱信号，改写 60% 则会摧毁信号。")
+    print("文本水印无法经受改写。部署时应组合 C2PA 元数据和水印：水印能经受")
+    print("压缩，元数据只要不被移除也能保留。")
     print("=" * 70)
 
 
