@@ -66,19 +66,19 @@ def main():
     x = torch.randn(2, 3, 64, 64)
 
     patches = vit.patch(x)
-    print(f"[shapes] input {tuple(x.shape)} -> patches {tuple(patches.shape)}")
+    print(f"[形状] 输入 {tuple(x.shape)} -> 图像块 {tuple(patches.shape)}")
     cls = vit.cls_token.expand(x.size(0), -1, -1)
     tokens = torch.cat([cls, patches], dim=1)
-    print(f"[shapes] tokens with CLS: {tuple(tokens.shape)}")
+    print(f"[形状] 含 CLS 的 token：{tuple(tokens.shape)}")
     tokens = tokens + vit.pos_embed
-    print(f"[shapes] after pos embed: {tuple(tokens.shape)}")
+    print(f"[形状] 添加位置嵌入后：{tuple(tokens.shape)}")
     logits = vit(x)
-    print(f"[shapes] output logits:   {tuple(logits.shape)}")
-    print(f"[params] total: {sum(p.numel() for p in vit.parameters()):,}")
+    print(f"[形状] 输出 logits：{tuple(logits.shape)}")
+    print(f"[参数量] 总计：{sum(p.numel() for p in vit.parameters()):,}")
 
     with torch.no_grad():
         probs = logits.softmax(-1)
-    print(f"[probs row 0 sum]: {probs[0].sum().item():.4f}")
+    print(f"[概率第 0 行之和]：{probs[0].sum().item():.4f}")
 
 
 if __name__ == "__main__":
