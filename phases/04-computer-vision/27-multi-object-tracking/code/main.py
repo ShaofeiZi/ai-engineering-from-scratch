@@ -119,9 +119,9 @@ def main():
             tracks = tracker.step(dets, f)
             tracks_per_frame.append(tracks)
         switches = count_id_switches(tracks_per_frame, gt)
-        print(f"{n_obj:>3d} objects:  active tracks={len(tracker.tracks):3d}  ID switches={switches}")
+        print(f"{n_obj:>3d} 个目标：活跃轨迹={len(tracker.tracks):3d}  ID 切换次数={switches}")
 
-    print("\nWith frame dropouts (drop_prob=0.2):")
+    print("\n存在丢帧时（drop_prob=0.2）：")
     tracker = SimpleTracker(max_age=3)
     frames, gt = synthetic_frames(num_frames=25, num_objects=5, drop_prob=0.2)
     tracks_per_frame = []
@@ -129,7 +129,7 @@ def main():
         tracks = tracker.step(dets, f)
         tracks_per_frame.append(tracks)
     switches = count_id_switches(tracks_per_frame, gt)
-    print(f"  5 objects + 20% dropouts:  ID switches={switches}")
+    print(f"  5 个目标 + 20% 丢帧：ID 切换次数={switches}")
 
 
 if __name__ == "__main__":
