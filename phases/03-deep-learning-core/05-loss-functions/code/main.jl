@@ -1,7 +1,6 @@
-# Loss functions in Julia. MSE, MAE, binary cross-entropy,
-# categorical cross-entropy + softmax, and focal loss for imbalanced
-# classification — each with its analytical gradient.
-# Stdlib only. Sources:
+# Julia 损失函数实现。包括 MSE、MAE、二元交叉熵、
+# 分类交叉熵 + softmax，以及用于类别不平衡的 focal loss —— 每个都附带解析梯度。
+# 仅使用标准库。参考资料：
 #   https://arxiv.org/abs/1708.02002  (Focal loss: Lin et al.)
 #   https://docs.julialang.org/en/v1/base/math/
 
@@ -70,7 +69,7 @@ function softmax(logits::Vector{Float64})::Vector{Float64}
 end
 
 
-# target_index is 0-indexed to mirror the Python lesson.
+# target_index 采用 0 起始索引，以与 Python 课程保持一致。
 function categorical_cross_entropy(logits::Vector{Float64}, target_index::Int;
                                    eps::Float64=1e-15)::Float64
     probs = softmax(logits)
@@ -87,9 +86,9 @@ function cce_grad(logits::Vector{Float64}, target_index::Int)::Vector{Float64}
 end
 
 
-# Focal loss for binary classification (sigmoid outputs).
-# Down-weights easy examples by (1 - p_t)^gamma so the model
-# focuses on hard ones; useful for class imbalance.
+# 用于二分类（sigmoid 输出）的 focal loss。
+# 通过 (1 - p_t)^gamma 降低简单样本的权重，使模型
+# 聚焦于困难样本；适用于类别不平衡场景。
 function focal_loss(preds::Vector{Float64}, targets::Vector{Float64};
                     gamma::Float64=2.0, alpha::Float64=0.25,
                     eps::Float64=1e-15)::Float64
@@ -117,9 +116,9 @@ function focal_grad(preds::Vector{Float64}, targets::Vector{Float64};
         t = targets[i]
         pt = t * p + (1 - t) * (1 - p)
         at = t * alpha + (1 - t) * (1 - alpha)
-        # d(pt)/d(p) = 2t - 1 (1 if t==1, -1 if t==0).
+        # d(pt)/d(p) = 2t - 1（当 t==1 时为 1，当 t==0 时为 -1）。
         dpt_dp = 2 * t - 1
-        # d/dp [-(1-pt)^gamma * log(pt)] applied via chain rule.
+        # d/dp [-(1-pt)^gamma * log(pt)] 通过链式法则应用。
         base = (1 - pt) ^ (gamma - 1)
         term = base * (gamma * log(pt) - (1 - pt) / pt)
         grads[i] = at * term * dpt_dp / n
@@ -147,7 +146,7 @@ end
 
 
 mutable struct LossNetwork
-    loss_type::Symbol  # :mse or :bce
+    loss_type::Symbol  # :mse 或 :bce
     lr::Float64
     hidden_size::Int
     w1::Matrix{Float64}
@@ -162,7 +161,7 @@ end
 
 function LossNetwork(loss_type::Symbol; hidden_size::Int=8, lr::Float64=0.1, seed::Int=0)
     loss_type in (:mse, :bce) ||
-        throw(ArgumentError("LossNetwork: loss_type must be :mse or :bce, got :$loss_type"))
+        throw(ArgumentError("LossNetwork: loss_type 必须为 :mse 或 :bce，得到的是 :$loss_type"))
     rng = MersenneTwister(seed)
     return LossNetwork(
         loss_type, lr, hidden_size,
@@ -233,7 +232,7 @@ function train!(net::LossNetwork, data::Vector{Tuple{Vector{Float64}, Float64}};
         acc = correct / length(data) * 100
         push!(history, (avg, acc))
         if epoch % 50 == 0 || epoch == epochs - 1
-            @printf("    Epoch %3d: loss=%.4f, accuracy=%.1f%%\n", epoch, avg, acc)
+            @printf("    轮次 %3d: 损失=%.4f, 准确率=%.1f%%\n", epoch, avg, acc)
         end
     end
     return history
@@ -242,82 +241,82 @@ end
 
 function main()
     println("=" ^ 60)
-    println("STEP 1: MSE Loss")
+    println("第 1 步：MSE 损失")
     println("=" ^ 60)
     preds = Float64[0.9, 0.1, 0.7, 0.4]
     targets = Float64[1.0, 0.0, 1.0, 0.0]
-    println("  Predictions: $preds")
-    println("  Targets:     $targets")
-    @printf("  MSE Loss:    %.6f\n", mse(preds, targets))
-    println("  MSE Grads:   $(round.(mse_grad(preds, targets), digits=4))")
+    println("  预测值: $preds")
+    println("  目标值: $targets")
+    @printf("  MSE 损失:  %.6f\n", mse(preds, targets))
+    println("  MSE 梯度:  $(round.(mse_grad(preds, targets), digits=4))")
 
     println("\n" * "=" ^ 60)
-    println("STEP 2: MAE Loss")
+    println("第 2 步：MAE 损失")
     println("=" ^ 60)
-    @printf("  MAE Loss:    %.6f\n", mae(preds, targets))
-    println("  MAE Grads:   $(round.(mae_grad(preds, targets), digits=4))")
+    @printf("  MAE 损失:  %.6f\n", mae(preds, targets))
+    println("  MAE 梯度:  $(round.(mae_grad(preds, targets), digits=4))")
 
     println("\n" * "=" ^ 60)
-    println("STEP 3: Binary Cross-Entropy")
+    println("第 3 步：二元交叉熵")
     println("=" ^ 60)
-    @printf("  BCE Loss:    %.6f\n", binary_cross_entropy(preds, targets))
-    println("  BCE Grads:   $(round.(bce_grad(preds, targets), digits=4))")
+    @printf("  BCE 损失:  %.6f\n", binary_cross_entropy(preds, targets))
+    println("  BCE 梯度:  $(round.(bce_grad(preds, targets), digits=4))")
 
-    println("\n  CE loss at different confidence levels (true label = 1):")
+    println("\n  不同置信度下的 CE 损失（真实标签 = 1）：")
     for conf in [0.01, 0.1, 0.5, 0.9, 0.99]
         ce = -log(max(1e-15, conf))
         ms = (conf - 1.0) ^ 2
-        @printf("    p=%.2f: CE=%.4f, MSE=%.4f, ratio=%.1fx\n", conf, ce, ms, ce / max(0.0001, ms))
+        @printf("    p=%.2f: CE=%.4f, MSE=%.4f, 比值=%.1fx\n", conf, ce, ms, ce / max(0.0001, ms))
     end
 
     println("\n" * "=" ^ 60)
-    println("STEP 4: Categorical Cross-Entropy + Softmax")
+    println("第 4 步：分类交叉熵 + Softmax")
     println("=" ^ 60)
     logits = Float64[2.0, 1.0, 0.1, -1.0, 3.0]
-    target_idx = 4   # 0-indexed; 5th class
+    target_idx = 4   # 0 起始索引；第 5 个类别
     probs = softmax(logits)
     println("  Logits:  $logits")
     println("  Softmax: $(round.(probs, digits=4))")
-    println("  Target class: $target_idx")
-    @printf("  CCE Loss: %.6f\n", categorical_cross_entropy(logits, target_idx))
-    println("  Gradient: $(round.(cce_grad(logits, target_idx), digits=4))")
+    println("  目标类别: $target_idx")
+    @printf("  CCE 损失: %.6f\n", categorical_cross_entropy(logits, target_idx))
+    println("  梯度:     $(round.(cce_grad(logits, target_idx), digits=4))")
 
     println("\n" * "=" ^ 60)
-    println("STEP 5: Focal Loss (handles class imbalance)")
+    println("第 5 步：Focal Loss（处理类别不平衡）")
     println("=" ^ 60)
-    # Show focal loss down-weighting easy correct examples vs hard ones.
-    println("  Effect of focal modulator (1 - pt)^gamma for true label = 1:")
+    # 展示 focal loss 如何降低简单正确样本的权重，相对困难样本而言。
+    println("  focal 调制因子 (1 - pt)^gamma 的效果（真实标签 = 1）：")
     for p in [0.05, 0.5, 0.95]
         pt = p
         modulator = (1 - pt) ^ 2.0
         ce = -log(max(1e-15, pt))
         focal = modulator * ce
-        @printf("    p=%.2f  CE=%.4f  modulator=(1-pt)^2=%.4f  Focal=%.4f\n", p, ce, modulator, focal)
+        @printf("    p=%.2f  CE=%.4f  调制因子=(1-pt)^2=%.4f  Focal=%.4f\n", p, ce, modulator, focal)
     end
 
-    # Mixed batch: half-correct preds, gamma=2, alpha=0.25.
-    @printf("\n  Batch focal loss (gamma=2, alpha=0.25): %.6f\n",
+    # 混合批次：一半预测正确，gamma=2，alpha=0.25。
+    @printf("\n  批次 focal loss (gamma=2, alpha=0.25): %.6f\n",
             focal_loss(preds, targets))
-    println("  Batch focal grads: $(round.(focal_grad(preds, targets), digits=4))")
-    @printf("\n  Batch BCE for comparison: %.6f\n", binary_cross_entropy(preds, targets))
+    println("  批次 focal 梯度: $(round.(focal_grad(preds, targets), digits=4))")
+    @printf("\n  对比用批次 BCE: %.6f\n", binary_cross_entropy(preds, targets))
 
     println("\n" * "=" ^ 60)
-    println("STEP 6: MSE vs BCE on Classification")
+    println("第 6 步：MSE 与 BCE 在分类任务上的对比")
     println("=" ^ 60)
     data = make_circle_data()
     for loss_type in [:mse, :bce]
-        println("\n--- Training with $(uppercase(string(loss_type))) ---")
+        println("\n--- 使用 $(uppercase(string(loss_type))) 训练 ---")
         net = LossNetwork(loss_type; hidden_size=8, lr=0.1)
         history = train!(net, data; epochs=200)
         final_loss, final_acc = history[end]
-        @printf("  Final: loss=%.4f, accuracy=%.1f%%\n", final_loss, final_acc)
+        @printf("  最终: 损失=%.4f, 准确率=%.1f%%\n", final_loss, final_acc)
     end
 
-    println("\n=== Key Takeaway ===")
-    println("  Cross-entropy converges faster on classification because its")
-    println("  gradient stays strong when predictions are wrong. MSE flattens")
-    println("  near 0 and 1 due to sigmoid saturation. Focal loss adds a")
-    println("  modulator that further focuses on hard examples.")
+    println("\n=== 核心要点 ===")
+    println("  交叉熵在分类任务上收敛更快，因为当预测错误时")
+    println("  它的梯度依然强劲。MSE 由于 sigmoid 饱和，在")
+    println("  接近 0 和 1 时梯度变平。Focal loss 增加了一个")
+    println("  调制因子，进一步聚焦于困难样本。")
 end
 
 

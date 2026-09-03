@@ -3,7 +3,7 @@ import random
 
 
 def mse(predictions, targets):
-    assert len(predictions) == len(targets), "predictions and targets must have the same length"
+    assert len(predictions) == len(targets), "predictions 和 targets 的长度必须相同"
     n = len(predictions)
     total = 0.0
     for p, t in zip(predictions, targets):
@@ -179,60 +179,60 @@ class LossComparisonNetwork:
             accuracy = correct / len(data) * 100
             losses.append((avg_loss, accuracy))
             if epoch % 50 == 0 or epoch == epochs - 1:
-                print(f"    Epoch {epoch:3d}: loss={avg_loss:.4f}, accuracy={accuracy:.1f}%")
+                print(f"    轮次 {epoch:3d}: 损失={avg_loss:.4f}, 准确率={accuracy:.1f}%")
         return losses
 
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("STEP 1: MSE Loss")
+    print("第 1 步：MSE 损失")
     print("=" * 60)
     preds = [0.9, 0.1, 0.7, 0.4]
     targets = [1.0, 0.0, 1.0, 0.0]
-    print(f"  Predictions: {preds}")
-    print(f"  Targets:     {targets}")
-    print(f"  MSE Loss:    {mse(preds, targets):.6f}")
-    print(f"  MSE Grads:   {[f'{g:.4f}' for g in mse_gradient(preds, targets)]}")
+    print(f"  预测值: {preds}")
+    print(f"  目标值: {targets}")
+    print(f"  MSE 损失: {mse(preds, targets):.6f}")
+    print(f"  MSE 梯度: {[f'{g:.4f}' for g in mse_gradient(preds, targets)]}")
 
     print("\n" + "=" * 60)
-    print("STEP 2: Binary Cross-Entropy")
+    print("第 2 步：二元交叉熵")
     print("=" * 60)
-    print(f"  Predictions: {preds}")
-    print(f"  Targets:     {targets}")
-    print(f"  BCE Loss:    {binary_cross_entropy(preds, targets):.6f}")
-    print(f"  BCE Grads:   {[f'{g:.4f}' for g in bce_gradient(preds, targets)]}")
+    print(f"  预测值: {preds}")
+    print(f"  目标值: {targets}")
+    print(f"  BCE 损失: {binary_cross_entropy(preds, targets):.6f}")
+    print(f"  BCE 梯度: {[f'{g:.4f}' for g in bce_gradient(preds, targets)]}")
 
-    print("\n  CE loss at different confidence levels (true label = 1):")
+    print("\n  不同置信度下的 CE 损失（真实标签 = 1）：")
     for conf in [0.01, 0.1, 0.5, 0.9, 0.99]:
         ce = -(1.0 * math.log(max(1e-15, conf)))
         ms = (conf - 1.0) ** 2
-        print(f"    p={conf:.2f}: CE={ce:.4f}, MSE={ms:.4f}, ratio={ce/max(0.0001, ms):.1f}x")
+        print(f"    p={conf:.2f}: CE={ce:.4f}, MSE={ms:.4f}, 比值={ce/max(0.0001, ms):.1f}x")
 
     print("\n" + "=" * 60)
-    print("STEP 3: Categorical Cross-Entropy + Softmax")
+    print("第 3 步：分类交叉熵 + Softmax")
     print("=" * 60)
     logits = [2.0, 1.0, 0.1, -1.0, 3.0]
     target_idx = 4
     probs = softmax(logits)
     print(f"  Logits:  {logits}")
     print(f"  Softmax: {[f'{p:.4f}' for p in probs]}")
-    print(f"  Target class: {target_idx}")
-    print(f"  CCE Loss: {categorical_cross_entropy(logits, target_idx):.6f}")
-    print(f"  Gradient: {[f'{g:.4f}' for g in cce_gradient(logits, target_idx)]}")
+    print(f"  目标类别: {target_idx}")
+    print(f"  CCE 损失: {categorical_cross_entropy(logits, target_idx):.6f}")
+    print(f"  梯度: {[f'{g:.4f}' for g in cce_gradient(logits, target_idx)]}")
 
     print("\n" + "=" * 60)
-    print("STEP 4: Label Smoothing")
+    print("第 4 步：标签平滑")
     print("=" * 60)
     num_classes = 5
     hard_loss = categorical_cross_entropy(logits, target_idx)
     smooth_loss = label_smoothed_cce(logits, target_idx, num_classes, alpha=0.1)
-    print(f"  Hard target loss:    {hard_loss:.6f}")
-    print(f"  Smooth target loss:  {smooth_loss:.6f}")
-    print(f"  Smoothing increases loss by {smooth_loss - hard_loss:.6f}")
-    print(f"  This prevents overconfidence by targeting 0.9 instead of 1.0")
+    print(f"  硬目标损失: {hard_loss:.6f}")
+    print(f"  平滑目标损失: {smooth_loss:.6f}")
+    print(f"  平滑使损失增加 {smooth_loss - hard_loss:.6f}")
+    print("  以 0.9 而非 1.0 为目标，可避免模型过度自信")
 
     print("\n" + "=" * 60)
-    print("STEP 5: Contrastive Loss")
+    print("第 5 步：对比损失")
     print("=" * 60)
     random.seed(42)
     anchor = [random.gauss(0, 1) for _ in range(8)]
@@ -242,27 +242,27 @@ if __name__ == "__main__":
     loss_val = contrastive_loss(anchor, positive, negatives, temperature=0.07)
     sim_pos = cosine_similarity(anchor, positive)
     sim_negs = [cosine_similarity(anchor, neg) for neg in negatives]
-    print(f"  Anchor-positive similarity: {sim_pos:.4f}")
-    print(f"  Anchor-negative similarities: {[f'{s:.4f}' for s in sim_negs]}")
-    print(f"  Contrastive loss (tau=0.07): {loss_val:.4f}")
+    print(f"  锚点与正样本的相似度: {sim_pos:.4f}")
+    print(f"  锚点与负样本的相似度: {[f'{s:.4f}' for s in sim_negs]}")
+    print(f"  对比损失 (tau=0.07): {loss_val:.4f}")
 
     loss_easy = contrastive_loss(anchor, positive, negatives, temperature=0.5)
-    print(f"  Contrastive loss (tau=0.5):  {loss_easy:.4f}")
-    print(f"  Lower temperature = sharper = higher loss for imperfect separation")
+    print(f"  对比损失 (tau=0.5): {loss_easy:.4f}")
+    print("  温度越低，分布越尖锐；样本分离不理想时损失越高")
 
     print("\n" + "=" * 60)
-    print("STEP 6: MSE vs Cross-Entropy on Classification")
+    print("第 6 步：分类任务中的 MSE 与交叉熵对比")
     print("=" * 60)
     data = make_circle_data()
 
     for loss_type in ["mse", "bce"]:
-        print(f"\n--- Training with {loss_type.upper()} ---")
+        print(f"\n--- 使用 {loss_type.upper()} 训练 ---")
         net = LossComparisonNetwork(loss_type=loss_type, hidden_size=8, lr=0.1)
         results = net.train(data, epochs=200)
         final_loss, final_acc = results[-1]
-        print(f"  Final: loss={final_loss:.4f}, accuracy={final_acc:.1f}%")
+        print(f"  最终: 损失={final_loss:.4f}, 准确率={final_acc:.1f}%")
 
-    print("\n=== Key Takeaway ===")
-    print("  Cross-entropy converges faster on classification because its")
-    print("  gradient is strong when predictions are wrong and weak when correct.")
-    print("  MSE gradient flattens near 0 and 1 due to sigmoid saturation.")
+    print("\n=== 核心要点 ===")
+    print("  交叉熵在分类任务上收敛更快：预测错误时梯度较强，")
+    print("  预测正确时梯度较弱。MSE 受 sigmoid 饱和影响，")
+    print("  在接近 0 和 1 时梯度会变平。")
