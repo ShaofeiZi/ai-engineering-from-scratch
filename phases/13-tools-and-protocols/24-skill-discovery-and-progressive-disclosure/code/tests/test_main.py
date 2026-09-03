@@ -1,4 +1,4 @@
-"""Deterministic tests for Lesson 24 discovery and disclosure."""
+"""第 24 课发现与披露机制的确定性测试。"""
 
 from __future__ import annotations
 

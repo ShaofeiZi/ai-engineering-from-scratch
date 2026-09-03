@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a skill catalog from NAME=PATH scopes, highest precedence first."""
+"""从 NAME=PATH 作用域构建技能目录，优先级最高者优先。"""
 
 from __future__ import annotations
 
@@ -217,14 +217,14 @@ def main() -> None:
         nargs="+",
         type=parse_scope,
         metavar="NAME=PATH",
-        help="scope roots in precedence order, highest precedence first",
+        help="按优先级顺序给出作用域根目录，优先级最高者在前",
     )
     parser.add_argument("--max-entries", type=int, default=40)
     parser.add_argument("--max-description-chars", type=int, default=240)
     parser.add_argument("--max-catalog-chars", type=int, default=8000)
     args = parser.parse_args()
     if min(args.max_entries, args.max_description_chars, args.max_catalog_chars) < 1:
-        parser.error("all catalog budgets must be positive")
+        parser.error("所有目录预算都必须为正数")
     result = build(
         args.scopes,
         args.max_entries,

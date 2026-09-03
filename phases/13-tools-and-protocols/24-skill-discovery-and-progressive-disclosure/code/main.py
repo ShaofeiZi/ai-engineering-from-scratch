@@ -151,7 +151,7 @@ def _frontmatter(path: Path) -> dict[str, str]:
 
 
 def discover_scope(scope: Scope) -> tuple[SkillCandidate, ...]:
-    """Read only direct child frontmatter; instruction bodies stay unloaded."""
+    """仅读取直接子级的前置元数据；指令体保持未加载状态。"""
     if not scope.root.exists():
         return ()
     candidates: list[SkillCandidate] = []
@@ -189,7 +189,7 @@ def discover_scope(scope: Scope) -> tuple[SkillCandidate, ...]:
 def resolve_collisions(
     candidates: Iterable[SkillCandidate], precedence: tuple[str, ...]
 ) -> tuple[tuple[SkillCandidate, ...], tuple[Collision, ...]]:
-    """Apply a caller-supplied high-to-low scope order."""
+    """应用 caller-supplied high-to-low 作用域顺序。"""
     rank = {scope: index for index, scope in enumerate(precedence)}
     grouped: dict[str, list[SkillCandidate]] = {}
     for candidate in candidates:
@@ -299,7 +299,7 @@ def load_skill_body(
 
 
 def validate_reference(skill_directory: Path, reference: str) -> Path:
-    """Allow a direct file or one subdirectory, never traversal or deep chains."""
+    """允许一个直接文件或一级子目录，不允许目录穿越或深层链。"""
     if not isinstance(reference, str):
         raise ReferencePathError("reference must be a string")
     if "\\" in reference:
