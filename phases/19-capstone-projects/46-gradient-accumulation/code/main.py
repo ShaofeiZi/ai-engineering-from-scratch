@@ -1,11 +1,10 @@
-"""Gradient accumulation from scratch.
+"""从零实现的梯度累积。
 
-Effective batch size = micro batch size * accumulation steps. Accumulate
-gradients across several forward and backward passes, only step the
-optimizer after the last micro-batch. Tracks throughput against effective
-batch size so the curve is visible, not folklore.
+有效批大小 = 微批大小 * 累积步数。在多次前向与反向传播之间累积
+梯度，仅到最后一个微批之后才执行一次优化器步进。按有效批大小
+记录吞吐量，让曲线看得见，而不是凭传说。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -102,9 +101,9 @@ def train_one_optimizer_step(
     no_sync_until_last: bool,
     sync_counter: List[int],
 ) -> tuple[float, float]:
-    """Run accum_steps micro batches, accumulate grads, step once.
+    """运行 accum_steps 个微批，累积梯度后执行一次步进。
 
-    Returns (total_unscaled_loss, grad_norm).
+    返回 (total_unscaled_loss, grad_norm)。
     """
     accum_steps = len(micro_batches)
     zero_grads(model)
@@ -139,11 +138,10 @@ class _NoSyncCtx:
 
 
 def no_sync_context(model: nn.Module):
-    """Stand-in for DDP no_sync.
+    """DDP no_sync 的替代实现。
 
-    In DDP this skips the all-reduce on the trailing backward. In this
-    single-process demo there is no collective to skip, but we still
-    surface the call site so the pattern reads the same on a real cluster.
+    在 DDP 中，它会跳过最后一次反向传播之前的 all-reduce。此单进程演示
+    没有可跳过的集合通信，但仍显式保留调用位置，使该模式与真实集群一致。
     """
     return _NoSyncCtx(model)
 
@@ -159,7 +157,7 @@ def run_config(
     lr: float,
     seed: int,
 ) -> CurvePoint:
-    assert effective_batch % accum_steps == 0, "effective_batch must divide by accum_steps"
+    assert effective_batch % accum_steps == 0, "effective_batch 必须能被 accum_steps 整除"
     micro_batch = effective_batch // accum_steps
     seed_everything(seed)
     gen = torch.Generator()
@@ -243,10 +241,10 @@ def equivalence_check(
     lr: float = 0.1,
     seed: int = 7,
 ) -> dict:
-    """One full batch step vs accum_steps micro-batches must match.
+    """单个完整批次步骤必须与 accum_steps 个微批次匹配。
 
-    Scaled loss is `raw / accum_steps`; the accumulated gradient equals the
-    full batch gradient up to floating point noise.
+    缩放后的 loss 为 ``raw / accum_steps``；除浮点噪声外，累积梯度等于
+    完整批次梯度。
     """
     assert big_batch % accum_steps == 0
     micro = big_batch // accum_steps
@@ -322,12 +320,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     accum_grid = [int(s) for s in args.accum_grid.split(",") if s.strip()]
-    print("equivalence check (full batch vs accumulated)")
+    print("等价性检查（完整批次与梯度累积）")
     eq = equivalence_check()
     print(json.dumps(eq, indent=2))
-    assert eq["max_grad_diff"] < 1e-4, f"gradients diverge: {eq['max_grad_diff']}"
-    assert eq["max_param_diff"] < 1e-4, f"params diverge: {eq['max_param_diff']}"
-    print("equivalence holds. running sweep...")
+    assert eq["max_grad_diff"] < 1e-4, f"梯度出现偏离：{eq['max_grad_diff']}"
+    assert eq["max_param_diff"] < 1e-4, f"参数出现偏离：{eq['max_param_diff']}"
+    print("等价性成立，正在运行参数扫描……")
 
     points = sweep_effective_batches(
         micro_batch=args.micro_batch,
@@ -336,7 +334,7 @@ def main() -> int:
         lr=args.lr,
         seed=args.seed,
     )
-    header = f"{'eff_batch':>10}  {'accum':>5}  {'micro':>5}  {'sps':>10}  {'median_ms':>10}  {'syncs':>6}  {'loss':>8}"
+    header = f"{'有效批次':>10}  {'累积':>5}  {'微批次':>5}  {'样本/秒':>10}  {'中位毫秒':>10}  {'同步数':>6}  {'损失':>8}"
     print(header)
     for p in points:
         print(
@@ -345,7 +343,7 @@ def main() -> int:
         )
     if not args.no_write:
         write_curve(points, LOG_PATH)
-        print(f"wrote {LOG_PATH}")
+        print(f"已写入 {LOG_PATH}")
     return 0
 
 
