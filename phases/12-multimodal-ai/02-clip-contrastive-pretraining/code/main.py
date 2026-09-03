@@ -1,10 +1,9 @@
-"""CLIP / SigLIP contrastive loss toy — stdlib Python.
+"""CLIP / SigLIP 对比损失玩具示例 — 纯标准库 Python。
 
-Implements InfoNCE (softmax) and sigmoid pairwise loss on a hand-constructed
-similarity matrix. Also runs a tiny zero-shot-classification walkthrough using
-synthetic image and text embeddings.
+在手工构造的相似度矩阵上实现 InfoNCE（softmax）和 sigmoid 逐对损失。
+还用合成图像和文本嵌入走查一个零样本分类小演示。
 
-No numpy. No torch. The point is to see the loss math and the argmax pattern.
+无需 numpy。无需 torch。重点是看清损失数学和 argmax 模式。
 """
 
 from __future__ import annotations
@@ -41,7 +40,7 @@ def log_sum_exp(row: list[float]) -> float:
 
 
 def infonce_loss(S: list[list[float]]) -> float:
-    """Symmetric InfoNCE over rows and columns."""
+    """对行和列做对称 InfoNCE。"""
     N = len(S)
     loss_i2t = 0.0
     for i in range(N):
@@ -62,7 +61,7 @@ def sigmoid(x: float) -> float:
 
 
 def sigmoid_loss(S: list[list[float]], bias: float = 0.0) -> float:
-    """SigLIP-style per-pair BCE. Positives are the diagonal."""
+    """SigLIP 风格的逐样本对 BCE；正样本在对角线上。"""
     N = len(S)
     total = 0.0
     count = 0
@@ -80,7 +79,7 @@ def sigmoid_loss(S: list[list[float]], bias: float = 0.0) -> float:
 
 def zero_shot_classify(image: list[float],
                        class_texts: dict[str, list[float]]) -> list[tuple[str, float]]:
-    """Argmax cosine similarity over class prompts."""
+    """在类提示上做余弦相似度 argmax。"""
     img = normalize(image)
     scores = []
     for name, vec in class_texts.items():
@@ -95,7 +94,7 @@ def make_fake_embedding(seed: int, dim: int = 64) -> list[float]:
 
 
 def demo_infonce() -> None:
-    print("\nDEMO 1: InfoNCE on 4 aligned pairs")
+    print("\n演示 1：4 对对齐样本上的 InfoNCE")
     print("-" * 60)
     images = [make_fake_embedding(i) for i in range(4)]
     texts = [[x + 0.05 * make_fake_embedding(i + 100)[k] for k, x in enumerate(v)]
@@ -109,24 +108,24 @@ def demo_infonce() -> None:
 
 
 def demo_shuffled() -> None:
-    print("\nDEMO 2: what happens with misaligned pairs")
+    print("\n演示 2：错位样本会发生什么")
     print("-" * 60)
     images = [make_fake_embedding(i) for i in range(6)]
     texts = [make_fake_embedding(i + 500) for i in range(6)]
     S = similarity_matrix(images, texts, tau=0.07)
     loss = infonce_loss(S)
     slip = sigmoid_loss(S)
-    print(f"  misaligned: InfoNCE={loss:.4f}  SigLIP={slip:.4f}")
+    print(f"  错位：InfoNCE={loss:.4f}  SigLIP={slip:.4f}")
     aligned_imgs = [make_fake_embedding(i) for i in range(6)]
     aligned_txt = [[x + 0.02 for x in v] for v in aligned_imgs]
     S2 = similarity_matrix(aligned_imgs, aligned_txt, tau=0.07)
-    print(f"  aligned   : InfoNCE={infonce_loss(S2):.4f}  "
+    print(f"  对齐      ：InfoNCE={infonce_loss(S2):.4f}  "
           f"SigLIP={sigmoid_loss(S2):.4f}")
-    print("  aligned loss < misaligned loss confirms the gradient signal.")
+    print("  对齐损失 < 错位损失，验证了梯度信号。")
 
 
 def demo_zero_shot() -> None:
-    print("\nDEMO 3: zero-shot classification")
+    print("\n演示 3：零样本分类")
     print("-" * 60)
     classes = {
         "cat": make_fake_embedding(42),
@@ -138,21 +137,22 @@ def demo_zero_shot() -> None:
                    for i, c in enumerate(classes["dog"])]
 
     ranked = zero_shot_classify(query_image, classes)
-    print("  query image (close to 'dog' prototype):")
+    print("  查询图像（接近“狗”原型）：")
+    display_names = {"cat": "猫", "dog": "狗", "bird": "鸟", "car": "汽车"}
     for name, score in ranked:
-        print(f"    {name:6s}: {score:+.4f}")
-    print(f"  top-1: {ranked[0][0]}")
+        print(f"    {display_names[name]:6s}：{score:+.4f}")
+    print(f"  第一名：{display_names[ranked[0][0]]}")
 
 
 def demo_prompt_ensemble() -> None:
-    print("\nDEMO 4: prompt template ensemble")
+    print("\n演示 4：提示模板集成")
     print("-" * 60)
     templates = [
-        "a photo of a {class}",
-        "a picture of a {class}",
-        "an image of a {class}",
+        "一张{class}的照片",
+        "一幅{class}的图片",
+        "一张展示{class}的图像",
     ]
-    class_name = "golden retriever"
+    class_name = "金毛寻回犬"
     ensemble_vec = [0.0] * 64
     count = 0
     for t in templates:
@@ -163,26 +163,26 @@ def demo_prompt_ensemble() -> None:
             ensemble_vec[k] += emb[k]
         count += 1
     ensemble_vec = [x / count for x in ensemble_vec]
-    print(f"  ensembled {count} prompts for '{class_name}'")
-    print(f"  first 6 dims: {[round(x, 3) for x in ensemble_vec[:6]]}")
-    print("  single-template: noisier; ensemble: +1-3 points on real benchmarks.")
+    print(f"  为 {count} 个 '{class_name}' 提示做集成")
+    print(f"  前 6 维：{[round(x, 3) for x in ensemble_vec[:6]]}")
+    print("  单模板：噪声更大；集成：在真实基准上可提高 1-3 分。")
 
 
 def main() -> None:
     print("=" * 60)
-    print("CLIP / SIGLIP CONTRASTIVE TRAINING (Phase 12, Lesson 02)")
+    print("CLIP / SIGLIP 对比训练（第 12 阶段，第 02 课）")
     print("=" * 60)
     demo_infonce()
     demo_shuffled()
     demo_zero_shot()
     demo_prompt_ensemble()
     print("\n" + "=" * 60)
-    print("TAKEAWAYS")
+    print("要点")
     print("-" * 60)
-    print("  · InfoNCE penalizes rows AND columns (symmetric)")
-    print("  · Lower tau -> sharper softmax -> more hard-negative pressure")
-    print("  · Sigmoid loss decouples pairs -> no all-gather in distributed runs")
-    print("  · Zero-shot = argmax cos(image, prompt) over class prompts")
+    print("  · InfoNCE 同时惩罚行与列（对称）")
+    print("  · tau 越小，softmax 越尖锐，困难负样本压力越大")
+    print("  · Sigmoid 损失将样本对解耦，分布式运行无需 all-gather")
+    print("  · 零样本分类是在类别提示上取 argmax cos(image, prompt)")
 
 
 if __name__ == "__main__":
