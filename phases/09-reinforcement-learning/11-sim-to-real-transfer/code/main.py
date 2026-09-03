@@ -84,13 +84,13 @@ def evaluate(Q, slip, episodes=200, rng=None):
 
 
 def main():
-    print(f"=== sim-to-real: train in 'sim', evaluate on 'real' ===")
-    print(f"env: {GRID}x{GRID} GridWorld, slip = probability of perpendicular slip")
+    print("=== 从仿真到现实：在“仿真”中训练，在“现实”中评估 ===")
+    print(f"环境：{GRID}x{GRID} GridWorld，slip = 垂直方向滑移的概率")
     print()
 
-    print("training two policies with same compute budget:")
-    print("  policy A: fixed slip = 0.0 (no domain randomization)")
-    print("  policy B: slip ~ Uniform[0.0, 0.3] (domain randomization)")
+    print("使用相同计算预算训练两个策略：")
+    print("  策略 A：固定 slip = 0.0（无域随机化）")
+    print("  策略 B：slip ~ Uniform[0.0, 0.3]（域随机化）")
     print()
 
     rng = random.Random(1)
@@ -98,8 +98,8 @@ def main():
     rng = random.Random(1)
     Q_dr = train_dr(0.0, 0.3, rng=rng)
 
-    print("evaluation on 'real' slips (each 200 episodes greedy eval):")
-    print(f"  {'slip':<10}{'fixed-slip policy':<22}{'DR-trained policy':<22}")
+    print("在“现实”slip 上评估（每项执行 200 个回合的贪心评估）：")
+    print(f"  {'slip':<10}{'固定 slip 策略':<22}{'DR 训练策略':<22}")
     for slip in (0.0, 0.1, 0.2, 0.3, 0.5, 0.7):
         r_fixed = evaluate(Q_fixed, slip)
         r_dr = evaluate(Q_dr, slip)
@@ -111,7 +111,7 @@ def main():
         print(f"  {slip:<10.2f}{r_fixed:<22.2f}{r_dr:<22.2f}{label}")
 
     print()
-    print("takeaway: DR-trained policy degrades gracefully; fixed-slip policy is brittle out-of-distribution.")
+    print("要点：DR 训练策略的性能会平缓下降；固定 slip 策略面对分布外数据时很脆弱。")
 
 
 if __name__ == "__main__":
