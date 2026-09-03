@@ -1,11 +1,11 @@
-"""A2A-minimal server and client using http.server.
+"""使用 http.server 实现的最小 A2A 服务端与客户端。
 
-Implements the discovery-submit-poll-result flow:
+实现发现、提交、轮询结果流程：
   - GET /.well-known/agent.json  -> Agent Card
-  - POST /tasks                  -> create task
-  - GET /tasks/{id}              -> state + artifact
+  - POST /tasks                  -> 创建任务
+  - GET /tasks/{id}              -> 状态 + 产物
 
-Server runs in a background thread; client talks to it and prints the trace.
+服务端在后台线程中运行；客户端与其通信并打印轨迹。
 """
 from __future__ import annotations
 
@@ -60,9 +60,9 @@ class TaskStore:
                 code = t["payload"].get("code", "")
                 issues = []
                 if "return" not in code:
-                    issues.append("no return statement")
+                    issues.append("没有 return 语句")
                 if "def " not in code:
-                    issues.append("no function definition")
+                    issues.append("没有函数定义")
                 t["artifact"] = {
                     "type": "structured",
                     "data": {"issues": issues, "lines": code.count("\n") + 1},
@@ -70,7 +70,7 @@ class TaskStore:
                 t["state"] = "completed"
             else:
                 t["state"] = "failed"
-                t["artifact"] = {"type": "text", "data": f"unknown skill '{t['skill']}'"}
+                t["artifact"] = {"type": "text", "data": f"未知技能“{t['skill']}”"}
 
     def get(self, tid: str) -> dict | None:
         with self._lock:
@@ -131,28 +131,28 @@ def http_json(method: str, url: str, body: Any = None) -> dict:
 
 
 def run_client() -> None:
-    print("\n[1] discovery: GET /.well-known/agent.json")
+    print("\n[1] 发现：GET /.well-known/agent.json")
     card = http_json("GET", "http://localhost:8765/.well-known/agent.json")
     print(f"    name={card['name']}, skills={card['skills']}")
 
-    print("\n[2] submit task: POST /tasks")
+    print("\n[2] 提交任务：POST /tasks")
     submission = {"skill": "review-python", "payload": {"code": "x = 1\nprint(x)\n"}}
     resp = http_json("POST", card["endpoints"]["tasks"], submission)
     tid = resp["task_id"]
     print(f"    task_id={tid}, state={resp['state']}")
 
-    print("\n[3] poll until completed")
+    print("\n[3] 轮询直至完成")
     for i in range(10):
         task = http_json("GET", f"http://localhost:8765/tasks/{tid}")
-        print(f"    attempt {i + 1}: state={task['state']}")
+        print(f"    第 {i + 1} 次尝试：state={task['state']}")
         if task["state"] in ("completed", "failed"):
-            print(f"    artifact: {task['artifact']}")
+            print(f"    产物：{task['artifact']}")
             break
         time.sleep(0.1)
 
 
 def main() -> None:
-    print("A2A minimal protocol demo")
+    print("A2A 最小协议演示")
     print("-" * 30)
     server = run_server()
     time.sleep(0.1)
@@ -160,8 +160,8 @@ def main() -> None:
         run_client()
     finally:
         server.shutdown()
-    print("\nKey insight: discovery + task lifecycle + typed artifact + auth is the A2A surface.")
-    print("MCP is agent <-> tool (vertical); A2A is agent <-> agent (horizontal). Production uses both.")
+    print("\n关键洞察：发现 + 任务生命周期 + 类型化产物 + 身份验证，构成了 A2A 接口。")
+    print("MCP 是 Agent <-> 工具（纵向）；A2A 是 Agent <-> Agent（横向）。生产系统两者都用。")
 
 
 if __name__ == "__main__":
