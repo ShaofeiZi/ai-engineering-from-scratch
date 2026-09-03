@@ -1,10 +1,10 @@
-"""Two-layer MLP projection from vision-token space to text embedding space.
+"""两层 MLP 投影：从视觉 token 空间到文本 embedding 空间。
 
-The vision encoder (lessons 58 and 59) stays frozen. A frozen mock text
-embedding table provides target vectors for synthetic captions. Only the
-projector trains. The objective is per-pair cosine alignment.
+视觉编码器（第 58 和 59 课）保持冻结。一个冻结的 mock 文本
+embedding 表为合成 caption 提供目标向量。只有投影器参与训练。
+优化目标为成对的余弦相似度对齐。
 
-Run with: python3 main.py
+运行方式：python3 main.py
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def _load_module(name: str, path: Path):
         return sys.modules[name]
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"could not load {path}")
+        raise ImportError(f"无法加载 {path}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     try:
@@ -59,7 +59,7 @@ class AlignConfig:
 
 
 class MLPProjector(nn.Module):
-    """Two-layer MLP, the canonical adapter shape used by LLaVA-style VLMs."""
+    """两层 MLP，LLaVA 风格 VLM 中经典的适配器结构。"""
 
     def __init__(self, in_dim: int, hidden_dim: int, out_dim: int) -> None:
         super().__init__()
@@ -71,11 +71,11 @@ class MLPProjector(nn.Module):
 
 
 class MockTextEmbedding(nn.Module):
-    """Frozen text table used as alignment targets.
+    """作为对齐目标的冻结文本表。
 
-    Captions are sequences of token ids; the caption embedding is the mean of
-    the embedded ids. Deterministic given seed.
-    """
+caption 是 token id 序列；caption 的 embedding 是各 id embedding 的均值。
+给定 seed 时结果确定。
+"""
 
     def __init__(self, vocab_size: int, dim: int, seed: int) -> None:
         super().__init__()
@@ -87,7 +87,7 @@ class MockTextEmbedding(nn.Module):
 
     def forward(self, ids: torch.Tensor) -> torch.Tensor:
         if ids.dim() != 2:
-            raise ValueError(f"expected (B, L) ids, got {tuple(ids.shape)}")
+            raise ValueError(f"期望 (B, L) 的 ids，得到 {tuple(ids.shape)}")
         embed = self.table(ids)
         mask = (ids != 0).float().unsqueeze(-1)
         denom = mask.sum(dim=1).clamp(min=1.0)
@@ -96,12 +96,12 @@ class MockTextEmbedding(nn.Module):
 
 
 def make_pair(seed: int, vocab_size: int, max_len: int) -> tuple[torch.Tensor, torch.Tensor]:
-    """One synthetic (image, caption_ids) pair.
+    """生成一个合成的 (image, caption_ids) 对。
 
-    Image is the deterministic 224x224x3 fixture from lesson 58 with a per-pair
-    seed. Caption is a length-`max_len` sequence of token ids, again
-    deterministic in seed. Token id 0 is reserved as padding.
-    """
+图像为第 58 课中确定的 224x224x3 固定样本，并带有每对独立的 seed。
+caption 为长度为 `max_len` 的 token id 序列，同样由 seed 确定。
+token id 0 保留为 padding。
+"""
     img = synthesize_image(seed=seed)
     rng = np.random.default_rng(seed + 10_000)
     length = int(rng.integers(4, max_len + 1))
@@ -113,7 +113,7 @@ def make_pair(seed: int, vocab_size: int, max_len: int) -> tuple[torch.Tensor, t
 def cosine_alignment_loss(image_emb: torch.Tensor, text_emb: torch.Tensor) -> torch.Tensor:
     if image_emb.shape != text_emb.shape:
         raise ValueError(
-            f"shape mismatch image {tuple(image_emb.shape)} vs text {tuple(text_emb.shape)}"
+            f"形状不匹配：image {tuple(image_emb.shape)} vs text {tuple(text_emb.shape)}"
         )
     img_n = F.normalize(image_emb, dim=-1)
     txt_n = F.normalize(text_emb, dim=-1)
@@ -136,12 +136,12 @@ class TrainStats:
 
 def train(cfg: AlignConfig) -> tuple[MLPProjector, TrainStats]:
     if cfg.pairs <= 0:
-        raise ValueError(f"pairs must be > 0, got {cfg.pairs}")
+        raise ValueError(f"pairs 必须 > 0，得到 {cfg.pairs}")
     if cfg.steps <= 0:
-        raise ValueError(f"steps must be > 0, got {cfg.steps}")
+        raise ValueError(f"steps 必须 > 0，得到 {cfg.steps}")
     if cfg.max_caption_len < 4:
         raise ValueError(
-            f"max_caption_len must be >= 4 for make_pair(), got {cfg.max_caption_len}"
+            f"make_pair() 要求 max_caption_len >= 4，得到 {cfg.max_caption_len}"
         )
 
     torch.manual_seed(cfg.seed)
@@ -185,7 +185,7 @@ def train(cfg: AlignConfig) -> tuple[MLPProjector, TrainStats]:
         if step % 25 == 0 or step == cfg.steps - 1:
             with torch.no_grad():
                 cos = F.cosine_similarity(image_emb, text_emb).mean().item()
-            print(f"  step {step:4d}  loss {loss.item():.4f}  cos {cos:+.4f}")
+            print(f"  步骤 {step:4d}  loss {loss.item():.4f}  cos {cos:+.4f}")
         if step == cfg.steps - 1:
             final_loss = loss.item()
             with torch.no_grad():
@@ -201,34 +201,34 @@ def train(cfg: AlignConfig) -> tuple[MLPProjector, TrainStats]:
 
 def main() -> None:
     print("=" * 60)
-    print("PROJECTION LAYER FOR MODALITY ALIGNMENT")
+    print("模态对齐的投影层")
     print("=" * 60)
 
     cfg = AlignConfig()
-    print(f"  vision hidden     : {cfg.vision_hidden}")
-    print(f"  projection hidden : {cfg.projection_hidden}")
-    print(f"  text hidden       : {cfg.text_hidden}")
-    print(f"  vocab size        : {cfg.vocab_size}")
-    print(f"  pairs             : {cfg.pairs}")
-    print(f"  steps             : {cfg.steps}")
-    print(f"  learning rate     : {cfg.lr}")
+    print(f"  视觉隐藏维度      : {cfg.vision_hidden}")
+    print(f"  投影隐藏维度      : {cfg.projection_hidden}")
+    print(f"  文本隐藏维度      : {cfg.text_hidden}")
+    print(f"  词表大小          : {cfg.vocab_size}")
+    print(f"  配对数量          : {cfg.pairs}")
+    print(f"  步数              : {cfg.steps}")
+    print(f"  学习率            : {cfg.lr}")
 
-    print("\ntraining (vision encoder frozen, text table frozen, projector trains):")
+    print("\n训练中（视觉编码器冻结、文本表冻结、投影器训练）：")
     projector, stats = train(cfg)
 
     n_proj = sum(p.numel() for p in projector.parameters())
-    print(f"\nprojector params  : {n_proj:,}")
-    print(f"initial loss      : {stats.initial_loss:.4f}")
-    print(f"final loss        : {stats.final_loss:.4f}")
-    print(f"final cosine sim  : {stats.final_cos:+.4f}")
+    print(f"\n投影器参数量  : {n_proj:,}")
+    print(f"初始损失       : {stats.initial_loss:.4f}")
+    print(f"最终损失       : {stats.final_loss:.4f}")
+    print(f"最终余弦相似度 : {stats.final_cos:+.4f}")
     drop = stats.initial_loss - stats.final_loss
-    print(f"loss drop         : {drop:.4f}")
+    print(f"损失下降       : {drop:.4f}")
     if drop > 0.0:
-        print("  ok: projector learned an alignment direction")
+        print("  通过：投影器学到了对齐方向")
     else:
-        print("  FAIL: loss did not decrease")
+        print("  失败：损失未下降")
 
-    print("\ndone.")
+    print("\n完成。")
 
 
 if __name__ == "__main__":

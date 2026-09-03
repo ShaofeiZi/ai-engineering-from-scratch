@@ -1,4 +1,4 @@
-"""Unit tests for the modality-alignment projection layer."""
+"""模态对齐投影层的单元测试。"""
 
 from __future__ import annotations
 
