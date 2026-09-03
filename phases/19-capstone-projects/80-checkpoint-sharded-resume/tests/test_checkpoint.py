@@ -1,4 +1,4 @@
-"""Unit tests for the sharded checkpoint module."""
+"""分片检查点模块的单元测试。"""
 
 from __future__ import annotations
 

@@ -1,14 +1,14 @@
-"""Sharded checkpoint with atomic write and verified resume.
+"""带原子写入与可验证恢复的分片检查点。
 
-Saves a multi-rank training state as per-rank binary files plus a JSON
-manifest. The write is atomic: every file lands at <name>.tmp first, the
-manifest writes last, then a single rename moves everything to the final
-names. A crash mid-write leaves the previous checkpoint intact.
+将多 rank 训练状态保存为按 rank 划分的二进制文件以及一个 JSON
+清单。写入是原子的：每个文件先写入 <name>.tmp，清单最后写入，
+然后通过一次重命名把所有文件移动到最终名称。写入过程中崩溃
+会使上一个检查点保持完好。
 
-Resume verifies the manifest schema (world_size, shard count, sha256 per
-shard) and reconstructs per-rank state byte-equal to what was saved.
+恢复时会校验清单 schema（world_size、分片数量、每个分片的
+sha256），并重建与保存时逐字节相等的各 rank 状态。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ class ShardManifest:
 
 
 class CheckpointError(Exception):
-    """Raised when manifest validation or shard verification fails."""
+    """当清单校验或分片验证失败时抛出。"""
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -75,7 +75,7 @@ def _sha256_bytes(data: bytes) -> str:
 
 
 def _fsync_dir(path: Path) -> None:
-    """Fsync a directory so rename metadata reaches disk; no-op where unsupported."""
+    """对目录执行 fsync，使重命名的元数据落盘；在不支持的系统上为空操作。"""
     try:
         fd = os.open(str(path), os.O_RDONLY)
     except OSError:
@@ -89,7 +89,7 @@ def _fsync_dir(path: Path) -> None:
 
 
 def _serialize_state(state: dict) -> bytes:
-    """Serialize a state dict deterministically using torch.save with pickle 4."""
+    """使用 torch.save 与 pickle 4 确定性地序列化状态字典。"""
     import io
     buf = io.BytesIO()
     torch.save(state, buf, pickle_protocol=4)
@@ -104,11 +104,11 @@ def _deserialize_state(data: bytes) -> dict:
 
 def save_sharded(per_rank_state: list, dest_dir: str, step: int,
                  wall_clock_seconds: float = 0.0) -> ShardManifest:
-    """Write per-rank state files atomically; return the manifest written.
+    """原子地写入按 rank 划分的状态文件；返回已写入的清单。
 
-    per_rank_state is a list indexed by rank. Each entry is a state dict that
-    will be torch.save'd into rankN.bin. The function uses the .tmp + rename
-    pattern so a partial write never corrupts an existing checkpoint.
+    per_rank_state 是按 rank 索引的列表。每个条目是一个状态字典，
+    会被 torch.save 写入 rankN.bin。该函数使用 .tmp + 重命名模式，
+    因此部分写入永远不会破坏已存在的检查点。
     """
     dest = Path(dest_dir)
     dest.mkdir(parents=True, exist_ok=True)
@@ -157,7 +157,7 @@ def save_sharded(per_rank_state: list, dest_dir: str, step: int,
 
 
 def load_sharded(src_dir: str, expected_world_size: int) -> tuple:
-    """Read the manifest, verify every shard, return (manifest, per-rank state list)."""
+    """读取 manifest，校验每个分片，并返回 ``(manifest, 各 rank 状态列表)``。"""
     src = Path(src_dir)
     manifest_path = src / MANIFEST_NAME
     if not manifest_path.exists():
@@ -210,7 +210,7 @@ def load_sharded(src_dir: str, expected_world_size: int) -> tuple:
 
 
 def rotate_checkpoints(parent_dir: str, keep_last: int = 5) -> list:
-    """Delete oldest checkpoint directories so only the most recent keep_last remain."""
+    """删除最旧的检查点目录，仅保留最近的 keep_last 个。"""
     if keep_last < 0:
         raise ValueError(f"keep_last must be >= 0, got {keep_last}")
     parent = Path(parent_dir)
@@ -234,7 +234,7 @@ def rotate_checkpoints(parent_dir: str, keep_last: int = 5) -> list:
 
 
 def make_demo_state(rank: int, world_size: int) -> dict:
-    """Construct a representative per-rank state for the demo."""
+    """为演示构造具有代表性的各 rank 状态。"""
     torch.manual_seed(31 + rank)
     return {
         "rank": rank,
@@ -249,41 +249,41 @@ def make_demo_state(rank: int, world_size: int) -> dict:
 def main() -> int:
     world_size = 4
     workdir = tempfile.mkdtemp(prefix="aie_ckpt_")
-    print(f"workdir: {workdir}")
+    print(f"工作目录：{workdir}")
     states = [make_demo_state(r, world_size) for r in range(world_size)]
     step_dir = os.path.join(workdir, "step_0100")
-    print("saving sharded checkpoint...")
+    print("正在保存分片检查点……")
     manifest = save_sharded(states, step_dir, step=100, wall_clock_seconds=42.0)
-    print(f"manifest: world_size={manifest.world_size}, step={manifest.step}, shards={len(manifest.shards)}")
+    print(f"清单：world_size={manifest.world_size}, step={manifest.step}, shards={len(manifest.shards)}")
     for entry in manifest.shards:
         print(f"  rank {entry.rank}: {entry.path} sha256={entry.sha256[:12]}... numel={entry.param_shard_numel}")
-    print("\nresuming...")
+    print("\n正在恢复……")
     loaded_manifest, loaded_states = load_sharded(step_dir, expected_world_size=world_size)
     for r in range(world_size):
         before = states[r]["param_shard"]
         after = loaded_states[r]["param_shard"]
-        assert torch.equal(before, after), f"rank {r} param shard differs after resume"
-    print("byte-equal round-trip verified for every rank")
-    print("\ntesting failure mode: wrong world size...")
+        assert torch.equal(before, after), f"rank {r} 的参数分片在恢复后不同"
+    print("已验证每个 rank 的逐字节一致往返")
+    print("\n正在测试失败模式：错误的 world size……")
     try:
         load_sharded(step_dir, expected_world_size=8)
     except CheckpointError as e:
-        print(f"  rejected as expected: {e}")
-    print("\ntesting failure mode: tampered shard...")
+        print(f"  已按预期拒绝：{e}")
+    print("\n正在测试失败模式：分片被篡改……")
     shard0 = Path(step_dir) / "rank0.bin"
     backup = shard0.read_bytes()
     shard0.write_bytes(backup + b"corruption")
     try:
         load_sharded(step_dir, expected_world_size=world_size)
     except CheckpointError as e:
-        print(f"  rejected as expected: {e}")
+        print(f"  已按预期拒绝：{e}")
     shard0.write_bytes(backup)
-    print("\ntesting rotation: write 8 checkpoints, keep 5...")
+    print("\n正在测试轮换：写入 8 个检查点，保留 5 个……")
     for s in range(8):
         sd = os.path.join(workdir, f"step_{s:04d}")
         save_sharded(states, sd, step=s)
     deleted = rotate_checkpoints(workdir, keep_last=5)
-    print(f"  rotated {len(deleted)} oldest: {deleted}")
+    print(f"  已轮换删除 {len(deleted)} 个最旧检查点：{deleted}")
     shutil.rmtree(workdir, ignore_errors=True)
     return 0
 
