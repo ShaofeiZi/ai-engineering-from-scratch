@@ -135,7 +135,7 @@ class Network:
 
 def train_xor():
     print("=" * 50)
-    print("Training on XOR")
+    print("在 XOR 上训练")
     print("=" * 50)
 
     random.seed(42)
@@ -165,14 +165,14 @@ def train_xor():
             p.data -= learning_rate * p.grad
 
         if epoch % 100 == 0:
-            print(f"Epoch {epoch:4d} | Loss: {total_loss.data:.6f}")
+            print(f"轮次 {epoch:4d} | 损失: {total_loss.data:.6f}")
 
-    print("\nXOR Results:")
+    print("\nXOR 结果:")
     for inputs, target in xor_data:
         x = [Value(i) for i in inputs]
         pred = net(x)
         predicted_class = 1 if pred.data > 0.5 else 0
-        print(f"  {inputs} -> {pred.data:.4f} (rounded: {predicted_class}, expected {int(target)})")
+        print(f"  {inputs} -> {pred.data:.4f} (取整: {predicted_class}, 期望 {int(target)})")
 
 
 def generate_circle_data(n=100):
@@ -187,7 +187,7 @@ def generate_circle_data(n=100):
 
 def train_circle():
     print("\n" + "=" * 50)
-    print("Training on Circle Classification")
+    print("在圆形分类任务上训练")
     print("=" * 50)
 
     random.seed(7)
@@ -218,22 +218,22 @@ def train_circle():
                 if predicted_class == target:
                     correct += 1
             accuracy = correct / len(circle_data) * 100
-            print(f"Epoch {epoch:4d} | Loss: {total_loss_val:.4f} | Accuracy: {accuracy:.1f}%")
+            print(f"轮次 {epoch:4d} | 损失: {total_loss_val:.4f} | 准确率: {accuracy:.1f}%")
 
-    print("\nSample Circle Results:")
+    print("\n圆形分类抽样结果:")
     test_points = [
-        ([0.0, 0.0], "inside"),
-        ([0.5, 0.5], "inside"),
-        ([1.2, 1.2], "outside"),
-        ([0.0, 1.2], "outside"),
-        ([-0.3, 0.3], "inside"),
+        ([0.0, 0.0], "圆内"),
+        ([0.5, 0.5], "圆内"),
+        ([1.2, 1.2], "圆外"),
+        ([0.0, 1.2], "圆外"),
+        ([-0.3, 0.3], "圆内"),
     ]
     for point, expected_region in test_points:
         x = [Value(i) for i in point]
         pred = net(x)
-        predicted_class = "inside" if pred.data > 0.5 else "outside"
-        status = "OK" if predicted_class == expected_region else "WRONG"
-        print(f"  {point} -> {pred.data:.4f} ({predicted_class}, expected {expected_region}) {status}")
+        predicted_class = "圆内" if pred.data > 0.5 else "圆外"
+        status = "正确" if predicted_class == expected_region else "错误"
+        print(f"  {point} -> {pred.data:.4f} ({predicted_class}, 期望 {expected_region}) {status}")
 
 
 if __name__ == "__main__":
