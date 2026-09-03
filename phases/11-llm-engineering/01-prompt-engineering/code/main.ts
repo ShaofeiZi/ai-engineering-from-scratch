@@ -1,10 +1,10 @@
-// Prompt engineering in TypeScript: pattern catalog, role/context/instruction
-// composition, multi-provider request formatters, simulated LLM dispatch with
-// deterministic scoring. Mirrors code/prompt_engineering.py.
-// Sources:
-//   https://platform.openai.com/docs/guides/text-generation
-//   https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering
-//   https://ai.google.dev/gemini-api/docs/text-generation
+// TypeScript中的快速工程:图案目录,角色/context/instruction
+// 组件、 多提供者请求格式化器, 模拟 LLM 发送
+// 决定性评分. 镜像代码/prompt_engineering.py.
+// 资料来源:
+// https://platform.openai.com/docs/guides/text-generation (韩语)
+// https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering (韩语)
+// https://ai.google.dev/gemini-api/docs/text-generation (韩语)
 
 import { createHash } from "node:crypto";
 
@@ -358,17 +358,17 @@ function compareModels(results: Record<string, ModelResult>, criteria: Criteria)
 
 function main(): void {
   console.log("=".repeat(60));
-  console.log("  PROMPT PATTERN CATALOG");
+  console.log("PROMPT 模式目录（TypeScript）");
   console.log("=".repeat(60));
   for (const [name, pattern] of Object.entries(PROMPT_PATTERNS)) {
     console.log("\n  [" + name + "] " + pattern.name);
     console.log("    " + pattern.description);
-    console.log("    Variables: " + pattern.variables.join(", "));
-    console.log("    Recommended temp: " + pattern.temperature);
+    console.log("    变量：" + pattern.variables.join(", "));
+    console.log("    建议 temperature：" + pattern.temperature);
   }
 
   console.log("\n" + "=".repeat(60));
-  console.log("  SINGLE PROMPT BUILD + TEST");
+  console.log("单条 prompt 构建与测试");
   console.log("=".repeat(60));
 
   const prompt = buildPrompt("persona", {
@@ -378,15 +378,15 @@ function main(): void {
     priority: "reliability over speed",
     task: "Explain why container orchestration matters for microservices.",
   });
-  console.log("\n  System: " + prompt.system);
-  console.log("  Temperature: " + prompt.temperature);
+  console.log("\n系统 prompt：" + prompt.system);
+  console.log("temperature：" + prompt.temperature);
 
   const results = runPromptTest(prompt);
   for (const [model, r] of Object.entries(results)) {
     console.log("\n  [" + model + "]");
-    console.log("    Response: " + r.response.slice(0, 100));
-    console.log("    Tokens: " + JSON.stringify(r.tokens));
-    console.log("    Latency: " + r.apiLatencyMs + "ms");
+    console.log("响应：" + r.response.slice(0, 100));
+    console.log("token 用量：" + JSON.stringify(r.tokens));
+    console.log("延迟：" + r.apiLatencyMs + " ms");
   }
 
   type TestCase = { name: string; pattern: PatternName; variables: Record<string, string>; criteria: Criteria };
@@ -423,16 +423,16 @@ function main(): void {
   ];
 
   console.log("\n" + "=".repeat(60));
-  console.log("  TEST SUITE");
+  console.log("测试");
   console.log("=".repeat(60));
   for (const test of suite) {
     const p = buildPrompt(test.pattern, test.variables);
     const rs = runPromptTest(p);
     const ranked = compareModels(rs, test.criteria);
-    console.log("\n  Test: " + test.name);
-    console.log("  Pattern: " + test.pattern);
+    console.log("\n 测试 :" + test.name);
+    console.log("模式 :" + test.pattern);
     for (const r of ranked) {
-      console.log("    " + r.model.padEnd(20) + " score=" + r.score.toFixed(3) + " tokens=" + r.tokens + " latency=" + r.latency + "ms");
+      console.log("    " + r.model.padEnd(20) + "分数=" + r.score.toFixed(3) + " token=" + r.tokens + " 延迟=" + r.latency + " ms");
     }
   }
 }

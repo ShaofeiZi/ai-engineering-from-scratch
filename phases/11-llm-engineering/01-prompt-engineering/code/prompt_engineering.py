@@ -479,26 +479,26 @@ TEST_SUITE = [
 
 def run_test_suite():
     print("=" * 70)
-    print("  PROMPT ENGINEERING TEST SUITE")
+    print("PROMPT 工程试验")
     print("=" * 70)
 
     all_results = []
 
     for test in TEST_SUITE:
         print(f"\n{'=' * 60}")
-        print(f"  Test: {test['name']}")
-        print(f"  Pattern: {test['pattern']}")
+        print(f"  测试：{test['name']}")
+        print(f"  模式：{test['pattern']}")
         print(f"{'=' * 60}")
 
         prompt = build_prompt(test["pattern"], test["variables"])
-        print(f"\n  System: {prompt['system'][:80]}...")
-        print(f"  User prompt: {prompt['user'][:120]}...")
-        print(f"  Temperature: {prompt['temperature']}")
+        print(f"\n  系统提示：{prompt['system'][:80]}...")
+        print(f"  用户提示：{prompt['user'][:120]}...")
+        print(f"  温度：{prompt['temperature']}")
 
         results = run_prompt_test(prompt)
         comparison, ranked = compare_models(results, test["criteria"])
 
-        print(f"\n  {'Model':<25} {'Score':>8} {'Tokens':>8} {'Latency':>10}")
+        print(f"\n  {'模型':<25} {'得分':>8} {'token 数':>8} {'延迟':>10}")
         print(f"  {'-' * 55}")
         for model_name, data in ranked:
             score = data["scores"]["composite_score"]
@@ -513,7 +513,7 @@ def run_test_suite():
         })
 
     print(f"\n\n{'=' * 70}")
-    print("  SUMMARY: MODEL RANKINGS ACROSS ALL TESTS")
+    print("摘要:模范系列跨越所有试验")
     print(f"{'=' * 70}")
 
     model_wins = {}
@@ -523,26 +523,26 @@ def run_test_suite():
             model_wins[winner] = model_wins.get(winner, 0) + 1
 
     for model, wins in sorted(model_wins.items(), key=lambda x: x[1], reverse=True):
-        print(f"  {model}: {wins} wins out of {len(all_results)} tests")
+        print(f"  {model}：在 {len(all_results)} 个测试中胜出 {wins} 次")
 
     return all_results
 
 
 def run_pattern_catalog_demo():
     print("=" * 70)
-    print("  PROMPT PATTERN CATALOG")
+    print("提示词模式目录（离线演示）")
     print("=" * 70)
 
     for name, pattern in PROMPT_PATTERNS.items():
         print(f"\n  [{name}] {pattern['name']}")
         print(f"    {pattern['description']}")
-        print(f"    Variables: {', '.join(pattern['variables'])}")
-        print(f"    Recommended temp: {pattern['temperature']}")
+        print(f"    变量：{', '.join(pattern['variables'])}")
+        print(f"    推荐温度：{pattern['temperature']}")
 
 
 def run_single_prompt_demo():
     print(f"\n{'=' * 70}")
-    print("  SINGLE PROMPT BUILD + TEST")
+    print("单个提示词构建与测试")
     print("=" * 70)
 
     prompt = build_prompt("persona", {
@@ -553,17 +553,17 @@ def run_single_prompt_demo():
         "task": "Explain why container orchestration matters for microservices.",
     })
 
-    print(f"\n  System message:\n    {prompt['system']}")
-    print(f"\n  User message:\n    {prompt['user'][:200]}...")
-    print(f"\n  Temperature: {prompt['temperature']}")
-    print(f"\n  Pattern metadata: {json.dumps(prompt['metadata'], indent=4)}")
+    print(f"\n  系统消息：\n    {prompt['system']}")
+    print(f"\n  用户消息：\n    {prompt['user'][:200]}...")
+    print(f"\n  温度：{prompt['temperature']}")
+    print(f"\n  模式元数据：{json.dumps(prompt['metadata'], indent=4)}")
 
     results = run_prompt_test(prompt)
     for model, result in results.items():
         print(f"\n  [{model}]")
-        print(f"    Response: {result['response'][:100]}...")
-        print(f"    Tokens: {result['tokens']}")
-        print(f"    Latency: {result['api_latency_ms']}ms")
+        print(f"    回复：{result['response'][:100]}...")
+        print(f"    token：{result['tokens']}")
+        print(f"    延迟：{result['api_latency_ms']}ms")
 
 
 if __name__ == "__main__":
