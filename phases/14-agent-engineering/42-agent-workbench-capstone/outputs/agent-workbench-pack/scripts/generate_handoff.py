@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-of-session handoff packet generator. See Phase 14 · 40."""
+"""会话结束时的交接包生成器。参见第 14 阶段 · 第 40 课。"""
 
 from __future__ import annotations
 
@@ -110,9 +110,9 @@ def main() -> int:
     try:
         payload = generate_handoff(args.task_id, args.session_id)
     except Exception as exc:
-        print(f"handoff failed: {exc}", file=sys.stderr)
+        print(f"交接失败：{exc}", file=sys.stderr)
         return 1
-    print(f"wrote outputs/handoff/{payload['session_id']}/{{handoff.json,handoff.md}}")
+    print(f"已写入 outputs/handoff/{payload['session_id']}/{{handoff.json,handoff.md}}")
     return 0
 
 

@@ -1,9 +1,8 @@
-"""Assemble the capstone agent-workbench-pack into outputs/.
+"""组装毕业设计 agent-workbench-pack 至 outputs/.
 
-Seeds schemas, scripts, and docs from the surfaces built in the
-preceding lessons of this mini-track. Idempotent. Prints the tree.
+从本 mini-track. 中前面课程所构建的界面层生成 Schema、脚本和文档。幂等操作，打印目录树。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -160,8 +159,8 @@ SCOPE_SCHEMA = {
 INSTALL_SH = """#!/usr/bin/env bash
 set -euo pipefail
 
-# Install the agent workbench pack into the current repo.
-# Usage: bin/install.sh [--force]
+# 将智能体工作台包安装到当前仓库。
+# 用法：bin/install.sh [--force]
 
 FORCE="${1:-}"
 TARGET="$(pwd)"
@@ -170,13 +169,13 @@ PACK_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 required=("AGENTS.md" "VERSION" "docs" "schemas" "scripts")
 for path in "${required[@]}"; do
     if [[ ! -e "$PACK_ROOT/$path" ]]; then
-        echo "missing pack source: $PACK_ROOT/$path" >&2
+        echo "缺少 pack 源文件：$PACK_ROOT/$path" >&2
         exit 1
     fi
 done
 
 if [[ -e "$TARGET/AGENTS.md" && "$FORCE" != "--force" ]]; then
-    echo "AGENTS.md already exists. Pass --force to overwrite." >&2
+    echo "AGENTS.md 已存在。请传入 --force 以覆盖。" >&2
     exit 1
 fi
 
@@ -187,13 +186,13 @@ cp -r "$PACK_ROOT/schemas/." "$TARGET/schemas/"
 cp -r "$PACK_ROOT/scripts/." "$TARGET/scripts/"
 cat "$PACK_ROOT/VERSION" > "$TARGET/.workbench-version"
 
-echo "pack installed at version $(cat "$PACK_ROOT/VERSION")"
-echo "next: edit task_board.json, set acceptance commands, run scripts/init_agent.py"
+echo "pack 已安装，版本为 $(cat "$PACK_ROOT/VERSION")"
+echo "下一步：编辑 task_board.json，设置验收命令，运行 scripts/init_agent.py"
 """
 
 
 INIT_AGENT_PY = '''#!/usr/bin/env python3
-"""Workbench init script. See Phase 14 · 35 for the from-scratch build."""
+"""工作台初始化脚本。完整构建过程参见第 14 阶段 · 第 35 课。"""
 
 from __future__ import annotations
 
@@ -258,7 +257,7 @@ def main() -> int:
         print(f"  {name:<{width}}  {status:>4}  {detail}")
     failed = [n for n, s, _ in probes if s == "fail"]
     if failed:
-        print(f"\\ninit failed: {failed}", file=sys.stderr)
+        print(f"\\n初始化失败：{failed}", file=sys.stderr)
         return 1
     return 0
 
@@ -269,7 +268,7 @@ if __name__ == "__main__":
 
 
 RUN_WITH_FEEDBACK_PY = '''#!/usr/bin/env python3
-"""Structured shell-command runner. See Phase 14 · 37."""
+"""结构化 shell 命令运行器。参见第 14 阶段 · 第 37 课。"""
 
 from __future__ import annotations
 
@@ -341,7 +340,7 @@ if __name__ == "__main__":
 
 
 VERIFY_AGENT_PY = '''#!/usr/bin/env python3
-"""Deterministic verification gate. See Phase 14 · 38."""
+"""确定性验证门禁。参见第 14 阶段 · 第 38 课。"""
 
 from __future__ import annotations
 
@@ -423,7 +422,7 @@ def main() -> int:
     out.write_text(json.dumps(report, indent=2) + "\\n")
     print(json.dumps(report, indent=2))
     if not report["passed"]:
-        print("verification failed", file=sys.stderr)
+        print("验证失败", file=sys.stderr)
         return 1
     return 0
 
@@ -434,7 +433,7 @@ if __name__ == "__main__":
 
 
 GENERATE_HANDOFF_PY = '''#!/usr/bin/env python3
-"""End-of-session handoff packet generator. See Phase 14 · 40."""
+"""会话结束时的交接包生成器。参见第 14 阶段 · 第 40 课。"""
 
 from __future__ import annotations
 
@@ -545,9 +544,9 @@ def main() -> int:
     try:
         payload = generate_handoff(args.task_id, args.session_id)
     except Exception as exc:
-        print(f"handoff failed: {exc}", file=sys.stderr)
+        print(f"交接失败：{exc}", file=sys.stderr)
         return 1
-    print(f"wrote outputs/handoff/{payload['session_id']}/{{handoff.json,handoff.md}}")
+    print(f"已写入 outputs/handoff/{payload['session_id']}/{{handoff.json,handoff.md}}")
     return 0
 
 

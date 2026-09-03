@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install the agent workbench pack into the current repo.
-# Usage: bin/install.sh [--force]
+# 将 agent 工作台 pack 安装到当前仓库。
+# 用法：bin/install.sh [--force]
 
 FORCE="${1:-}"
 TARGET="$(pwd)"
@@ -11,13 +11,13 @@ PACK_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 required=("AGENTS.md" "VERSION" "docs" "schemas" "scripts")
 for path in "${required[@]}"; do
     if [[ ! -e "$PACK_ROOT/$path" ]]; then
-        echo "missing pack source: $PACK_ROOT/$path" >&2
+        echo "缺少 pack 源文件：$PACK_ROOT/$path" >&2
         exit 1
     fi
 done
 
 if [[ -e "$TARGET/AGENTS.md" && "$FORCE" != "--force" ]]; then
-    echo "AGENTS.md already exists. Pass --force to overwrite." >&2
+    echo "AGENTS.md 已存在。请传入 --force 以覆盖。" >&2
     exit 1
 fi
 
@@ -28,5 +28,5 @@ cp -r "$PACK_ROOT/schemas/." "$TARGET/schemas/"
 cp -r "$PACK_ROOT/scripts/." "$TARGET/scripts/"
 cat "$PACK_ROOT/VERSION" > "$TARGET/.workbench-version"
 
-echo "pack installed at version $(cat "$PACK_ROOT/VERSION")"
-echo "next: edit task_board.json, set acceptance commands, run scripts/init_agent.py"
+echo "pack 已安装，版本为 $(cat "$PACK_ROOT/VERSION")"
+echo "下一步：编辑 task_board.json，设置验收命令，运行 scripts/init_agent.py"

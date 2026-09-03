@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic verification gate. See Phase 14 · 38."""
+"""确定性验证门禁。参见第 14 阶段 · 第 38 课。"""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def main() -> int:
     out.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
     if not report["passed"]:
-        print("verification failed", file=sys.stderr)
+        print("验证失败", file=sys.stderr)
         return 1
     return 0
 

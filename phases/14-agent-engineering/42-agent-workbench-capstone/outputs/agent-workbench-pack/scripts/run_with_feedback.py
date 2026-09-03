@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Structured shell-command runner. See Phase 14 · 37."""
+"""结构化 shell 命令运行器。参见第 14 阶段 · 第 37 课。"""
 
 from __future__ import annotations
 
