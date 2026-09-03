@@ -1,8 +1,8 @@
-"""Stdlib failure-mode tagger for agent traces.
+"""标准库故障模式标注器，用于智能体轨迹。
 
-Detects the five industry-recurring modes: hallucinated actions, scope creep,
-cascading errors, context loss, tool misuse. Each detector returns a tag if
-the trace matches; aggregate distribution mirrors Phoenix's trace clustering.
+检测五种 industry-recurring 模式：虚构操作、范围蔓延、
+级联错误、上下文丢失、工具误用。每个检测器在轨迹匹配时返回一个标签；
+聚合分布镜像 Phoenix 的轨迹聚类。
 """
 
 from __future__ import annotations
@@ -121,7 +121,7 @@ def tag(trace: Trace) -> list[str]:
 
 def main() -> None:
     print("=" * 70)
-    print("AGENT FAILURE MODES — Phase 14, Lesson 26")
+    print("智能体故障模式 — 第 14 阶段，第 26 课")
     print("=" * 70)
 
     traces = [
@@ -189,14 +189,14 @@ def main() -> None:
         labels = tag(trace)
         distribution.update(labels)
         print(f"  {trace.tid}  user={trace.user_request[:40]!r}")
-        print(f"    labels: {labels if labels else '[clean]'}")
+        print(f"    标签: {labels if labels else '[clean]'}")
 
-    print("\naggregate distribution")
+    print("\n聚合分布")
     for label, count in distribution.most_common():
         print(f"  {label}: {count}")
     print()
-    print("gate at every step: classifier, argument validation, state probe.")
-    print("cascading is the killer. detect early, stop the loop.")
+    print("每步设置关卡：分类器、参数校验、状态探测。")
+    print("级联是最致命的问题。尽早检测，终止循环。")
 
 
 if __name__ == "__main__":
