@@ -1,14 +1,14 @@
-"""Toy ReAct agent loop — stdlib only.
+"""简易 ReAct 智能体循环——仅使用标准库。
 
-Implements the five ingredients from docs/en.md:
-  1. message buffer
-  2. tool registry
-  3. stop condition
-  4. turn budget
-  5. observation formatter
+实现了 docs/en.md 中的五个要素：
+  1. 消息缓冲区
+  2. 工具注册表
+  3. 停止条件
+  4. 轮次预算
+  5. 观测格式化器
 
-ToyLLM is a scripted policy so the loop runs offline and deterministic. Swap
-ToyLLM for a real provider client and the control flow is identical.
+ToyLLM 是一个脚本化策略，因此循环可离线运行且确定性。将
+ToyLLM 替换为真实的提供商客户端后，控制流完全相同。
 """
 
 from __future__ import annotations
@@ -76,10 +76,10 @@ class KVStore:
 
 
 class ToyLLM:
-    """Scripted ReAct policy. Returns one assistant turn per call.
+    """脚本化 ReAct 策略。每次调用返回一个助手轮次。
 
-    Each script entry is either ('thought', text) plus ('action', name, args)
-    or ('finish', text). The loop runs through the script in order.
+    每个脚本条目要么是 ('thought', text) 加上 ('action', name, args)，
+    要么是 ('finish', text)。循环按顺序执行脚本。
     """
 
     def __init__(self, script: list[dict[str, Any]]) -> None:
@@ -161,16 +161,16 @@ def build_demo_agent() -> AgentLoop:
 
 def main() -> None:
     print("=" * 70)
-    print("TOY REACT LOOP — Phase 14, Lesson 01")
+    print("玩具版 REACT 循环 — 第 14 阶段，第 01 课")
     print("=" * 70)
     agent = build_demo_agent()
     final = agent.run("What is 120 plus 15% tax, stored in kv?")
     print()
     pretty_trace(agent.history)
     print()
-    print(f"final answer: {final}")
-    print(f"turns used:   {len([t for t in agent.history if t.kind == 'action'])}")
-    print(f"tools used:   {agent.tools.names()}")
+    print(f"最终答案：{final}")
+    print(f"已用轮次：   {len([t for t in agent.history if t.kind == 'action'])}")
+    print(f"已用工具：   {agent.tools.names()}")
 
 
 if __name__ == "__main__":
