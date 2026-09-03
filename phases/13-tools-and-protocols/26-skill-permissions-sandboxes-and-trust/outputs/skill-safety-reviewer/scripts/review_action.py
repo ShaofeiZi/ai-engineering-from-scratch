@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify a JSON action request under a JSON policy without executing it."""
+"""在 JSON 策略下对 JSON 操作请求进行分类，但不执行该请求。"""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def contains_secret(value: str) -> bool:
 
 
 def normalize_https_origin(value: str, *, origin_only: bool = False) -> str:
-    """Return a canonical HTTPS origin with an explicit effective port."""
+    """返回带有明确有效端口的规范化 HTTPS 源。"""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("HTTPS origin must be a non-empty string")
     try:

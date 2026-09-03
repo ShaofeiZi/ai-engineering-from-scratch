@@ -1,4 +1,4 @@
-"""Deterministic tests for Lesson 26's non-executing sandbox reviewer."""
+"""第 26 课非执行型沙箱审查器的确定性测试。"""
 
 from __future__ import annotations
 

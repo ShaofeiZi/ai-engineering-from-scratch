@@ -1,4 +1,4 @@
-"""Probe observable container boundaries and print one JSON report."""
+"""探测可观测容器的边界并打印一份 JSON 报告。"""
 
 from __future__ import annotations
 

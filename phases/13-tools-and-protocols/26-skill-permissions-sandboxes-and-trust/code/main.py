@@ -74,7 +74,7 @@ def contains_secret(value: str) -> bool:
 
 
 def normalize_https_origin(value: str, *, origin_only: bool = False) -> str:
-    """Return a canonical HTTPS origin with an explicit effective port."""
+    """返回一个带有显式有效端口的规范 HTTPS 源。"""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("HTTPS origin must be a non-empty string")
     try:
@@ -135,7 +135,7 @@ def normalize_workspace_path(workspace_root: Path, target: str) -> Path:
 def inspect_command(
     command: tuple[str, ...], allowlist: Iterable[tuple[str, ...]]
 ) -> tuple[bool, str]:
-    """Inspect an argv vector without invoking a shell or subprocess."""
+    """检查 argv 向量，而不调用 shell 或子进程。"""
     if not command:
         return False, "empty command"
     executable = command[0]
@@ -174,7 +174,7 @@ def _decision(
 
 
 def review_action(policy: SandboxPolicy, request: ActionRequest) -> ReviewDecision:
-    """Classify one proposed action. This function has no execution path."""
+    """对一项提议的操作进行分类。此函数没有执行路径。"""
     if request.kind == "policy-change":
         return _decision(
             request,
