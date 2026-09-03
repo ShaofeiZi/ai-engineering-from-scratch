@@ -1,4 +1,4 @@
-"""Deterministic tests for Lesson 25 invocation policy adapters."""
+"""第 25 课调用策略适配器的确定性测试。"""
 
 from __future__ import annotations
 

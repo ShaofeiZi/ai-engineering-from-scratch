@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simulate one invocation decision and print JSON; no skill code is executed."""
+"""模拟一次调用决策并打印 JSON；不执行任何技能代码。"""
 
 from __future__ import annotations
 

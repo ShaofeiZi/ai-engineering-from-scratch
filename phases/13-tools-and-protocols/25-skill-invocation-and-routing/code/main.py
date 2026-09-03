@@ -118,7 +118,7 @@ def relevance_score(query: str, skill: SkillMetadata) -> float:
 
 
 class CorePolicyAdapter:
-    """Apply only caller-supplied host policy; ignore extension fields."""
+    """仅应用 caller-supplied 主机策略；忽略扩展字段。"""
 
     def __init__(self, policy: InvocationPolicy):
         self.policy = policy
@@ -171,7 +171,7 @@ def _extension_true(value: object) -> bool:
 
 
 class ExtensionPolicyAdapter(CorePolicyAdapter):
-    """Example adapter for one host's invocation metadata conventions."""
+    """针对某个主机调用元数据约定的适配器示例。"""
 
     def allows(
         self,
