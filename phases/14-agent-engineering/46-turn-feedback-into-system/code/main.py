@@ -1,8 +1,8 @@
-# Lesson program for promoting corrections into durable controls.
-# Read: phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md
-# Reference: Basili, Caldiera, and Rombach, The Goal Question Metric Approach.
-# Reference: Shinn et al., Reflexion, arXiv:2303.11366.
-# Run this file to generate outputs/feedback-ratchet.json.
+# 课程程序，用于将修正提升为持久控制。
+# 阅读：phases/14-agent-engineering/46-turn-feedback-into-system/docs/en.md
+# 参考文献：Basili、Caldiera 和 Rombach，《目标问题度量方法》（The Goal Question Metric Approach）。
+# 参考文献：Shinn 等人，Reflexion，arXiv:2303.11366.
+# 运行此文件以生成 outputs/feedback-ratchet.json.
 from __future__ import annotations
 
 import hashlib
