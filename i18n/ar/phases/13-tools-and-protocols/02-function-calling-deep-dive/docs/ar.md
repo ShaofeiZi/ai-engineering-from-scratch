@@ -1,6 +1,6 @@
-# الوظيفة التي تدعو للغوص العميق  OpenAI، الأنثروبيك، جيمين
+# الوظيفة التي تدعو للغوص العميق OpenAI, Anthropic, Gemini
 
-> تجمع مزودي الحدود الثلاثة على نفس حلقة الاتصال بالأدوات في عام 2024 ثم اختلفوا على كل شيء آخر.`tools`و`tool_calls`. الاستخدامات الإنسانية`tool_use`و`tool_result`الكتل التي يستخدمها التوأم`functionDeclarations`هذه الدروس تفرق الثلاثة جانبا إلى جانبه بحيث لا يتم كسر الرمز الذي يتم شحنه على مزود واحد عندما تقوم بتنفيذه.
+> تجمع مزودي الحدود الثلاثة على نفس حلقة الاتصال بالأدوات في عام 2024 ثم اختلفوا في كل شيء آخر. OpenAI استخدامات `tools` و `tool_calls`. Anthropic استخدامات `tool_use` و `tool_result` الكتل. Gemini استخدامات `functionDeclarations` هذه الدروس تفرق الثلاثة جانبا إلى جانبه بحيث لا يتم كسر الرمز الذي يتم شحنه على مزود واحد عندما تقوم بتنفيذه.
 
 **Type:** Build
 **Languages:** Python (stdlib, schema translators)
@@ -9,24 +9,24 @@
 
 ## أهداف التعلم
 
-- أوضح الفرق الثلاثة في الشكل بين OpenAI و Anthropic و Gemini (إعلان ، دعوة ، نتيجة).
+- أوضح الفرق الثلاثة في الشكل بين OpenAI, Anthropicو Gemini الحملات المفيدة التي تدعو إلى الوظيفة (الإعلان، الدعوة، النتيجة).
 - ترجمة إعلان واحد للأداة عبر جميع تنسيقات المزودين الثلاثة وتنبؤ بمكان تختلف قيود الوضع الصارم.
-- استخدام`tool_choice`في كل مزود لإجبار، أو منع، أو اختيار أداة الاتصال تلقائيًا.
+- الاستخدام `tool_choice` في كل مزود لإجبار، أو منع، أو اختيار أداة الاتصال تلقائيًا.
 - تعرف الحدود القاسية لكل مزود (عدد الأدوات ، عمق النظام ، طول الحجج) وتوقيعات الخطأ التي تنبعثها كل واحد عندما يتم انتهاك الحدود.
 
 ## المشكلة
 
 تشكل طلب استدعاء الوظيفة يختلف حسب المقدم. ثلاثة أمثلة ملموسة من مجموعات الإنتاج 2026:
 
-**OpenAI Chat Completions / Responses API.**أنت تمر`tools: [{type: "function", function: {name, description, parameters, strict}}]`. ردة النموذج تحتوي على `choices[0].message.tool_calls: [{id, type: "function", function: {name, arguments}}]`أين`arguments`هو سلسلة JSON يجب أن تحلل. وضع صارم (`strict: true`) يفرض الامتثال للخطط عبر فك القيود المحدود.
+**OpenAI الإكمالات / الإجابات API.** أنت تمر `tools: [{type: "function", function: {name, description, parameters, strict}}]`. ردة النموذج تحتوي على `choices[0].message.tool_calls: [{id, type: "function", function: {name, arguments}}]` حيث `arguments` هو JSON الحبل يجب أن تحلل. وضع صارم (`strict: true`) يفرض الامتثال للخطط عبر فك القيود المحدود.
 
-**Anthropic Messages API.**أنت تمر`tools: [{name, description, input_schema}]`ردنا على هذا هو`content: [{type: "text"}, {type: "tool_use", id, name, input}]`. .`input`تم تحليلها بالفعل (شيء وليس سلسلة)`user`رسالة تحتوي على`{type: "tool_result", tool_use_id, content}`-بلوك
+**Anthropic الرسائل API.** أنت تمر `tools: [{name, description, input_schema}]`ردنا على ذلك `content: [{type: "text"}, {type: "tool_use", id, name, input}]`. `input` تم تحليلها بالفعل (شيء وليس سلسلة). `user` رسالة تحتوي على `{type: "tool_result", tool_use_id, content}` -بلوك
 
-**Google Gemini API.**أنت تمر`tools: [{functionDeclarations: [{name, description, parameters}]}]`(مُعَشَّرَة تحت `functionDeclarations`) والرد يأتي ك`candidates[0].content.parts: [{functionCall: {name, args, id}}]`أين`id`هو فريد في جيميني 3 و فوق لتنسيق المكالمة المتوازية.`{functionResponse: {name, id, response}}`. . .
+**جوجل Gemini API.** أنت تمر `tools: [{functionDeclarations: [{name, description, parameters}]}]` (مُعَشَّر تحت `functionDeclarations`) والرد يأتي ك `candidates[0].content.parts: [{functionCall: {name, args, id}}]` حيث `id` هو فريد في Gemini 3 و فوق لترابط الدعوة الموازية. `{functionResponse: {name, id, response}}`.
 
-نفس الحلقة، أسماء الميدان المختلفة، وترتيبات مختلفة، وآليات مختلفة للشريط مقابل الكائن، وآليات مختلفة للاتصال. فريق يكتب وكيل الطقس على OpenAI يدفع لميناء يومين إلى "أنثروبيك" و يوم آخر إلى "جيميني" فقط من أجل التبني.
+نفس الحلقة. أسماء الميدان المختلفة، وترتيبات مختلفة، ووافقات مختلفة بين السلاسل والكائنات، وآليات التواصل المختلفة. OpenAI يدفع مدة يومين إلى Anthropic و يوماً آخر Gemini فقط للأنبوب
 
-هذه الدروس تبني مترجم يوحد الصيغ الثلاثة في إعلان واحد أداة القنوني والطرق في الحافة. مرحلة 13 · 17 تعميم نفس النمط في بوابة LLM.
+هذه الدروس تبني مترجم يوحد الصيغ الثلاثة في إعلان واحد أداة القنونية والطرق في الحافة. LLM بوابة
 
 ## المفهوم
 
@@ -34,57 +34,57 @@
 
 كل مزود يحتاج إلى خمسة أشياء:
 
-1. **Tool list.**اسم كل أداة وصف ونظام إدخال.
-2. **Tool choice.**أجبري على أداة محددة أو حظر الأدوات أو دع النموذج يقرر
-3. **Call emission.**الناتج المهيكلي الذي يسمي الأداة والحجج.
-4. **Call id.**ربط الاستجابة بالدعوة الصحيحة (المسائل للموازية).
-5. **Result injection.**رسالة أو حظر يربط النتيجة بالاتصال
+1. **قائمة الأدوات** اسم كل أداة وصف ونظام إدخال.
+2. **اختيار الأدوات** أجبري على أداة محددة أو حظر الأدوات أو دع النموذج يقرر
+3. **إرسال مكالمة** الناتج المهيكلي الذي يسمي الأداة والحجج.
+4. **اتصل بالهوية** ربط الاستجابة بالدعوة الصحيحة (المسائل للموازية).
+5. **نتيجة الحقن** رسالة أو حظر يربط النتيجة بالاتصال
 
 ### اختلافات الشكل، حقلًا بحقل
 
-| Aspect | OpenAI | Anthropic | Gemini |
+| الجانب | OpenAI | Anthropic | Gemini |
 |--------|--------|-----------|--------|
-| Declaration envelope | `{type: "function", function: {...}}` | `{name, description, input_schema}` | `{functionDeclarations: [{...}]}` |
-| Schema field | `parameters` | `input_schema` | `parameters` |
-| Response container | `tool_calls[]` on assistant message | `content[]` of type `tool_use` | `parts[]` of type `functionCall` |
-| Arguments type | stringified JSON | parsed object | parsed object |
-| Id format | `call_...` (OpenAI generates) | `toolu_...` (Anthropic) | UUID (Gemini 3+) |
-| Result block | role `tool`, `tool_call_id` | `user` with `tool_result`, `tool_use_id` | `functionResponse` with matching `id` |
-| Force-a-tool | `tool_choice: {type: "function", function: {name}}` | `tool_choice: {type: "tool", name}` | `tool_config: {function_calling_config: {mode: "ANY"}}` |
-| Forbid tools | `tool_choice: "none"` | `tool_choice: {type: "none"}` | `mode: "NONE"` |
-| Strict schema | `strict: true` | schema-is-schema (always enforced) | `responseSchema` at request level |
+| ملف الإعلان | `{type: "function", function: {...}}` | `{name, description, input_schema}` | `{functionDeclarations: [{...}]}` |
+| حقل الخطة | `parameters` | `input_schema` | `parameters` |
+| حاوية الاستجابة | `tool_calls[]` على رسالة المساعد | `content[]` من نوع `tool_use` | `parts[]` من نوع `functionCall` |
+| نوع الحجج | المخططات JSON | الموضوع المتحقق | الموضوع المتحقق |
+| صيغة الهوية | `call_...` (OpenAI (تولّد) | `toolu_...` (Anthropic) | UUID (Gemini 3+) |
+| حظر النتائج | الدور `tool`, `tool_call_id` | `user` مع `tool_result`, `tool_use_id` | `functionResponse` مع مطابقة `id` |
+| قوة أداة | `tool_choice: {type: "function", function: {name}}` | `tool_choice: {type: "tool", name}` | `tool_config: {function_calling_config: {mode: "ANY"}}` |
+| أدوات محظورة | `tool_choice: "none"` | `tool_choice: {type: "none"}` | `mode: "NONE"` |
+| مخطط صارم | `strict: true` | المخطط هو المخطط (لا يزال يتم تطبيقه) | `responseSchema` على مستوى الطلب |
 
 ### الحدود التي ستضربها فعلاً
 
-- **OpenAI.**128 أداة لكل طلب. عمق الخطة 5. سلسلة الحجج <= 8192 بايت. وضع القييد لا يتطلب `$ref`لا , لا`oneOf`-أجل`anyOf`-أجل`allOf`مع التداخل، كل ممتلكات المدرجة في `required`. . .
-- **Anthropic.**64 أداة لكل طلب. عمق الخطة لا حدود لها ولكن حد عملي 10. لا يوجد علامة على الوضع الصارم. الخطة عقد وتعتبر النموذج متوافقة.
-- **Gemini.**64 وظيفة لكل طلب. أنواع الخطة هي OpenAPI 3.0 فرعية (اختلاف طفيف من JSON Schema 2020-12). الدعوات المتوازية هو واحد-هوية منذ جيمين 3.
+- **OpenAI.** 128 أداة لكل طلب. عمق الخطة 5. الحجة string <= 8192 الـ (بايت) ، الـ (مود) القييد لا يتطلب `$ref`لا , لا `oneOf`/`anyOf`/`allOf` مع التداخل، كل خصائص المدرجة في `required`.
+- **Anthropic.** 64 أداة لكل طلب. عمق الخطة لا حدود لها ولكن حد عملي 10. لا يوجد علامة على الوضع الصارم. الخطة عقد وتعتبر النموذج متوافقة.
+- **Gemini.** 64 وظيفة لكل طلب. أنواع النظام هي OpenAPI مجموعة الفرعية 3.0 (اختلاف بسيط من JSON المخطط 2020-12). Gemini 3.
 
-### `tool_choice`السلوك
+### `tool_choice` السلوك
 
 ثلاثة أنظمة تدعمها الجميع، تسميت مختلفة.
 
-- **Auto.**النموذج يختار الأداة أو النص الافتراضي
-- **Required / Any.**يجب أن يتصل النموذج بأداة واحدة على الأقل
-- **None.**لا يجب أن تدعو النموذج إلى أدوات
+- **-أوتوماتيكي** النموذج يختار الأداة أو النص الافتراضي
+- **مطلوبة أي** يجب أن يتصل النموذج بأداة واحدة على الأقل
+- **لا شيء** لا يجب أن تدعو النموذج إلى أدوات
 
 بالإضافة إلى وضع واحد فريد لكل مزود:
 
-- **OpenAI.**اجبر أداة محددة باسمها
-- **Anthropic.**إجبار أداة محددة باسمها`disable_parallel_tool_use`العلم يفصل بين واحد مقابل متعدد
-- **Gemini.** `mode: "VALIDATED"`يتوجه كل رد عبر مؤكدة النظام بغض النظر عن نية النموذج.
+- **OpenAI.** اجبر أداة محددة باسمها
+- **Anthropic.** إجبار أداة محددة باسمها `disable_parallel_tool_use` العلم يفصل بين واحد مقابل متعدد
+- **Gemini.** `mode: "VALIDATED"` يتوجه كل رد عبر مؤكدة النظام بغض النظر عن نية النموذج.
 
 ### المكالمات المتوازية
 
-"أوبن آي"`parallel_tool_calls: true`(الديفالتي) ينشر مكالمات متعددة في رسالة مساعدة واحدة. تقوم بتشغيلها كلها وترد برسالة أداة-دور المجموعة التي تحتوي على إدخال واحد لكل`tool_call_id`. إنثروبي تاريخياً كان يطلب مكالمة واحدة`disable_parallel_tool_use: false`(الديفالتي اعتبارا من كلود 3.5) تمكن متعددة. سمح جيميني 2 بالاتصال المتوازي ولكن لم يعطي هواتف مستقرة. جيميني 3 يضيف UUIDs حتى تتواصل استجابات خارج النظام بشكل نظيف.
+OpenAI- نعم `parallel_tool_calls: true` (الديفالتي) إصدار مكالمات متعددة في رسالة مساعدة واحدة. تقوم بتشغيلها كلها وترد برسالة أداة-دور المجموعة التي تحتوي على إدخال واحد لكل `tool_call_id`. Anthropic تاريخياً، كانت تستخدم مكالمة واحدة. `disable_parallel_tool_use: false` (المتخلفة اعتبارا من Claude 3.5) يسمح بمتعدد. Gemini 2 سمح للاتصال بالموازات ولكن لم يقدم هويتهم المستقرة Gemini 3 adds UUIDs لذا الردود غير المرتبطة تتوافق بشكل واضح
 
 ### التدفق
 
 جميع الدعوات الثلاثة تدعم أداة التدفق. تنسيق الأسلاك يختلف:
 
-- **OpenAI.**قطعات ديلتا من`tool_calls[i].function.arguments`تصل بشكل تدريجي، تتراكم حتى`finish_reason: "tool_calls"`. . .
-- **Anthropic.**أحداث البدء المحدد / البلوك-دلتا / وقف المحدد. `input_json_delta`الكتائب تحمل حجج جزئية.
-- **Gemini.** `streamFunctionCallArguments`(جديد في جيميني 3) يُصدّر قطع مع `functionCallId`حتى تتمكن مكالمات متوازية متعددة من التقاط.
+- **OpenAI.** قطعات ديلتا من `tool_calls[i].function.arguments` تصل تدريجياً، تتراكم حتى `finish_reason: "tool_calls"`.
+- **Anthropic.** أحداث البدء المحدد / البلوك-دلتا / وقف المحدد. `input_json_delta` الكتائب تحمل حجج جزئية.
+- **Gemini.** `streamFunctionCallArguments` (جديد في Gemini 3) يُصدّر قطع مع `functionCallId` حتى تتمكن مكالمات متوازية متعددة من التقاط.
 
 مرحلة 13 · 03 تدخل عميقًا في إعادة تجميع الموازات + التدفق. يركز هذا الدروس على أشكال الإعلانات والدعوة الواحدة.
 
@@ -92,10 +92,10 @@
 
 أخطاء الحجج غير صالحة تبدو مختلفة أيضا.
 
-- **OpenAI (non-strict).**النموذج يعود `arguments: "{bad json}"`إذا فشلت تحليل JSON، تقوم بإدخال رسالة خطأ وإعادة الاتصال.
-- **OpenAI (strict).**يتم التحقق من التحقق من الصحة أثناء فك التشفير . غير صالحة JSON مستحيل ولكن `refusal`يمكن أن تظهر.
-- **Anthropic.** `input`قد تحتوي على حقل غير متوقعة، النموذج هو نصيحة. تأكيد جانب الخادم.
-- **Gemini.**المميزة في OpenAPI 3.0: `enum`على حقل الأشياء التي تم تجاهلها بصمت، تأكدي نفسك.
+- **OpenAI (غير صارم)** العائدات النموذجية `arguments: "{bad json}"`، JSON إذا فشل التحليل، تقوم بإدخال رسالة خطأ وإعادة الاتصال.
+- **OpenAI (مصرّفة)** يتم التحقق من التحقق من الصحة أثناء فك التشفير ؛ غير صالح JSON هذا مستحيل `refusal` يمكن أن تظهر.
+- **Anthropic.** `input` قد تحتوي على حقل غير متوقعة، النموذج هو نصيحة. تأكيد جانب الخادم.
+- **Gemini.** OpenAPI 3.0 غريبة: `enum` على حقل الأشياء التي تم تجاهلها بصمت، تأكدي نفسك.
 
 ### نمط الترجمة
 
@@ -110,9 +110,9 @@ Tool(
 )
 ```
 
-ثلاث وظائف صغيرة تحويلها إلى ثلاثة أشكال مزود.`code/main.py`يقوم بذلك بالضبط، ثم يقوم بتجول مكالمة أداة مزيفة عبر شكل استجابة كل مزود. لا توجد شبكة مطلوبة  هذا الدرس يعلم الشكول، وليس HTTP.
+ثلاث وظائف صغيرة ترجمة إلى ثلاثة شكل مزود. `code/main.py` يقوم هذا بالضبط، ثم يُجول مكالمة أداة مزيفة عبر شكل استجابة كل مزود. لا توجد شبكة مطلوبة  هذا الدروس يعلم الشكول، وليس HTTP.
 
-فرق الإنتاج تغلف هذا المترجم في`AbstractToolset`(الذكاء الاصطناعي البيانتي)`UniversalToolNode`(لنجراف) ، أو`BaseTool`(LlamaIndex). مرحلة 13 · 17 تشكل بوابة تعرض API على شكل OpenAI أمام أي من الثلاثة.
+فرق الإنتاج تغلف هذا المترجم في `AbstractToolset` (بيدانتي) AI), `UniversalToolNode` (LangGraph), أو `BaseTool` (LlamaIndex) مرحلة 13 · 17 تمثل بوابة تُعرض OpenAI-shaped API أمام أي من الثلاثة
 
 ```figure
 function-call-args
@@ -120,49 +120,49 @@ function-call-args
 
 ## استخدمها
 
-`code/main.py`يحدد واحد القنوني `Tool`فهي تقوم بعد ذلك بتحليل استجابة مزود مصنوعة يدويا لكل شكل إلى نفس جسم الدعوة القنوني ، مما يظهر أن التفاصيل نفسها تحت الجلد. قم بتشغيلها وتفاصيل الإعلانات الثلاث جنبا إلى جنب.
+`code/main.py` يحدد واحد القنوني `Tool` و ثلاث مترجمين ينشرون OpenAI, Anthropicو Gemini الإعلان JSON. ثم يقوم بتحليل استجابة مزودية مصنوعة يدويا لكل شكل إلى نفس كائن الدعوة القنوني ، مما يظهر أن التفاصيل نفسها تحت الجلد. قم بتشغيلها وتفاصيل الإعلانات الثلاث جنبا إلى جنب.
 
 ما الذي يجب أن ننظر إليه:
 
 - لا تختلف كتلة الإعلان الثلاثة إلا في أسم الملفات والحقول.
-- تختلف كتلة الاستجابة الثلاثة في مكان وجود المكالمة (على مستوى أعلى `tool_calls`،`content[]`الحجر`parts[]`الدخول)
-- واحد`canonical_call()`مقتطفات الوظيفة `{id, name, args}`من جميع أشكال الاستجابة الثلاثة.
+- تختلف كتلة الاستجابة الثلاثة في مكان وجود المكالمة (على المستوى الأعلى `tool_calls`, `content[]` الكتلة `parts[]` الدخول)
+- واحد `canonical_call()` مقتطفات الوظيفة `{id, name, args}` من جميع أشكال الاستجابة الثلاثة.
 
 ## أرسله
 
-هذا الدرس يُنتج`outputs/skill-provider-portability-audit.md`. نظراً لتكاملات الدعوة الوظيفية مع مزود واحد، فإن المهارة تنتج مراجعة للنقل: أي مزود يحد من الحدود التي يعتمد عليها، والحقول التي تحتاج إلى إعادة تسمية، وما الذي ينتهي عندما يتم نقلها إلى مزود آخر.
+هذا الدرس يُنتج `outputs/skill-provider-portability-audit.md`. نظراً لتكاملات الدعوة الوظيفية مع مزود واحد، فإن المهارة تنتج مراجعة للنقل: أي مزود يحد من الحدود التي يعتمد عليها، والحقول التي تحتاج إلى إعادة تسمية، وما الذي ينتهي عندما يتم نقلها إلى مزود آخر.
 
 ## التمارين
 
-1. أركض`code/main.py`وتحقق من أن جميع JSONs الإعلانات المقدمة ثلاثة تسلسل نفس الأساسية `Tool`تعديل الأداة القنونية لإضافة مبرمير enum وتأكيد فقط مترجم جيميني يحتاج للتعامل مع عادة OpenAPI.
+1. أركض `code/main.py` وتحقق من أن إعلان المقدمين الثلاثة JSONs جميعها تسلسل نفس الأساسية `Tool` تعديل الأداة القنونية لإضافة مبرمير enum وتأكيد فقط Gemini يجب على المترجم التعامل مع OpenAPI غرابة
 
-2. إضافة`ListToolsResponse`المصفح لكل مزود يستخرج قائمة الأدوات يعيد النموذج بعد `list_tools`أو دعوة اكتشاف. لا يوجد لدى OpenAI واحدة بشكل أصلي؛ لاحظ هذه التناظر.
+2. إضافة `ListToolsResponse` المصفح لكل مزود يستخرج قائمة الأدوات يعيد النموذج بعد `list_tools` أو مكالمة اكتشاف OpenAI لا يوجد واحدة في الوطن، لاحظ هذه التناظر.
 
-3. تنفيذ`tool_choice`تحويل: خريطة القنوني `ToolChoice(mode="force", tool_name="x")`في جميع أشكال المزودين الثلاثة. ثم خريطة`mode="any"`و`mode="none"`تفقد جدول الاختلافات في الدروس
+3. تنفيذ `tool_choice` تحويل: خريطة القنوني `ToolChoice(mode="force", tool_name="x")` في جميع أشكال المزودين الثلاثة. ثم خريطة `mode="any"` و `mode="none"`تفقد جدول الاختلافات في الدروس
 
-4. اختر واحد من المقدمين الثلاثة وقرأ دليل استدعاء الوظائف من نهايتها إلى نهايتها. ابحث عن حقل واحد في مواصفات مخططها التي لا تدعمها الاثنان الآخران. المتقدمين: OpenAI `strict`، الأنثروبيك `disable_parallel_tool_use`، التوأم`function_calling_config.allowed_function_names`. . .
+4. اختر واحد من المقدمين الثلاثة وقرأ دليل استدعاء الوظائف من نهايتها إلى نهايتها. ابحث عن حقل واحد في مواصفات مخططها التي لا تدعمها الاثنان الآخران. OpenAI `strict`, Anthropic `disable_parallel_tool_use`, Gemini `function_calling_config.allowed_function_names`.
 
 5. كتابة متجه اختبار: دعوة أداة تنتهك حججها النظام المعلن. قم بتشغيلها من خلال مؤكدة كل مزود (ستعمل stdlib في الدروس 01 كوكب) وتسجيل أي أخطاء تنطلق. وثيقة من المزود الذي ستستخدم في الإنتاج لتحقيق الصرامة.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
+| المدة | ما يقوله الناس | ما يعنيه هذا في الواقع |
 |------|----------------|------------------------|
-| Function calling | "Tool use" | Provider-level API for structured tool-call emission |
-| Tool declaration | "Tool spec" | Name + description + JSON Schema input payload |
-| `tool_choice` | "Force / forbid" | Auto / required / none / specific-name modes |
-| Strict mode | "Schema enforcement" | OpenAI flag that constrains decoding to match schema |
-| `tool_use` block | "Anthropic's call shape" | Inline content block with id, name, input |
-| `functionCall` part | "Gemini's call shape" | A `parts[]` entry containing name, args, and id |
-| Arguments-as-string | "Stringified JSON" | OpenAI returns args as a JSON string, not an object |
-| Parallel tool calls | "Fan-out in one turn" | Multiple tool calls in one assistant message |
-| Refusal | "Model declines" | Strict-mode-only refusal block instead of a call |
-| OpenAPI 3.0 subset | "Gemini schema quirk" | Gemini uses a JSON-Schema-like dialect with minor differences |
+| دعوة الوظيفة | "استخدام الأدوات" | مستوى المقدم API للانبعاثات المهيكلة للدعوة من الأدوات |
+| إعلان الأداة | "مواصفات الأدوات" | Name + description + JSON الحمل المفيد لدخول الخطة |
+| `tool_choice` | "إجبار / منع" | أوضاع السيارات / مطلوبة / لا / اسم محدد |
+| وضع صارم | "إنفاذ المخططات" | OpenAI العلم الذي يفرض القيود على التشغيل لتطابق النمط |
+| `tool_use` الكتلة | "Anthropic"شكل الدعوة" | كتلة المحتوى الداخلية مع الهوية والاسم والدخول |
+| `functionCall` الجزء | "Gemini"شكل الدعوة" | A `parts[]` الإدخال الذي يحتوي على الاسم والرسوم والهوية |
+| الحجج كسلسلة | "مُقَدَّس" JSON" | OpenAI يعود args ك JSON السلسلة وليس كائن |
+| مكالمات الأدوات المتوازية | "المعجب في جولة واحدة" | مكالمات أداة متعددة في رسالة مساعدة واحدة |
+| الرفض | "تراجع النموذج" | حظر الرفض القياسي فقط بدلاً من مكالمة |
+| OpenAPI 3.0 subset | "Gemini "غريبة النظام" | Gemini يستخدم JSON-Schema-like اللغة ذات الاختلافات الصغيرة |
 
 ## المزيد من القراءة
 
-- [OpenAI — Function calling guide](https://platform.openai.com/docs/guides/function-calling) الإشارة القنونية بما في ذلك الوضع الصارم والدعوات المتوازية
-- [Anthropic — Tool use overview](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview) `tool_use`و`tool_result`النطقية الكلي
-- [Google — Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling) المكالمات المتوازية، والهوية الفريدة، و OpenAPI الفرعية
-- [Vertex AI — Function calling reference](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/function-calling) سطح مؤسسة جيمين
-- [OpenAI — Structured outputs](https://platform.openai.com/docs/guides/structured-outputs) تفاصيل تنفيذ النظام الصارم
+- [OpenAI دليل الدعوة إلى الوظيفة](https://platform.openai.com/docs/guides/function-calling) الإشارة القنونية بما في ذلك الوضع الصارم والدعوات المتوازية
+- [Anthropic استعراض عام للاستخدام](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview) — `tool_use` و `tool_result` النطقية الكلي
+- [جوجل Gemini الدعوة إلى الوظيفة](https://ai.google.dev/gemini-api/docs/function-calling) مكالمات متوازية، و هواتف فريدة، و OpenAPI الفرعية
+- [الدوام AI إشارة دعوة الوظيفة](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/function-calling) — Geminiسطح المؤسسة
+- [OpenAI النتائج المهيكلة](https://platform.openai.com/docs/guides/structured-outputs) تفاصيل تنفيذ النظام الصارم

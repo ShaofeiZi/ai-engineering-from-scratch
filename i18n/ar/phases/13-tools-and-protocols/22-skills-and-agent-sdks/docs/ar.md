@@ -10,10 +10,10 @@
 ## أهداف التعلم
 
 - تعريف مهارة العميل دون الخلط بينها مع عرض، أو تعليمات مخزن، أو أداة، أو خطوة، أو سوباجنت، أو مضخة.
-- اقرأ الهاتف المحمول`SKILL.md`العقد والفصل عنه من تمديدات محددة للوقت التشغيل.
+- اقرأ الهاتف المحمول `SKILL.md` العقد والفصل عنه من تمديدات محددة للوقت التشغيل.
 - شرح اكتشاف، واختيار، تنشيط، تحميل الموارد، استخدام الأدوات، والتحقق كمرحلة دورة الحياة المختلفة.
 - تأكيد حزمة مهارات قبل أن يضعها في كتالوج العميل
-- اختر بين مهارة، أداة MCP، خطوة، سوباجنت، أو رمز عادي لمهمة محددة.
+- اختر بين مهارة MCP أداة، خطوة، صبغنت، أو رمز عادي لمهمة محددة.
 
 ## نجاح أول عشر دقائق
 
@@ -23,7 +23,7 @@
 
 ### قبل الرحلة إلى مختبر المضيف الحقيقي
 
-نقطة التفتيش الحقيقية تستلزم Node.js،`npx`، بايثون 3 ، واحد مختار
+نقطة التفتيش الحقيقية تستلزم Node.js، `npx`, Python 3، واحد مختار
 المضيف المهني، وكتب الوصول إلى المشروع أو نطاق المستخدم الذي تختاره
 التحقق من الأوامر المحلية أولاً:
 
@@ -60,7 +60,7 @@ ls -A
 mkdir -p my-first-skill
 ```
 
-إخلق`my-first-skill/SKILL.md`مع هذا المحتوى:
+إخلق `my-first-skill/SKILL.md` مع هذا المحتوى:
 
 ```markdown
 ---
@@ -85,19 +85,19 @@ test -f my-first-skill/SKILL.md
 
 ### 2. قم بتثبيت مجموعة المراجعة الكاملة
 
-ابق في الداخل`agent-skills-first-run`و أطلق:
+ابق في الداخل `agent-skills-first-run` و أطلق:
 
 ```bash
 npx skills add rohitg00/ai-engineering-from-scratch --skill skill-contract-reviewer --full-depth
 ```
 
 اختر عامل المضيف والطاق الذي تستخدمه. يجب على الجهاز التثبيت إدراج
-`skill-contract-reviewer`والمكان الذي كتبته`--full-depth`هو
+`skill-contract-reviewer` والمكان الذي كتبته `--full-depth` هو
 المطلوبة لأن مهارة هذا الدروس هي حزمة مستوى مع المراجع،
 السيناريو، ومتلك.
 
-المجموعة`SKILL_ROOT`إلى المجلد المطلق الذي أبلغ عنه المثبت.
-أن يكون الإرشاد الذي يحتوي على المثبت `SKILL.md`ليس مصدر الدروس
+المجموعة `SKILL_ROOT` إلى المجلد المطلق الذي أبلغ عنه المثبت.
+يكون هذا الإرشاد الذي يحتوي على المكونات المثبتة `SKILL.md`ليس مصدر الدروس
 الإداري وليس مساحة العمل الحالية:
 
 ```bash
@@ -112,16 +112,16 @@ printf 'SKILL_ROOT=%s\n' "$SKILL_ROOT"
 
 ### 3. استدعاءها صراحة
 
-في الوكيل المثبت، مع `agent-skills-first-run`كعمل
+في الوكيل المثبت، مع `agent-skills-first-run` كعمل
 الإرشادات، استخدام النصوص التي يدعمها هذا المضيف:
 
-| Host | Explicit invocation |
+| المضيف | الدعوة الصريحة |
 |---|---|
-| Codex | `skill-contract-reviewer`, or choose it from `/skills`, then provide the review request |
-| Claude Code | `/skill-contract-reviewer` followed by the review request |
-| Portable fallback | `Use skill-contract-reviewer to review the target package.` |
+| Codex | `skill-contract-reviewer`أو اخترها من `/skills`، ثم تقدم طلب المراجعة |
+| Claude الرمز | `/skill-contract-reviewer` ويتبع طلب المراجعة |
+| الرد الخلفي المحمول | `Use skill-contract-reviewer to review the target package.` |
 
-استخدم القيم المطلقة المطبوعة ل `SKILL_ROOT`و`TARGET_ROOT`في
+استخدم القيم المطلقة المطبوعة ل `SKILL_ROOT` و `TARGET_ROOT` في
 طلب. اطلب من المضيف لتوسيعها قبل تنفيذها وتظهر بالضبط
 أمر حل، وليس أمر يعتمد على دليل العمل العملي:
 
@@ -138,7 +138,7 @@ python3 "/absolute/install/path/skill-contract-reviewer/scripts/check_skill.py" 
 
 النتيجة الناجحة لها كل الخصائص الثلاثة:
 
-1. المضيف يجد`skill-contract-reviewer`باسمها
+1. المضيف يجد `skill-contract-reviewer` باسمها
 2. يقرأ المراجع العقد الحزمي ويقوم بتشغيل مؤكدة المجموعة.
 3. يحتوي الإجابة على تقرير تأكيد بدون خطأ هيكلي للاتصالات
    العينة، بالإضافة إلى اختيار بدائي مبرر.
@@ -172,8 +172,8 @@ npx skills remove skill-contract-reviewer
 ```
 
 اختر نفس المضيف والطاق المستخدم أثناء التثبيت. بعد إعادة مسح أو إعادة تشغيل
-جلسة، طلب صريح ل`skill-contract-reviewer`يجب أن يبلغ عن
-لا يمكن الحصول عليها`my-first-skill`في الدروس اللاحقة، أو إزالة
+جلسة، طلب صريح `skill-contract-reviewer` يجب أن يبلغ عن
+لا يمكن الحصول عليها `my-first-skill` في الدروس اللاحقة، أو إزالة
 دليل المختبر بعد أن تنتهي من المسار
 
 ## المشكلة
@@ -182,7 +182,7 @@ npx skills remove skill-contract-reviewer
 
 وضع هذا التدفق العمل في عرض واحد يجعل من السهل التلصق وصعوبة التشغيل. لا يوجد في عرض الهوية المستقرة، لا قاعدة اكتشاف، لا حدود الموارد، لا شكل حزمة قابلة للتحقق، ولا يوجد إجابة على الأسئلة الأساسية: من يمكنه استدعائها؟ متى يجب على النموذج اختيارها؟ أي نصوص يمكن تشغيلها؟ أي ملفات يمكن الوثوق بها؟ ما الذي يبقى عندما يتم ضغط السياق؟
 
-الخطأ المعاكس هو التعامل مع كل تعليم قابل لإعادة الاستخدام كمهارة. اتفاقيات مخزن، التلقائية التحكمية، الأدوات الخارجية، خطط الحدث، والوكلاء المفوضين تحل المشاكل المختلفة.`SKILL.md`ينتج دليل يبدو محمولاً بينما يعتمد على سلوك مضيف واحد غير مُوثق.
+الخطأ المعاكس هو التعامل مع كل تعليم قابل لإعادة الاستخدام كمهارة. اتفاقيات مخزن، التلقائية التحكمية، الأدوات الخارجية، خطط الحدث، والوكلاء المفوضين تحل المشاكل المختلفة. `SKILL.md` ينتج دليل يبدو محمولاً بينما يعتمد على سلوك مضيف واحد غير مُوثق.
 
 أول مهمة هندسية هي التصنيف، تحديد ما هو الفن قبل أن تقرر كيفية إغلاقه.
 
@@ -190,28 +190,28 @@ npx skills remove skill-contract-reviewer
 
 ### المهارات التي ترمز المعرفة الإجرائية
 
-مهارة العميل هو دليل نقطة دخولها هي`SKILL.md`. يحتوي ملف الإدخال على المادة الأمامية YAML تليها تعليمات Markdown. يمكن أن يحتوي الإدراج أيضًا على مرجعيات وسكرتات وأصول.
+مهارة العميل هو دليل نقطة دخولها هي `SKILL.md`الملف المذكور يحتوي على YAML المادة الأمامية تليها تعليمات ماركداون. يمكن أن يحتوي الإرشادات والنصوص والأصول.
 
 ```figure
 skill-package-anatomy
 ```
 
-الإرشادية، وليس ملف ماركداون وحده، هي الوحدة القابلة للتنفيذ.`SKILL.md`مع إشارات مفقودة هي حزمة مكسورة حتى لو تم تحليل المواد الأمامية.
+الإرشادية، وليس ملف ماركداون وحده، هي الوحدة القابلة للتنفيذ. `SKILL.md` مع إشارات مفقودة هي حزمة مكسورة حتى لو تم تحليل المواد الأمامية.
 
 ### الامتزاجات المجاورة
 
-| Artifact | Primary job | Loaded or run when | What it should not impersonate |
+| القطع الأثرية | الوظيفة الأساسية | يتم تحميل أو تشغيله عندما | ما لا ينبغي أن يتظاهر به |
 |---|---|---|---|
-| Prompt | Shape one model interaction | Included by an application or user | A versioned package with resources |
-| Repository instructions | Explain one codebase's standing rules | A coding runtime enters that scope | A reusable task workflow |
-| Agent skill | Supply reusable procedural knowledge | Explicit or implicit activation | A hard authorization boundary |
-| MCP tool | Expose a typed remote capability | The model or application calls it | A detailed operating procedure |
-| Hook | Run deterministic logic on an event | The declared event occurs | Probabilistic model routing |
-| Subagent | Delegate work with separate context and state | An orchestrator creates or calls it | A static instruction bundle |
-| Plugin | Distribute a larger runtime extension | The host installs or enables it | The portable skill contract itself |
-| Learned skill library | Store behavior discovered through experience | A policy retrieves a prior program or trajectory | A standards-based `SKILL.md` package |
+| -أسرع | تشكيل نموذج واحد للتفاعل | يتم تضمينها من قبل التطبيق أو المستخدم | حزمة نسخية مع الموارد |
+| تعليمات المخبز | شرح قواعد قاعدة واحدة | وقت تشغيل التشفير يدخل هذا النطاق | سير عمل المهام القابل لإعادة الاستخدام |
+| مهارات العميل | إمدادات المعرفة الإجرائية التي يمكن إعادة استخدامها | التفعيل المبرر أو الضمني | حدود تصريح صارمة |
+| MCP أداة | عرض إمكانية التحكم عن بعد المكتوب | النموذج أو التطبيق يسميه | إجراء عملي مفصل |
+| -الربط | إدارة المنطق التحديدية على حدث | الحدث المعلن يحدث | التوجيه النموذج المحتمل |
+| السباق | تمنح العمل مع سياق ووضع منفصل | الموسيقي يخلق أو يطلق عليه | مجموعة تعليمات ثابتة |
+| المكونات | توزيع إضافة وقت تشغيل أكبر | المضيف يثبّت أو يُمكّن | العقد المهارات المحمولة نفسها |
+| مكتبة المهارات المتعلقة | سلوك المخزن الذي اكتشف من خلال التجربة | السياسة تستعيد برنامج أو مسار سابق | القواعد القائمة `SKILL.md` الحزمة |
 
-يمكن لمهارة الإفراج أن تخبر العميل كيف يفتش الإفراج. يمكن لمخادم MCP كشف سجل الإفراج. يمكن أن يحظر القفز المباشر. يمكن للقائد التحكم بشكل مستقل في المرشح. هذه الأجزاء تتكون لأنها تحتفظ بمسؤوليات مختلفة.
+مهارة الإفراج يمكن أن تخبر العميل كيفية فحص الإفراج. MCP يمكن للخادم كشف سجل الإفراج. يمكن أن يحظر القفز المباشر. يمكن للخاضع مراجعة المرشح بشكل مستقل. هذه الأجزاء تتكون لأنها تحتفظ بمسؤوليات مختلفة.
 
 ### كلمة "مهارة" تعني أفكار مختلفة
 
@@ -219,14 +219,14 @@ skill-package-anatomy
 
 مهارة العميل في هذه المسار الصغير مختلفة. إنها حزمة مصممة مع عقد نظام الملفات المعلن ، وتفشي البيانات المعدنية ، والكشف التدريجي ، والدعوة المتوسطة في الوقت التشغيلي ، والأدوات التي يتم التحكم بها من قبل المضيف. يمكن إنشاؤها أو تحسينها من قبل العميل ، ولكن لا يتطلب التعلم للصيغة.
 
-| Dimension | Agent Skill package | Learned skill library |
+| الأبعاد | حزمة المهارات العميلة | مكتبة المهارات المتعلقة |
 |---|---|---|
-| Primary unit | `SKILL.md` directory | Program, policy, trajectory, or memory record |
-| Creation | Authored, generated, or curated | Usually discovered from environment experience |
-| Selection | Catalog description plus runtime policy | Retrieval or policy over task state |
-| Execution | Model follows instructions and calls host tools | Environment runs a stored behavior or code artifact |
-| Portability | Package contract can cross compatible hosts | Often tied to one environment and action space |
-| Evaluation | Routing, artifact, safety, and host compatibility | Reward, success rate, transfer, and library growth |
+| الوحدة الأساسية | `SKILL.md` الإدراج | البرنامج، السياسة، المسار، أو سجل الذاكرة |
+| الخلق | المُؤلف، أو المُنتج، أو المُنتج | عادة ما يتم اكتشافها من تجربة البيئة |
+| الاختيار | وصف الكتالوج بالإضافة إلى سياسة وقت التشغيل | الاسترداد أو سياسة على حالة المهمة |
+| الإعدام | النموذج يتبع التعليمات ويستدع أدوات المضيف | البيئة تشغيل سلوك مخزن أو رمز الفن |
+| التنقل | عقد الحزمة يمكن أن تتقاطع بين مضيفات متوافقة | غالباً ما ترتبط بيئة واحدة ومجال عمل واحد |
+| التقييم | التوجيه والصنع والسلامة والتناسب مع المضيف | المكافآت ومعدل النجاح والتحويلات ونمو المكتبات |
 
 كلاهما يحتوي على كفاءة قابلة للاستعمال بشكل متكرر.
 
@@ -241,16 +241,16 @@ description: Inspect a release candidate when the user asks whether a version is
 ---
 ```
 
-`name`هو المعرف المستقر. يجب أن يلبي قواعد الإسم المحدد ويتطابق مع دليل الأم. `description`هو كل من الوثائق والبيانات المتحولية. يجب أن يقول ما تقوم به المهارة ومتى تطبق.
+`name` هو المعرف المستقر. يجب أن يلبي قواعد الإسم المحدد ويتطابق مع دليل الأم. `description` هو كل من الوثائق والبيانات المتحولية. يجب أن يقول ما تقوم به المهارة ومتى تطبق.
 
 الحقول الاختيارية الحقول هي:
 
-| Field | Purpose | Portability note |
+| الحقل | الغرض | ملاحظة تحميل |
 |---|---|---|
-| `license` | State the terms for the package | Core specification |
-| `compatibility` | State environmental requirements | Core specification |
-| `metadata` | Carry string-valued extension data | Core specification |
-| `allowed-tools` | Suggest pre-approved tools | Experimental; host support varies |
+| `license` | إضافة شروط الحزمة | المواصفات الأساسية |
+| `compatibility` | متطلبات البيئة الحكومية | المواصفات الأساسية |
+| `metadata` | حمل بيانات التوسع ذات قيمة سلسلة | المواصفات الأساسية |
+| `allowed-tools` | اقترح أدوات مُعتمدة مسبقاً | تجربي؛ الدعم المضيف يختلف |
 
 يحتوي جهاز ماركداون على تعليمات التشغيل. يجب أن يحدد تدفق العمل، نقاط القرار، سلوك الفشل، والطرق المباشرة إلى الموارد الداعمة.
 
@@ -270,15 +270,15 @@ Use this workflow for a release candidate, not for ordinary development builds.
 
 بعض المضيفين يقبلون إضافية المواد الأمامية أو تكوين المرفق. يمكن أن تكون هذه الحقول مفيدة، لكنها ليست محمولة تلقائيًا.
 
-| Behavior | Example host extension | Portable core? |
+| السلوك | مثال على تمديد المضيف | -البرة المحمولة؟ |
 |---|---|:---:|
-| Hide a skill from model routing while keeping direct user invocation | `disable-model-invocation` | No |
-| Hide a skill from the user's command menu while allowing model routing | `user-invocable` | No |
-| Show argument help in a command menu | `argument-hint` | No |
-| Run the skill in delegated context | `context`, `agent` | No |
-| Pin model or reasoning settings | `model`, `effort` | No |
-| Register lifecycle automation | `hooks` | No |
-| Disable implicit invocation in Codex | `agents/openai.yaml` policy | No |
+| إخفاء مهارة من التوجيه النموذجي مع الحفاظ على دعوة المستخدم المباشرة | `disable-model-invocation` | لا , لا |
+| إخفاء مهارة من قائمة الأوامر للمستخدم مع السماح بتوجيه النموذج | `user-invocable` | لا , لا |
+| عرض مساعدة الحجج في قائمة الأوامر | `argument-hint` | لا , لا |
+| إدارة المهارة في السياق المفوض | `context`, `agent` | لا , لا |
+| نموذج الحزمة أو إعدادات التفكير | `model`, `effort` | لا , لا |
+| تسجيل أوتوماتيكية دورة الحياة | `hooks` | لا , لا |
+| إيقاف الدعوة الضمنية في Codex | `agents/openai.yaml` السياسة | لا , لا |
 
 تعامل كل امتداد كإعداد. حافظ على سير العمل الأساسي صالحًا دون ذلك ، وثيقة الخلف ، واختبار المضيف الذي يستهلكه. قد يتجاهل وقت تشغيل حقلًا مجهولًا ، أو يرفضه ، أو يحفظه دون تنفيذ السلوك.
 
@@ -286,8 +286,8 @@ Use this workflow for a release candidate, not for ordinary development builds.
 
 البيانات المعدنية تغير سلوك النظام قبل قراءة جسم المهارات.
 
-- -أصيب بالشكل الخطأ`name`يمكن أن تجعل الاكتشاف يفشل
-- غامض`description`يمكن أن يتوجه طلبات خاطئة.
+- -أصيب بالشكل الخطأ `name` يمكن أن تجعل الاكتشاف يفشل
+- غامض `description` يمكن أن يتوجه طلبات خاطئة.
 - علم بشري فقط يمكن أن يزيل المهارة من كتالوج النموذج.
 - إمكانية استخدام الأدوات تغير ما إذا كان المضيف يطلب الإذن.
 - إعداد السياق يمكن أن تحرك التنفيذ إلى جلسة عامل منفصلة.
@@ -302,20 +302,20 @@ skill-runtime-lifecycle
 
 كل سهم هو حدود مع وضع الفشل الخاص به.
 
-1. **Discovery**يجد حزم محتملة في مواقع محددة.
-2. **Validation**يرفض الحزم المعاصرة أو غير الآمنة قبل نشر الكتالوج.
-3. **Cataloging**يظهر الوصف`name`و`description`ليس الحزمة الكاملة
-4. **Selection**يقرر ما إذا كانت المهارة ذات صلة.
-5. **Activation**يضع الجسم في سياق مرئي للنموذج.
-6. **Disclosure**يقرأ الإشارات أو الأصول فقط عندما يطلبها فرع.
-7. **Execution**يستخدم أدوات المضيف بموجب قواعد الإذن والعزل من المضيف.
-8. **Verification**يختبر الفن المنتج بشكل مستقل عن ادعاء النموذج.
+1. **اكتشاف** يجد حزم محتملة في مواقع محددة.
+2. **التحقق من الصلاحية** يرفض الحزم المعاصرة أو غير الآمنة قبل نشر الكتالوج.
+3. **التسجيل** يظهر الوصف `name` و `description`ليس الحزمة الكاملة
+4. **الاختيار** يقرر ما إذا كانت المهارة ذات صلة.
+5. **التفعيل** يضع الجسم في سياق مرئي للنموذج.
+6. **الإفصاح عن** يقرأ الإشارات أو الأصول فقط عندما يطلبها فرع.
+7. **الإعدام** يستخدم أدوات المضيف بموجب قواعد الإذن والعزل من المضيف.
+8. **التحقق** يختبر الفن المنتج بشكل مستقل عن ادعاء النموذج.
 
 إن انهيار هذه المراحل يسبب نماذج عقلية سيئة. المهارة المكتشفة غير نشطة. المهارة النشطة غير مصرح بها للقيام بكل ما وصفه. دعوة أداة مسموح بها ليست دليلا على صحة النتيجة.
 
 ### المهارات والأدوات متناغمة
 
-يجيب MCP: "ما هي القدرات التي يمكن لهذا التطبيق أن يستدعيها، وما هي مخططاتها؟" يجيب المهارة، "كيف ينبغي على وكيل التوجه إلى هذه الفئة من المهام؟"
+MCP يجيب: "ما هي القدرات التي يمكن لهذا التطبيق أن يستدعيها، وما هي مخططاتها؟" يجيب المهارة، "كيف يجب على وكيل التوجه إلى هذه الفئة من المهام؟"
 
 ```figure
 skill-tool-orthogonality
@@ -345,16 +345,16 @@ If that skill is unavailable, stop and report the missing dependency.
 
 ## بناءها
 
-`code/main.py`يطبق مؤكداً صغيراً موجهاً نحو المعايير ومختار الأدوات. يبقى stdlib فقط حتى تكون كل قاعدة مرئية.
+`code/main.py` يطبق مؤكداً صغيراً موجهاً نحو المعايير ومختار الأدوات. يبقى stdlib فقط حتى تكون كل قاعدة مرئية.
 
 المحقق يظهر:
 
-- `parse_frontmatter(text)`لفرق البيانات المعدنية عن الجسم.
-- `validate_skill_text(text, directory_name, allowed_runtime_extensions=())`للتحقق من الحقول المطلوبة، والإسم، والإمدادات غير المعروفة، وموجودة الجسم، والحدود المحمولة.
-- `ValidationIssue`و`SkillReport`لإرجاع الأدلة المهيكلة بدلاً من البولية غير الشفافة.
-- `FrontmatterSyntaxError`للمدخول الذي لا يمكن تفسيره بأمان.
+- `parse_frontmatter(text)` لفرق البيانات المعدنية عن الجسم.
+- `validate_skill_text(text, directory_name, allowed_runtime_extensions=())` للتحقق من الحقول المطلوبة، والإسم، والإمدادات غير المعروفة، وموجودة الجسم، والحدود المحمولة.
+- `ValidationIssue` و `SkillReport` لإرجاع الأدلة المهيكلة بدلاً من البولية غير الشفافة.
+- `FrontmatterSyntaxError` للمدخول الذي لا يمكن تفسيره بأمان.
 
-الاختيار يُكشف`TaskShape`و`select_primitives(task)`. يخطط احتياجات المهمة إلى الرمز العادي، أو تعليمات مخزن، أو مهارة، أو خطوة، أو جهاز تحكم، أو أداة MCP.
+الاختيار يظهر `TaskShape` و `select_primitives(task)`. يخطط احتياجات المهمة إلى الرمز العادي، أو تعليمات مخزن، مهارة، خطوة، أو MCP أداة
 
 إدير المختبر
 
@@ -366,9 +366,9 @@ python3 -m unittest discover -s code/tests -v
 ```
 
 هذا الحظر يتطلب نسخة محلية ويجب أن تبدأ من أي مكان في الداخل
-ذلك النموذج كذلك`git rev-parse --show-toplevel`يمكن أن تحل جذور المخبأ
+ذلك النموذج `git rev-parse --show-toplevel` يمكن أن تحل جذور المخبأ
 
-يقوم المشاهد الطباعة JSON لمهارة محمولة واحدة صالحة، مهارة مضيفة واحدة مُوسعة، حزمة واحدة غير صالحة، وعدة قرارات شكل المهام. تحقق من رموز المسألة. يجب أن يشرح مؤكد الحزمة كيفية إصلاح عنصر أثري دون تخمين نيابة عن المؤلف.
+طبعات التجربة JSON لمهارة محمولة واحدة صالحة، مهارة مضيفة واحدة مُوسعة، حزمة واحدة غير صالحة، وعدة قرارات شكل المهام. تحقق من رموز المسألة. يجب على مرجع الملفات شرح كيفية إصلاح عنصر دون تخمين نيابة عن المؤلف.
 
 ### أمر التحقق من المصادقة
 
@@ -384,22 +384,22 @@ skill-validation-order
 
 قبل كتابة مهارة، املأ هذه البطاقة القرارية:
 
-| Question | If yes | Likely primitive |
+| السؤال | إذا كان ذلك صحيحاً | ربما بدائية |
 |---|---|---|
-| Does this need reusable model judgment across several steps? | The procedure is stable but decisions vary | Skill |
-| Must this happen every time an event fires? | Missing one execution is unacceptable | Hook or application code |
-| Does the model need an external capability with typed inputs? | The operation lives outside model context | Tool or MCP server |
-| Does the work need isolated context, state, or ownership? | A separate worker returns a bounded result | Subagent |
-| Is this guidance specific to one repository? | It describes local commands and constraints | Repository instructions |
-| Is one interaction enough? | No package lifecycle is needed | Prompt |
+| هل هذا يتطلب استمارة نموذجية قابلة للتحكم في العديد من الخطوات؟ | الإجراء مستقراً ولكن القرارات تختلف | المهارات |
+| هل يجب أن يحدث هذا كلما حدث حريق؟ | إنّ إغفال إعدام واحد غير مقبول | رمز الركبة أو التطبيق |
+| هل يحتاج النموذج إلى قدرة خارجية مع مدخلات مدرجة؟ | العملية تعيش خارج سياق النموذج | أداة أو MCP الخادم |
+| هل العمل يحتاج إلى سياق منفصل، ولاية، أو ملكية؟ | العامل المفرد يعود نتيجة محدودة | السباق |
+| هل هذا الإرشاد محدد لمخزن واحد؟ | يصف القواعد والقيود المحلية | تعليمات المخبز |
+| هل تفاعل واحد كاف؟ | لا تحتاج إلى دورة حياة الحزمة | -أسرع |
 
 العديد من عمليات الإنتاج تستخدم أكثر من سطر واحد. بطاقة منع أحد الأدوات من التظاهر بتوفير كل خاصية.
 
 ## أرسله
 
-هذا الدرس يخلق`skill-contract-reviewer`الحزمة تحت `outputs/`. يحتوي على:
+هذه الدروس تنتج `skill-contract-reviewer` الحزمة تحت `outputs/`. يحتوي على:
 
-- محمول`SKILL.md`التي تعيد مراجعة حزمة مهارات المقترحة؛
+- محمول `SKILL.md` التي تعيد مراجعة حزمة مهارات المقترحة؛
 - قوائم التحقق المرجعية للعقد المحمول والانتخاب الأولي.
 - نص التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق من التحقق.
 - أجهزة تشكيل المهام تغطي الإشارات والمهارات والأدوات والكوك والرقم العادي والسوابق.
@@ -419,27 +419,27 @@ python3 scripts/install_skills.py /tmp/aiefs-skills --phase 13 --type skill
 
 ## التمارين
 
-1. تصنف خمس عمليات عمل من فريقك الخاص باستخدام `TaskShape`الدفاع عن كل حالة حيث تختار أكثر من واحد بدائي.
-2. إضافة اختبارات الحدود التي تثبت أن 500 حرف `compatibility`يمر القيمة ويتعطل قيمة 501 حرفًا كخطأ في التفاصيل.
+1. تصنيف خمس تدفقات عمل من فريقك الخاص باستخدام `TaskShape`الدفاع عن كل حالة حيث تختار أكثر من واحد بدائي.
+2. إضافة اختبارات الحدود التي تثبت أن 500 حرف `compatibility` يمر القيمة ويتعطل قيمة 501 حرفًا كخطأ في التفاصيل.
 3. إضافة إضافة إضافة واحدة لفترة تشغيل إلى قائمة السماح. اكتب اختبار يثبت أن نفس الملف لا يزال مميزا عن مهارة المحمول فقط.
-4. تقسيم خط 400 إلى `SKILL.md`إشارة واحدة، عقد نص واحد، وشكل خروج واحد. إبق كل ملف مسؤولا عن نوع واحد من المعلومات.
-5. تصميم استجابة فشل لمهارة تشير إلى أداة MCP غير متوفرة. لا تحل محل أداة بصمت بإذنات أوسع.
+4. تقسيم خط 400 على `SKILL.md`إشارة واحدة، عقد نص واحد، وشكل خروج واحد. إبق كل ملف مسؤولا عن نوع واحد من المعلومات.
+5. تصميم رد الفشل لمهارة تشير إلى غير متوفر MCP أداة. لا تستبدل أداة بصمت بإذنات أوسع.
 6. مراجعة مهارة موجودة وتسمية كل جملة على أنها طريق، الإجراء، السياسة، مؤشر مرجع، أو عقد الخروج.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
+| المدة | ما يقوله الناس | ما يعنيه هذا في الواقع |
 |---|---|---|
-| Agent skill | "A saved prompt" | A discoverable directory of procedural instructions and optional resources |
-| Portable core | "Fields every runtime shares" | The contract defined by the Agent Skills specification |
-| Runtime extension | "Extra frontmatter" | Host-specific configuration whose behavior requires a compatible adapter |
-| Activation | "The skill ran" | The skill body entered model-visible context; execution may come later |
-| Skill dependency | "Import another skill" | A runtime-mediated invocation edge with availability and policy checks |
-| Tool contract | "A function schema" | Inputs, outputs, permissions, side effects, errors, and evidence for a capability |
+| مهارات العميل | "إشارة مدفوعة" | دليل قابل للتعرف على التعليمات الإجرائية والموارد الاختيارية |
+| النواة المحمولة | "الملعب كل حصص تشغيل" | العقد الذي حددته مواصفات مهارات العميل |
+| تمديد الوقت | "المادة المضافة" | التكوينات المحددة لشبكة المضيف التي تتطلب سلوكها مُعدلاً متوافقًا |
+| التفعيل | "تجري المهارة" | دخلت مجموعة المهارات في سياق نموذج مرئي؛ قد يأتي التنفيذ في وقت لاحق |
+| الاعتماد على المهارات | "استيراد مهارة أخرى" | حافة الدعوة التي يتم تعزيزها في الوقت الزمني مع التحقق من الوصول والسياسة |
+| عقد الأدوات | "مخطط وظيفي" | المدخلات والمخرجات والإذنات والآثار الجانبية والخطأ والأدلة على القدرة |
 
 ## المزيد من القراءة
 
-- [Agent Skills specification](https://agentskills.io/specification)للديريكتوريا المحمولة وعقد المادة الأمامية.
-- [Agent Skills best practices](https://agentskills.io/skill-creation/best-practices)لقطاع النطاق والإرشادات وتنظيم الموارد.
-- [OpenAI: Build skills](https://learn.chatgpt.com/docs/build-skills)لسياسة اكتشاف و استدعاء القوانين الحالية.
-- [Claude Code skills](https://code.claude.com/docs/en/skills)لفترة تشغيل واحدة من الدعوة والحجة والوسيلة والإضافات الموحدة للسياق.
+- [مواصفات مهارات العميل](https://agentskills.io/specification) للديريكتوريا المحمولة وعقد المادة الأمامية.
+- [أفضل الممارسات في مجال مهارات العميل](https://agentskills.io/skill-creation/best-practices) لقطاع النطاق والإرشادات وتنظيم الموارد.
+- [OpenAI: بناء المهارات](https://learn.chatgpt.com/docs/build-skills) للشحن Codex سلوك اكتشاف ودعوة
+- [Claude مهارات الرموز](https://code.claude.com/docs/en/skills) لفترة تشغيل واحدة من الدعوة والحجة والوسيلة والإضافات الموحدة للسياق.

@@ -9,17 +9,17 @@
 
 ## أهداف التعلم
 
-- قم بتكوين مكالمات الأدوات، والنتائج على شكل مهمة، والعمل المفوض، وموارد واجهة المستخدم، وسياسة الموافقة، وتتبع السجلات في تدفق واحد.
-- تحمل إصدار بروتوكول ، هوية العميل ، والقدرات على كل طلب MCP بدلاً من الاعتماد على جلسة اتصال.
+- إعداد دعوات الأدوات، نتائج تشكيلة المهام، العمل المفوض، UI الموارد، سياسة التأخيص، وتتبع السجلات في تدفق واحد.
+- تحمل إصدار بروتوكول ، هوية العميل ، والقدرات على كل MCP طلب بدلاً من الاعتماد على جلسة اتصال.
 - اكتشف خادم قبل استخدامها وتعمل على العمل الطويل من خلال التوسع الرسمي للمهام.
-- التمييز بين محاكاة على شكل بروتوكول من تنفيذ MCP أو A2A أو OAuth أو OpenTelemetry.
+- التمييز بين محاكاة على شكل بروتوكول من MCP, A2A, OAuthأو OpenTelemetry التنفيذ
 - خريط كل حدود محاكاة إلى مكون الإنتاج الذي يجب استبداله.
-- إبق`AGENTS.md`, مهارات العميل , مُعدّلات وقت التشغيل , الأدوات , وسياسة الأمن في أدوارهم الصحيحة
+- إبق `AGENTS.md`, مهارات العميل , مُعدّلات وقت التشغيل , الأدوات , وسياسة الأمن في أدوارهم الصحيحة
 - شرح أي ادعاءات يمكن التحقق منها من الناتج المحلي والتي تحتاج إلى اختبارات التكامل الحي.
 
 ## المشكلة
 
-تصميم نظام بحث وتقرير. يطلب المستخدم ورقًا حول بروتوكولات الوكيل. يقوم النظام ببحث في كتالوج ورقية، ويمنح التوجيهات، ويتولى تقريرًا، ويرجع إلى موارد واجهة المستخدم، ويرتفع المسار عبر النظام.
+تصميم نظام بحث وتقرير. يطلب المستخدم ورق على بروتوكولات الوكيل. يقوم النظام بالبحث في كتالوج ورقية، ويمنح التلخص، ويمنح تقرير، ويرجع UI المورد، وتسجيل المسار من خلال النظام.
 
 هذه الجملة تخفي عدة عقود مستقلة:
 
@@ -32,7 +32,7 @@
 - التكاثر والصادرة
 - إجراءات تشغيل قابلة لإعادة الاستخدام.
 
-`code/main.py`يظل هذه الحدود مرئية مع وظائف Python العادية والقواميس. لا يفتح النقل ، أو يواصل arXiv ، أو يقوم بتنفيذ OAuth ، أو يدعو خادم A2A ، أو يقوم بتصميم تطبيق MCP ، أو تصدير التلفزيون. وهذا يجعل تدفق التحكم سهلا للتفتيش دون تقديم محاكاة كخدمة متوافقة.
+`code/main.py` يبقي تلك الحدود مرئية مع العادي Python وظائف و قاموس لا يفتح وسيلة نقل arXiv، أداء OAuth، اتصل A2A الخادم، إرسال MCP تطبيق أو تصدير التلفاز. وهذا يجعل من السهل تفتيش تدفق التحكم دون تقديم محاكاة كخدمة متوافقة.
 
 ## المفهوم
 
@@ -73,28 +73,28 @@ flowchart TD
   I --> L2[llm.chat final synthesis]
 ```
 
-في تنفيذ حقيقي، كل هوب ينتشر سياق البصمة. يجب أن تتبع أسماء وخصائص المجالات الاتفاقيات التعريفية OpenTelemetry المدعومة من قبل إصدار الأداة المختار. لا يثبت معرف البصمة المشترك وحده وجود أصول صحيحة أو تصدير أو استهلاك الخلفية.
+في تنفيذ حقيقي، كل هوب ينتشر سياق آثار. OpenTelemetry الاتفاقيات النطاقية التي تدعمها إصدار الأدوات المختار. لا يثبت معرف البصمات المشترك وحده أن الأصل أو التصدير أو استهلاك الخلفية صحيح.
 
 ### السطحات الحالية للبروتوكول
 
 استخدم أسماء الطرق التي حددتها البروتوكول الحالي، وليس أسماء تتذكر من مسودة قديمة:
 
-| Boundary | Current surface | What the capstone simulates |
+| الحدود | السطح الحالي | ما يحتاكه الحجر الرئيسي |
 |---|---|---|
-| MCP discovery | Mandatory `server/discover` | A direct function returning versions, capabilities, and server identity |
-| MCP request context | Version, capabilities, and client identity in every `params._meta` | Fresh request metadata passed to every simulated call |
-| MCP tool call | `tools/call` | Direct Python function dispatch |
-| MCP task polling | `io.modelcontextprotocol/tasks` with `tasks/get` | A working handle followed by a completed task carrying its final result |
-| A2A delegation | `SendMessage` in gRPC and JSON-RPC; `POST /message:send` in HTTP+JSON | One nested span with no remote call or artificial delay |
-| MCP App calling a server tool | `app.callServerTool({ name, arguments })` | An HTML string with no live bridge |
-| OAuth authorization | Authorization server, protected-resource metadata, audience and scope validation | Static token lookup and scope membership |
-| OpenTelemetry | SDK, propagator, exporter, and collector or backend | In-memory span dictionaries |
+| MCP الاكتشاف | إلزامية `server/discover` | وظيفة مباشرة تعيد الإصدارات والقدرات و هوية الخادم |
+| MCP السياق الطلب | الإصدار والقدرات و هوية العميل في كل `params._meta` | بيانات المطلوب الجديدة تم إرسالها إلى كل مكالمة محاكاة |
+| MCP دعوة الأداة | `tools/call` | مباشرة Python إرسال الوظيفة |
+| MCP إجراءات استطلاع | `io.modelcontextprotocol/tasks` مع `tasks/get` | مسدس عمل يليه مهمة اكتملت تحمل نتيجة نهائية |
+| A2A التفويض | `SendMessage` في gRPC و JSON-RPC; `POST /message:send` في HTTP+JSON | فترة واحدة متضخمة بدون مكالمة عن بعد أو تأخير اصطناعي |
+| MCP التطبيقات التي تدعو إلى أداة الخادم | `app.callServerTool({ name, arguments })` | (إنجليزية) HTML حبل بدون جسر حي |
+| OAuth الإذن | خادم التصريح، البيانات المعدنية الموارد المحمية، تأكيد الجمهور ومدى التطبيق | البحث عن الرمز التجاري والعضوية في نطاق |
+| OpenTelemetry | SDK، المروج والمصدر والجمع أو الخلفية | قاموسات فترة الذاكرة |
 
 أسماء البروتوكولات هي الطبقة الأولى فقط. يجب أن تقوم اختبارات الإنتاج بتنظيم التسلسل وفشل التصديق والإلغاء والوقت والإعادة المحاولات وتوافق النسخ عبر الأسلاك الحقيقية.
 
-### يغير المؤسسة العاملة في المجال العنصري حدود التكامل
+### بدون جنسية MCP تغير حدود التكامل
 
-مراجعة`2026-07-28`يزيل جلسات البروتوكول و`initialize`- لا ، لا`notifications/initialized`يضغط يدك، كما أنه يزيل`Mcp-Session-Id`كل طلب يحمل هذه المساحات الاسمية`_meta`الحقول:
+الإصلاح `2026-07-28` يزيل جلسات البروتوكول `initialize` / `notifications/initialized` يضغط يدك. `Mcp-Session-Id`كل طلب يحمل هذه المساحات الاسمية `_meta` الحقول:
 
 ```json
 {
@@ -111,15 +111,15 @@ flowchart TD
 }
 ```
 
-يجب على الخادم تنفيذ `server/discover`. استخدام النتائج العادية`resultType: "complete"`؛ استخدامات معالجة المهام `resultType: "task"`كل نتيجة يجب أن تحدد الخادم في `_meta.io.modelcontextprotocol/serverInfo`. . .
+يجب على الخادم تنفيذ `server/discover`. استخدام النتائج العادية `resultType: "complete"`؛ استخدامات مسدس المهمة `resultType: "task"`كل نتيجة يجب أن تحدد الخادم في `_meta.io.modelcontextprotocol/serverInfo`.
 
-تمديد المهام`tasks/get`،`tasks/update`و`tasks/cancel`أداة قد تعود أولاً`resultType: "task"`.`tasks/get`نفسها تعود`resultType: "complete"`، والكمل`Task`يحتوي على النتيجة النهائية.`tasks/result`و`tasks/list`الأساليب ليست جزءا من التوسع الحالي. يجب على العميل الإعلان `io.modelcontextprotocol/tasks`في نفس الطلب الذي قد يتلقى مسدسة المهمة. إذا لم يفعل ذلك، يعود الخادم `-32021`مع`requiredCapabilities`شكلها كشيء غائب للقدرة على العميل، بما في ذلك `extensions.io.modelcontextprotocol/tasks`. . .
+تمديد المهام `tasks/get`, `tasks/update`و `tasks/cancel`أداة قد تعود أولاً `resultType: "task"`; `tasks/get` نفسها تعود `resultType: "complete"`، والكمل `Task` يحتوي النتيجة النهائية `tasks/result` و `tasks/list` الأساليب ليست جزءا من التوسيع الحالي. يجب على العميل الإعلان عن `io.modelcontextprotocol/tasks` في نفس الطلب الذي قد يتلقى مسدسة المهمة. إذا لم يفعل ذلك، يعود الخادم `-32021` مع `requiredCapabilities` على شكل كائن لا يتوفر على قدرة العميل، بما في ذلك `extensions.io.modelcontextprotocol/tasks`.
 
 ### وضعية الأمن
 
 النشر المقصود يستخدم الدفاع العميق:
 
-- تصريح OAuth مع PKCE حيث يتطلب ذلك نوع العميل.
+- OAuth الموافقة مع PKCE عندما يطلب ذلك نوع العميل؛
 - التزاماً بالموارد والجمهور للوصول إلى رموز الوصول المصدرة؛
 - البوابة RBAC التي تحقق من الأداة والمدى المطلوب؛
 - الإثباتات المتقدمة التي تمت احتفاظها خارج سياق النموذج المرئي؛
@@ -131,7 +131,7 @@ flowchart TD
 
 ### المهارات هي الإجراءات وليس النقل
 
-يمكن لمهارة العميل أن تخبر الوقت الإجراء كيفية تنفيذ سير العمل البحثي ، وأي أدوات تعاقدات تتوقع ، وما هي الأدلة التي يجب حفظها ، ومتى يجب التوقف. لا يمكن أن تجعل خادم MCP موجودًا ، أو تحديد توافق A2A ، أو منح نطاقات ، أو إنشاء صندوق رمال.
+يمكن لمهارة العميل أن تخبر الوقت المباشر كيفية تنفيذ سير العمل البحث، أي أدوات العقود تتوقع، أي أدلة أن توفر، ومتى تتوقف. MCP الخادم موجود، إقامة A2A التوافق، أو نطاقات المنحة، أو إنشاء صندوق رمل.
 
 ```mermaid
 flowchart TD
@@ -147,7 +147,7 @@ flowchart TD
 
 ### البيانات المتحركة في المقرر هي مُعدّل محلي
 
-الكاتلوج الدراسي ومركز التثبيت يدرك الملفات المسطحة المسمى `skill-*.md`، ولكن هذه هي اتفاقية مخزن بدلا من عقد حزمة المهارات العميل المحمولة. قراءة المواد الأمامية الحد الأدنى لديهم فقط مفاتيح المستوى العلوي. هذا الدروس يبقي حقل الهوية المحمولة وحقل الكتالوج الدراسي على نفس المستوى:
+الكاتلوج الدراسي ومركز التثبيت يدرك الملفات السطحية المسمى `skill-*.md`، ولكن هذه هي اتفاقية مخزن بدلا من عقد حزمة المهارات العميل المحمولة. قراءة المواد الأمامية الحد الأدنى لديهم فقط مفاتيح المستوى العلوي. هذا الدروس يبقي حقل الهوية المحمولة وحقل الكتالوج الدراسي على نفس المستوى:
 
 ```yaml
 ---
@@ -160,37 +160,37 @@ tags: [mcp, capstone, ecosystem, architecture, a2a, otel]
 ---
 ```
 
-`name`و`description`هي حقل الهوية المحمولة. `version`،`phase`،`lesson`و`tags`هي امتدادات الكتالوجية الخاصة بالدورة.`tags`كقائمة متواصلة`--tag capstone`يمكن أن تتطابق مع ذلك.
+`name` و `description` هي حقل الهوية المحمولة. `version`, `phase`, `lesson`و `tags` هي امتدادات الكتالوجية الخاصة بالدورة. `tags` كقائمة متواصلة `--tag capstone` يمكن أن تتطابق مع ذلك.
 
-مهارة دليل محمولة قد تستخدم الخيار الاختياري `metadata`خريطة لبيانات التوسع ذات قيمة سلسلة. هذا لا يجعل `metadata`يمكن تبادلها مع مخطط الكتالوج لهذا المخبز. إذا كان هذا الملف مسطح تعيش`version`أو`tags`أدناه`metadata`، يفرط المصفح الحد الأدنى هذه المفاتيح المقطوعة ، ويستسجل الكتالوج نسخة فارغة ، و لا يمكن تصفية العلامات العلامة العثور على الفن. يجب على مضيفي الإنتاج استخدام محلل YAML آمن وتؤكيد مخططهم الموثوق الخاص.
+مهارة دليل محمولة قد تستخدم اختياري `metadata` خريطة لبيانات التوسع ذات قيمة سلسلة. هذا لا يجعل `metadata` يمكن تبادلها مع مخطط الكتالوج هذا المخبز. إذا كان هذا الملف مسطح تعيش `version` أو `tags` أدناه `metadata`، يفرض المصفح الحد الأدنى هذه المفاتيح المقطوعة ، ويستسجل الكتالوج نسخة فارغة ، و لا يمكن تصفية العلامات العلامة العثور على الفن. مضيف الإنتاج يجب أن تستخدم خزانة YAML يبحثون ويمتدّعون مخططاتهم الموثقة الخاصة بهم.
 
 ### المحاكاة مقابل الإنتاج
 
-| Layer | `code/main.py` | Production replacement | Required evidence |
+| الطبقة | `code/main.py` | استبدال الإنتاج | الدليل المطلوب |
 |---|---|---|---|
-| Discovery | `server_discover()` plus static `TOOLS` | `server/discover` followed by cache-aware `tools/list` | Wire transcript, deterministic order, and schema validation |
-| Authentication | Token-keyed dictionary | OAuth authorization and resource server validation | Issuer, audience, scope, expiry, and failure tests |
-| Authorization | Scope membership | Gateway policy bound to actor, tool, target, and tenant | Allow and deny audit cases |
-| Search | Static paper fixtures | Search API or MCP server | Source provenance, ranking, and error tests |
-| Tasks | Local handle plus immediate `tasks/get` | Durable `io.modelcontextprotocol/tasks` store with `tasks/get`, `tasks/update`, `tasks/cancel`, and TTL | State-transition, input, cancellation, and recovery tests |
-| Delegation | Sleep plus nested span | A2A client and remote Agent Card | Contract, timeout, retry, and opacity tests |
-| App | HTML string and URI | MCP Apps resource and `App` bridge | CSP, permissions, tool-call, and browser tests |
-| Telemetry | In-memory list | OTel SDK and exporter | Collector receipt and trace-parent assertions |
-| Sandbox | None | Host-enforced isolated executor | Escape, egress, secret, and resource-limit tests |
+| اكتشاف | `server_discover()` + ثابتة `TOOLS` | `server/discover` يليها " الوعي بالخلف " `tools/list` | النصوص السلكية، والترتيب التحديدي، وتصديق النظام |
+| التحقق | قاموس مفتاح الرمز | OAuth التصريح والتحقق من المصادقة على خادم الموارد | اختبارات المصدر والجمهور ومدى التطبيق والانتهاء من الصلاحية والفشل |
+| الإذن | عضوية النطاق | سياسة البوابة المرتبطة بالجهاز الفاعل والأداة والهدف والمستأجر | السماح وإرفض حالات المراجعة |
+| البحث | أجهزة ورق ثابتة | البحث API أو MCP الخادم | اختبارات مصدر المصدومة والتصنيف والخطأ |
+| المهام | المقبض المحلي بالإضافة إلى الفورية `tasks/get` | مستدامة `io.modelcontextprotocol/tasks` متجر مع `tasks/get`, `tasks/update`, `tasks/cancel`و TTL | اختبارات الانتقال إلى الحالة، وإدخال، وإلغاء، وإعادة التأهيل |
+| التفويض | النوم بالإضافة إلى المدة المضطربة | A2A بطاقة العميل والوكيل عن بعد | اختبارات العقد، وقتاً طويلاً، وإعادة المحاولة، والضبابية |
+| التطبيق | HTML السلسلة URI | MCP الموارد التطبيقات `App` الجسر | CSP، الإذن ، دعوة الأدوات ، واختبارات المتصفح |
+| التلفاز | قائمة في الذاكرة | OTel SDK والمصدر | إيصال المجمع وتصريحات الأبوة |
+| صندوق الرمال | لا يوجد | المُنفذ المعزول الذي يُجبر على الاستضافة | اختبارات الهروب والخروج والسرية ومحدودية الموارد |
 
 هذه الجدول هو حدود التسليم. إدارة محلية خضراء تؤكد المحاكاة فقط.
 
 ### خريطة المرحلة 13
 
-| Lessons | Contribution |
+| الدروس | المساهمة |
 |---|---|
-| 01-05 | Tool interfaces, calls, schemas, structured results, and deterministic validation |
-| 06-14 | Stateless MCP request envelopes, discovery, transports, resources, prompts, extensions, and Apps |
-| 15-18 | Poisoning defenses, OAuth, gateways, registries, and production authentication |
-| 19 | A2A message and task delegation |
-| 20 | OpenTelemetry GenAI trace design |
-| 21 | Model-provider routing |
-| 22 | Portable skill contract and runtime boundary |
+| 01-05 | واجهات الأدوات، الدعوات، الخطط، النتائج المهيكلة، والتحقق من التحقق من التحقق من التحقق من التحقق |
+| 06-14 | بدون جنسية MCP طلبات الغلافات، اكتشاف، النقل، الموارد، الإشارات، التوسعات، والتطبيقات |
+| 15-18 | دفاعات التسمم OAuth، البوابات، السجلات، ووحدة الإنتاج |
+| 19 | A2A تفويض الرسالة والمهام |
+| 20 | OpenTelemetry GenAI تصميم العثور |
+| 21 | التوجيه من مقدم النموذج |
+| 22 | عقد مهارات محمولة وحدود وقت التشغيل |
 
 ```figure
 t3-capstone-chain
@@ -207,12 +207,12 @@ python3 code/main.py
 
 فحص خمسة أشياء:
 
-1. `server/discover`الإعلانات الإصلاح `2026-07-28`ومدّة المهام
+1. `server/discover` الإعلانات الإصلاح `2026-07-28` ومدّة المهام
 2. (أليس) تستطيع قراءة وتوليد تقرير بينما يتم رفض مكالمة (بوب) المكتوبة
 3. كل فترة محلية في مسار واحد للموسيقي يشارك في تعريف واحد وتسجيلات تعريفات فترة الأب.
-4. البيان يبدأ كمسؤولية مهمة.`tasks/get`يعود المهام المكتملة التي يحتوي النتيجة النهائية على نص و `ui://`الإشارة
+4. البيان يبدأ كمسؤولية مهمة `tasks/get` يعود مهمة اكتملت النتيجة النهائية تحتوي على نص و `ui://` الإشارة
 5. يظل الكاتب المفوض غير مرئي لأن الموسيقي يسجل فقط المدى الحدودي.
-6. لا توجد دعوامات إنتاجية عن اتصال الشبكة أو تبادل OAuth أو تصدير المستجم ، أو عرض المتصفح ، أو تنفيذ مربع الرمال.
+6. لا يوجد أي دعوى إنتاجية على اتصال الشبكة OAuth حدث تبادل، صادرة المجموعة، عرض المتصفح، أو تنفيذ صندوق الرمل.
 
 النص يبدأ مرتين، لذلك ينتج اثنين من أثر الجذر. إدخالات التدقيق هي عملية محلية وإعادة تعيين في التشغيل التالي.
 
@@ -220,11 +220,11 @@ python3 code/main.py
 
 دعم طبقة واحدة في كل مرة:
 
-1. استبدل`server_discover()`و قائمة الأدوات الثابتة مع حقيقية `server/discover`و`tools/list`إرسال الإصدار والهوية والقدرات في كل طلب
+1. استبدال `server_discover()` و قائمة الأدوات الثابتة مع حقيقية `server/discover` و `tools/list` إرسال الإصدار والهوية والقدرات في كل طلب
 2. استبدال الرموز الثابتة بخادم تصريح وتحقق المصادقة الموارد المحمية.
-3. تنفيذ`io.modelcontextprotocol/tasks`التوسع والاختبار`tasks/get`،`tasks/update`،`tasks/cancel`، التوقف ، TTL ، وإعادة تشغيل التعافي. لا تضيف`tasks/result`أو`tasks/list`. . .
-4. استبدل القنبلة التفويضية بعميل A2A الذي يحل بطاقة العميل ويرسل رسالة.
-5. قم ببناء التطبيق باستخدام SDK الرسمي ودعوة أدوات الخادم من خلال `app.callServerTool`. . .
+3. تنفيذ `io.modelcontextprotocol/tasks` التوسع والاختبار `tasks/get`, `tasks/update`, `tasks/cancel`، وقت وقف TTL، وإعادة تشغيل التعافي . لا تضيف `tasks/result` أو `tasks/list`.
+4. استبدل قاعدة التفويض بـ A2A العميل الذي يحل بطاقة العميل ويرسل رسالة
+5. قم ببناء التطبيق مع المسؤول SDK ويدعو أدوات الخادم من خلال `app.callServerTool`.
 6. تمتد التصدير إلى جمع اختبار وتؤكد الأصل عند المستلم.
 7. إشغال أداة وتنفيذ النص داخل عقد صندوق الرمل من الدروس 26.
 8. حزم الإجراء كحزمة إداري كاملة ومر بوابة إطلاق الدروس 27.
@@ -233,37 +233,37 @@ python3 code/main.py
 
 ## أرسله
 
-هذا الدرس يُنتج`outputs/skill-ecosystem-blueprint.md`، وهو متجر دورة واحد متكرر. يطلب بنية صفحة واحدة تغطي البدائيات والأمن والوكالة والمتنقلات والحزمة، والخطر التشغيلي الصعب. يتم ممارسة حقل الكتالوج على مستوى الأعلى من قبل الكتالوج الحقيقي للمخزن والمتصفحات المثبتة.
+هذا الدرس يُنتج `outputs/skill-ecosystem-blueprint.md`، وهو متجر دورة واحد متكرر. يطلب بنية صفحة واحدة تغطي البدائيات والأمن والوكالة والمتنقلات والحزمة، والخطر التشغيلي الصعب. يتم ممارسة حقل الكتالوج على مستوى الأعلى من قبل الكتالوج الحقيقي للمخزن والمتصفحات المثبتة.
 
 ولأن هذا ليس مجموعة من المجلدات، فإنه لا يمكن أن يحمل الإشارات، والنصوص، والأصول، أو تصميمات تقييم. استخدم شكل الحزمة من الدروس 22 و 24 إلى 27 عند نشر مهارة قابلة للاستعمال خارج هذه الدورة.
 
 ## التمارين
 
-1. أركض`code/main.py`.حقائق منفصلة أثبتت بالإنتاج من ادعاءات الإنتاج التي لا تزال بحاجة إلى دليل على التكامل.
-2. إضافة آخر خلفية ثابتة وتحديد قاعدة التصادم لعددين من الأدوات ذات الاسم نفسه. ثم استبدال كلتا القوائم بالواقع `tools/list`مكالمات
-3. استبدل خريطة الكاتب بخادم اختبار A2A، سجل بطاقة العميل، طلب الرسالة، مسار الموعد، والشئ المرجع.
-4. إضافة مخزن المهام الذي يتبقى من إعادة تشغيل العملية. إثبات العميل يمكن استئناف مع `tasks/get`، الإحترام`pollIntervalMs`، وقراءة النتيجة النهائية للمهمة المكتملة دون `tasks/result`. . .
-5. قم ببناء تطبيق MCP بسيط وتحقق`app.callServerTool`في متصفح مع CSP مقيد والإذن الصريحة.
-6. تصدير المدة المحاكاة من خلال SDK OTel إلى جمع محلي. تأكيد الإيصالات، وتعريفات البحث، والآباء، وحالة الخطأ.
-7. اكتب`AGENTS.md`لقيود الصيانة على مستوى المكتبة ومجموعة مهارات منفصلة لإجراء البحث القابل لإعادة الاستخدام. شرح لماذا لا يمنح أي من الملفات سلطة الأدوات.
+1. أركض `code/main.py`.حقائق منفصلة أثبتت بالإنتاج من ادعاءات الإنتاج التي لا تزال بحاجة إلى دليل على التكامل.
+2. إضافة آخر خلفية ثابتة وتحديد قاعدة التصادم لعددين من الأدوات ذات الاسم نفسه. ثم استبدل كل من القوائم مع حقيقية `tools/list` مكالمات
+3. استبدل مخطط الكاتب A2A سجل بطاقة العميل، طلب الرسالة، مسار التوقف، والشئ المرجع.
+4. إضافة مخزن المهام الذي يتجاوز إعادة تشغيل العملية. إثبات العميل يمكن استئناف مع `tasks/get`, الاحترام `pollIntervalMs`، وقراءة النتيجة النهائية للمهمة المكتملة دون `tasks/result`.
+5. بناء الحد الأدنى MCP التطبيق والتحقق `app.callServerTool` في متصفح مع قيود CSP والإذن المبرر
+6. تصدير المكاسب المثبتة عبر OTel SDK إلى جمع محلي. تأكيد الإيصالات، وتعريفات البحث، والآباء، وحالة الخطأ.
+7. اكتب `AGENTS.md` لقيود الصيانة على مستوى المكتبة ومجموعة مهارات منفصلة لإجراء البحث القابل لإعادة الاستخدام. شرح لماذا لا يمنح أي من الملفات سلطة الأدوات.
 
 ## الشروط الرئيسية
 
-| Term | What people say | What it actually means |
+| المدة | ما يقوله الناس | ما يعنيه هذا في الواقع |
 |---|---|---|
-| Capstone | "Everything wired together" | A staged integration whose simulated and live boundaries remain explicit |
-| Protocol-shaped simulation | "It is basically MCP" | Local data and calls that resemble a protocol without implementing its wire contract |
-| Tasks extension | "Long tool call" | An optional `io.modelcontextprotocol/tasks` lifecycle with durable identity, polling, client input, final result, and cancellation semantics |
-| Opacity boundary | "The other agent handles it" | The caller sees the declared interface and artifacts, not private reasoning or internal state |
-| Runtime adapter | "Skill integration" | Host code that maps portable procedure to discovery, invocation, tools, policy, and context |
-| Integration evidence | "It passed" | A transcript, artifact, or receiver-side observation proving the real boundary was crossed |
+| كابستون | "كل شيء متصل" | إدماج مرحلي يظل حدوده المثبتة والحية واضحة |
+| محاكاة على شكل بروتوكول | "إنه في الأساس MCP" | البيانات المحلية والمكالمات التي تشبه بروتوكول دون تنفيذ عقدها السلكي |
+| تمديد المهام | "تصل طويل الأدوات" | اختيارية `io.modelcontextprotocol/tasks` دورة الحياة مع الهوية الدائمة، والمسحات، وإدخال العملاء، والنتيجة النهائية، والإلغاء |
+| حدود المكشف | "الوكيل الآخر يتعامل مع الأمر" | يرى المدعو الواجهة والملفات المعلنة، وليس التفكير الخاص أو الحالة الداخلية |
+| مُعدّل وقت التشغيل | "التكامل المهني" | رمز المضيف الذي يقوم بتخريط الإجراءات المحمولة إلى اكتشاف، ودعوة، والأدوات، والسياسة، والسياق |
+| دليل على الاندماج | "لقد مر" | نسخة، أو أداة، أو ملاحظة من جانب المستلم يثبت أن الحدود الحقيقية قد تم عبورها |
 
 ## المزيد من القراءة
 
-- [MCP specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28)لطلبات غير تابعة للولاية، والاكتشافات، والأدوات، والإذن، وسلوك النقل.
-- [MCP 2026-07-28 key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)لإنزال جلسة، البيانات المعدنية حسب الطلب، MRTR، التوسع، والإزالة.
-- [MCP Tasks extension](https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks)لـ`tasks/get`،`tasks/update`،`tasks/cancel`ونتائج النهائية التي تمت بقيامها بمهمات نهائية.
-- [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps/blob/main/docs/overview.md)لـ`App`و`app.callServerTool`. . .
-- [A2A protocol](https://a2a-protocol.org/latest/)للكارطات العميلة، وتسليم الرسائل، والمهام، والقطع الأثرية، والترقل.
-- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)لـ"تعاقد" و"تعاقد"
-- [Agent Skills specification](https://agentskills.io/specification)بالنسبة لعقد الحزمة المحمولة المستخدمة في الطبقة الإجرائية.
+- [MCP المواصفات 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) لطلبات غير تابعة للولاية، والاكتشافات، والأدوات، والإذن، وسلوك النقل.
+- [MCP 2026-07-28 تغييرات رئيسية](https://modelcontextprotocol.io/specification/2026-07-28/changelog) لإزالة جلسة، البيانات المعدنية حسب الطلب، MRTR، التوسعات، والإحباطات.
+- [MCP تمديد المهام](https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks) لـ `tasks/get`, `tasks/update`, `tasks/cancel`ونتائج النهائية التي تمت بقيامها بمهمات نهائية.
+- [MCP التطبيقات SDK](https://github.com/modelcontextprotocol/ext-apps/blob/main/docs/overview.md) لـ `App` و `app.callServerTool`.
+- [A2A البروتوكول](https://a2a-protocol.org/latest/) للكارطات العميلة، وتسليم الرسائل، والمهام، والقطع الأثرية، والترقل.
+- [OpenTelemetry GenAI الاتفاقيات النطاقية](https://opentelemetry.io/docs/specs/semconv/gen-ai/) لـ"تعاقد" و"تعاقد"
+- [مواصفات مهارات العميل](https://agentskills.io/specification) بالنسبة لعقد الحزمة المحمولة المستخدمة في الطبقة الإجرائية.
