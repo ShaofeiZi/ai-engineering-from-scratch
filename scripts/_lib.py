@@ -1,11 +1,11 @@
-"""Shared helpers for scripts/ tools.
+"""供 scripts/ 工具共用的辅助函数。
 
-Currently provides:
-- parse_frontmatter: minimal YAML-subset parser for `--- ... ---` blocks in markdown.
-- validate_repository_directory/file: containment checks for lesson artifacts.
-- validate_skill_bundle: safe, deterministic file discovery for skill bundles.
+当前提供：
+- parse_frontmatter：解析 Markdown 中 `--- ... ---` 块的最小 YAML 子集解析器。
+- validate_repository_directory/file：检查课程产物是否位于仓库内。
+- validate_skill_bundle：安全、确定性地发现 skill bundle 文件。
 
-No external dependencies. Python 3.10+ (PEP 604 unions in type hints).
+无外部依赖。需要 Python 3.10+（类型注解使用 PEP 604 union）。
 """
 
 from __future__ import annotations
@@ -15,11 +15,11 @@ from pathlib import Path
 
 
 class BundleValidationError(ValueError):
-    """Raised when a skill bundle is unsafe or malformed."""
+    """skill bundle 不安全或格式错误时抛出。"""
 
 
 class ArtifactPathError(ValueError):
-    """Raised when a lesson artifact path is unsafe or escapes the repository."""
+    """课程产物路径不安全或逃逸出仓库时抛出。"""
 
 
 def _resolve_within_repository(
@@ -41,7 +41,7 @@ def _resolve_within_repository(
 def validate_repository_directory(
     directory: Path, repository_root: Path, label: str
 ) -> Path:
-    """Resolve a regular directory and require it to remain in the repository."""
+    """解析普通目录，并要求其始终位于仓库内。"""
 
     if directory.is_symlink():
         _resolve_within_repository(
@@ -56,7 +56,7 @@ def validate_repository_directory(
 
 
 def validate_repository_file(file_path: Path, repository_root: Path, label: str) -> Path:
-    """Resolve a non-symlink regular file contained by the repository."""
+    """解析仓库内不属于符号链接的普通文件。"""
 
     if file_path.is_symlink() or not file_path.is_file():
         raise ArtifactPathError(f"{label} must be a regular file: {file_path}")
@@ -66,7 +66,7 @@ def validate_repository_file(file_path: Path, repository_root: Path, label: str)
 
 
 def validate_skill_bundle(bundle_root: Path, repository_root: Path) -> list[str]:
-    """Return a validated bundle's relative POSIX file paths in string order."""
+    """按字符串顺序返回已验证 bundle 的相对 POSIX 文件路径。"""
 
     if bundle_root.is_symlink() or not bundle_root.is_dir():
         raise BundleValidationError(
@@ -104,21 +104,15 @@ def validate_skill_bundle(bundle_root: Path, repository_root: Path) -> list[str]
 
 
 def parse_frontmatter(text: str) -> dict[str, object] | None:
-    """Parse a YAML-subset frontmatter block at the top of a markdown string.
+    """解析 Markdown 字符串开头的 YAML 子集 frontmatter 块。
 
-    Returns the parsed key/value mapping, or None when no frontmatter is present
-    or the closing `---` is missing.
+    返回解析后的键值映射；没有 frontmatter 或缺少结束 `---` 时返回 None。
 
-    Supports:
-    - bare strings: `key: value`
-    - single-quoted: `key: 'value'`
-    - double-quoted: `key: "value"`
-    - lists: `key: [a, b, "c"]`
-    - inline comment lines beginning with `#`
+    支持裸字符串、单引号/双引号字符串、列表，以及以 `#` 开头的行内注释。
     """
     if not text.startswith("---\n"):
         return None
-    # Closing delimiter: "\n---\n" inside the file, or "\n---" at EOF.
+    # 结束分隔符：文件内部的 "\n---\n"，或文件结尾的 "\n---"。
     end = text.find("\n---\n", 4)
     if end == -1 and text.endswith("\n---"):
         end = len(text) - 4
@@ -127,7 +121,7 @@ def parse_frontmatter(text: str) -> dict[str, object] | None:
     block = text[4:end].strip("\n")
     result: dict[str, object] = {}
     for raw in block.splitlines():
-        # Anchor at column 0: skip comments + indented lines.
+        # 锚定第 0 列：跳过注释和缩进行。
         if not raw or raw.startswith("#") or raw[0] in (" ", "\t"):
             continue
         if ":" not in raw:

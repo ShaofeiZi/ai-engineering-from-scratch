@@ -1,8 +1,8 @@
-name: Deploy GitHub Pages mirror
+name: 部署 GitHub Pages 镜像
 
 on:
   push:
-    branches: [main]
+    branches: [codex/chinese-only-full-localization]
   workflow_dispatch:
 
 concurrency:
@@ -11,49 +11,49 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/codex/chinese-only-full-localization'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Check out the repository
+      - name: 检出仓库
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
 
-      - name: Set up Node.js
+      - name: 配置 Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 
-      - name: Validate the configured translation branch
+      - name: 验证配置的翻译分支
         env:
-          AIFS_TRANSLATION_REF: ${{ vars.AIFS_TRANSLATION_REF || 'translations' }}
+          AIFS_TRANSLATION_REF: ${{ github.ref_name }}
         run: |
           case "$AIFS_TRANSLATION_REF" in
             ""|@|-*|refs/*)
-              echo "::error title=Invalid translation ref::AIFS_TRANSLATION_REF must name a branch using a short ref"
+              echo "::error title=翻译引用无效::AIFS_TRANSLATION_REF 必须使用短引用来命名一个分支"
               exit 1
               ;;
           esac
           git check-ref-format "refs/heads/$AIFS_TRANSLATION_REF" > /dev/null
 
-      - name: Build the static mirror
+      - name: 构建静态镜像
         env:
           AIFS_TRANSLATION_REPOSITORY: ${{ vars.AIFS_TRANSLATION_REPOSITORY || github.repository }}
-          AIFS_TRANSLATION_REF: ${{ vars.AIFS_TRANSLATION_REF || 'translations' }}
+          AIFS_TRANSLATION_REF: ${{ github.ref_name }}
         run: node site/build.js
 
-      - name: Validate Simplified Chinese site UI
+      - name: 验证简体中文站点 UI
         run: node --test site/test_ui_i18n.js
 
-      - name: Upload the Pages artifact
+      - name: 上传 Pages 产物
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: site
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/codex/chinese-only-full-localization'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -63,6 +63,6 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - name: Deploy to GitHub Pages
+      - name: 部署到 GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

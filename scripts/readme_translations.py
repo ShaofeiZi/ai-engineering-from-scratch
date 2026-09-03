@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Hand-authored README translations, consumed by build_readme_i18n.py.
+"""供 build_readme_i18n.py 使用的人工 README 译文。
 
-Keyed by the exact English block (whitespace-normalized). Inline markdown, code
-spans, and links are preserved in the translations. Simplified Chinese covers
-every prose/heading block exposed by the generator; the other languages retain
-the original incremental, high-visibility coverage. Any missing block in those
-other languages falls back to English without breaking a build.
+以精确英文块（空白已规范化）为键。译文保留行内 Markdown、代码区间和链接。
+简体中文覆盖生成器暴露的每个正文/标题块；其他语言维持原有的渐进式高可见度
+覆盖，缺失块回退到英文且不会破坏构建。
 
-To add a language: add its code here and to the README language bar; run
+新增语言时：在此处和 README 语言栏中加入语言代码，然后运行
     python3 scripts/build_readme_i18n.py
 """
 
-# --- exact English block keys (must match build_readme_i18n.py normalization) ---
+# --- 精确英文块键（必须匹配 build_readme_i18n.py 的规范化规则）---
 HERO1 = "**84% of students already use AI tools. Only 18% feel prepared to use them professionally.** This curriculum closes that gap."
 HERO2 = "523 lessons. 20 phases. ~342 hours. Python, TypeScript, Rust, Julia. Every lesson ships a reusable artifact: a prompt, a skill, an agent, an MCP server. Free, open source, MIT."
 HERO3 = "You don't just learn AI. You build it. End-to-end. By hand."

@@ -1,4 +1,4 @@
-name: curriculum
+name: 课程质量检查
 
 on:
   push:
@@ -94,14 +94,14 @@ permissions:
   contents: read
 
 env:
-  # Configure the same owner/repository and branch in the site deployment.
-  # Defaults keep a fork self-contained and make its first publish optional.
+  # 在站点部署中配置相同的所有者/仓库与分支。
+  # 默认值让 fork 仓库自包含,并使其首次发布变为可选。
   AIFS_TRANSLATION_REPOSITORY: ${{ vars.AIFS_TRANSLATION_REPOSITORY || github.repository }}
   AIFS_TRANSLATION_REF: ${{ vars.AIFS_TRANSLATION_REF || 'translations' }}
 
 jobs:
   audit:
-    name: invariant checks
+    name: 不变量检查
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -110,60 +110,60 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: "3.12"
-      - name: run scripts/audit_lessons.py
+      - name: 运行 scripts/audit_lessons.py
         run: python3 scripts/audit_lessons.py
-      - name: run scripts/audit_certifications.py
+      - name: 运行 scripts/audit_certifications.py
         run: python3 scripts/audit_certifications.py
-      - name: certification remediation references are complete
+      - name: 检查认证修复引用完整性
         run: python3 scripts/backfill_certification_references.py --check
-      - name: run certification lab tests
+      - name: 运行认证实验测试
         run: find certifications/claude/lessons -path '*/code/tests/test_*.py' -print0 | xargs -0 -r -n1 python3
-      - name: run certification lab demos
+      - name: 运行认证实验演示
         run: find certifications/claude/lessons -path '*/code/main.py' -print0 | xargs -0 -r -n1 python3
-      - name: skill artifact bundles install without losing companion files
+      - name: 验证 skill 产物包安装时不丢失配套文件
         run: python3 scripts/test_skill_artifact_bundles.py
-      - name: skill artifact bundles render as one lesson output
+      - name: 验证 skill 产物包渲染为单个课程输出
         run: node --test site/test_build_artifacts.js
-      - name: i18n publication and book contracts stay intact
+      - name: 验证 i18n 发布与图书契约
         run: node --test site/test_i18n_contracts.js
-      - name: build the static site
+      - name: 构建静态站点
         run: node site/build.js
-      - name: dynamic lesson and certification routes preserve their public contracts
+      - name: 验证动态课程与认证路由的公开契约
         run: node --test scripts/test_seo_routes.js
-      - name: agent-facing discovery surfaces stay complete
+      - name: 验证面向 Agent 的发现入口完整性
         run: python3 scripts/test_agent_readiness.py
-      - name: Markdown negotiation stays cache-safe
+      - name: 验证 Markdown 协商的 cache 安全性
         run: node --test scripts/test_agent_negotiation.js
-      - name: static preview routes stay navigable
+      - name: 验证静态预览路由可导航
         run: node --test site/test_static_preview_routes.js
-      - name: learning paths links and routes stay valid
+      - name: 验证学习路径链接与路由
         run: node --test site/test_learning_paths.js
-      - name: Simplified Chinese site UI contracts stay intact
+      - name: 验证简体中文站点 UI 契约
         run: node --test site/test_ui_i18n.js
-      - name: quiz answer positions are de-biased
+      - name: 检查测验答案位置去偏
         run: python3 scripts/debias_quizzes.py --check
-      - name: certification answer positions are de-biased
+      - name: 检查认证答案位置去偏
         run: python3 scripts/debias_certification_questions.py --check
-      - name: README translations are in sync with English
+      - name: 检查 README 译文与英文同步
         run: python3 scripts/build_readme_i18n.py --check
-      - name: README translation coverage is complete
+      - name: 检查 README 翻译覆盖完整性
         run: python3 scripts/test_readme_i18n.py
-      - name: lesson translation auditor is tested
+      - name: 测试课程翻译审计器
         run: python3 scripts/test_audit_translations.py
-      - name: translated book heading structure is tested
+      - name: 测试译文图书标题结构
         run: python3 scripts/test_build_book.py
-      - name: lesson translation walker preserves protected content
+      - name: 验证课程翻译遍历器保留受保护内容
         run: python3 scripts/test_translate_lessons.py
-      - name: audit published Simplified Chinese lessons
+      - name: 审计已发布的简体中文课程
         run: |
           case "$AIFS_TRANSLATION_REF" in
             ""|@|-*|refs/*)
-              echo "::error title=Invalid translation ref::AIFS_TRANSLATION_REF must name a branch using a short ref"
+              echo "::error title=翻译引用无效::AIFS_TRANSLATION_REF 必须使用短引用来命名一个分支"
               exit 1
               ;;
           esac
           if ! git check-ref-format "refs/heads/$AIFS_TRANSLATION_REF" >/dev/null; then
-            echo "::error title=Invalid translation ref::AIFS_TRANSLATION_REF must name a branch using a short ref"
+            echo "::error title=翻译引用无效::AIFS_TRANSLATION_REF 必须使用短引用来命名一个分支"
             exit 1
           fi
 
@@ -177,26 +177,26 @@ jobs:
           set -e
 
           if [ "$translation_status" -eq 2 ]; then
-            echo "translation branch has not been published yet; site will fall back to English"
+            echo "翻译分支尚未发布;站点将回退到英文"
             exit 0
           fi
           if [ "$translation_status" -ne 0 ]; then
-            echo "failed to inspect configured translation source" >&2
+            echo "无法检查已配置的翻译来源" >&2
             exit "$translation_status"
           fi
 
           git fetch --no-tags "$translation_remote" "+${translation_remote_ref}:${translation_audit_ref}"
           python3 scripts/audit_translations.py --lang zh --translation-ref "$translation_audit_ref"
-      - name: translation workflow publisher retries safely
+      - name: 验证翻译 workflow 发布器安全重试
         run: python3 scripts/test_translate_workflow.py
-      - name: learning skills mirror is in sync
-        # skills/ is the canonical, agent-neutral home (what `npx skills add`
-        # installs for every agent); .claude/skills/ is a mirror so cloning the
-        # repo auto-loads them in Claude Code. They must never diverge.
+      - name: 检查学习 skill 镜像同步
+        # skills/ 是规范的、与代理无关的存放位置(`npx skills add`
+        # 为每个代理安装的内容);.claude/skills/ 是一个镜像,以便克隆仓库时
+        # 在 Claude Code 中自动加载它们。两者绝不能产生分歧。
         run: diff -r skills .claude/skills
 
   readme-counts-sync:
-    name: README counts auto-fix (main only)
+    name: 自动修复 README 计数（仅 main）
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -209,23 +209,23 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: "3.12"
-      - name: build ephemeral catalog
+      - name: 构建临时 catalog
         run: python3 scripts/build_catalog.py
-      - name: sync README counts
+      - name: 同步 README 计数
         run: python3 scripts/check_readme_counts.py --fix
-      - name: regenerate README translations from the synced English
+      - name: 根据同步后的英文重新生成 README 译文
         run: python3 scripts/build_readme_i18n.py
-      - name: commit + push if README changed
+      - name: README 变化时提交并推送
         env:
           BOT_COMMIT_PREFIX: "chore(readme): sync counts"
         run: |
-          # Keep the allowlist narrow: the i18n tree also contains reviewed
-          # catalogs and other source assets that this job must never commit.
+          # 保持白名单范围狭窄:i18n 目录树还包含经过审校的
+          # 目录和其他源资产,本作业绝不能提交它们。
           generated_paths=('README.md' ':(top,glob)i18n/*/README.md')
-          # porcelain (not git diff) also sees a newly generated README for a
-          # freshly added language and deletions for a removed language.
+          # porcelain(而非 git diff)也能看到为新增语言新生成的 README,
+          # 以及为已移除语言产生的删除项。
           if [ -z "$(git status --porcelain -- "${generated_paths[@]}")" ]; then
-            echo "README.md + translations already in sync"
+            echo "README.md 及其翻译已同步"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -235,31 +235,31 @@ jobs:
           branch="${GITHUB_REF#refs/heads/}"
           for attempt in 1 2 3 4 5; do
             if git push origin "HEAD:${branch}"; then
-              echo "push succeeded on attempt $attempt"
+              echo "第 $attempt 次推送成功"
               exit 0
             fi
             if [ "$attempt" -eq 5 ]; then
               break
             fi
-            echo "push attempt $attempt rejected; rebuilding from origin/${branch}"
+            echo "第 $attempt 次推送被拒绝;基于 origin/${branch} 重新构建"
             git fetch origin "${branch}"
             git switch --detach "origin/${branch}"
             python3 scripts/build_catalog.py
             python3 scripts/check_readme_counts.py --fix
             python3 scripts/build_readme_i18n.py
             if [ -z "$(git status --porcelain -- "${generated_paths[@]}")" ]; then
-              echo "newest ${branch} is already in sync"
+              echo "最新的 ${branch} 已经同步"
               exit 0
             fi
             git add -A -- "${generated_paths[@]}"
             git commit -m "$BOT_COMMIT_PREFIX"
             sleep "$((attempt * 2))"
           done
-          echo "push failed after 5 attempts; README translations remain stale" >&2
+          echo "5 次尝试后推送失败;README 翻译仍为旧版" >&2
           exit 1
 
   site-rebuild:
-    name: site generated artifacts auto-rebuild (main only)
+    name: 自动重建站点生成产物（仅 main）
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -270,17 +270,17 @@ jobs:
         with:
           ref: ${{ github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: rebuild generated site artifacts
+      - name: 重建站点生成产物
         run: node site/build.js
-      - name: commit + push if generated site artifacts changed
+      - name: 生成产物变化时提交并推送
         env:
           BOT_COMMIT_PREFIX: "chore(site): rebuild generated artifacts"
         run: |
-          # site/build.js intentionally updates these tracked generated surfaces.
-          # Keep the allowlist explicit so source files are never swept into a bot commit.
+          # site/build.js 有意更新这些受跟踪的生成产物。
+          # 保持白名单明确,以免源文件被误纳入机器人提交。
           generated_paths=('README.md' 'site/data.js' 'site/cmdpalette.js' ':(glob)site/*.html')
           if [ -z "$(git status --porcelain -- "${generated_paths[@]}")" ]; then
-            echo "generated site artifacts already in sync"
+            echo "生成的站点产物已同步"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -290,29 +290,29 @@ jobs:
           branch="${GITHUB_REF#refs/heads/}"
           for attempt in 1 2 3 4 5; do
             if git push origin "HEAD:${branch}"; then
-              echo "push succeeded on attempt $attempt"
+              echo "第 $attempt 次推送成功"
               exit 0
             fi
             if [ "$attempt" -eq 5 ]; then
               break
             fi
-            echo "push attempt $attempt rejected; rebuilding from origin/${branch}"
+            echo "第 $attempt 次推送被拒绝;基于 origin/${branch} 重新构建"
             git fetch origin "${branch}"
             git switch --detach "origin/${branch}"
             node site/build.js
             if [ -z "$(git status --porcelain -- "${generated_paths[@]}")" ]; then
-              echo "newest ${branch} is already in sync"
+              echo "最新的 ${branch} 已经同步"
               exit 0
             fi
             git add -A -- "${generated_paths[@]}"
             git commit -m "$BOT_COMMIT_PREFIX"
             sleep "$((attempt * 2))"
           done
-          echo "push failed after 5 attempts; generated site artifacts remain stale" >&2
+          echo "5 次尝试后推送失败;生成的站点产物仍为旧版" >&2
           exit 1
 
   readme-counts-drift:
-    name: README.md counts drift advisory
+    name: README.md 计数漂移提示
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -322,10 +322,10 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: "3.12"
-      - name: build ephemeral catalog
+      - name: 构建临时 catalog
         run: python3 scripts/build_catalog.py
-      - name: check README counts
+      - name: 检查 README 计数
         run: |
           if ! python3 scripts/check_readme_counts.py; then
-            echo "::warning::README.md counts drift detected. Main will self-heal on merge."
+            echo "::warning::检测到 README.md 计数漂移。合并到 main 时会自动修复。"
           fi

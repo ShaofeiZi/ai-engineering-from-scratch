@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Build script for AI Engineering from Scratch website.
- * Parses README.md, ROADMAP.md, and glossary/terms.md from the repo root
- * and generates data.js with all phase/lesson/glossary data.
+ * AI Engineering from Scratch 站点的构建脚本。
+ * 从仓库根目录解析 README.md、ROADMAP.md 和 glossary/terms.md，
+ * 然后生成包含 phase、lesson 与 glossary 全量数据的 data.js。
  *
- * Run: node site/build.js
- * Called automatically by GitHub Actions on every push.
+ * 运行方式：node site/build.js
+ * GitHub Actions 会在每次 push 时自动调用。
  */
 
 const fs = require('fs');
@@ -33,8 +33,8 @@ const CATALOG_DISCOVERY_END = '<!-- GENERATED:LESSON-DISCOVERY:END -->';
 const CERTIFICATION_DISCOVERY_START = '<!-- GENERATED:CERTIFICATION-DISCOVERY:START -->';
 const CERTIFICATION_DISCOVERY_END = '<!-- GENERATED:CERTIFICATION-DISCOVERY:END -->';
 
-// Registration order is public behavior. Later providers intentionally replace
-// selected legacy figures, including figures-tools3.js -> figures-mcp.js.
+// 注册顺序属于公开行为。后加载的 provider 会有意替换部分旧图示，
+// 包括 figures-tools3.js -> figures-mcp.js 这一覆盖关系。
 const FIGURE_PROVIDER_ORDER = [
   'figures.js',
   'figures-math.js',
@@ -99,21 +99,21 @@ const FIGURE_PROVIDER_ORDER = [
 const GITHUB_BASE = 'https://github.com/rohitg00/ai-engineering-from-scratch/tree/main/';
 const SITE_ORIGIN = 'https://aiengineeringfromscratch.com';
 
-// GITHUB_BASE lesson url -> site path "phases/<phase>/<lesson>"
+// GITHUB_BASE 中的 lesson URL -> 站点路径 "phases/<phase>/<lesson>"
 function lessonPath(url) {
   if (!url) return null;
   const m = url.match(/(phases\/[^/]+\/[^/]+)\/?$/);
   return m ? m[1] : null;
 }
 
-// ─── Parse ROADMAP.md for lesson statuses ────────────────────────────
+// ─── 解析 ROADMAP.md 中的课程状态 ─────────────────────────────────────
 function parseRoadmap(content) {
   const statuses = {}; // { "Phase 0": { phaseStatus, lessons: { "Dev Environment": "complete" } } }
   let currentPhase = null;
   let currentPhaseStatus = null;
 
   for (const line of content.split(/\r?\n/)) {
-    // Match phase headers like: ## Phase 0: Setup & Tooling — ✅
+    // 匹配 phase 标题，例如：## Phase 0: Setup & Tooling — ✅
     const phaseMatch = line.match(/^##\s+Phase\s+(\d+).*?—\s*(✅|🚧|⬚)/);
     if (phaseMatch) {
       const phaseId = parseInt(phaseMatch[1]);
@@ -124,7 +124,7 @@ function parseRoadmap(content) {
       continue;
     }
 
-    // Match lesson rows like: | 01 | Dev Environment | ✅ |
+    // 匹配 lesson 行，例如：| 01 | Dev Environment | ✅ |
     if (currentPhase) {
       const lessonMatch = line.match(/^\|\s*\d+\s*\|\s*(.+?)\s*\|\s*(✅|🚧|⬚)\s*\|/);
       if (lessonMatch) {
@@ -139,13 +139,13 @@ function parseRoadmap(content) {
   return statuses;
 }
 
-// ─── Parse README.md for phases and lessons ──────────────────────────
+// ─── 解析 README.md 中的 phase 与 lesson ──────────────────────────────
 function parseReadme(content, roadmapStatuses) {
   const phases = [];
 
-  // Split into phase blocks
-  // Phase 0 is in a <table> block, phases 1-19 are in <details> blocks
-  // We'll parse line by line to extract phase headers and lesson tables
+  // 按 phase 分块。
+  // Phase 0 位于 <table> 区块中，phase 1-19 位于 <details> 区块中。
+  // 这里按行解析，提取 phase 标题与 lesson 表格。
 
   const lines = content.split(/\r?\n/);
   let currentPhase = null;
@@ -155,11 +155,11 @@ function parseReadme(content, roadmapStatuses) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match Phase header - multiple formats supported:
-    // Old: ### Phase 0: Setup & Tooling `12 lessons`
-    // Old: <summary><strong>Phase 1: Math Foundations</strong> <code>22 lessons</code> ... <em>Description</em></summary>
-    // New: ### ![](https://img.shields.io/badge/Phase_0-Setup_&_Tooling-95A5A6?style=for-the-badge) `12 lessons`
-    // New: <summary><b>🟣 Phase 1 — Math Foundations</b> &nbsp;<code>22 lessons</code>&nbsp; <em>Description</em></summary>
+    // 匹配 phase 标题，兼容多种格式：
+    // 旧格式：### Phase 0: Setup & Tooling `12 lessons`
+    // 旧格式：<summary><strong>Phase 1: Math Foundations</strong> <code>22 lessons</code> ... <em>Description</em></summary>
+    // 新格式：### ![](https://img.shields.io/badge/Phase_0-Setup_&_Tooling-95A5A6?style=for-the-badge) `12 lessons`
+    // 新格式：<summary><b>🟣 Phase 1 — Math Foundations</b> &nbsp;<code>22 lessons</code>&nbsp; <em>Description</em></summary>
     const phaseHeaderMatch =
       line.match(/###\s+Phase\s+(\d+):\s+(.+?)\s*`(\d+)\s+lessons?`/) ||
       line.match(/###\s+!\[\]\([^)]*?Phase[_\s]+(\d+)[-_]([^?)]+?)-[A-F0-9]{6}[^)]*\)\s*`(\d+)\s+lessons?`/i);
@@ -171,7 +171,7 @@ function parseReadme(content, roadmapStatuses) {
       const [, idStr, rawName] = phaseHeaderMatch;
       const id = parseInt(idStr);
       const name = rawName.replace(/_/g, ' ').trim();
-      // Look for the description on the next line (blockquote)
+      // 在后续几行里查找说明文字（blockquote）
       let desc = '';
       for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
         if (lines[j].startsWith('>')) {
@@ -198,19 +198,19 @@ function parseReadme(content, roadmapStatuses) {
       continue;
     }
 
-    // Detect start of lesson table
+    // 检测 lesson 表格起点
     if (currentPhase && line.match(/^\|\s*#\s*\|\s*Lesson/)) {
       inLessonTable = true;
       isCapstoneTable = false;
       continue;
     }
 
-    // Skip table separator
+    // 跳过表头分隔线
     if (inLessonTable && line.match(/^\|[\s:|-]+\|$/)) {
       continue;
     }
 
-    // Parse lesson rows
+    // 解析 lesson 行
     if (inLessonTable && currentPhase && line.startsWith('|')) {
       // | 01 | [Dev Environment](phases/00-setup-and-tooling/01-dev-environment/) | Build | Python, Node, Rust |
       // | 02 | Multi-Layer Networks & Forward Pass | Build | Python |
@@ -220,11 +220,11 @@ function parseReadme(content, roadmapStatuses) {
         const typeRaw = cols[2];
         const langRaw = cols[3];
 
-        // Type may be plain ("Build") or a shield image: ![Build](https://...)
+        // Type 可能是纯文本（"Build"），也可能是 shield 图片：![Build](https://...)
         const typeBadgeMatch = typeRaw.match(/!\[([^\]]+)\]/);
         const type = typeBadgeMatch ? typeBadgeMatch[1] : typeRaw;
 
-        // Lang may be plain ("Python, Rust") or emoji flags (🐍 🟦 🦀 🟣 ⚛️)
+        // Lang 可能是纯文本（"Python, Rust"），也可能是 emoji 标记（🐍 🟦 🦀 🟣 ⚛️）
         const EMOJI_LANG = {
           '🐍': 'Python',
           '🟦': 'TypeScript',
@@ -243,7 +243,7 @@ function parseReadme(content, roadmapStatuses) {
         }
         if (lang === '—' || lang === '-') lang = '';
 
-        // Check if lesson has a link (meaning it has content)
+        // 检查 lesson 是否带链接（带链接表示已有内容）
         const linkMatch = lessonCol.match(/\[(.+?)\]\((.+?)\)/);
         let lessonName, url;
         if (linkMatch) {
@@ -255,12 +255,12 @@ function parseReadme(content, roadmapStatuses) {
           url = null;
         }
 
-        // Get status from roadmap
+        // 从 roadmap 读取状态
         const roadmapKey = `Phase ${currentPhase.id}`;
         const roadmapPhase = roadmapStatuses[roadmapKey];
         let status = 'planned';
         if (roadmapPhase) {
-          // Try to find matching lesson by fuzzy match
+          // 通过模糊匹配尝试找到对应 lesson
           const lessonNameClean = lessonName.replace(/[-–—:]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
           for (const [rName, rStatus] of Object.entries(roadmapPhase.lessons)) {
             const rNameClean = rName.replace(/[-–—:]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -272,15 +272,15 @@ function parseReadme(content, roadmapStatuses) {
           }
         }
 
-        // If it has a link, it's at least complete (override roadmap if needed)
+        // 只要有链接，至少说明已完成到可访问状态（必要时覆盖 roadmap）
         if (url && status === 'planned') {
           status = 'complete';
         }
 
-        // Capstone tables use the middle column for prerequisite phase tokens
-        // (e.g., "P11 P13 P14"), not a Build/Learn enum. Keep `type` on the
-        // Build/Learn axis so CSS selectors (data-type="Build"/"Learn") stay
-        // valid, and emit the prereq string in a dedicated `combines` field.
+        // Capstone 表格的中间列是前置 phase token（例如 "P11 P13 P14"），
+        // 不是 Build/Learn 枚举。`type` 仍保持在 Build/Learn 轴上，
+        // 这样 CSS 选择器（data-type="Build"/"Learn"）仍然有效，
+        // 同时把前置字符串输出到独立的 `combines` 字段。
         const lessonEntry = {
           name: lessonName.trim(),
           status,
@@ -293,12 +293,12 @@ function parseReadme(content, roadmapStatuses) {
       }
     }
 
-    // End of table
+    // 表格结束
     if (inLessonTable && (line.match(/<\/td>/) || line.match(/<\/details>/) || (line.trim() === '' && i + 1 < lines.length && !lines[i + 1].startsWith('|')))) {
       inLessonTable = false;
     }
 
-    // Also detect capstone table format (# | Project | Combines | Lang)
+    // 同时识别 capstone 表格格式（# | Project | Combines | Lang）
     if (currentPhase && line.match(/^\|\s*#\s*\|\s*Project/)) {
       inLessonTable = true;
       isCapstoneTable = true;
@@ -309,9 +309,9 @@ function parseReadme(content, roadmapStatuses) {
   return phases;
 }
 
-// ─── Parse focused learning paths ────────────────────────────────────
-// A learning path is an ordered overlay on the canonical PHASES data. The
-// manifest owns intent and pacing; README owns the lesson title and URL.
+// ─── 解析 focused learning paths ─────────────────────────────────────
+// learning path 是叠加在标准 PHASES 数据之上的有序视图。manifest 负责
+// 意图与节奏，README 负责课程标题与 URL。
 function parseLearningPaths(repoRoot = REPO_ROOT, phases = []) {
   const learningPathsDir = path.join(repoRoot, 'learning-paths');
   if (!fs.existsSync(learningPathsDir)) return [];
@@ -521,10 +521,10 @@ function parseLearningPaths(repoRoot = REPO_ROOT, phases = []) {
   });
 }
 
-// ─── Resolve figure IDs to the provider scripts that register them ─────────
-// Lessons are fetched at runtime and translated lessons can retain figure
-// fences, so the browser resolves providers from the rendered data-figure IDs.
-// The build emits only IDs that are actually used by lesson Markdown.
+// ─── 将 figure ID 解析为注册它们的 provider 脚本 ────────────────────────
+// lesson 在运行时抓取，翻译后的 lesson 也可能保留 figure fenced block，
+// 因此浏览器需要根据渲染后的 data-figure ID 反查 provider。
+// 构建结果只输出 lesson Markdown 实际用到的 ID。
 function collectMarkdownFiles(directory, files = []) {
   if (!fs.existsSync(directory)) return files;
   const entries = fs.readdirSync(directory, { withFileTypes: true })
@@ -638,10 +638,9 @@ function writeFigureManifest(repoRoot = REPO_ROOT, siteDir = __dirname) {
   return manifest;
 }
 
-// ─── Parse the canonical phase dependency graph from README.md ───────
-// The public Mermaid diagram under "The shape of the curriculum" owns the
-// phase-level learning path. Keeping the website graph generated from it
-// prevents the interactive roadmap from drifting into a second curriculum.
+// ─── 从 README.md 解析标准 phase 依赖图 ───────────────────────────────
+// “The shape of the curriculum” 下方公开的 Mermaid 图是 phase 级学习路径的
+// 权威来源。站点图从这里生成，能避免交互式 roadmap 漂移成第二套课程体系。
 function parseCurriculumPrereqs(content, phases) {
   const section = content.match(/## The shape of the curriculum[\s\S]*?```mermaid\s*\r?\n([\s\S]*?)```/);
   if (!section) throw new Error('README.md is missing the canonical curriculum Mermaid graph');
@@ -709,19 +708,19 @@ function parseCurriculumPrereqs(content, phases) {
   return prerequisites;
 }
 
-// ─── Extract lesson summary + keywords from docs/en.md ───────────────
+// ─── 从 docs/en.md 提取 lesson 摘要与关键词 ───────────────────────────
 /**
- * Single-pass read of a lesson's docs/en.md.
+ * 单次读取 lesson 的 docs/en.md。
  *
- * Returns:
- *   summary  — first `> blockquote` line (the lesson's one-liner motto).
- *   keywords — all `### H3` heading texts joined by ' · '.
- *              H3 headings are the densest vocabulary in a lesson doc
- *              (e.g. "Scaled dot-product · Causal masking · KV cache"),
- *              so they extend search coverage without bloating data.js.
+ * 返回：
+ *   summary  — 第一条 `> blockquote` 行（lesson 的一句话 motto）。
+ *   keywords — 所有 `### H3` 标题文本，用 ' · ' 拼接。
+ *              H3 标题往往是 lesson 文档里信息密度最高的词汇区
+ *              （例如 "Scaled dot-product · Causal masking · KV cache"），
+ *              因此能扩展搜索覆盖面，又不会让 data.js 过度膨胀。
  *
- * Both fields are empty strings when the file is absent or has no
- * matching content — expected for planned lessons with no docs yet.
+ * 当文件不存在，或没有匹配内容时，这两个字段都会返回空字符串；
+ * 对于尚未编写 docs 的 planned lesson，这是预期行为。
  */
 function extractLessonMeta(relPath) {
   const docPath = path.join(REPO_ROOT, relPath, 'docs', 'en.md');
@@ -742,7 +741,7 @@ function extractLessonMeta(relPath) {
     }
     if (h3s.length) result.keywords = h3s.join(' · ');
   } catch (_) {
-    // File absent or unreadable — expected for planned lessons.
+    // 文件不存在或不可读：对 planned lesson 来说属于预期情况。
   }
   return result;
 }
@@ -956,6 +955,10 @@ function buildSeoManifests(phases, certifications, learningPaths = []) {
       if (descriptionSourceLength >= 120 && docSeo.description.length < 120) {
         throw new Error(`SEO lesson ${relPath} has enough prose but a description shorter than 120 characters`);
       }
+      const zhDocPath = path.join(REPO_ROOT, 'i18n', 'zh', relPath, 'docs', 'zh.md');
+      const zh = fs.existsSync(zhDocPath)
+        ? lessonDocumentSeo(fs.readFileSync(zhDocPath, 'utf8'), lesson.name)
+        : null;
       courseEntries.push({
         path: relPath,
         ...docSeo,
@@ -972,6 +975,12 @@ function buildSeoManifests(phases, certifications, learningPaths = []) {
         fromTrackIds: (fromTrackIdsByLesson.get(relPath) || []).slice().sort(),
         sourceUrl: githubSourceUrl(relPath),
         canonicalUrl: canonicalLessonUrl(relPath),
+        ...(zh && { zh: {
+          title: zh.title,
+          seoTitle: zh.seoTitle,
+          description: zh.description,
+          excerpt: zh.excerpt,
+        } }),
       });
     }
   }
@@ -1977,6 +1986,7 @@ function discoverArtifacts(repoRoot = REPO_ROOT) {
         for (const entry of entries) {
           if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
           const file = entry.name;
+          if (/\.[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*\.md$/.test(file)) continue;
           const stem = file.replace(/\.md$/, '');
           const type = VALID_TYPES.find(t => stem.startsWith(`${t}-`));
           if (!type) continue;
@@ -2069,11 +2079,11 @@ function requireShortRef(value, label) {
 }
 
 function resolveRef(environment = process.env) {
-  if (environment.VERCEL_ENV === 'production') return 'main';
-  if (environment.VERCEL_ENV === 'preview') {
+  if (environment.VERCEL_ENV === 'production' || environment.VERCEL_ENV === 'preview') {
     const sha = String(environment.VERCEL_GIT_COMMIT_SHA || '').trim();
     if (/^[0-9a-f]{7,40}$/i.test(sha)) return sha;
   }
+  if (environment.VERCEL_ENV === 'production') return 'main';
 
   let ref = String(
     environment.VERCEL_GIT_COMMIT_REF
@@ -2125,9 +2135,9 @@ function sourceIdentity(repository, revision) {
 
 function githubSourceUrl(relativePath, view = 'tree', environment = process.env) {
   const repository = resolveRepository(environment);
-  // Public SEO links stay on main outside Vercel. Preview deployments use the
-  // immutable SHA selected by resolveRef so links cannot drift after indexing.
-  const sourceRef = environment.VERCEL_ENV === 'preview'
+  // Vercel deployments use their immutable commit SHA so custom production
+  // branches and previews cannot drift to main after indexing.
+  const sourceRef = environment.VERCEL_ENV === 'preview' || environment.VERCEL_ENV === 'production'
     ? resolveRef(environment)
     : 'main';
   const revision = sourceRef
@@ -2173,7 +2183,7 @@ function writeBuildMeta(environment = process.env, outputPath = path.join(__dirn
 
 function publishedLanguages(registry) {
   return registry.languages
-    .filter(language => language.source || language.ci || language.manual)
+    .filter(language => language.public === true)
     .map(language => ({ code: language.code, native: language.native }));
 }
 
@@ -3139,11 +3149,11 @@ function assertAboutCurriculumSummary(summary, siteDir = __dirname) {
 
   const fallback = match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const checks = [
-    ['corePhases', 'core phases', /\bcore curriculum has (\d+) phases\b/i],
-    ['coreLessons', 'core lessons', /\bcore curriculum has \d+ phases and (\d+) lessons\b/i],
-    ['focusedLearningPaths', 'focused paths', /\bBeyond it are (\d+) focused paths\b/i],
-    ['certificationTracks', 'certification tracks', /\bfocused paths and (\d+) Claude certification tracks\b/i],
-    ['certificationLessons', 'certification lessons', /\bwith (\d+) certification lessons\b/i],
+    ['corePhases', 'core phases', /(?:\bcore curriculum has (\d+) phases\b|核心课程包含 (\d+) 个阶段)/i],
+    ['coreLessons', 'core lessons', /(?:\bcore curriculum has \d+ phases and (\d+) lessons\b|核心课程包含 \d+ 个阶段、(\d+) 节课程)/i],
+    ['focusedLearningPaths', 'focused paths', /(?:\bBeyond it are (\d+) focused paths\b|此外还有 (\d+) 条专题路径)/i],
+    ['certificationTracks', 'certification tracks', /(?:\bfocused paths and (\d+) Claude certification tracks\b|以及 (\d+) 条 Claude 认证路线)/i],
+    ['certificationLessons', 'certification lessons', /(?:\bwith (\d+) certification lessons\b|共 (\d+) 节认证课程)/i],
   ];
 
   for (const [field, label, pattern] of checks) {
@@ -3151,7 +3161,7 @@ function assertAboutCurriculumSummary(summary, siteDir = __dirname) {
     if (!countMatch) {
       throw new Error(`about.html static fallback is missing its ${label} count`);
     }
-    const actual = Number(countMatch[1]);
+    const actual = Number(countMatch[1] || countMatch[2]);
     if (actual !== summary[field]) {
       throw new Error(
         `about.html static fallback ${label} drift: expected ${summary[field]}, found ${actual}`

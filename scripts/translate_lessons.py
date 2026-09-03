@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Translate lesson markdown into other languages, preserving all technical spans.
+"""将课程 Markdown 翻译为其他语言，同时保留所有技术文本区间。
 
-The English lessons are canonical. This produces machine translations of the
-prose only: fenced code, inline code, math, figure/mermaid blocks, links,
-image refs, and the metadata header are preserved byte-for-byte. Output is
-written to a separate tree (default: i18n/<lang>/...) that a CI job commits to
-a translations branch, never to main. Runs are hash-cached, so a lesson is
-re-translated only when its English source changes.
+英文课程是规范源。本脚本只机器翻译正文；围栏代码、行内代码、数学公式、
+figure/mermaid 块、链接、图片引用和元数据头均逐字节保留。输出写入独立目录树
+（默认 i18n/<lang>/...），由 CI job 提交到 translations 分支，绝不提交到 main。
+运行结果按哈希缓存，仅当英文源发生变化时才重新翻译课程。
 
 Usage:
     LLM_API_KEY=... python3 scripts/translate_lessons.py --lang fr
@@ -14,9 +12,9 @@ Usage:
     python3 scripts/translate_lessons.py --lang tr --only phases/00-setup-and-tooling/01-dev-environment
     python3 scripts/translate_lessons.py --lang tr --dry-run   # show what would translate, no API calls
 
-Provider is pluggable via --provider. Default is "nllb" (the free open model that
-runs locally). Optional upgrades: anthropic|openai|deepl. "echo" makes no network
-calls and returns the source unchanged, for wiring/tests.
+可通过 --provider 插拔 provider。默认为本地运行的免费开放模型 "nllb"。
+可选升级为 anthropic|openai|deepl；"echo" 不发起网络请求并原样返回源文本，
+用于连线与测试。
 """
 
 import argparse
@@ -41,10 +39,9 @@ OUT_ROOT = ROOT / "i18n"
 
 
 def cache_path(lang, phase=None):
-    # Per-(language, phase) cache so the sharded CI jobs never touch the same
-    # file: each job publishes only its own phase slice, so caches merge without
-    # clobbering and a timed-out run resumes exactly where it stopped. A full
-    # local run (no --phase) keeps the single combined cache.
+    # 按 (language, phase) 分缓存，避免分片 CI job 接触同一文件：每个 job 只发布
+    # 自己的 phase 切片，缓存合并时不会互相覆盖，超时运行也能从中断处准确恢复。
+    # 完整本地运行（不传 --phase）仍使用单一合并缓存。
     if phase:
         validate_phase(ROOT, phase)
         return _safe_language_path(lang, ".cache", f"{phase}.json")
@@ -52,7 +49,7 @@ def cache_path(lang, phase=None):
 
 
 def write_text_atomically(path, text):
-    """Replace *path* without exposing a partially written file."""
+    """替换 *path*，且不暴露只写入一部分的文件。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = None
     try:
@@ -76,12 +73,12 @@ def write_text_atomically(path, text):
 
 
 def write_json_atomically(path, value):
-    """Serialize *value* before atomically replacing its JSON file."""
+    """序列化 *value*，再原子替换其 JSON 文件。"""
     write_text_atomically(path, json.dumps(value, indent=2, ensure_ascii=False))
 
 
 def _translation_lock_path(lang):
-    """Return a process-shared lock path outside published output trees."""
+    """返回位于发布输出目录树之外的进程共享锁路径。"""
     validate_language(lang)
     root_fingerprint = hashlib.sha256(
         os.fsencode(str(OUT_ROOT.absolute()))
@@ -93,7 +90,7 @@ def _translation_lock_path(lang):
 
 @contextmanager
 def translation_lock(lang):
-    """Serialize writers that can touch one language's caches or outputs."""
+    """串行化可能改动同一语言缓存或输出的写入者。"""
     lock_path = _translation_lock_path(lang)
     flags = os.O_CREAT | os.O_RDWR
     if hasattr(os, "O_NOFOLLOW"):
@@ -108,8 +105,7 @@ def translation_lock(lang):
 
 
 def _load_registry():
-    # languages.json is a committed canonical file; fail loudly if it is missing
-    # rather than masking that with a silent hardcoded fallback.
+    # languages.json 是已提交的规范文件；缺失时明确失败，不用静默硬编码回退掩盖问题。
     return json.loads((ROOT / "languages.json").read_text(encoding="utf-8"))["languages"]
 
 
@@ -129,7 +125,7 @@ DEFAULT_TRANSLATION_MODELS = {
 
 
 def translation_model(provider):
-    """Return the exact configured model/backend used by *provider*."""
+    """返回 *provider* 使用的确切配置模型/backend。"""
     if provider == "nllb":
         return os.environ.get("NLLB_MODEL", DEFAULT_TRANSLATION_MODELS[provider])
     if provider in {"anthropic", "openai"}:
@@ -138,65 +134,64 @@ def translation_model(provider):
 
 
 def validate_language(lang, *, allow_manual=False):
-    """Return a safe registered target language or raise ``ValueError``.
+    """返回安全且已注册的目标语言，否则抛出 ``ValueError``。
 
-    Registry membership is the path-segment allowlist. Path-looking values
-    such as ``x/../zh`` and ``../../`` are rejected, never normalized.
+    registry 成员关系就是路径段 allowlist。``x/../zh``、``../../`` 等形似路径的
+    值会被拒绝，绝不会先规范化。
     """
     entry = LANGUAGE_REGISTRY.get(lang)
     if entry is None:
-        raise ValueError(f"unknown language {lang!r}; choose a code from languages.json")
+        raise ValueError(f"未知语言 {lang!r}；请从 languages.json 中选择代码")
     if entry.get("source"):
-        raise ValueError(f"language {lang!r} is the canonical source, not a translation")
+        raise ValueError(f"语言 {lang!r} 是规范源，不是译文")
     if entry.get("manual") and not allow_manual:
         raise ValueError(
-            f"language {lang!r} is human-maintained; refusing machine translation"
+            f"语言 {lang!r} 由人工维护；拒绝机器翻译"
         )
     return lang
 
 
 def validate_phase(repo_root, phase):
-    """Return an existing, repository-contained phase directory name."""
+    """返回仓库内确实存在的 phase 目录名。"""
     if phase is None:
         return None
     if PHASE_DIR_RE.fullmatch(phase) is None:
-        raise ValueError(f"invalid phase directory name {phase!r}")
+        raise ValueError(f"无效的 phase 目录名 {phase!r}")
     phases_root = (Path(repo_root) / "phases").resolve()
     candidate = (phases_root / phase).resolve()
     if not candidate.is_relative_to(phases_root) or not candidate.is_dir():
-        raise ValueError(f"phase directory does not exist in this repository: {phase!r}")
+        raise ValueError(f"仓库中不存在 phase 目录：{phase!r}")
     return phase
 
 
 def _safe_language_path(lang, *parts):
-    """Resolve an output path and prove it remains below its language root."""
+    """解析输出路径，并证明它始终位于对应语言根目录下。"""
     validate_language(lang)
     lexical_output_root = OUT_ROOT.absolute()
     lexical_language_root = lexical_output_root / lang
     lexical_target = lexical_language_root.joinpath(*parts)
     cursor = lexical_output_root
     if cursor.is_symlink():
-        raise ValueError(f"translation output root is a symlink: {cursor}")
+        raise ValueError(f"翻译输出根目录是符号链接：{cursor}")
     for part in Path(lang, *parts).parts:
         cursor /= part
         if cursor.is_symlink():
             raise ValueError(
-                f"output path for {lang!r} contains a symlink: {cursor}"
+                f"{lang!r} 的输出路径包含符号链接：{cursor}"
             )
     output_root = lexical_output_root.resolve()
     language_root = lexical_language_root.resolve()
     if not language_root.is_relative_to(output_root):
         raise ValueError(
-            f"language root for {lang!r} resolves outside translation output root"
+            f"{lang!r} 的语言根目录解析到了翻译输出根目录之外"
         )
     target = lexical_target.resolve()
     if target != language_root and not target.is_relative_to(language_root):
-        raise ValueError(f"output path for {lang!r} resolves outside language root")
+        raise ValueError(f"{lang!r} 的输出路径解析到了语言根目录之外")
     return target
 
 
-# Inline span vocabulary, named once so the two protection lists compose from the
-# same regexes instead of copy-pasting them.
+# 行内区间词汇统一命名，使两份保护列表复用同一组正则，而非复制粘贴。
 INLINE_CODE = re.compile(
     r"(?<!`)(?P<ticks>`+)(?!`)(?P<body>[^\n]*?)(?<!`)(?P=ticks)(?!`)"
 )
@@ -227,7 +222,7 @@ TECHNICAL_TOKEN = re.compile(
     r"HTTPS|JSON|YAML|SQL|HTML|CSS|API|SDK|CLI|GPU|CPU|TPU|MCP|LLM|AI)"
     r"(?![A-Za-z0-9_])"
 )
-# Whole-document protection for the LLM path.
+# LLM 路径的整篇文档保护。
 PROTECT = [
     re.compile(r"```.*?\n.*?```", re.S),          # fenced code / figure / mermaid
     re.compile(r"~~~.*?\n.*?~~~", re.S),          # alt fenced
@@ -333,7 +328,7 @@ class ReferenceDefinition:
 
 
 def _looks_like_currency_span(raw, following=""):
-    """Distinguish two currency markers from a real ``$...$`` formula."""
+    """区分两个货币标记与真正的 ``$...$`` 公式。"""
     body = raw[1:-1].strip()
     if body.startswith("/"):
         return True
@@ -342,19 +337,17 @@ def _looks_like_currency_span(raw, following=""):
     amount = re.match(r"^\d[\d,]*(?:\.\d+)?(?:[kKmMbBtT])?", body)
     if amount is None:
         return False
-    # The regex pairs the dollar signs of two ordinary prices. A digit right
-    # after the apparent closing delimiter proves that delimiter starts the
-    # second amount, even when the prose between them contains words such as
-    # ``if`` or ``otherwise``.
+    # 此正则会把两个普通价格的美元符号配成一对。若看似结束的 delimiter 后紧跟数字，
+    # 即可证明该 delimiter 实际是第二个金额的开头，即使中间文字包含 ``if`` 或
+    # ``otherwise`` 等词。
     if following[:1].isdigit():
         return True
     rest = body[amount.end():]
     if not rest:
         return False
-    # Numeric-leading conditional and qualified expressions are formulas when
-    # the keyword immediately follows the leading value. Requiring that
-    # position avoids treating a broad span between two prices, such as
-    # ``$4 per run. If ... $50``, as mathematics.
+    # 数字开头的条件或限定表达式中，若关键字紧跟起始值，则将其视为公式。要求关键字
+    # 位于此位置，可避免把两个价格之间的大段文字（如 ``$4 per run. If ... $50``）
+    # 误判为数学公式。
     if re.match(
         r"^\s+(?:if|else|for|where|when|otherwise)\b",
         rest,
@@ -363,9 +356,8 @@ def _looks_like_currency_span(raw, following=""):
         return False
     if re.match(r"^\s*(?:\\[A-Za-z]+|[_^])", rest):
         return False
-    # Numeric-leading algebra has an immediate identifier/subscript or an
-    # arithmetic operator. Currency prose continues with a unit, punctuation,
-    # natural-language description, or the next price marker.
+    # 数字开头的代数表达式后会立即出现 identifier/subscript 或算术运算符；
+    # 货币文字后则是单位、标点、自然语言描述或下一个价格标记。
     if re.match(r"^[A-Za-z_{}^\\]", rest):
         return False
     operator = re.match(r"^\s*([+*/=<>^-])\s*(\S.*)$", rest)
@@ -402,15 +394,14 @@ def _looks_like_currency_span(raw, following=""):
 
 
 def _mixed_formula_span(text, start):
-    """Return a formula prefix followed by translatable connective prose."""
+    """返回公式前缀及其后可翻译的连接性正文。"""
     tail = text[start:]
     for connector in FORMULA_CONNECTOR_RE.finditer(tail):
         candidate = tail[:connector.start()].rstrip()
         if not candidate:
             continue
-        # A later connective can belong to the next sentence. Treating the
-        # intervening prose as part of the formula leaves it untranslated and
-        # makes target-side token boundaries depend on the target script.
+        # 后面的连接词可能属于下一句。若把中间文字视为公式的一部分，会导致其未被翻译，
+        # 并使目标侧 token 边界依赖目标文字系统。
         if re.search(r"[.!?][)\]\"']*\s+[A-Za-z]", candidate):
             continue
         if not FORMULA_LHS_RE.match(candidate):
@@ -431,7 +422,7 @@ def _is_escaped(text, index):
 
 
 def _balanced_closer(text, opening_index, opener, closer):
-    """Locate a same-line closer, respecting nesting and escapes."""
+    """在同一行定位结束符，并遵循嵌套和转义规则。"""
     depth = 0
     index = opening_index
     while index < len(text) and text[index] != "\n":
@@ -450,12 +441,11 @@ def _balanced_closer(text, opening_index, opener, closer):
 
 
 def _markdown_destination_closer(text, opening_index):
-    """Locate the outer ``)`` of an inline Markdown destination.
+    """定位 Markdown 行内目标最外层的 ``)``。
 
-    An angle destination has its own delimiter pair. Parentheses inside
-    ``<...>`` are URL bytes, not nesting for the surrounding ``(...)``.
-    Keeping that distinction here also means the angle wrapper remains part of
-    the protected target rather than being mistaken for Markdown syntax.
+    尖括号目标拥有自己的分隔符对。``<...>`` 内的圆括号属于 URL 字节，
+    不是外围 ``(...)`` 的嵌套结构。保留这一差异，也能确保尖括号包装仍属于
+    受保护目标，而不会被误认为 Markdown 语法。
     """
     depth = 1
     index = opening_index + 1
@@ -519,7 +509,7 @@ def _normalized_reference_label(label):
 
 
 def _reference_destination(value):
-    """Return ``(destination, trailing text)`` for one definition line."""
+    """返回单行定义的 ``(destination, trailing text)``。"""
     text = value.lstrip()
     if not text:
         return None
@@ -556,7 +546,7 @@ def _reference_destination(value):
 
 
 def _reference_title_extent(lines, start, value):
-    """Return ``(opening marker, final line)`` for a CommonMark title."""
+    """返回 CommonMark title 的 ``(opening marker, final line)``。"""
     current = value.lstrip(" \t")
     if not current or current[0] not in {"\"", "'", "("}:
         return None
@@ -588,7 +578,7 @@ def _reference_title_extent(lines, start, value):
 
 
 def reference_definitions(text):
-    """Parse single- and multi-line CommonMark reference definitions."""
+    """解析单行和多行 CommonMark reference 定义。"""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = normalized.split("\n")
     definitions = []
@@ -638,8 +628,7 @@ def reference_definitions(text):
         destination, trailing = parsed
         title_marker = None
         if trailing.strip(" \t"):
-            # A same-line title must be separated from the destination. Any
-            # other trailing character invalidates the entire definition.
+            # 同行 title 必须与 destination 分隔；任何其他尾随字符都会使整个定义无效。
             title = (
                 _reference_title_extent(lines, end, trailing)
                 if trailing.startswith((" ", "\t"))
@@ -669,7 +658,7 @@ def reference_definitions(text):
 
 
 def _markdown_reference_at(text, start, reference_labels):
-    """Parse a defined full, collapsed, or shortcut reference link."""
+    """解析已定义的完整、折叠或快捷 reference link。"""
     image = text.startswith("![", start)
     label_open = start + 1 if image else start
     if (
@@ -708,7 +697,7 @@ def _markdown_reference_at(text, start, reference_labels):
 
 
 def _bare_url_end(text, start):
-    """Return the end of a bare URL with balanced/escaped parentheses."""
+    """返回括号平衡或转义的裸 URL 结束位置。"""
     index = start
     depth = 0
     while index < len(text):
@@ -737,7 +726,7 @@ def _bare_url_end(text, start):
 
 
 def inline_spans(text, reference_labels=frozenset()):
-    """Yield protected/structured inline Markdown spans from left to right."""
+    """从左到右生成受保护或结构化的行内 Markdown span。"""
     index = 0
     while index < len(text):
         span = None
@@ -771,10 +760,8 @@ def inline_spans(text, reference_labels=frozenset()):
                 if match is not None and _looks_like_currency_span(
                     match.group(0), text[match.end() : match.end() + 1]
                 ):
-                    # Skip only this currency marker. The amount and prose stay
-                    # visible, and nested code/URLs are still scanned. A later
-                    # price marker is classified independently instead of being
-                    # paired as fake math.
+                    # 仅跳过当前货币标记。金额和文字保持可见，嵌套代码/URL 仍会被扫描。
+                    # 后续价格标记独立分类，不会被配对为伪数学表达式。
                     index += 1
                     continue
             if match is None:
@@ -814,7 +801,7 @@ def inline_spans(text, reference_labels=frozenset()):
 
 
 def _reference_definition_labels(text):
-    """Collect source reference labels outside fenced and math blocks."""
+    """收集 fenced block 和数学 block 之外的源 reference 标签。"""
     return frozenset(definition.label for definition in reference_definitions(text))
 
 
@@ -836,7 +823,7 @@ def protect(text, patterns=None):
         store.append(m.group(0))
         return SENTINEL.format(len(store) - 1)
 
-    # Explicit pattern callers retain the generic substitution contract.
+    # 显式 pattern 调用方保留通用替换契约。
     if patterns is not None:
         for pat in patterns:
             text = pat.sub(stash, text)
@@ -894,9 +881,8 @@ def protect(text, patterns=None):
         rebuilt.append(value[cursor:])
         return "".join(rebuilt)
 
-    # Protect block spans first using the same fence semantics as the markdown
-    # walker. This keeps four-backtick outer fences intact even when they
-    # contain literal triple-backtick lines.
+    # 首先使用与 Markdown walker 相同的 fence 语义保护 block span。这样即使四反引号
+    # 外层 fence 中包含字面量三反引号行，也能保持完整。
     block_store = []
     placeholders = []
     prose = []
@@ -968,7 +954,7 @@ def protect(text, patterns=None):
 
 
 def protect_inline_destinations(text):
-    """Protect balanced link/image targets and bare URLs, not visible labels."""
+    """保护括号平衡的链接/图片目标和裸 URL，不保护可见标签。"""
     store = []
     rebuilt = []
     cursor = 0
@@ -990,15 +976,15 @@ def protect_inline_destinations(text):
 
 
 def restore(text, store):
-    # reverse order so a span that itself contains a lower-indexed sentinel
-    # (e.g. a link whose url was protected first) resolves correctly.
+    # 按逆序恢复，使自身包含较低索引 sentinel 的 span（如 URL 先受保护的链接）
+    # 能正确解析。
     for i in range(len(store) - 1, -1, -1):
         text = text.replace(SENTINEL.format(i), store[i])
     return text
 
 
 def placeholder_sequence_is_valid(protected, translated):
-    """Return whether provider output preserved placeholder tokens exactly."""
+    """返回 provider 输出是否精确保留 placeholder token。"""
     expected = SENT_RE.findall(protected)
     actual = SENT_RE.findall(translated)
     if actual != expected:
@@ -1008,7 +994,7 @@ def placeholder_sequence_is_valid(protected, translated):
 
 
 def has_protection_sentinel_residue(text):
-    """Detect complete or damaged placeholders left in translated text."""
+    """检测译文中残留的完整或损坏 placeholder。"""
     return PLACEHOLDER_FRAGMENT_RE.search(text) is not None
 
 
@@ -1024,7 +1010,7 @@ Hard rules:
 
 
 def translate_text(text, lang, provider):
-    """Translate protected prose. Returns translated text with sentinels intact."""
+    """翻译受保护正文，返回 sentinel 保持完整的译文。"""
     if provider == "echo" or not text.strip():
         return text
     lang_name = LANG_NAMES.get(lang, lang)
@@ -1035,7 +1021,7 @@ def translate_text(text, lang, provider):
         return _openai(system, text)
     if provider == "deepl":
         return _deepl(text, lang)
-    raise SystemExit(f"unknown provider: {provider}")
+    raise SystemExit(f"未知 provider：{provider}")
 
 
 def _anthropic(system, text):
@@ -1076,7 +1062,7 @@ def _deepl(text, lang):
     return payload["translations"][0]["text"]
 
 
-# ── NLLB-200: free, key-less, runs in the CI runner ──────────────────────────
+# ── NLLB-200：免费、无需密钥，在 CI runner 中运行 ──────────────────────────
 _NLLB = {}
 META_RE = re.compile(
     r"^\s*\*\*(Type|Language|Languages|Prerequisites|Phases exercised|Time|Related):\*\*"
@@ -1115,14 +1101,14 @@ def _nllb_pipe(tgt):
 
 
 def _nllb_sentence(pipe, text):
-    # NLLB truncates past ~512 tokens; split long fragments by sentence.
+    # NLLB 会截断超过约 512 个 token 的内容；按句子拆分长片段。
     if len(text) <= 400:
         return pipe(text)[0]["translation_text"]
     return " ".join(pipe(s)[0]["translation_text"] for s in SENT_SPLIT.split(text) if s.strip())
 
 
 def _nllb_batch(pipe, texts):
-    """Translate short independent fragments in one model invocation."""
+    """在一次模型调用中翻译多个短小且相互独立的片段。"""
     values = list(texts)
     if not values:
         return []
@@ -1131,7 +1117,7 @@ def _nllb_batch(pipe, texts):
 
 
 def _translate_visible_plain(text, translate_fn):
-    """Translate a visible prose fragment while retaining surrounding space."""
+    """翻译可见正文片段，同时保留两侧空白。"""
     match = re.match(r"^(\s*)(.*?)(\s*)$", text, re.S)
     if match is None:
         return text
@@ -1142,7 +1128,7 @@ def _translate_visible_plain(text, translate_fn):
 
 
 def _translate_unmatched_backtick_prefix(text, translate_fn):
-    """Keep unmatched leading backtick runs while translating their prose."""
+    """保留未配对的行首反引号序列，并翻译其后的正文。"""
     malformed_fence = re.match(r"^(`{3,}[^`\n]*`)(.*)$", text, re.S)
     if malformed_fence is not None:
         prefix, remainder = malformed_fence.groups()
@@ -1155,7 +1141,7 @@ def _translate_unmatched_backtick_prefix(text, translate_fn):
 
 
 def visible_plain_needs_translation(text):
-    """Return whether plain visible text is prose rather than a terse token."""
+    """判断可见纯文本是正文而不是简短 token。"""
     if is_technical_fragment(text):
         return False
     words = ENGLISH_WORD_RE.findall(text)
@@ -1177,11 +1163,10 @@ def visible_plain_needs_translation(text):
 
 
 def is_technical_fragment(text):
-    """Return whether visible ASCII text is an identifier or math expression.
+    """判断可见 ASCII 文本是标识符还是数学表达式。
 
-    These fragments may contain several English-looking names, but translating
-    them would corrupt executable identifiers or formulas rather than localize
-    prose.
+    这些片段可能包含多个看似英文的名称，但翻译它们会破坏可执行标识符或公式，
+    而不是完成正文的本地化。
     """
     body = text.strip()
     if body in PRESERVED_NAMED_TERMS:
@@ -1221,13 +1206,13 @@ def is_technical_fragment(text):
 
 
 def technical_contract_value(text):
-    """Return an exact technical fragment skipped by the NLLB walker."""
+    """返回 NLLB 遍历器跳过的精确技术片段。"""
     body = text.strip()
     return ("technical-contract", body) if is_technical_fragment(body) else None
 
 
 def technical_contract_values(text):
-    """Return exact technical plain-text spans, excluding Markdown syntax."""
+    """返回精确的技术纯文本 span，不含 Markdown 语法。"""
     values = []
     for part in extract_visible_plain_parts(text):
         technical = technical_contract_value(part)
@@ -1237,7 +1222,7 @@ def technical_contract_values(text):
 
 
 def extract_visible_plain_parts(text):
-    """Yield visible plain-text regions, descending into labels/emphasis."""
+    """生成可见纯文本区域，并递归进入标签与强调内容。"""
     parts = []
     cursor = 0
     for span in inline_spans(text):
@@ -1250,7 +1235,7 @@ def extract_visible_plain_parts(text):
 
 
 def reference_visible_parts(text):
-    """Return prose after a leading reference link, omitting its title."""
+    """返回行首引用链接之后的正文，省略链接标题。"""
     first = len(text) - len(text.lstrip())
     span = _markdown_link_at(text, first)
     if span is None or span.kind != "link":
@@ -1262,7 +1247,7 @@ def reference_visible_parts(text):
 
 
 def translate_inline_visible(text, translate_fn, reference_labels=frozenset()):
-    """Translate visible Markdown text while preserving syntax and targets."""
+    """翻译可见 Markdown 文本，同时保留语法和目标。"""
     out = []
     cursor = 0
     for span in inline_spans(text, reference_labels):
@@ -1312,7 +1297,7 @@ def translate_inline_visible(text, translate_fn, reference_labels=frozenset()):
 def protected_inline_values(
     text, *, include_technical=True, reference_labels=frozenset()
 ):
-    """Return inline literals and destinations that translation must retain."""
+    """返回翻译时必须保留的行内字面量和目标。"""
     values = []
     for span in inline_spans(text, reference_labels):
         if span.kind in {"image", "link", "reference-link", "reference-image"}:
@@ -1346,13 +1331,11 @@ def protected_inline_values(
 
 
 def protected_document_values(text):
-    """Collect explicitly marked immutable Markdown content.
+    """收集明确标记为不可变的 Markdown 内容。
 
-    Unlike ``nllb_protected_segments``, this representation has no positional
-    contract.  Human translators may move prose and its technical spans while
-    every source-side fenced block, code/math span, URL, and destination must
-    still occur. Unmarked identifiers and formulas remain visible prose: a
-    human translation may add annotations or localize their surrounding form.
+    与 ``nllb_protected_segments`` 不同，此表示没有位置契约。人工译者可以移动正文
+    及其技术 span，但源侧的每个 fenced block、代码/数学 span、URL 和目标仍必须存在。
+    未标记的标识符与公式仍属于可见正文：人工翻译可以添加注解或本地化其外围形式。
     """
     values = []
     definitions = reference_definitions(text)
@@ -1433,17 +1416,35 @@ def protected_document_values(text):
     return tuple(values)
 
 
-def protected_content_is_preserved(src, out):
-    """Return whether all immutable values survive, allowing reordering."""
+def protected_content_is_preserved(src, out, *, equivalent_value=None):
+    """判断所有不可变值是否仍然存在，允许重新排序。"""
     source = src.replace("\r\n", "\n").replace("\r", "\n")
     target = out.replace("\r\n", "\n").replace("\r", "\n")
     source_values = Counter(protected_document_values(source))
     target_values = Counter(protected_document_values(target))
-    return not source_values - target_values
+    missing = source_values - target_values
+    if not missing or equivalent_value is None:
+        return not missing
+
+    remaining = target_values - source_values
+    for source_value, count in missing.items():
+        for _ in range(count):
+            replacement = next(
+                (
+                    target_value
+                    for target_value, available in remaining.items()
+                    if available and equivalent_value(source_value, target_value)
+                ),
+                None,
+            )
+            if replacement is None:
+                return False
+            remaining[replacement] -= 1
+    return True
 
 
 def replace_visible_literal(text, source, replacement):
-    """Replace a literal only in visible prose and link/image labels."""
+    """仅在可见正文和链接/图片标签中替换字面量。"""
     rebuilt = []
     cursor = 0
     for span in inline_spans(text):
@@ -1470,7 +1471,7 @@ def replace_visible_literal(text, source, replacement):
 
 
 def split_table_row(line):
-    """Split a Markdown table row on pipes outside code spans."""
+    """在代码 span 之外的竖线处分割 Markdown 表格行。"""
     parts, start, ticks, escaped = [], 0, 0, False
     index = 0
     while index < len(line):
@@ -1500,7 +1501,7 @@ def split_table_row(line):
 
 
 def translate_table_row(line, translate_fn, reference_labels=frozenset()):
-    """Translate table-cell text without changing pipe or inline structure."""
+    """翻译表格单元格文本，不改变竖线或行内结构。"""
     if TABLE_SEPARATOR_RE.fullmatch(line):
         return line
     return "".join(
@@ -1512,10 +1513,10 @@ def translate_table_row(line, translate_fn, reference_labels=frozenset()):
 
 
 def fence_transition(line, fence=None):
-    """Return the active CommonMark fence after consuming *line*.
+    """消费 *line* 后返回当前有效的 CommonMark fence。
 
-    The marker character and opening length matter: a triple-backtick literal
-    inside a four-backtick block is content, not a closing delimiter.
+    标记字符和起始长度都很重要：四反引号 block 内的三反引号字面量是内容，
+    不是结束分隔符。
     """
     match = FENCE_LINE_RE.match(line)
     if not match:
@@ -1532,26 +1533,25 @@ def fence_transition(line, fence=None):
 
 
 def is_display_math_delimiter(line):
-    """Return whether a line opens or closes a multi-line ``$$`` block.
+    """判断一行是否开启或关闭多行 ``$$`` block。
 
-    A self-contained ``$$ expression $$`` line must not change the state for
-    following prose.
+    自包含的 ``$$ expression $$`` 行不得改变后续正文的状态。
     """
     stripped = line.strip()
     return stripped.startswith("$$") and stripped.count("$$") == 1
 
 
 def is_display_math_line(line):
-    """Return whether *line* starts a display-math span or delimiter."""
+    """判断 *line* 是否以 display-math span 或分隔符开头。"""
     return line.strip().startswith("$$")
 
 
 def nllb_translate_doc(src, tgt, translate_fn=None):
-    """Prose-only walker: code/math/figures/bold/links never reach the model.
+    """仅处理正文的遍历器：代码、数学、图形、粗体和链接永不进入模型。
 
-    Works line by line on the raw source so classification (fence, table,
-    metadata) sees the real markdown, then protects inline spans per line.
-    translate_fn(str)->str lets tests pass identity; production uses the NLLB pipe.
+    逐行处理原始来源，使分类逻辑（fence、表格、metadata）看到真实 Markdown，
+    再逐行保护行内 span。测试可通过 ``translate_fn(str)->str`` 注入恒等函数；
+    生产环境使用 NLLB pipeline。
     """
     if translate_fn is None:
         pipe = _nllb_pipe(tgt)
@@ -1582,9 +1582,8 @@ def nllb_translate_doc(src, tgt, translate_fn=None):
                 in_mathblock = not in_mathblock
             out_lines.append(line)
             continue
-        # Verbatim: code/math blocks, blanks, raw-HTML lines, and metadata.
-        # Tables and inline Markdown keep their syntax/targets while translating
-        # user-visible cell and label text.
+        # 原样保留：代码/数学 block、空白、原始 HTML 行和 metadata。表格与行内
+        # Markdown 保留语法/目标，同时翻译用户可见的单元格和标签文本。
         if in_mathblock or not line.strip() or s.startswith("<") or META_RE.match(line):
             out_lines.append(line)
             continue
@@ -1611,16 +1610,15 @@ def nllb_translate_doc(src, tgt, translate_fn=None):
 
 
 def translate_untranslated_table_cells(src, out, translate_many):
-    """Translate English table cells still copied verbatim in *out*.
+    """翻译 *out* 中仍逐字复制的英文表格单元格。
 
-    Existing Chinese cells are left untouched. Only a target cell equal to its
-    canonical English counterpart is eligible, which makes this safe for
-    incremental upgrades of the historical translations branch.
+    已有中文单元格保持不变。只有与规范英文对应项相同的目标单元格才符合条件，
+    因而可安全用于历史翻译分支的增量升级。
     """
     source_lines = src.split("\n")
     target_lines = out.split("\n")
     if len(source_lines) != len(target_lines):
-        raise ValueError("source and translation line counts differ")
+        raise ValueError("源文本与译文的行数不同")
 
     pending = []
     plans = {}
@@ -1644,7 +1642,7 @@ def translate_untranslated_table_cells(src, out, translate_many):
         source_parts = split_table_row(source_line)
         target_parts = split_table_row(target_line)
         if len(source_parts) != len(target_parts):
-            raise ValueError(f"table column count differs at line {line_number + 1}")
+            raise ValueError(f"第 {line_number + 1} 行的表格列数不同")
         indices = []
         for index, (source_part, target_part) in enumerate(zip(source_parts, target_parts)):
             if source_part == "|" or source_part.strip() != target_part.strip():
@@ -1666,7 +1664,7 @@ def translate_untranslated_table_cells(src, out, translate_many):
 
     translated = translate_many(pending)
     if len(translated) != len(pending):
-        raise ValueError("table translator returned the wrong number of fragments")
+        raise ValueError("表格翻译器返回的片段数量不正确")
     for line_number, (parts, indices) in plans.items():
         for index, source_part, start, count in indices:
             replacements = iter(translated[start:start + count])
@@ -1678,17 +1676,16 @@ def translate_untranslated_table_cells(src, out, translate_many):
 
 
 def translate_untranslated_visible_fragments(src, out, translate_many):
-    """Translate source prose fragments still present on the matching target line.
+    """翻译匹配目标行上仍存在的源正文片段。
 
-    This is an incremental migration helper for historical translations. It
-    ignores tables (handled separately), metadata, raw HTML, code fences, and
-    display math, while allowing visible emphasis and link labels to be
-    localized without changing their delimiters or destinations.
+    这是历史译文的增量迁移辅助函数。它忽略表格（另行处理）、metadata、原始 HTML、
+    代码 fence 和 display math，同时允许本地化可见强调内容与链接标签，且不改变
+    其分隔符或目标。
     """
     source_lines = src.split("\n")
     target_lines = out.split("\n")
     if len(source_lines) != len(target_lines):
-        raise ValueError("source and translation line counts differ")
+        raise ValueError("源文本与译文的行数不同")
 
     pending = []
     plans = {}
@@ -1732,7 +1729,7 @@ def translate_untranslated_visible_fragments(src, out, translate_many):
 
     translated = translate_many(pending)
     if len(translated) != len(pending):
-        raise ValueError("visible-text translator returned the wrong fragment count")
+        raise ValueError("可见文本翻译器返回的片段数量不正确")
     for line_index, (match, fragments, start) in plans.items():
         replacements = dict(
             zip(fragments, translated[start:start + len(fragments)])
@@ -1752,7 +1749,7 @@ def translate_untranslated_visible_fragments(src, out, translate_many):
 
 
 def nllb_protected_segments(text):
-    """Collect content that the prose-only NLLB walker must not change."""
+    """收集仅处理正文的 NLLB 遍历器不得更改的内容。"""
     segments = []
     fence = None
     fenced = []
@@ -1798,9 +1795,8 @@ def nllb_protected_segments(text):
             continue
         metadata = META_RE.match(line)
         if metadata:
-            # Metadata labels are part of the lesson contract and stay in
-            # English. Human-maintained translations may localize the visible
-            # values, so protect only the label plus literal inline spans.
+            # Metadata 标签属于课程契约，须保持英文。人工维护的翻译可以本地化可见值，
+            # 因此仅保护标签和字面量 inline span。
             segments.append(("metadata-key", metadata.group(1)))
             segments.extend(
                 ("inline", value)
@@ -1819,11 +1815,10 @@ def nllb_protected_segments(text):
 
 
 def protected_sequence_is_preserved(expected, actual):
-    """Match source items exactly while ignoring unrelated target items.
+    """精确匹配源项目，同时忽略无关的目标项目。
 
-    A target-language model may emit new text that happens to resemble an
-    inline code or math span. Those additions are not source corruption unless
-    they duplicate a source value. Source values must retain order and count.
+    目标语言模型可能生成恰似行内代码或数学 span 的新文本。除非这些新增内容重复了
+    某个源值，否则不视为源内容损坏。源值必须保持顺序和数量。
     """
     required = tuple(expected)
     source_values = set(required)
@@ -1832,12 +1827,10 @@ def protected_sequence_is_preserved(expected, actual):
 
 
 def _nllb_aligned_visible_parts(src, out):
-    """Return source/target prose parts after enforcing walker structure.
+    """强制遍历器结构后返回源/目标正文部分。
 
-    Classification is deliberately source-driven. Target-language text may
-    contain Markdown-like characters, but it cannot move source content across
-    a line or table-cell boundary. Lines the walker never translates must stay
-    byte-identical.
+    分类刻意由源文本驱动。目标语言文本可以包含类似 Markdown 的字符，但不能跨行或
+    表格单元格边界移动源内容。遍历器从未翻译的行必须保持逐字节相同。
     """
     source = src.replace("\r\n", "\n").replace("\r", "\n")
     target = out.replace("\r\n", "\n").replace("\r", "\n")
@@ -1998,7 +1991,7 @@ def _nllb_technical_values_are_preserved(pairs):
 def _nllb_part_contract_values(
     text, reference_labels=frozenset(), ancestors=()
 ):
-    """Return every source literal skipped by the walker in source order."""
+    """按源顺序返回遍历器跳过的每个源字面量。"""
     values = []
     cursor = 0
 
@@ -2055,7 +2048,7 @@ def _nllb_part_contract_values(
 
 
 def _source_literals_are_preserved(source_part, target_part, literals):
-    """Match source-classified literals without re-tokenizing translated prose."""
+    """匹配源侧分类的字面量，不对翻译后的正文重新分词。"""
     ordered_literals = tuple(literals)
     target_cursor = 0
     for literal in ordered_literals:
@@ -2111,10 +2104,8 @@ def _nllb_all_values_are_preserved(pairs):
             required_without_technical, actual_without_technical
         ):
             return False
-        # Whitespace-only plain fragments are context-sensitive: translated
-        # prose can create a new boundary that the target-side classifier sees
-        # as the same space from another line. Their per-part contract above
-        # remains strict; only this cross-part collision check ignores them.
+        # 仅含空白的普通片段依赖上下文：译文可能创建新边界，使目标侧分类器把它看作
+        # 来自另一行的相同空格。上方逐部分契约仍保持严格；只有此跨部分冲突检查忽略它们。
         source_values.extend(
             item for item in required_without_technical
             if not (item[0] == "verbatim-plain" and not item[1].strip())
@@ -2127,7 +2118,7 @@ def _nllb_all_values_are_preserved(pairs):
 
 
 def provider_document_contract(text):
-    """Return protected values and Markdown structure for API providers."""
+    """返回 API provider 所需的受保护值和 Markdown 结构。"""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     definitions = reference_definitions(normalized)
     reference_labels = frozenset(definition.label for definition in definitions)
@@ -2235,37 +2226,34 @@ def provider_document_contract(text):
 
 
 def nllb_protected_content_is_preserved(src, out):
-    """Check source-side structural spans on their corresponding lines.
+    """检查源侧结构 span 是否保留在对应行。
 
-    NLLB output may contain target-language text that resembles code or math.
-    Only source spans are contractual: each must survive, in order, on the line
-    whose visible prose was translated. Fenced blocks and metadata stay fully
-    byte-identical because the walker never sends those lines to the model.
+    NLLB 输出可能包含类似代码或数学表达式的目标语言文本。只有源 span 属于契约：
+    每个 span 都必须按顺序保留在其可见正文被翻译的行上。由于遍历器从不把 fenced
+    block 和 metadata 所在行发送给模型，这些内容必须保持逐字节完全相同。
     """
     pairs = _nllb_aligned_visible_parts(src, out)
     return pairs is not None and _nllb_inline_values_are_preserved(pairs)
 
 
 def nllb_technical_contracts_are_preserved(src, out):
-    """Check source-side technical fragments in their corresponding lines.
+    """检查源侧技术片段是否保留在对应行。
 
-    The NLLB walker is line preserving.  We therefore validate only fragments
-    that the source classifier told the walker to keep, rather than classifying
-    translated prose a second time and treating new target-language shapes as
-    protected content.
+    NLLB 遍历器保留行结构。因此只验证源分类器要求遍历器保留的片段，不对译文再次
+    分类，也不把目标语言中新出现的形式误当成受保护内容。
     """
     pairs = _nllb_aligned_visible_parts(src, out)
     return pairs is not None and _nllb_technical_values_are_preserved(pairs)
 
 
 def nllb_translation_contract_is_preserved(src, out):
-    """Validate every source-side invariant of the line-preserving walker."""
+    """验证保留行结构的遍历器所要求的全部源侧不变量。"""
     pairs = _nllb_aligned_visible_parts(src, out)
     return pairs is not None and _nllb_all_values_are_preserved(pairs)
 
 
 def translation_contract_is_preserved(src, out, *, provider):
-    """Apply the machine or human translation integrity policy."""
+    """应用机器或人工翻译的完整性策略。"""
     if provider == "nllb":
         return nllb_translation_contract_is_preserved(src, out)
     if provider in {"anthropic", "openai", "deepl"}:
@@ -2278,7 +2266,7 @@ def translation_contract_is_preserved(src, out, *, provider):
 
 
 def _normalize_visible_chunks(chunks):
-    """Collapse visible whitespace while retaining a line for each character."""
+    """折叠可见空白，同时保留每个字符对应的行号。"""
     normalized = []
     line_map = []
     pending_space_line = None
@@ -2298,7 +2286,7 @@ def _normalize_visible_chunks(chunks):
 
 
 def _reference_heading_ordinals(text):
-    """Return structural heading positions for reference-only sections."""
+    """返回仅供参考章节的结构化标题位置。"""
     ordinals = set()
     heading_ordinal = 0
     fence = None
@@ -2324,12 +2312,11 @@ def _reference_heading_ordinals(text):
 
 
 def _visible_markdown_paragraph_fragments(text, reference_headings=frozenset()):
-    """Return normalized visible prose fragments with source-line maps.
+    """返回带源行映射的规范化可见正文片段。
 
-    Consecutive prose lines form one Markdown paragraph, so their last and
-    first visible parts are joined before whitespace is normalized. Inline
-    protected spans remain fragment boundaries; their code, math, URL, HTML,
-    and technical-token bytes therefore never enter the untranslated scan.
+    连续正文行组成一个 Markdown 段落，因此先连接前一行末尾与后一行开头的可见部分，
+    再规范化空白。行内受保护 span 仍作为片段边界，所以其中的代码、数学、URL、HTML
+    和技术 token 字节永远不会进入未翻译扫描。
     """
     visible = []
     paragraph_chunks = []
@@ -2362,8 +2349,7 @@ def _visible_markdown_paragraph_fragments(text, reference_headings=frozenset()):
             paragraph_start_line = line_number
             paragraph_key = block_key
         if paragraph_chunks:
-            # A Markdown soft break renders as whitespace. Joining only the
-            # visible pieces also prevents protected spans from being scanned.
+            # Markdown soft break 会渲染为空白。仅连接可见片段也能避免扫描受保护 span。
             paragraph_chunks.append((" ", line_number))
         parts = (
             reference_visible_parts(body)
@@ -2372,8 +2358,7 @@ def _visible_markdown_paragraph_fragments(text, reference_headings=frozenset()):
         )
         for part in parts:
             if paragraph_chunks:
-                # The omitted span is semantic, so keep its neighboring visible
-                # words distinct instead of accidentally concatenating them.
+                # 被省略的 span 具有语义，因此要保持相邻可见单词分离，避免意外拼接。
                 paragraph_chunks.append((" ", line_number))
             paragraph_chunks.append((part, line_number))
         paragraph_quote_depth = quote_depth
@@ -2395,7 +2380,7 @@ def _visible_markdown_paragraph_fragments(text, reference_headings=frozenset()):
         if not line.strip():
             flush_paragraph()
             continue
-        # Four-space/tab-indented code is verbatim just like fenced code.
+        # 以四个空格或 tab 缩进的代码与 fenced code 一样原样保留。
         if line.startswith(("    ", "\t")):
             flush_paragraph()
             continue
@@ -2453,13 +2438,11 @@ def _visible_markdown_paragraph_fragments(text, reference_headings=frozenset()):
 
 
 def missing_visible_fragments(src, out):
-    """Return substantive source prose blocks absent from the translation.
+    """返回译文中缺失的实质性源正文 block。
 
-    Translation changes the words, so completeness is checked by structural
-    block multiplicity rather than text equality. Short colon-ended lead-ins
-    are allowed to merge into the following paragraph, as human translations
-    commonly do. Headings and reference-only sections have separate structural
-    checks and are deliberately excluded here.
+    翻译会改变措辞，因此通过结构 block 的数量而不是文本相等性检查完整性。人工翻译
+    常会把以冒号结尾的简短引导语合并到下一段，故允许这种情况。标题和仅供参考章节
+    另有结构检查，因此在此刻意排除。
     """
     reference_headings = _reference_heading_ordinals(src)
     source_fragments = _visible_markdown_paragraph_fragments(
@@ -2489,7 +2472,7 @@ def missing_visible_fragments(src, out):
         return len(words) >= 3 and sum(map(len, words)) >= 15
 
     def content_weight(fragment):
-        """Approximate rendered information without assuming a target script."""
+        """在不假设目标文字系统的前提下估算渲染信息量。"""
         return sum(2 if ord(char) > 127 else 1 for char in fragment if char.isalnum())
 
     source_groups = {}
@@ -2513,12 +2496,10 @@ def missing_visible_fragments(src, out):
             continue
 
 
-    # Equal per-section block counts alone do not prove completeness: a few
-    # short filler paragraphs can replace a full lesson. Compare aggregate
-    # visible information across all required blocks. Non-ASCII text receives
-    # two units per character to account conservatively for denser scripts. The
-    # 50% floor sits below every complete reviewed zh lesson while still
-    # catching the short filler that otherwise balances a missing paragraph.
+    # 各章节 block 数相同并不能证明内容完整：少量简短填充段落也能替代完整课程。
+    # 应比较全部必需 block 的可见信息总量。非 ASCII 文本每字符计两个单位，
+    # 以保守适配信息密度更高的文字系统。50% 下限低于所有经审阅的完整 zh 课程，
+    # 同时仍能捕获那些用来抵消缺失段落的短填充内容。
     required_records = [record for records in source_groups.values() for record in records]
     relevant_target_keys = set(source_groups)
     target_records = [
@@ -2545,13 +2526,11 @@ def missing_visible_fragments(src, out):
 
 
 def untranslated_fragments(src, out, min_words=3, min_letters=15):
-    """Find substantive source prose copied verbatim into a zh translation.
+    """查找逐字复制到中文译文中的实质性源正文。
 
-    Visible Markdown paragraphs are compared after non-semantic whitespace is
-    collapsed, so provider reflow and soft line breaks cannot hide untranslated
-    prose. Fenced/indented code, math, raw HTML, metadata, inline code, and URLs
-    stay outside the comparison. Each result retains the source line and maps
-    the normalized match back to its actual target line when possible.
+    折叠无语义空白后比较可见 Markdown 段落，使 provider 的重新排版和软换行无法隐藏
+    未翻译正文。fenced/缩进代码、数学、原始 HTML、metadata、行内代码和 URL 均不参与
+    比较。每项结果保留源行，并在可行时把规范化匹配映射回实际目标行。
     """
     reference_headings = _reference_heading_ordinals(src)
     source_fragments = _visible_markdown_paragraph_fragments(
@@ -2596,7 +2575,7 @@ def untranslated_fragments(src, out, min_words=3, min_letters=15):
 
 
 def untranslated_table_cells(src, out, min_words=3, min_letters=15):
-    """Find visible English table cells copied verbatim into a translation."""
+    """查找逐字复制到译文中的可见英文表格单元格。"""
     def table_blocks(text):
         blocks = []
         rows = []
@@ -2622,8 +2601,7 @@ def untranslated_table_cells(src, out, min_words=3, min_letters=15):
                 flush()
                 continue
             if not line.strip():
-                # Do not orphan later rows when a translation accidentally
-                # inserts a blank line inside an otherwise continuous table.
+                # 译文意外在连续表格中插入空行时，不要遗弃后续行。
                 continue
             if not line.lstrip().startswith("|"):
                 flush()
@@ -2676,7 +2654,7 @@ def untranslated_table_cells(src, out, min_words=3, min_letters=15):
 
 
 def suspicious_repetitions(text, min_characters=6):
-    """Return obvious repeated-Han generation loops outside code/math."""
+    """返回代码/数学内容之外明显重复的汉字生成循环。"""
     findings = []
     fence = None
     in_mathblock = False
@@ -2699,7 +2677,7 @@ def suspicious_repetitions(text, min_characters=6):
 
 
 def translation_integrity_issues(src, out, lang, provider):
-    """Return reasons a translation must be regenerated or rejected."""
+    """返回译文必须重新生成或拒绝的原因。"""
     issues = []
     if not out.strip():
         issues.append("translation is empty")
@@ -2763,7 +2741,7 @@ def translation_integrity_issues(src, out, lang, provider):
 
 
 def translation_cache_is_valid(src, out, lang, provider):
-    """Return whether a cached translation can be reused safely."""
+    """判断缓存译文能否安全复用。"""
     return not translation_integrity_issues(src, out, lang, provider)
 
 
@@ -2772,7 +2750,7 @@ def source_hash(text):
 
 
 def translation_cache_entry(value):
-    """Return ``(source_sha256, provider)`` from legacy or current cache data."""
+    """从旧版或当前 cache 数据返回 ``(source_sha256, provider)``。"""
     if isinstance(value, str):
         return value, "nllb"
     if isinstance(value, dict):
@@ -2781,7 +2759,7 @@ def translation_cache_entry(value):
 
 
 def cache_entry_matches(value, source_digest, provider, output_digest):
-    """Require provenance for the exact source, output, model, and pipeline."""
+    """要求来源记录精确匹配 source、output、model 和 pipeline。"""
     if not isinstance(value, dict):
         return False
     return (
@@ -2794,13 +2772,13 @@ def cache_entry_matches(value, source_digest, provider, output_digest):
 
 
 def lesson_docs():
-    # Same "what is a lesson" definition as the catalog/book/llms.txt tooling,
-    # so a non-conforming dir can't become a translated, published lesson.
+    # 与 catalog/book/llms.txt 工具采用相同的“什么是课程”定义，
+    # 避免不合规目录成为已翻译、已发布课程。
     for phase in sorted(PHASES.iterdir()):
         if not PHASE_DIR_RE.fullmatch(phase.name):
             continue
         if phase.is_symlink():
-            raise ValueError(f"source lesson path contains a symlink: {phase}")
+            raise ValueError(f"源课程路径包含符号链接：{phase}")
         if not phase.is_dir():
             continue
         for lesson in sorted(phase.iterdir()):
@@ -2808,7 +2786,7 @@ def lesson_docs():
                 continue
             if lesson.is_symlink():
                 raise ValueError(
-                    f"source lesson path contains a symlink: {lesson}"
+                    f"源课程路径包含符号链接：{lesson}"
                 )
             if not lesson.is_dir():
                 continue
@@ -2817,17 +2795,16 @@ def lesson_docs():
             for component in (docs, doc):
                 if component.is_symlink():
                     raise ValueError(
-                        f"source lesson path contains a symlink: {component}"
+                        f"源课程路径包含符号链接：{component}"
                     )
             if doc.is_file():
                 yield doc
 
 
 def targets():
-    # Lessons only. The per-language README is hand-authored and built by
-    # scripts/build_readme_i18n.py into i18n/<lang>/README.md; translating it
-    # here would overwrite that file with a machine translation, so the README
-    # is deliberately not a target of this script.
+    # 仅处理课程。各语言 README 由人工编写，并由 scripts/build_readme_i18n.py
+    # 构建为 i18n/<lang>/README.md；若在此翻译，会用机器译文覆盖该文件，
+    # 因此本脚本有意不以 README 为目标。
     yield from lesson_docs()
 
 
@@ -2837,7 +2814,7 @@ def out_path(doc, lang):
 
 
 def remove_orphan_phase_outputs(lang, phase, expected_paths, *, dry_run=False):
-    """Remove translated lesson files that have no source in *phase*."""
+    """删除 *phase* 中没有源文件的课程译文。"""
     phase_root = _safe_language_path(lang, "phases", phase)
     if not phase_root.is_dir():
         return 0
@@ -2849,18 +2826,18 @@ def remove_orphan_phase_outputs(lang, phase, expected_paths, *, dry_run=False):
             cursor /= part
             if cursor.is_symlink():
                 raise ValueError(
-                    f"translation path for {lang!r} contains a symlink: {cursor}"
+                    f"{lang!r} 的翻译路径包含符号链接：{cursor}"
                 )
         resolved = candidate.resolve()
         if not resolved.is_relative_to(phase_root):
             raise ValueError(
-                f"translation path for {lang!r} resolves outside phase slice"
+                f"{lang!r} 的翻译路径解析到阶段分片之外"
             )
         if resolved in expected_paths:
             continue
-        action = "would remove" if dry_run else "removed"
+        action = "将删除" if dry_run else "已删除"
         print(
-            f"{action} orphan translation -> "
+            f"{action}孤立译文 -> "
             f"{candidate.relative_to(ROOT.resolve())}"
         )
         removed += 1
@@ -2878,12 +2855,12 @@ def remove_orphan_phase_outputs(lang, phase, expected_paths, *, dry_run=False):
 
 
 def translate_doc(src, lang, provider):
-    """Return translated markdown for one lesson. NLLB uses the prose walker;
-    LLM/DeepL providers protect-translate-restore the whole document."""
+    """返回一节课程的 Markdown 译文。NLLB 使用正文遍历器；
+    LLM/DeepL provider 对整篇文档执行保护、翻译、恢复。"""
     if provider == "nllb":
         tgt = NLLB_CODES.get(lang)
         if not tgt:
-            raise SystemExit(f"no NLLB (FLORES-200) code for language {lang!r} in languages.json")
+            raise SystemExit(f"languages.json 中没有语言 {lang!r} 的 NLLB (FLORES-200) code")
         return nllb_translate_doc(src, tgt)
     protected, store = protect(src)
     raw = translate_text(protected, lang, provider)
@@ -2898,13 +2875,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lang", required=True)
     ap.add_argument("--provider", default=os.environ.get("TRANSLATE_PROVIDER", "nllb"))
-    ap.add_argument("--phase", help="limit to one phase dir name")
-    ap.add_argument("--only", help="limit to one lesson path (phases/.../lesson)")
+    ap.add_argument("--phase", help="仅处理一个 phase 目录名")
+    ap.add_argument("--only", help="仅处理一个课程路径（phases/.../lesson）")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     if args.provider not in TRANSLATION_PROVIDERS and args.provider != "echo":
         ap.error(
-            f"unknown provider {args.provider!r}; choose one of "
+            f"未知 provider {args.provider!r}；请选择以下之一："
             + ", ".join(sorted(TRANSLATION_PROVIDERS))
         )
     try:
@@ -2917,7 +2894,7 @@ def main():
 
 
 def run_translation(args):
-    """Run one translation job while the caller holds its language lock."""
+    """调用方持有语言锁时运行一个翻译任务。"""
     cpath = cache_path(args.lang, args.phase)
     cache = {}
     if cpath.is_file():
@@ -2942,9 +2919,9 @@ def run_translation(args):
         )
         orphan_cache_keys = sorted(set(cache) - set(phase_documents))
         if orphan_cache_keys:
-            action = "would remove" if args.dry_run else "removed"
+            action = "将删除" if args.dry_run else "已删除"
             for key in orphan_cache_keys:
-                print(f"{action} orphan cache key -> {key}")
+                print(f"{action}孤立 cache key -> {key}")
             if not args.dry_run:
                 for key in orphan_cache_keys:
                     cache.pop(key)
@@ -2961,7 +2938,7 @@ def run_translation(args):
         src = doc.read_text(encoding="utf-8")
         h = source_hash(src)
         dst = out_path(doc, args.lang)
-        # key is the lesson path; the cache file is already per-language
+        # key 是课程路径；cache 文件已经按语言拆分。
         existing_bytes = dst.read_bytes() if dst.is_file() else None
         existing_digest = (
             hashlib.sha256(existing_bytes).hexdigest()
@@ -2984,16 +2961,16 @@ def run_translation(args):
             )
 
         if args.dry_run:
-            print(f"would translate -> {dst.relative_to(ROOT)}")
+            print(f"将翻译 -> {dst.relative_to(ROOT)}")
             translated += 1
             continue
 
         out = translate_doc(src, args.lang, args.provider)
         dst.parent.mkdir(parents=True, exist_ok=True)
         if out is None:
-            # provider dropped a placeholder; keep English but DON'T cache it,
-            # so a later run retries instead of freezing this lesson in English
-            print(f"WARNING placeholder mismatch in {rel}; keeping English", file=sys.stderr)
+            # provider 丢失了 placeholder；保留英文但不要写入 cache，
+            # 使后续运行能够重试，而不是把本课程永久冻结为英文。
+            print(f"警告：{rel} 中的 placeholder 不匹配；保留英文", file=sys.stderr)
             write_text_atomically(dst, src)
             cache.pop(rel, None)
             save_cache()
@@ -3003,7 +2980,7 @@ def run_translation(args):
         )
         if integrity_issues:
             raise RuntimeError(
-                f"invalid translation for {rel}: " + "; ".join(integrity_issues)
+                f"{rel} 的译文无效：" + "; ".join(integrity_issues)
             )
         write_text_atomically(dst, out)
         if args.provider != "echo":
@@ -3017,13 +2994,13 @@ def run_translation(args):
         else:
             cache.pop(rel, None)
         translated += 1
-        # persist after every lesson so a killed run resumes here, never restarts
+        # 每完成一课就持久化，使被终止的运行能从此处恢复，而不是重新开始。
         save_cache()
-        print(f"translated {rel} -> {args.lang}")
+        print(f"已翻译 {rel} -> {args.lang}")
 
     if not args.dry_run:
         save_cache()
-    print(f"{args.lang}: {translated} translated, {skipped} unchanged (cache hit)")
+    print(f"{args.lang}：已翻译 {translated} 个，未变化 {skipped} 个（cache 命中）")
 
 
 if __name__ == "__main__":

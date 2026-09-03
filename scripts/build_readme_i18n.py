@@ -1,24 +1,21 @@
 #!/usr/bin/env python3
-"""Build translated README files from the canonical English README.
+"""根据规范英文 README 构建各语言 README。
 
-The README is mostly structure: a banner, badges, a 523-row lesson table, and
-HTML blocks. Only prose and headings are translated; every other byte is kept
-exactly, so a translation can never break the layout, the lesson table, or a
-link. The generator works by replacing only the translated line-spans in a copy
-of the original file, so a language with no translations round-trips to a
-byte-identical README (asserted on every run).
+README 主要由结构组成：横幅、徽章、523 行课程表和 HTML 块。只翻译正文与
+标题，其余字节保持不变，避免译文破坏布局、课程表或链接。生成器只替换原文件
+副本中的已翻译行区间，因此没有译文的语言往返处理后仍与 README 逐字节一致
+（每次运行都会断言这一点）。
 
-Translations are hand-authored (highest quality for a landing page) and stored
-in scripts/readme_translations.py, keyed by the exact English block. Any block
-without a translation falls back to English, except Simplified Chinese: its
-translation table must exactly cover every current translatable block.
+译文由人工编写（保证落地页质量），存放在 scripts/readme_translations.py，
+并以精确英文块作为键。没有译文的块回退到英文；简体中文除外，其翻译表必须
+精确覆盖当前全部可翻译块。
 
     python3 scripts/build_readme_i18n.py --dump     # list translatable blocks
     python3 scripts/build_readme_i18n.py            # write i18n/<lang>/README.md
     python3 scripts/build_readme_i18n.py --check     # fail if any output is stale
 
-Output goes to i18n/<lang>/README.md and is committed to main (unlike the lesson
-translations, which live on the translations branch). English stays canonical.
+输出写入 i18n/<lang>/README.md 并提交到 main（课程译文则位于 translations
+分支）。英文始终是规范源。
 """
 import argparse
 import json
@@ -74,7 +71,7 @@ def is_prose(line):
     s = line.strip()
     if not s or STRUCTURAL.match(line) or s.startswith("```"):
         return False
-    if re.fullmatch(r"\[[^\]]+\]\([^)]+\)", s):  # a lone link/badge line
+    if re.fullmatch(r"\[[^\]]+\]\([^)]+\)", s):  # 单独占一行的链接或徽章
         return False
     return bool(re.search(r"[A-Za-z]{3,}", s))
 
@@ -84,10 +81,10 @@ def block_key(lines):
 
 
 def spans(text):
-    """Return translatable spans as dicts with original line indices.
+    """以包含原始行索引的 dict 返回可翻译 span。
 
-    kind='heading' spans one line; kind='prose' spans a maximal run of prose
-    (or blockquote-prose) lines. Everything else is left untouched.
+    kind='heading' 覆盖一行；kind='prose' 覆盖最长连续正文行（或 blockquote 正文行）。
+    其他内容保持不变。
     """
     lines = text.split("\n")
     i, in_code, out = 0, False, []
@@ -130,18 +127,18 @@ def spans(text):
     return out
 
 
-# repo-root-relative link/image targets, excluding absolute URLs, anchors, and
-# paths that already point upward. Two capture groups: the opener and the target.
+# 相对仓库根目录的链接/图片目标，不包括绝对 URL、锚点和已经向上引用的路径。
+# 两个捕获组：起始部分与目标。
 _HTML_LINK = re.compile(r'((?:href|src)=")(?!https?://|/|#|mailto:|data:|\.\.?/)([^"]+)')
 _MD_LINK = re.compile(r'(\]\()(?!https?://|/|#|mailto:|data:|\.\.?/)([^)]+)')
 
 
 def localize_links(md):
-    """Prefix ../../ to repo-root-relative links so a README two levels deep in
-    i18n/<lang>/ still resolves images, the lesson table, and the language bar.
+    """为仓库根目录相对链接添加 ../../ 前缀，使 i18n/<lang>/ 下两层深的
+    README 仍能正确解析图片、课程表和语言栏。
 
-    Fenced code blocks are left untouched, so code like ``tools[call.name](**kw)``
-    (which looks like a Markdown link) is never rewritten."""
+    fenced code block 保持不变，因此 ``tools[call.name](**kw)`` 等形似 Markdown
+    链接的代码绝不会被重写。"""
     out, in_code = [], False
     for line in md.split("\n"):
         if FENCE.match(line):
@@ -160,7 +157,7 @@ def localize_links(md):
 def render(text, lang, translations):
     table = translations.get(lang, {})
     lines = text.split("\n")
-    # replace bottom-up so earlier indices stay valid
+    # 自后向前替换，使前面的索引保持有效。
     for sp in sorted(spans(text), key=lambda s: s["start"], reverse=True):
         t = table.get(sp["key"])
         if not t:
@@ -178,17 +175,17 @@ def render(text, lang, translations):
 
 
 def load_zh_assets(catalog_dir=ZH_CATALOG_DIR, structural_path=ZH_STRUCTURAL_PATH):
-    """Load the complete, reviewable Simplified Chinese README inventory."""
+    """加载完整、可审阅的简体中文 README 清单。"""
     phases, lessons = {}, {}
     for path in sorted(catalog_dir.glob("phase-*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
         for key, value in payload.get("phases", {}).items():
             if key in phases:
-                raise ValueError(f"duplicate zh phase translation {key!r}")
+                raise ValueError(f"重复的 zh 阶段翻译 {key!r}")
             phases[key] = value
         for key, value in payload.get("lessons", {}).items():
             if key in lessons:
-                raise ValueError(f"duplicate zh lesson translation {key!r}")
+                raise ValueError(f"重复的 zh 课程翻译 {key!r}")
             lessons[key] = value
     structural = json.loads(structural_path.read_text(encoding="utf-8"))
     return phases, lessons, structural
@@ -198,12 +195,12 @@ def _phase_by_number(phases, number):
     prefix = f"{int(number):02d}-"
     matches = [(key, value) for key, value in phases.items() if key.startswith(prefix)]
     if len(matches) != 1:
-        raise ValueError(f"expected one zh phase entry for {prefix!r}, found {len(matches)}")
+        raise ValueError(f"{prefix!r} 应有一个 zh 阶段条目，实际找到 {len(matches)} 个")
     return matches[0]
 
 
 def render_zh_catalog_line(line, phases, lessons):
-    """Translate one README curriculum line without changing its links."""
+    """翻译一行 README 课程内容，不改变其中链接。"""
     if line in CATALOG_HEADER_TRANSLATIONS:
         return CATALOG_HEADER_TRANSLATIONS[line]
     row = LESSON_ROW_RE.match(line)
@@ -235,7 +232,7 @@ def render_zh_catalog_line(line, phases, lessons):
 
 
 def render_zh_catalog(text, phases, lessons):
-    """Render catalog-owned README copy before generic prose translation."""
+    """在通用正文翻译前渲染由 catalog 管理的 README 文案。"""
     lines = text.split("\n")
     rendered = []
     index = 0
@@ -261,7 +258,7 @@ def render_zh_catalog(text, phases, lessons):
 
 
 def render_complete_zh(text, translations, phases, lessons, structural):
-    """Render prose plus every registered visible README structure line."""
+    """渲染正文及所有已注册的可见 README 结构行。"""
     body = render_zh_catalog(text, phases, lessons)
     body = render(body, "zh", translations)
     line_translations = structural.get("lineTranslations", {})
@@ -277,7 +274,7 @@ def render_complete_zh(text, translations, phases, lessons, structural):
 
 
 def phase_zero_catalog_span_keys(text):
-    """Return prose keys whose Chinese copy comes from the phase catalog."""
+    """返回中文文案来自 phase catalog 的正文 key。"""
     keys = set()
     lines = text.split("\n")
     for index, line in enumerate(lines):
@@ -300,7 +297,7 @@ def phase_zero_catalog_span_keys(text):
 
 
 def zh_structural_candidates(text):
-    """Return visible English source lines outside normal prose/catalog spans."""
+    """返回普通正文/catalog span 之外的可见英文源行。"""
     covered = {
         index
         for span in spans(text)
@@ -333,7 +330,7 @@ def zh_structural_candidates(text):
 
 
 def validate_zh_assets(text, phases, lessons, structural):
-    """Return errors for missing, extra, or stale zh README inventory keys."""
+    """返回 zh README 清单 key 缺失、多余或过期的错误。"""
     errors = []
     expected_lessons = set()
     for line in text.splitlines():
@@ -347,13 +344,13 @@ def validate_zh_assets(text, phases, lessons, structural):
     missing_phases = sorted(expected_phases - set(phases))
     extra_phases = sorted(set(phases) - expected_phases)
     if missing_lessons:
-        errors.append(f"missing {len(missing_lessons)} zh lesson title(s): {missing_lessons[:5]}")
+        errors.append(f"缺少 {len(missing_lessons)} 个 zh 课程标题：{missing_lessons[:5]}")
     if extra_lessons:
-        errors.append(f"stale {len(extra_lessons)} zh lesson title(s): {extra_lessons[:5]}")
+        errors.append(f"存在 {len(extra_lessons)} 个过期 zh 课程标题：{extra_lessons[:5]}")
     if missing_phases:
-        errors.append(f"missing {len(missing_phases)} zh phase entry(s): {missing_phases}")
+        errors.append(f"缺少 {len(missing_phases)} 个 zh 阶段条目：{missing_phases}")
     if extra_phases:
-        errors.append(f"stale {len(extra_phases)} zh phase entry(s): {extra_phases}")
+        errors.append(f"存在 {len(extra_phases)} 个过期 zh 阶段条目：{extra_phases}")
     source_lines = set(text.splitlines())
     line_translations = structural.get("lineTranslations", {})
     allowed = set(structural.get("allowedEnglishLines", []))
@@ -365,11 +362,11 @@ def validate_zh_assets(text, phases, lessons, structural):
     empty_lines = sorted(key for key, value in line_translations.items() if not value.strip())
     if missing_lines:
         errors.append(
-            f"missing {len(missing_lines)} zh visible-line decision(s): "
+            f"缺少 {len(missing_lines)} 个 zh 可见行决策："
             f"{missing_lines[:5]}"
         )
     if stale_lines:
-        errors.append(f"stale {len(stale_lines)} zh structural line key(s): {stale_lines[:5]}")
+        errors.append(f"存在 {len(stale_lines)} 个过期 zh 结构行 key：{stale_lines[:5]}")
     if overlap:
         errors.append(f"conflicting {len(overlap)} zh structural line key(s): {overlap[:5]}")
     if empty_lines:
@@ -378,12 +375,11 @@ def validate_zh_assets(text, phases, lessons, structural):
 
 
 def translation_coverage_issues(text, lang, translations):
-    """Return missing and stale exact span keys for a complete language.
+    """返回完整语言中缺失和过期的精确 span key。
 
-    Empty translation values count as missing because ``render`` deliberately
-    treats them as a request to fall back to the canonical English text. Exact
-    current source lines are valid supplemental keys because ``render`` also
-    supports line-level translations outside fenced code blocks.
+    空译文值按缺失处理，因为 ``render`` 会有意把它们视为回退到规范英文文本的请求。
+    当前源代码的精确行可作为有效补充 key，因为 ``render`` 也支持 fenced code block
+    之外的逐行翻译。
     """
     required = {sp["key"] for sp in spans(text)}
     if lang == "zh":
@@ -396,26 +392,26 @@ def translation_coverage_issues(text, lang, translations):
 
 
 def validate_complete_translations(text, translations):
-    """Return a human-readable error when a complete language has drifted."""
+    """完整语言发生漂移时返回人类可读错误。"""
     failures = []
     for lang in COMPLETE_LANGUAGES:
         missing, stale = translation_coverage_issues(text, lang, translations)
         if not missing and not stale:
             continue
-        lines = [f"README translation coverage error for {lang!r}:"]
+        lines = [f"{lang!r} 的 README 翻译覆盖错误："]
         if missing:
-            lines.append(f"  missing {len(missing)} current span key(s):")
+            lines.append(f"  缺少 {len(missing)} 个当前 span key：")
             lines.extend(f"    - {key!r}" for key in missing)
         if stale:
-            lines.append(f"  stale {len(stale)} translation key(s):")
+            lines.append(f"  存在 {len(stale)} 个过期翻译 key：")
             lines.extend(f"    - {key!r}" for key in stale)
         failures.append("\n".join(lines))
     if not failures:
         return ""
     return (
         "\n".join(failures)
-        + "\nTRANSLATIONS['zh'] must exactly cover the current README span keys; "
-          "refusing to fall back to English."
+        + "\nTRANSLATIONS['zh'] 必须精确覆盖当前 README span key；"
+          "拒绝回退到英文。"
     )
 
 
@@ -426,13 +422,13 @@ def main(argv=None):
     args = ap.parse_args(argv)
     text = README.read_text(encoding="utf-8")
 
-    assert render(text, "en", {}) == text, "generator is not structure-lossless"
+    assert render(text, "en", {}) == text, "生成器未做到结构无损"
 
     if args.dump:
         keys = [sp["key"] for sp in spans(text)]
         for k in keys:
             print(f"- {k}")
-        print(f"\n{len(keys)} translatable blocks; round-trip identity OK", file=sys.stderr)
+        print(f"\n{len(keys)} 个可翻译 block；往返一致性正常", file=sys.stderr)
         return 0
 
     from readme_translations import TRANSLATIONS, README_NOTE
@@ -445,14 +441,14 @@ def main(argv=None):
     try:
         zh_phases, zh_lessons, zh_structural = load_zh_assets()
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"Simplified Chinese README asset error: {exc}", file=sys.stderr)
+        print(f"简体中文 README 资源错误：{exc}", file=sys.stderr)
         return 1
     zh_asset_errors = validate_zh_assets(
         text, zh_phases, zh_lessons, zh_structural
     )
     if zh_asset_errors:
         print(
-            "Simplified Chinese README coverage error:\n  - "
+            "简体中文 README 覆盖错误：\n  - "
             + "\n  - ".join(zh_asset_errors),
             file=sys.stderr,
         )
@@ -476,9 +472,9 @@ def main(argv=None):
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_text(content, encoding="utf-8")
-            print(f"wrote {dst.relative_to(ROOT)}")
+            print(f"已写入 {dst.relative_to(ROOT)}")
     if args.check and stale:
-        print(f"stale README translations: {stale}; run build_readme_i18n.py", file=sys.stderr)
+        print(f"README 译文已过期：{stale}；请运行 build_readme_i18n.py", file=sys.stderr)
         return 1
     return 0
 

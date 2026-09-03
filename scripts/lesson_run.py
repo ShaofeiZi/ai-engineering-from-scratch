@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-"""Smoke-check every lesson's Python code.
+"""对每节课程的 Python 代码执行冒烟检查。
 
-By default this script byte-compiles every `.py` file under
-`phases/**/[0-9][0-9]-*/code/` using `py_compile`. It does NOT execute the
-code — that would need API keys and heavy ML dependencies the curriculum
-does not pin. Syntax-only is enough to catch the regressions contributors
-introduce most often (bad indentation, broken f-strings, stray edits).
+默认使用 `py_compile` 对 `phases/**/[0-9][0-9]-*/code/` 下的每个 `.py` 文件
+执行字节编译，但不会执行代码，因为执行可能需要 API key 和课程未固定的重量级
+ML 依赖。仅检查语法足以发现贡献者最常引入的回归（错误缩进、损坏的 f-string、
+意外编辑）。
 
-Opt in to real execution with `--execute`. Each file runs with a 10-second
-timeout. Lessons whose entry file starts with a `# requires: pkg1, pkg2`
-comment listing imports outside the standard library are skipped with a
-"needs <deps>" reason so heavy lessons (torch, anthropic, etc.) do not blow
-up the run.
+使用 `--execute` 可显式启用真实执行，每个文件超时为 10 秒。若课程入口文件
+以 `# requires: pkg1, pkg2` 注释列出标准库之外的 import，则以
+"needs <deps>" 原因跳过，避免重量级课程（torch、anthropic 等）拖垮运行。
 
 Usage:
     python3 scripts/lesson_run.py                      # syntax check, full curriculum
@@ -20,11 +17,11 @@ Usage:
     python3 scripts/lesson_run.py --json               # JSON report on stdout
     python3 scripts/lesson_run.py --execute            # actually run each lesson
 
-Exit codes:
-    0 — clean, or non-strict run with failures reported
-    1 — `--strict` and at least one lesson failed
+退出码：
+    0 — 检查通过，或非严格模式下仅报告失败
+    1 — 使用 `--strict` 且至少一节课程失败
 
-Stdlib only. Python 3.10+ syntax (PEP 604 unions).
+仅使用标准库。需要 Python 3.10+ 语法（PEP 604 union）。
 """
 
 from __future__ import annotations
@@ -53,7 +50,7 @@ EXECUTE_TIMEOUT_SEC = 10
 class LessonResult:
     lesson: str
     files: list[str] = field(default_factory=list)
-    status: str = "passed"  # passed | failed | skipped
+    status: str = "passed"  # passed | failed | skipped（通过、失败、跳过）
     reason: str = ""
 
     def to_dict(self) -> dict[str, object]:
@@ -203,18 +200,18 @@ def render_report(results: list[LessonResult], execute: bool) -> str:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--phase", type=int, default=None, help="restrict to a single phase number"
+        "--phase", type=int, default=None, help="仅检查一个 phase 编号"
     )
     parser.add_argument(
-        "--json", action="store_true", help="emit JSON report on stdout"
+        "--json", action="store_true", help="向 stdout 输出 JSON 报告"
     )
     parser.add_argument(
-        "--strict", action="store_true", help="exit 1 if any lesson fails"
+        "--strict", action="store_true", help="任一课程失败时以状态码 1 退出"
     )
     parser.add_argument(
         "--execute",
         action="store_true",
-        help=f"run each lesson's entry file with a {EXECUTE_TIMEOUT_SEC}s timeout",
+        help=f"运行每课的入口文件，超时为 {EXECUTE_TIMEOUT_SEC} 秒",
     )
     args = parser.parse_args(argv)
 

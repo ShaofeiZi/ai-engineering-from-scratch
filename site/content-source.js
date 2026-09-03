@@ -1,9 +1,9 @@
 /**
- * Resolve repository content for static pages.
+ * 为静态页面解析仓库内容。
  *
- * Local previews are served from the repository root, so ../ reaches lesson
- * and assessment source files directly. Deploys keep branch-aware English
- * source and separately configured published translations through build-meta.js.
+ * 本地预览从仓库根目录提供，因此 ../ 可直接访问课程
+ * 和评估的源文件。部署时通过 build-meta.js 保留按分支区分的英文
+ * 源文件，并单独配置已发布的翻译版本。
  */
 (function () {
   'use strict';

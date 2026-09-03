@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble course lessons into book volumes and render them with pandoc.
+"""将课程组装为分卷图书，并使用 pandoc 渲染。
 
 Usage:
     python3 scripts/build_book.py                 # assemble + epub for all volumes
@@ -7,9 +7,8 @@ Usage:
     python3 scripts/build_book.py --pdf           # also render PDF (xelatex)
     python3 scripts/build_book.py --assemble-only # markdown only, no pandoc
 
-The book is deliberately a companion to the repo and the website, not a
-replacement. Interactive figures, quizzes, and runnable code stay online;
-every chapter ends with the links that take the reader there.
+本书特意作为仓库与网站的配套内容，而非替代品。交互图、测验和可运行代码
+仍保留在线版本；每章末尾都提供前往这些内容的链接。
 """
 
 import argparse
@@ -140,14 +139,14 @@ def continue_box(u, has_quiz):
 
 
 def fence_end(src, i):
-    """Index of the line that closes the fence opened at src[i] (len(src) if unclosed)."""
+    """返回关闭 src[i] 所开 fence 的行索引；未关闭时返回 len(src)。"""
     j = i + 1
     while j < len(src) and src[j].strip() != "```":
         j += 1
     return j
 
 
-BOOK_LANG = "en"  # set by --lang; selects translated source when available
+BOOK_LANG = "en"  # 由 --lang 设置；存在译文时选择翻译后的来源
 
 
 def _lesson_source(phase, lesson, source_root=ROOT, book_lang=None):
@@ -161,7 +160,7 @@ def _lesson_source(phase, lesson, source_root=ROOT, book_lang=None):
 
 
 def translation_coverage(vol, book_lang=None):
-    """Return ``(localized, total)`` for one volume and selected language."""
+    """返回一个分卷及所选语言的 ``(localized, total)``。"""
     book_lang = BOOK_LANG if book_lang is None else book_lang
     localized = total = 0
     for phase in vol["phases"]:
@@ -174,33 +173,31 @@ def translation_coverage(vol, book_lang=None):
 
 
 def require_translation_coverage(vol, book_lang=None):
-    """Reject mislabeled editions and report any per-lesson fallback."""
+    """拒绝语言标记错误的版本，并报告逐课程 fallback。"""
     book_lang = BOOK_LANG if book_lang is None else book_lang
     if book_lang == "en":
         return
     localized, total = translation_coverage(vol, book_lang)
     if total and localized == 0:
         raise SystemExit(
-            f"volume {vol['slug']}: no {book_lang} lesson translations found; "
-            "restore the configured translations branch before building"
+            f"分卷 {vol['slug']}：未找到 {book_lang} 课程译文；"
+            "请先恢复配置的翻译分支再构建"
         )
     if localized < total:
         raise SystemExit(
-            f"volume {vol['slug']}: incomplete {book_lang} translation coverage "
-            f"({localized}/{total}); restore the configured translations branch "
-            "before building"
+            f"分卷 {vol['slug']}：{book_lang} 翻译覆盖不完整 "
+            f"({localized}/{total})；请先恢复配置的翻译分支再构建"
         )
 
 
 def require_translation_provenance(volumes, book_lang=None):
-    """Audit every selected translated phase before any book output is written."""
+    """写入任何图书输出前，审计所有选中的已翻译 phase。"""
     book_lang = BOOK_LANG if book_lang is None else book_lang
     if book_lang == "en":
         return
 
-    # Keep the translation pipeline dependency off the English build path.
-    # audit_translations is the canonical cache/provenance implementation, so
-    # the book builder deliberately delegates instead of parsing cache records.
+    # 避免让英文构建路径依赖翻译流水线。audit_translations 是规范的 cache/provenance
+    # 实现，因此图书构建器有意委托给它，而不是自行解析 cache 记录。
     import audit_translations as translation_audit
 
     source = translation_audit.LocalTranslationSource(ROOT)
@@ -214,22 +211,20 @@ def require_translation_provenance(volumes, book_lang=None):
             )
         except (translation_audit.TranslationSourceError, ValueError) as exc:
             raise SystemExit(
-                f"translation preflight failed for {book_lang} phase {phase}: {exc}"
+                f"{book_lang} 阶段 {phase} 的翻译预检失败：{exc}"
             ) from exc
         if result.issues:
             raise SystemExit(
-                f"translation preflight failed for {book_lang} phase {phase}:\n"
+                f"{book_lang} 阶段 {phase} 的翻译预检失败：\n"
                 f"{translation_audit.render_report(result)}"
             )
 
 
 def _canonical_h2_kinds(phase, lesson, source_root=ROOT):
-    """Map each level-two heading to its language-independent book role.
+    """将每个二级标题映射到与语言无关的图书角色。
 
-    Translated lessons preserve the canonical heading order, but naturally
-    localize headings such as "Ship It" and "Exercises".  Drive the book
-    transforms from the matching English heading instead of requiring every
-    translation to retain those two English labels.
+    译文课程保留规范标题顺序，但会自然地本地化 "Ship It"、"Exercises" 等标题。
+    图书转换应依据匹配的英文标题驱动，无需每份译文都保留这两个英文标签。
     """
     source = source_root / "phases" / phase / lesson / "docs" / "en.md"
     return [
@@ -239,7 +234,7 @@ def _canonical_h2_kinds(phase, lesson, source_root=ROOT):
 
 
 def _localized_h2_kind(title, book_lang):
-    """Resolve a special book role without requiring an English title."""
+    """在不要求英文标题的情况下解析特殊图书角色。"""
     canonical_kind = CANONICAL_H2_KIND_BY_TITLE.get(title)
     if canonical_kind is not None:
         return canonical_kind
@@ -250,20 +245,18 @@ def _localized_h2_kind(title, book_lang):
 
 
 def _validate_h2_sections(canonical_lines, localized_lines, source, book_lang):
-    """Fail closed when localized sections cannot be aligned safely.
+    """本地化章节无法安全对齐时按失败处理。
 
-    The translation audit makes heading order and count contractual. Titles may
-    be translated, but special book roles use an explicit per-language alias
-    contract so equal-count deletion/insertion or reordering cannot silently
-    assign a canonical role to the wrong H2. Unknown languages fail closed
-    unless these special headings retain their canonical English titles.
+    翻译审计把标题顺序和数量作为契约。标题可以翻译，但特殊图书角色使用显式的逐语言
+    alias 契约，因此等量删除/插入或重排不会悄悄把规范角色分配给错误的 H2。
+    未知语言默认失败，除非这些特殊标题保留其规范英文标题。
     """
     canonical_titles = _h2_titles(canonical_lines)
     localized_titles = _h2_titles(localized_lines)
     if len(localized_titles) != len(canonical_titles):
         raise ValueError(
-            f"H2 structure mismatch in {source}: expected "
-            f"{len(canonical_titles)} H2 headings, found {len(localized_titles)}"
+            f"{source} 的 H2 结构不匹配：预期 "
+            f"{len(canonical_titles)} 个 H2 标题，实际为 {len(localized_titles)} 个"
         )
 
     canonical_roles = tuple(
@@ -283,15 +276,15 @@ def _validate_h2_sections(canonical_lines, localized_lines, source, book_lang):
     found = tuple((index, kind) for index, _, kind in localized_roles)
     if found != expected:
         raise ValueError(
-            f"H2 section mismatch in {source}: expected canonical special "
-            f"sections {canonical_roles!r}, found localized special sections "
+            f"{source} 的 H2 章节不匹配：预期规范特殊章节 "
+            f"{canonical_roles!r}，实际本地化特殊章节为 "
             f"{localized_roles!r}"
         )
     return [CANONICAL_H2_KIND_BY_TITLE.get(title) for title in canonical_titles]
 
 
 def _h2_titles(lines):
-    """Return level-two headings outside fenced code blocks."""
+    """返回 fenced code block 之外的二级标题。"""
     titles = []
     i = 0
     while i < len(lines):
@@ -389,29 +382,29 @@ def transform_lesson(phase, lesson_dir, source_root=ROOT, book_lang=None):
 
     if h2_index != len(canonical_h2_kinds):
         raise ValueError(
-            f"H2 structure mismatch in {source}: expected to transform "
-            f"{len(canonical_h2_kinds)} H2 headings, found {h2_index}"
+            f"{source} 的 H2 结构不匹配：预期转换 "
+            f"{len(canonical_h2_kinds)} 个 H2 标题，实际为 {h2_index} 个"
         )
 
     if not balanced:
-        raise ValueError(f"unbalanced code fence in {lesson_dir / 'docs' / 'en.md'}")
+        raise ValueError(f"{lesson_dir / 'docs' / 'en.md'} 中的代码 fence 未闭合")
 
     out += continue_box(u, has_quiz)
     return out
 
 
 def _transform_lesson_fixture(fixture):
-    """Exercise the production book transform with isolated lesson sources."""
+    """使用隔离的课程源执行生产图书转换。"""
     canonical = fixture.get("canonical")
     localized = fixture.get("localized")
     if not isinstance(canonical, str) or not isinstance(localized, str):
-        raise ValueError("fixture canonical and localized fields must be strings")
+        raise ValueError("fixture 的 canonical 和 localized 字段必须是字符串")
 
     phase = "99-book-transform-fixture"
     lesson = "01-localized-sections"
     book_lang = fixture.get("lang", "zh")
     if not isinstance(book_lang, str):
-        raise ValueError("fixture lang must be a string")
+        raise ValueError("fixture 的 lang 必须是字符串")
     with tempfile.TemporaryDirectory(prefix="build-book-fixture-") as temp_dir:
         source_root = Path(temp_dir)
         lesson_dir = source_root / "phases" / phase / lesson
@@ -482,10 +475,10 @@ def render_mermaid(block):
         return str(svg.relative_to(ROOT))
     except subprocess.CalledProcessError as exc:
         detail = (exc.stderr or b"").decode(errors="replace").strip()[:300]
-        print(f"warning: mermaid render failed for {mmd.name}: {detail}", file=sys.stderr)
+        print(f"警告：{mmd.name} 的 Mermaid 渲染失败：{detail}", file=sys.stderr)
         return None
     except subprocess.TimeoutExpired:
-        print(f"warning: mermaid render timed out for {mmd.name}", file=sys.stderr)
+        print(f"警告：{mmd.name} 的 Mermaid 渲染超时", file=sys.stderr)
         return None
 
 
@@ -505,7 +498,24 @@ def git_edition():
 
 
 @functools.lru_cache(maxsize=None)
-def titlepage_template():
+def titlepage_template(book_lang=None):
+    book_lang = BOOK_LANG if book_lang is None else book_lang
+    if book_lang == "en":
+        return r"""\begin{titlepage}
+\thispagestyle{empty}
+\vspace*{0.1in}
+\noindent{\ttfamily\bfseries\color{blueprint}\small VOLUME\ @VOLNUM3@\ \ —\ \ REFERENCE\ MANUAL}\hfill{\ttfamily\color{inkmute}\small \textcopyright\ 2026\ \ \textperiodcentered\ \ OPEN\ SOURCE\ \ \textperiodcentered\ \ MIT\ LICENSE}\\[6pt]
+\noindent{\color{blueprint}\rule{\textwidth}{0.8pt}}\\[64pt]
+\noindent{\ttfamily\bfseries\color{blueprint}\fontsize{38}{44}\selectfont AI\ ENGINEERING}\\[6pt]
+\noindent{\ttfamily\bfseries\color{ink}\fontsize{38}{44}\selectfont FROM\ SCRATCH.}\\[40pt]
+\noindent{\Large\color{ink}\itshape @TITLE@: @SUBTITLE@}\\[14pt]
+\noindent{\ttfamily\color{inksoft}\small VOLUME\ @ROMAN@\ /\ OF\ @TOTALVOL@\ \ \textperiodcentered\ \ @CHAPTERS@\ CHAPTERS\ \ \textperiodcentered\ \ PHASES\ @PHASES@}
+\vfill
+\noindent{\ttfamily\footnotesize\color{inkmute}EDITION\ @EDITION@\ \ \textperiodcentered\ \ A\ SNAPSHOT\ OF\ A\ LIVING\ CURRICULUM\ \ \textperiodcentered\ \ THE\ LINKS\ BELOW\ ALWAYS\ POINT\ TO\ THE\ LATEST\ BUILD}\\[6pt]
+\noindent{\color{blueprint}\rule{\textwidth}{0.8pt}}\\[10pt]
+\noindent{\ttfamily\large\href{https://aiengineeringfromscratch.com}{\color{blueprint}aiengineeringfromscratch.com}}\hfill{\ttfamily\footnotesize\color{inkmute}\href{https://github.com/rohitg00/ai-engineering-from-scratch}{github.com/rohitg00/ai-engineering-from-scratch}}
+\end{titlepage}
+"""
     return (ROOT / "book" / "titlepage.tex").read_text(encoding="utf-8")
 
 
@@ -605,15 +615,14 @@ def render(vol, md, chapters, pdf=False):
     subprocess.run(cmd, check=True, cwd=ROOT)
     results = [epub]
     if pdf and BOOK_LANG in ("ar", "fa", "ur", "he"):
-        # right-to-left scripts need a bidi engine + Arabic/Hebrew fonts that the
-        # xelatex theme does not ship; the EPUB (above) handles RTL natively, so
-        # skip the PDF rather than emit a broken left-to-right one.
-        print(f"note: skipping {BOOK_LANG} PDF for {vol['slug']} (RTL not wired for PDF); EPUB produced", file=sys.stderr)
+        # 从右到左文字需要 bidi 引擎及 xelatex 主题未提供的阿拉伯语/希伯来语字体；
+        # 上方 EPUB 原生处理 RTL，因此跳过 PDF，避免产出错误的从左到右版本。
+        print(f"提示：跳过 {vol['slug']} 的 {BOOK_LANG} PDF（PDF 尚未接入 RTL）；已生成 EPUB", file=sys.stderr)
         pdf = False
     if pdf:
         titlepage = BUILD / f"{vol['slug']}-titlepage.tex"
         titlepage.write_text(
-            titlepage_template()
+            titlepage_template(BOOK_LANG)
             .replace("@VOLNUM3@", f"{vol['number']:03d}")
             .replace("@EDITION@", git_edition())
             .replace("@ROMAN@", ROMAN[vol["number"] - 1])
@@ -651,8 +660,8 @@ def render(vol, md, chapters, pdf=False):
             cmd_pdf += ["-V", f"mainfont={serif}"]
         if mono:
             cmd_pdf += ["-V", f"monofont={mono}"]
-        # CJK scripts need a matching font; DejaVu already covers
-        # Latin/Cyrillic/Greek/Devanagari for the other languages.
+        # CJK 文字需要匹配字体；DejaVu 已覆盖其他语言所需的
+        # Latin/Cyrillic/Greek/Devanagari 字符。
         cjk_candidates = {
             "zh": ["Noto Sans CJK SC", "Noto Serif CJK SC", "Source Han Serif SC"],
             "zh-TW": ["Noto Sans CJK TC", "Noto Serif CJK TC", "Source Han Serif TC"],
@@ -667,7 +676,7 @@ def render(vol, md, chapters, pdf=False):
             subprocess.run(cmd_pdf, check=True, cwd=ROOT)
             results.append(pdf_out)
         except subprocess.CalledProcessError:
-            print(f"warning: PDF render failed for {vol['slug']} (non-fatal)", file=sys.stderr)
+            print(f"警告：{vol['slug']} 的 PDF 渲染失败（非致命错误）", file=sys.stderr)
     return results
 
 
@@ -677,22 +686,22 @@ def check_phases():
         for phase in vol["phases"]:
             claimed.add(phase)
             if not (PHASES / phase).is_dir() or not lesson_dirs(phase):
-                sys.exit(f"volume {vol['slug']}: phase {phase} is missing or has no lessons")
+                sys.exit(f"分卷 {vol['slug']}：阶段 {phase} 缺失或没有课程")
     for d in sorted(PHASES.iterdir()):
         if d.is_dir() and d.name not in claimed:
-            print(f"warning: phase directory {d.name} is not claimed by any volume", file=sys.stderr)
+            print(f"警告：阶段目录 {d.name} 不属于任何分卷", file=sys.stderr)
 
 
 def main():
     global BOOK_LANG
     ap = argparse.ArgumentParser()
-    ap.add_argument("--volume", help="build one volume by slug")
-    ap.add_argument("--pdf", action="store_true", help="also render PDF via xelatex")
-    ap.add_argument("--assemble-only", action="store_true", help="skip pandoc")
+    ap.add_argument("--volume", help="按 slug 构建一个分卷")
+    ap.add_argument("--pdf", action="store_true", help="同时通过 xelatex 渲染 PDF")
+    ap.add_argument("--assemble-only", action="store_true", help="跳过 pandoc")
     ap.add_argument(
         "--lang",
         default="en",
-        help="build a complete, audited edition from i18n/<lang>/",
+        help="从 i18n/<lang>/ 构建经过完整审计的版本",
     )
     ap.add_argument("--test-transform-fixture", action="store_true",
                     help=argparse.SUPPRESS)
@@ -710,13 +719,13 @@ def main():
     if args.volume:
         vols = [v for v in vols if v["slug"] == args.volume]
         if not vols:
-            sys.exit(f"unknown volume: {args.volume}")
+            sys.exit(f"未知分卷：{args.volume}")
 
     require_translation_provenance(vols)
 
     for vol in vols:
         md, chapters, words = assemble(vol)
-        print(f"vol {vol['number']} {vol['slug']}: {chapters} chapters, {words:,} words -> {md}")
+        print(f"分卷 {vol['number']} {vol['slug']}：{chapters} 章，{words:,} 词 -> {md}")
         if not args.assemble_only:
             for artifact in render(vol, md, chapters, pdf=args.pdf):
                 size = artifact.stat().st_size // 1024

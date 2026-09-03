@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Install course outputs (skills / prompts / agents) into a target directory.
+"""将课程产物（skills / prompts / agents）安装到目标目录。
 
-Walks flat `phases/**/outputs/{skill,prompt,agent}-*.md` artifacts and skill
-bundles at `phases/**/outputs/<name>/SKILL.md`, parses YAML frontmatter, filters
-by type / phase / tag, and installs each matching artifact.
+遍历扁平的 `phases/**/outputs/{skill,prompt,agent}-*.md` 产物与
+`phases/**/outputs/<name>/SKILL.md` 下的 skill bundle，解析 YAML frontmatter，
+按 type / phase / tag 筛选，并安装每个匹配产物。
 
 Usage:
     python3 scripts/install_skills.py <target_dir> [options]
@@ -20,8 +20,7 @@ Options:
     --force                            overwrite existing files
     --json                             write manifest.json only; do not print steps
 
-Always writes <target>/manifest.json with the installed inventory. Bundle
-entries also include their source directory and regular-file list.
+始终将已安装清单写入 <target>/manifest.json。Bundle 条目还包含源目录和普通文件列表。
 """
 
 from __future__ import annotations
@@ -229,7 +228,7 @@ def target_path(artifact: Artifact, target_root: Path, layout: str) -> Path:
         or "\\" in artifact.name
         or Path(artifact.name).name != artifact.name
     ):
-        raise ValueError(f"unsafe artifact name: {artifact.name!r}")
+        raise ValueError(f"不安全的 artifact 名称：{artifact.name!r}")
     if artifact.bundle_root is not None:
         if layout == "by-phase":
             phase_dir = (
@@ -247,7 +246,7 @@ def target_path(artifact: Artifact, target_root: Path, layout: str) -> Path:
         return target_root / phase_dir / f"{artifact.name}.md"
     if layout == "skills":
         return target_root / artifact.name / "SKILL.md"
-    raise ValueError(f"unknown layout: {layout}")
+    raise ValueError(f"未知 layout：{layout}")
 
 
 @dataclass
@@ -575,7 +574,7 @@ def apply_plan(plan: Plan, force: bool = False) -> None:
         else:
             validate_flat_artifact(artifact.source)
     if plan.actions and plan.target_root is None:
-        raise ValueError("installation plan is missing its target root")
+        raise ValueError("安装计划缺少目标根目录")
     for artifact, dest in plan.actions:
         _ensure_safe_destination_parent(plan.target_root, dest.parent)
         if artifact.bundle_root is not None:
@@ -635,7 +634,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--json",
         action="store_true",
-        help="suppress human-readable output (manifest.json still written unless --dry-run)",
+        help="不输出人类可读信息（除非使用 --dry-run，否则仍写入 manifest.json）",
     )
     args = parser.parse_args(argv)
 

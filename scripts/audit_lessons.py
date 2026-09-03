@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Invariant checks across every lesson directory.
+"""检查所有课程目录必须满足的不变量。
 
 Usage:
     python scripts/audit_lessons.py [--phase N] [--json] [--strict]
 
-Exit codes:
-    0 — clean
-    1 — issues found
+退出码：
+    0 — 检查通过
+    1 — 发现问题
 """
 
 from __future__ import annotations
@@ -243,12 +243,12 @@ def render_report(audit: Audit) -> str:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, default=None, help="restrict to a single phase number")
-    parser.add_argument("--json", action="store_true", help="emit JSON report on stdout")
+    parser.add_argument("--phase", type=int, default=None, help="仅检查一个 phase 编号")
+    parser.add_argument("--json", action="store_true", help="向 stdout 输出 JSON 报告")
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="treat warnings as errors (currently equivalent to default; reserved)",
+        help="将警告视为错误（当前与默认行为相同，预留选项）",
     )
     args = parser.parse_args(argv)
 

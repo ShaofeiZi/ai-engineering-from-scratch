@@ -3,14 +3,14 @@ set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
   cat <<'USAGE' >&2
-Usage: scripts/scaffold-lesson.sh <phase-dir> <lesson-slug> [title]
+用法：scripts/scaffold-lesson.sh <phase-dir> <lesson-slug> [title]
 
-Examples:
+示例：
   scripts/scaffold-lesson.sh 05-nlp-foundations-to-advanced 03-tokenizers
   scripts/scaffold-lesson.sh 05-nlp-foundations-to-advanced 03-tokenizers "Tokenizers from Scratch"
 
-Creates phases/<phase-dir>/<lesson-slug>/ with code/, notebook/, docs/, outputs/
-and a docs/en.md skeleton prefilled from LESSON_TEMPLATE.md.
+创建 phases/<phase-dir>/<lesson-slug>/，其中包含 code/、notebook/、docs/、outputs/，
+并根据 LESSON_TEMPLATE.md 预填充 docs/en.md 骨架。
 USAGE
   exit 2
 fi
@@ -21,7 +21,7 @@ TITLE="${3:-}"
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [[ -z "$REPO_ROOT" ]]; then
-  echo "error: run this from inside the ai-engineering-from-scratch git repo" >&2
+  echo "错误：请在 ai-engineering-from-scratch Git 仓库内运行此脚本" >&2
   exit 1
 fi
 
@@ -29,18 +29,18 @@ PHASE_DIR="$REPO_ROOT/phases/$PHASE"
 LESSON_DIR="$PHASE_DIR/$LESSON"
 
 if [[ ! -d "$PHASE_DIR" ]]; then
-  echo "error: phase dir not found: phases/$PHASE" >&2
-  echo "       run: ls phases/ to see valid phases" >&2
+  echo "错误：找不到 phase 目录：phases/$PHASE" >&2
+  echo "      运行 ls phases/ 查看有效 phase" >&2
   exit 1
 fi
 
 if [[ -e "$LESSON_DIR" ]]; then
-  echo "error: lesson already exists: phases/$PHASE/$LESSON" >&2
+  echo "错误：课程已存在：phases/$PHASE/$LESSON" >&2
   exit 1
 fi
 
 if [[ ! "$LESSON" =~ ^[0-9]{2}-[a-z0-9-]+$ ]]; then
-  echo "error: lesson slug must match NN-kebab-case (e.g. 03-tokenizers)" >&2
+  echo "错误：课程 slug 必须匹配 NN-kebab-case（例如 03-tokenizers）" >&2
   exit 1
 fi
 
@@ -79,7 +79,7 @@ cat >"$LESSON_DIR/docs/en.md" <<EOF
 [explanation]
 
 \`\`\`python
-# code here
+# Write code here
 \`\`\`
 
 ### Step 2: [name]
@@ -87,7 +87,7 @@ cat >"$LESSON_DIR/docs/en.md" <<EOF
 [explanation]
 
 \`\`\`python
-# code here
+# Write code here
 \`\`\`
 
 ## Use It
@@ -117,7 +117,7 @@ EOF
 
 cat >"$LESSON_DIR/code/main.py" <<'EOF'
 def main():
-    raise NotImplementedError("implement the lesson")
+    raise NotImplementedError("Implement this lesson")
 
 
 if __name__ == "__main__":

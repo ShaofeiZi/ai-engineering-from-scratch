@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""Distribute quiz correct-answer positions so they are not always the same slot.
+"""分散测验正确答案的位置，避免总在同一选项。
 
-The generated quizzes placed the correct answer in option B (index 1) for 61.5%
-of questions, making every quiz guessable. This rewrites each question's option
-order with a deterministic, content-seeded permutation and updates the `correct`
-index to follow the moved answer. It is idempotent: options are canonicalised to
-a sorted base before permuting, so re-running produces byte-identical output.
+生成的测验中有 61.5% 的正确答案位于选项 B（索引 1），使测验容易被猜中。
+本脚本使用由内容作为种子的确定性排列重写每题选项顺序，并更新 `correct` 索引
+以跟随移动后的答案。该过程具备幂等性：排列前会把选项规范化为有序基准，
+因此重复运行会产生逐字节一致的输出。
 
-Questions whose options reference each other by position ("all of the above",
-"both A and B", etc.) are left in their original order, since reordering would
-break the meaning.
+若题目选项按位置互相引用（如 "all of the above"、"both A and B"），
+则保留原顺序，因为重排会破坏语义。
 
 Usage:
     python3 scripts/debias_quizzes.py            # rewrite in place
@@ -45,7 +43,7 @@ def has_positional_anchor(options):
 
 
 def debias_question(path, q):
-    """Return True if the question order changed."""
+    """题目选项顺序发生变化时返回 True。"""
     options = q.get("options")
     correct = q.get("correct")
     if not isinstance(options, list) or not isinstance(correct, int):
@@ -55,7 +53,7 @@ def debias_question(path, q):
     if has_positional_anchor(options):
         return False
     if len(set(map(str, options))) != len(options):
-        return False  # duplicate options make identity tracking ambiguous
+        return False  # 重复选项会让身份追踪产生歧义
 
     correct_val = options[correct]
     base = sorted(options, key=str)
@@ -73,11 +71,10 @@ def debias_question(path, q):
 
 
 def serialize(data, inline_options):
-    """Pretty JSON at 2-space indent, matching the file's original option style.
+    """以两空格缩进美化 JSON，并匹配文件原有的选项排版。
 
-    Some quiz files keep each question's `options` array on one line; others
-    expand it. Preserving the original form keeps the diff to the reordered
-    values instead of a whole-file whitespace change.
+    有些测验文件把每题的 `options` 数组放在一行，另一些则展开显示。保留原始形式，
+    可让 diff 仅包含重新排序的值，而不是整文件的空白变化。
     """
     text = json.dumps(data, ensure_ascii=False, indent=2)
     if not inline_options:
@@ -116,7 +113,7 @@ def iter_questions(data):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--check", action="store_true", help="report only, do not write")
+    ap.add_argument("--check", action="store_true", help="仅报告，不写入")
     args = ap.parse_args()
 
     pos = collections.Counter()
@@ -152,18 +149,18 @@ def main():
         if file_changed:
             changed_files += 1
 
-    verb = "would rewrite" if args.check else "rewritten"
-    print(f"questions: {total}  files affected: {changed_files}  questions {verb}: {changed_qs}")
-    print(f"positional-anchor questions left as-is: {skipped_anchor}")
-    print("correct-position distribution:")
+    verb = "将重写" if args.check else "已重写"
+    print(f"题目：{total}  受影响文件：{changed_files}  {verb}：{changed_qs}")
+    print(f"保持不变的位置锚定题目：{skipped_anchor}")
+    print("正确选项位置分布：")
     for k in sorted(pos):
         label = chr(65 + k) if isinstance(k, int) else "?"
         print(f"  {label}: {pos[k]:4d}  {100 * pos[k] / max(total, 1):5.1f}%")
 
     if args.check and changed_qs:
         print(
-            f"\nFAIL: {changed_qs} quiz question(s) are not de-biased. "
-            "Run: python3 scripts/debias_quizzes.py",
+            f"\n失败：{changed_qs} 道 quiz 题目尚未消除位置偏差。"
+            "请运行：python3 scripts/debias_quizzes.py",
             file=sys.stderr,
         )
         return 1

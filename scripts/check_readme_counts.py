@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
-"""Verify that hardcoded counts in README.md match catalog.json totals.
+"""验证 README.md 中的硬编码数量与 catalog.json 汇总值一致。
 
-Requires Python 3.10+. Stdlib only.
+需要 Python 3.10+，仅使用标准库。
 
-catalog.json is filesystem-truth (rebuilt by scripts/build_catalog.py in CI,
-or built ephemerally when the file is absent locally). The README, however,
-sprinkles hardcoded counts ("428 lessons", "373 skills, 99 prompts, ...") that
-drift every time the curriculum grows or shrinks. This script pins each
-hardcoded count to a field in catalog.json's `totals` block and fails when they
-disagree.
+catalog.json 是文件系统事实源（CI 中由 scripts/build_catalog.py 重建；本地
+缺失时临时构建）。README 中散布着硬编码数量（"428 lessons"、
+"373 skills, 99 prompts, ..."），课程增减时容易漂移。本脚本将每个硬编码
+数量绑定到 catalog.json 的 `totals` 字段，不一致时失败。
 
 Usage:
     python3 scripts/check_readme_counts.py            # exit 1 on any drift
     python3 scripts/check_readme_counts.py --json     # machine-readable report
     python3 scripts/check_readme_counts.py --fix      # rewrite README to match catalog
 
-The --fix flag is opt-in. CI runs the script without --fix and fails the
-build on any mismatch, surfacing the drift in the workflow log.
+`--fix` 需要显式启用。CI 不带 `--fix` 运行，发现不一致时构建失败，并在
+workflow 日志中暴露漂移。
 
-Patterns are deliberately anchored to README context (badge URLs, alt
-attributes, specific prose) so per-phase counts like `<code>22 lessons</code>`
-in the Contents table are NOT touched. Each pattern declares its catalog
-field and a short human description; mismatches are reported with line
-numbers and surrounding text.
+匹配模式会刻意锚定 README 上下文（徽章 URL、alt 属性、特定正文），因此不会
+改动目录表中的 `<code>22 lessons</code>` 等分阶段数量。每个模式声明对应的
+catalog 字段和简短说明；不匹配项会连同行号及上下文一起报告。
 """
 
 from __future__ import annotations
@@ -44,10 +40,10 @@ INDEX_HTML_PATH = ROOT / "site" / "index.html"
 
 @dataclass(frozen=True)
 class CountPattern:
-    """A single hardcoded count in README pinned to a catalog totals field."""
+    """README 中绑定到 catalog 汇总字段的单个硬编码数量。"""
 
     regex: re.Pattern[str]
-    field: str  # totals.<field>
+    field: str  # totals.<field> 字段
     description: str
 
 
@@ -135,7 +131,7 @@ def load_totals() -> dict[str, int]:
         catalog = build_catalog()
     totals = catalog.get("totals")
     if not isinstance(totals, dict):
-        raise SystemExit("catalog.json is missing the 'totals' block")
+        raise SystemExit("catalog.json 缺少 'totals' block")
     return totals
 
 
@@ -156,7 +152,7 @@ def find_mismatches(readme_text: str, totals: dict[str, int]) -> list[Mismatch]:
     for pattern in PATTERNS:
         expected = totals.get(pattern.field)
         if expected is None:
-            raise SystemExit(f"catalog.json totals is missing field: {pattern.field}")
+            raise SystemExit(f"catalog.json totals 缺少字段：{pattern.field}")
         matched_any = False
         for match in pattern.regex.finditer(readme_text):
             matched_any = True
@@ -173,9 +169,9 @@ def find_mismatches(readme_text: str, totals: dict[str, int]) -> list[Mismatch]:
                 )
         if not matched_any:
             raise SystemExit(
-                f"pattern did not match README at all: {pattern.description} "
-                f"({pattern.regex.pattern!r}). The README structure has changed; "
-                f"update scripts/check_readme_counts.py."
+                f"pattern 完全未匹配 README：{pattern.description} "
+                f"({pattern.regex.pattern!r})。README 结构已变化；"
+                f"请更新 scripts/check_readme_counts.py。"
             )
     return mismatches
 
@@ -195,7 +191,7 @@ def apply_fixes(readme_text: str, totals: dict[str, int]) -> str:
 
 
 def expand_phase_display(display: str) -> list[str]:
-    """Parse a phase-band display ("00-02", "00–02", "03, 04, 06") into 2-digit ids."""
+    """将阶段范围显示（如 "00-02"、"00–02"、"03, 04, 06"）解析为两位 ID。"""
     display = display.strip()
     parts = [p.strip() for p in display.split(",")]
     out: list[str] = []
@@ -211,12 +207,11 @@ def expand_phase_display(display: str) -> list[str]:
 
 
 def check_book_volumes() -> list[str]:
-    """Pin the three presentation copies of the volume tables to book/volumes.json.
+    """确保三份分卷表展示副本都与 book/volumes.json 一致。
 
-    volumes.json drives the build (artifact filenames, titles, phase bands); the
-    README table, book/README.md table, and the homepage books array each carry a
-    hand-rendered copy. A rename or band move that misses one copy silently 404s
-    the release download links, so any disagreement fails here.
+    volumes.json 驱动构建（产物文件名、标题和阶段范围）；README 表格、
+    book/README.md 表格和首页 books 数组各自保存一份手工渲染的副本。重命名或
+    移动阶段范围时若漏改任一副本，发布下载链接会静默变成 404，因此任何差异都在此失败。
     """
     volumes = json.loads(VOLUMES_PATH.read_text(encoding="utf-8"))["volumes"]
     readme = README_PATH.read_text(encoding="utf-8")
@@ -291,16 +286,16 @@ def check_book_volumes() -> list[str]:
 
 def render_text_report(mismatches: list[Mismatch]) -> str:
     if not mismatches:
-        return "README.md counts match catalog.json totals.\n"
-    out = [f"README.md drift detected: {len(mismatches)} mismatch(es).\n"]
+        return "README.md 计数与 catalog.json totals 一致。\n"
+    out = [f"检测到 README.md 漂移：{len(mismatches)} 处不匹配。\n"]
     for m in mismatches:
         out.append(
             f"  README.md:{m.line}  {m.pattern.description}\n"
-            f"    expected totals.{m.pattern.field} = {m.expected}, found {m.found}\n"
+            f"    预期 totals.{m.pattern.field} = {m.expected}，实际为 {m.found}\n"
             f"    >>> {m.snippet}\n"
         )
     out.append(
-        "\nRun `python3 scripts/check_readme_counts.py --fix` to update README.md.\n"
+        "\n请运行 `python3 scripts/check_readme_counts.py --fix` 更新 README.md。\n"
     )
     return "".join(out)
 
@@ -326,11 +321,11 @@ def render_json_report(mismatches: list[Mismatch], totals: dict[str, int]) -> st
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--json", action="store_true", help="emit JSON report on stdout")
+    parser.add_argument("--json", action="store_true", help="向 stdout 输出 JSON 报告")
     parser.add_argument(
         "--fix",
         action="store_true",
-        help="rewrite README.md so hardcoded counts match catalog.json",
+        help="重写 README.md，使硬编码数量与 catalog.json 一致",
     )
     args = parser.parse_args(argv)
 
@@ -343,7 +338,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.json:
                 sys.stdout.write(render_json_report([], totals))
             else:
-                sys.stdout.write("README.md already matches catalog.json totals.\n")
+                sys.stdout.write("README.md 已与 catalog.json totals 一致。\n")
             return 0
         new_text = apply_fixes(readme_text, totals)
         README_PATH.write_text(new_text, encoding="utf-8")
@@ -351,7 +346,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             sys.stdout.write(render_json_report(remaining, totals))
         else:
-            sys.stdout.write("README.md updated to match catalog.json totals.\n")
+            sys.stdout.write("已更新 README.md，使其与 catalog.json totals 一致。\n")
             if remaining:
                 sys.stdout.write(render_text_report(remaining))
         return 1 if remaining else 0
@@ -367,12 +362,12 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(render_text_report(mismatches))
         if volume_errors:
             sys.stdout.write(
-                f"book volume drift detected: {len(volume_errors)} error(s).\n"
+                f"检测到图书分卷漂移：{len(volume_errors)} 个错误。\n"
             )
             for err in volume_errors:
                 sys.stdout.write(f"  {err}\n")
             sys.stdout.write(
-                "book/volumes.json is the source of truth; sync the copies above.\n"
+                "book/volumes.json 是事实源；请同步上面的副本。\n"
             )
         else:
             sys.stdout.write("Book volume tables match book/volumes.json.\n")

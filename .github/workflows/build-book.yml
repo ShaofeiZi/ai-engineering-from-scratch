@@ -1,4 +1,4 @@
-name: build-book
+name: 构建图书
 
 on:
   push:
@@ -21,38 +21,38 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install pandoc
+      - name: 安装 pandoc
         run: |
           curl -sL https://github.com/jgm/pandoc/releases/download/3.10.1/pandoc-3.10.1-1-amd64.deb -o /tmp/pandoc.deb
           echo "b419369915e0f3181be0afdb040ec8ecc6b70e72e5992652a0d83aed9e6bc109  /tmp/pandoc.deb" | sha256sum -c -
           sudo dpkg -i /tmp/pandoc.deb
 
-      - name: Install mermaid renderer
+      - name: 安装 Mermaid 渲染器
         continue-on-error: true
         run: npm install -g @mermaid-js/mermaid-cli
 
-      - name: Install xelatex
+      - name: 安装 xelatex
         if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q texlive-xetex texlive-fonts-recommended fonts-dejavu librsvg2-bin
 
-      - name: Build EPUB volumes
+      - name: 构建 EPUB 分卷
         if: github.event_name == 'push'
         run: python3 scripts/build_book.py
 
-      - name: Build EPUB and PDF volumes
+      - name: 构建 EPUB 和 PDF 分卷
         if: github.event_name != 'push'
         run: python3 scripts/build_book.py --pdf
 
-      - name: Upload EPUBs
+      - name: 上传 EPUB
         uses: actions/upload-artifact@v4
         with:
           name: book-epub
           path: dist/book/*.epub
           retention-days: 30
 
-      - name: Upload PDFs
+      - name: 上传 PDF
         if: github.event_name != 'push'
         uses: actions/upload-artifact@v4
         with:
@@ -60,7 +60,7 @@ jobs:
           path: dist/book/*.pdf
           retention-days: 90
 
-      - name: Attach to release
+      - name: 附加到 Release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Validate external HTTP/HTTPS links in every markdown doc.
+"""验证所有 Markdown 文档中的外部 HTTP/HTTPS 链接。
 
-Requires Python 3.10+ (PEP 604 union types).
+需要 Python 3.10+（PEP 604 union 类型）。
 
-Walks every `*.md` file under the repo (excluding `.git/`, `node_modules/`,
-`outputs/`), extracts `https?://` URLs from markdown link syntax and bare URLs,
-deduplicates, and validates each unique URL by HEAD request (falling back to
-GET on 405/501). Results are cached for 7 days at `.link-cache.json` (repo
-root, gitignored) so re-runs do not hammer external services.
+遍历仓库中的每个 `*.md` 文件（排除 `.git/`、`node_modules/`、`outputs/`），
+从 Markdown 链接语法与裸 URL 中提取 `https?://` URL，去重后以 HEAD 请求验证
+每个唯一 URL（遇到 405/501 时回退到 GET）。结果在仓库根目录中已被 gitignore
+的 `.link-cache.json` 缓存 7 天，避免重复运行持续请求外部服务。
 
-Stdlib only. No `requests`, no `httpx`.
+仅使用标准库，不依赖 `requests` 或 `httpx`。
 
 Usage:
     python3 scripts/link_check.py                       # full check, group by file
@@ -22,8 +21,8 @@ Usage:
     python3 scripts/link_check.py --timeout 15          # per-request timeout (sec)
     python3 scripts/link_check.py --concurrency 16      # worker threads
 
-Companion to `scripts/audit_lessons.py` (rule L010 validates *internal* links);
-this script handles the external HTTP/HTTPS surface.
+本脚本与 `scripts/audit_lessons.py` 配套使用（rule L010 验证内部链接），负责
+外部 HTTP/HTTPS 链接。
 """
 
 from __future__ import annotations
@@ -153,7 +152,7 @@ def strip_trailing_punct(url: str) -> str:
 
 
 def extract_urls(text: str) -> list[tuple[str, int]]:
-    """Return list of (url, line_number) tuples preserving order."""
+    """按原顺序返回 ``(url, line_number)`` 元组列表。"""
     out: list[tuple[str, int]] = []
     seen_per_line: set[tuple[int, str]] = set()
     for lineno, line in enumerate(text.splitlines(), start=1):
@@ -195,7 +194,7 @@ def save_cache(entries: dict[str, dict[str, object]]) -> None:
     try:
         CACHE_PATH.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     except OSError as exc:
-        print(f"warning: could not write {CACHE_PATH.name}: {exc}", file=sys.stderr)
+        print(f"警告：无法写入 {CACHE_PATH.name}：{exc}", file=sys.stderr)
 
 
 def cache_is_fresh(entry: dict[str, object], cache_days: int) -> bool:
@@ -385,19 +384,19 @@ def run(args: argparse.Namespace) -> int:
         json.dump(report.to_dict(), sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
     else:
-        print(f"checked {report.checked_files} markdown files", file=sys.stderr)
-        print(f"unique urls: {report.unique_urls}", file=sys.stderr)
-        print(f"requested:   {report.requested}", file=sys.stderr)
-        print(f"cache hits:  {report.cached_hits}", file=sys.stderr)
-        print(f"skipped:     {len(set(report.skipped))} urls in {len(skip_domains)} domains", file=sys.stderr)
-        print(f"broken:      {len(report.failed)} occurrences across {len(report.by_file)} files", file=sys.stderr)
+        print(f"已检查 {report.checked_files} 个 Markdown 文件", file=sys.stderr)
+        print(f"唯一 URL： {report.unique_urls}", file=sys.stderr)
+        print(f"已请求：   {report.requested}", file=sys.stderr)
+        print(f"缓存命中： {report.cached_hits}", file=sys.stderr)
+        print(f"已跳过：   {len(set(report.skipped))} 个 URL，涉及 {len(skip_domains)} 个域名", file=sys.stderr)
+        print(f"失效链接： {len(report.failed)} 处，涉及 {len(report.by_file)} 个文件", file=sys.stderr)
         if report.by_file:
             print("", file=sys.stderr)
             for fname, entries in report.by_file.items():
                 print(fname, file=sys.stderr)
                 for e in entries:
                     code = e["http_status"] if e["http_status"] is not None else e["error"]
-                    print(f"  line {e['line']}: [{code}] {e['url']}", file=sys.stderr)
+                    print(f"  第 {e['line']} 行：[{code}] {e['url']}", file=sys.stderr)
 
     if args.strict and report.failed:
         return 1
@@ -406,29 +405,29 @@ def run(args: argparse.Namespace) -> int:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate external HTTP/HTTPS links across markdown docs.",
+        description="验证 Markdown 文档中的外部 HTTP/HTTPS 链接。",
     )
-    parser.add_argument("--phase", type=int, default=None, help="restrict to phase NN")
-    parser.add_argument("--path", default=None, help="restrict to one file or directory")
-    parser.add_argument("--strict", action="store_true", help="exit 1 if any link is broken")
-    parser.add_argument("--json", action="store_true", help="emit machine-readable report")
+    parser.add_argument("--phase", type=int, default=None, help="仅检查 phase NN")
+    parser.add_argument("--path", default=None, help="仅检查一个文件或目录")
+    parser.add_argument("--strict", action="store_true", help="存在失效链接时以状态码 1 退出")
+    parser.add_argument("--json", action="store_true", help="输出机器可读报告")
     parser.add_argument(
         "--timeout",
         type=int,
         default=DEFAULT_TIMEOUT,
-        help=f"per-request timeout in seconds (default: {DEFAULT_TIMEOUT})",
+        help=f"单次请求超时秒数（默认：{DEFAULT_TIMEOUT}）",
     )
     parser.add_argument(
         "--concurrency",
         type=int,
         default=DEFAULT_CONCURRENCY,
-        help=f"worker threads (default: {DEFAULT_CONCURRENCY})",
+        help=f"worker 线程数（默认：{DEFAULT_CONCURRENCY}）",
     )
     parser.add_argument(
         "--cache",
         type=int,
         default=DEFAULT_CACHE_DAYS,
-        help=f"cache TTL in days; 0 disables (default: {DEFAULT_CACHE_DAYS})",
+        help=f"cache TTL 天数；0 表示禁用（默认：{DEFAULT_CACHE_DAYS}）",
     )
     return parser.parse_args(argv)
 

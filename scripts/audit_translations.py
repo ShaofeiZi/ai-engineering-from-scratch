@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Audit lesson translations against the canonical English documents.
+"""对照英文规范文档审计课程译文。
 
-By default translations are read directly from ``origin/translations``; no
-checkout or worktree is required.  A local tree can be audited instead:
+默认直接从 ``origin/translations`` 读取译文，无需 checkout 或 worktree。
+也可以改为审计本地目录：
 
     python3 scripts/audit_translations.py --lang zh
     python3 scripts/audit_translations.py --lang zh --translation-ref origin/translations
     python3 scripts/audit_translations.py --lang zh --translation-root /tmp/export
 
-The local root is the directory that contains ``i18n/``.  Exit status is zero
-only when path coverage, cache provenance, content, and Markdown structure are
-all valid.
+本地根目录是包含 ``i18n/`` 的目录。仅当路径覆盖、缓存来源、内容与
+Markdown 结构全部有效时，退出状态才为零。
 """
 
 from __future__ import annotations
@@ -18,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import posixpath
 import re
 import subprocess
 import sys
@@ -33,6 +33,7 @@ from translate_lessons import (  # noqa: E402
     TRANSLATION_PROVIDERS,
     has_protection_sentinel_residue,
     missing_visible_fragments,
+    protected_content_is_preserved,
     suspicious_repetitions,
     translation_cache_entry,
     translation_contract_is_preserved,
@@ -50,9 +51,8 @@ MANUAL_TRANSLATION_PROVIDER = "manual"
 
 ATX_HEADING_RE = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+|$)")
 FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
-# The translator's sentinel is U+2063 + PROTECT<number> + U+2063.  Match the
-# bare core too, so a provider that drops either invisible separator cannot
-# leave an apparently clean translation behind.
+# 翻译器的 sentinel 为 U+2063 + PROTECT<number> + U+2063。也要匹配裸露核心，
+# 以免 provider 丢失任一不可见分隔符后留下表面正常的翻译。
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 METADATA_RE = re.compile(
     r"^\s*\*\*(Type|Language|Languages|Prerequisites|Phases exercised|Time|Related):\*\*"
@@ -73,21 +73,21 @@ HAN_RANGES = (
 
 
 class TranslationSourceError(RuntimeError):
-    """The selected translation tree could not be listed or read."""
+    """无法列出或读取所选翻译目录树时抛出。"""
 
 
 class TranslationSource(Protocol):
     @property
     def label(self) -> str:
-        """Human-readable source label used in reports."""
+        """报告中使用的人类可读源标签。"""
         ...
 
     def list_files(self, prefix: str) -> set[str]:
-        """Return POSIX paths for every file below *prefix*."""
+        """返回 *prefix* 下所有文件的 POSIX 路径。"""
         ...
 
     def read_bytes(self, path: str) -> bytes:
-        """Read one path from the selected tree."""
+        """从所选目录树读取一个路径。"""
         ...
 
 
@@ -211,11 +211,10 @@ def contains_han(text: str) -> bool:
 
 
 def markdown_structure(text: str) -> MarkdownStructure:
-    """Extract translation-invariant Markdown structure.
+    """提取不应随翻译变化的 Markdown 结构。
 
-    Headings, table rows, and raw HTML inside fenced code do not count.  Fence
-    delimiter lines are retained exactly (apart from newline characters), so a
-    changed language tag, delimiter kind, or delimiter count is detected.
+    fenced code 内的标题、表格行和原始 HTML 不计入。fence delimiter 行除换行符外
+    会被精确保留，因此可以检测语言标签、delimiter 类型或数量的变化。
     """
 
     headings: list[int] = []
@@ -305,6 +304,145 @@ def _read_source_file(
     except TranslationSourceError as exc:
         result.add(rule, path, str(exc))
         return None
+
+
+def _resolved_repo_relative(
+    document_path: str, destination: str
+) -> PurePosixPath | None:
+    """Resolve a relative Markdown destination as a normalized repo path."""
+    if not destination or "\\" in destination:
+        return None
+    destination_path = PurePosixPath(destination)
+    if destination_path.is_absolute():
+        return None
+    resolved = PurePosixPath(
+        posixpath.normpath(
+            posixpath.join(PurePosixPath(document_path).parent.as_posix(), destination)
+        )
+    )
+    if resolved.is_absolute() or not resolved.parts or resolved.parts[0] == "..":
+        return None
+    return resolved
+
+
+def _manual_zh_path_rewrite_is_equivalent(
+    source_value: tuple[object, ...],
+    target_value: tuple[object, ...],
+    *,
+    repo_root: Path,
+    source_path: str,
+    target_path: str,
+    translation_source: TranslationSource,
+    translation_paths: set[str],
+) -> bool:
+    """Allow only the two path rewrites used by manual Chinese companions."""
+    inline_target = (
+        len(source_value) == 2
+        and len(target_value) == 2
+        and source_value[0] == target_value[0]
+        and source_value[0] in {"link-target", "image-target"}
+    )
+    reference_target = (
+        len(source_value) == 3
+        and len(target_value) == 3
+        and source_value[:2] == target_value[:2]
+        and source_value[0] == "reference-destination"
+    )
+    if not inline_target and not reference_target:
+        return False
+
+    source_destination = source_value[-1]
+    target_destination = target_value[-1]
+    if not isinstance(source_destination, str) or not isinstance(
+        target_destination, str
+    ):
+        return False
+    source_relative = _resolved_repo_relative(source_path, source_destination)
+    target_relative = _resolved_repo_relative(target_path, target_destination)
+    if source_relative is None or target_relative is None:
+        return False
+
+    phases_root = (repo_root / "phases").resolve()
+    source_file = (repo_root / source_relative).resolve()
+    if not source_file.is_file() or not source_file.is_relative_to(phases_root):
+        return False
+    source_parts = PurePosixPath(source_destination).parts
+    source_lesson = PurePosixPath(source_path).parents[1]
+
+    if (
+        source_value[0] in {"link-target", "reference-destination"}
+        and source_parts
+        and source_parts[0] == ".."
+        and source_parts[-2:] == ("docs", "en.md")
+        and len(source_relative.parts) == 5
+        and source_relative.parts[0] == "phases"
+        and PHASE_DIR_RE.fullmatch(source_relative.parts[1])
+        and LESSON_DIR_RE.fullmatch(source_relative.parts[2])
+        and PurePosixPath(*source_relative.parts[:-2]) != source_lesson
+    ):
+        expected_destination = source_destination[:-len("en.md")] + "zh.md"
+        expected_target = PurePosixPath(
+            "i18n", "zh", *source_relative.parts[:-1], "zh.md"
+        )
+        if (
+            target_destination != expected_destination
+            or target_relative != expected_target
+            or not target_relative.is_relative_to(PurePosixPath("i18n/zh/phases"))
+            or target_relative.as_posix() not in translation_paths
+        ):
+            return False
+        try:
+            translation_source.read_bytes(target_relative.as_posix())
+        except TranslationSourceError:
+            return False
+        return True
+
+    if (
+        len(source_parts) >= 3
+        and source_parts[:2] == ("..", "assets")
+        and ".." not in source_parts[2:]
+    ):
+        lesson_root = (repo_root / source_lesson).resolve()
+        expected_source = source_lesson / "assets" / PurePosixPath(*source_parts[2:])
+        expected_destination = posixpath.relpath(
+            expected_source.as_posix(), PurePosixPath(target_path).parent.as_posix()
+        )
+        return (
+            source_relative == expected_source
+            and source_file.is_relative_to(lesson_root)
+            and target_destination == expected_destination
+            and target_relative == expected_source
+        )
+
+    return False
+
+
+def manual_zh_translation_contract_is_preserved(
+    src: str,
+    out: str,
+    *,
+    repo_root: Path,
+    source_path: str,
+    target_path: str,
+    translation_source: TranslationSource,
+    translation_paths: set[str],
+) -> bool:
+    """Apply the manual-zh contract, including verified local path rewrites."""
+    return protected_content_is_preserved(
+        src,
+        out,
+        equivalent_value=lambda source_value, target_value: (
+            _manual_zh_path_rewrite_is_equivalent(
+                source_value,
+                target_value,
+                repo_root=repo_root,
+                source_path=source_path,
+                target_path=target_path,
+                translation_source=translation_source,
+                translation_paths=translation_paths,
+            )
+        ),
+    )
 
 
 def _load_cache_file(
@@ -468,9 +606,8 @@ def audit_translations(
             language_root,
             "combined and per-phase cache layouts must not coexist",
         )
-    # Prefer the sharded cache whenever it exists. A full local translation may
-    # use the legacy combined cache; when auditing one phase, entries belonging
-    # to other phases are deliberately ignored instead of reported as extras.
+    # 分片 cache 存在时优先使用。完整本地翻译可能使用旧版合并 cache；审计单个 phase
+    # 时，其他 phase 的条目会被刻意忽略，而不是报告为多余项。
     if phase_cache_files:
         cache_files = phase_cache_files
     elif combined_cache in all_files:
@@ -500,8 +637,8 @@ def audit_translations(
                 )
         for key, value in entries.items():
             if not isinstance(key, str):
-                # JSON object keys are strings by definition; retained as a
-                # defensive guard for alternate parsers or direct callers.
+                # JSON 对象 key 按定义都是字符串；此处保留防御性 guard，
+                # 以兼容其他 parser 或直接调用方。
                 result.add("cache-key", cache_path, f"non-string cache key {key!r}")
                 continue
             if key in cache_origins:
@@ -549,9 +686,8 @@ def audit_translations(
             continue
         cached_hash, cached_provider = translation_cache_entry(cache[source_path])
         cache_value = cache[source_path]
-        # Match translate_lessons.py exactly: Path.read_text() performs
-        # universal-newline conversion before source_hash() encodes the text.
-        # This matters for a locally audited checkout containing CRLF files.
+        # 与 translate_lessons.py 严格一致：Path.read_text() 会在 source_hash()
+        # 编码文本前执行通用换行转换。这对包含 CRLF 文件的本地审计 checkout 很重要。
         source_for_hash = english_text.get(source_path)
         if source_for_hash is None:
             continue
@@ -712,9 +848,20 @@ def audit_translations(
                 if cached_provider in TRANSLATION_PROVIDERS
                 else "nllb"
             )
-            protected_ok = translation_contract_is_preserved(
-                source_text, text, provider=integrity_provider
-            )
+            if manual_language and lang == "zh":
+                protected_ok = manual_zh_translation_contract_is_preserved(
+                    source_text,
+                    text,
+                    repo_root=repo_root,
+                    source_path=source_path,
+                    target_path=target_path,
+                    translation_source=source,
+                    translation_paths=all_files,
+                )
+            else:
+                protected_ok = translation_contract_is_preserved(
+                    source_text, text, provider=integrity_provider
+                )
             if not protected_ok:
                 result.add(
                     "structure-protected-content",
@@ -736,7 +883,7 @@ def audit_translations(
                 result.add(
                     "translation-untranslated-prose",
                     target_path,
-                    f"target line {target_line} retains source line "
+                    f"目标第 {target_line} 行保留了源第 "
                     f"{source_line}: {fragment!r}",
                 )
             for line_number, column, fragment in untranslated_table_cells(
@@ -745,7 +892,7 @@ def audit_translations(
                 result.add(
                     "translation-untranslated-table",
                     target_path,
-                    f"target line {line_number}, column {column} retains: "
+                    f"目标第 {line_number} 行第 {column} 列保留了："
                     f"{fragment!r}",
                 )
             if lang == "zh":
@@ -753,7 +900,7 @@ def audit_translations(
                     result.add(
                         "translation-repetition",
                         target_path,
-                        f"target line {line_number} repeats {fragment[:40]!r}",
+                        f"目标第 {line_number} 行重复出现 {fragment[:40]!r}",
                     )
 
     return result
@@ -761,17 +908,17 @@ def audit_translations(
 
 def render_report(result: AuditResult) -> str:
     lines = [
-        f"Translation audit: lang={result.lang}, source={result.source_label}",
-        f"  canonical documents: {result.canonical_count}",
-        "  translation documents: "
-        f"{result.found_translation_count} found / "
-        f"{result.expected_translation_count} expected "
-        f"({result.checked_translation_count} content-checked)",
-        "  cache: "
-        f"{result.cache_file_count} file(s), "
-        f"{result.found_cache_key_count} key(s) found / "
-        f"{result.expected_cache_key_count} expected",
-        f"  errors: {len(result.issues)}",
+        f"翻译审计：lang={result.lang}，source={result.source_label}",
+        f"  规范文档：{result.canonical_count}",
+        "  翻译文档："
+        f"找到 {result.found_translation_count} / "
+        f"预期 {result.expected_translation_count} "
+        f"（已检查内容 {result.checked_translation_count}）",
+        "  cache："
+        f"{result.cache_file_count} 个文件，"
+        f"找到 {result.found_cache_key_count} 个 key / "
+        f"预期 {result.expected_cache_key_count}",
+        f"  错误：{len(result.issues)}",
     ]
     if result.issues:
         lines.append("")
@@ -779,18 +926,18 @@ def render_report(result: AuditResult) -> str:
             f"  [{issue.rule}] {issue.path}: {issue.message}" for issue in result.issues
         )
         lines.append("")
-        lines.append("FAIL: translation audit found errors")
+        lines.append("失败：翻译审计发现错误")
     else:
-        lines.append("PASS: translation audit clean")
+        lines.append("通过：翻译审计无错误")
     return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--lang", required=True, help="translation language code, e.g. zh")
+    parser.add_argument("--lang", required=True, help="译文语言代码，例如 zh")
     parser.add_argument(
         "--phase",
-        help="limit the audit to one phase directory, e.g. 05-nlp-foundations-to-advanced",
+        help="仅审计一个 phase 目录，例如 05-nlp-foundations-to-advanced",
     )
     parser.add_argument(
         "--repo-root",
@@ -803,14 +950,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--translation-ref",
         "--ref",
         dest="translation_ref",
-        help=f"git ref containing i18n/ (default: {DEFAULT_TRANSLATION_REF})",
+        help=f"包含 i18n/ 的 git ref（默认：{DEFAULT_TRANSLATION_REF}）",
     )
     source_group.add_argument(
         "--translation-root",
         "--root",
         dest="translation_root",
         type=Path,
-        help="local directory containing i18n/ instead of a git ref",
+        help="包含 i18n/ 的本地目录，用于替代 git ref",
     )
     return parser
 
@@ -834,8 +981,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = audit_translations(repo_root, args.lang, source, args.phase)
     except TranslationSourceError as exc:
         print(
-            f"Translation audit: lang={args.lang}, source={source.label}\n"
-            f"ERROR: {exc}",
+            f"翻译审计：lang={args.lang}，source={source.label}\n"
+            f"错误：{exc}",
             file=sys.stderr,
         )
         return 2

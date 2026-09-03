@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-"""Build a machine-readable catalog of the entire curriculum.
+"""构建覆盖全部课程的机器可读目录。
 
-Requires Python 3.10+ (PEP 604 union types, Path.is_relative_to).
+需要 Python 3.10+（PEP 604 union 类型、Path.is_relative_to）。
 
-Walks every `phases/NN-slug/MM-slug/` lesson directory on disk and emits a
-single JSON document with the truth of what exists in the repo: phases,
-lessons, code files, outputs (skills / prompts / agents), and totals.
+遍历磁盘上的每个 `phases/NN-slug/MM-slug/` 课程目录，输出单个 JSON 文档，
+如实记录仓库中的阶段、课程、代码文件、产物（skills / prompts / agents）和总数。
 
 Usage:
     python3 scripts/build_catalog.py                     # write catalog.json at repo root
     python3 scripts/build_catalog.py --out path/to/catalog.json
     python3 scripts/build_catalog.py --stdout            # write to stdout, do not touch repo
 
-Output shape (schema_version 1):
+输出结构（schema_version 1）：
     {
       "schema_version": 1,
       "totals": {"phases": ..., "lessons": ..., "skills": ..., "prompts": ..., "agents": ..., "code_files": ...},
@@ -222,6 +221,8 @@ def list_outputs(outputs_dir: Path) -> list[dict[str, object]]:
         if not path.is_file():
             continue
         validate_repository_file(path, ROOT, "flat artifact")
+        if path.name.endswith(".zh-CN.md"):
+            continue
         record = parse_artifact(path)
         if record is not None:
             artifacts.append(record)
@@ -328,12 +329,12 @@ def main(argv: list[str]) -> int:
         "--out",
         type=Path,
         default=ROOT / "catalog.json",
-        help="output path (default: <repo>/catalog.json)",
+        help="输出路径（默认：<repo>/catalog.json）",
     )
     parser.add_argument(
         "--stdout",
         action="store_true",
-        help="write JSON to stdout instead of a file",
+        help="将 JSON 写入 stdout，而不是文件",
     )
     args = parser.parse_args(argv)
 

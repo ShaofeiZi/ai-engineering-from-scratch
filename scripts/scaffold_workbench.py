@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scaffold the Agent Workbench pack into a target repository.
+"""在目标仓库中搭建 Agent Workbench 包。
 
 Usage:
     python3 scripts/scaffold_workbench.py <target_dir> [options]
@@ -10,7 +10,7 @@ Options:
     --dry-run       Print what would happen without writing.
     --no-seed       Skip seeding starter task_board.json + agent_state.json.
 
-What it installs:
+安装内容：
     AGENTS.md                      — root contract for the builder agent
     docs/                          — agent rules, reviewer rubric, handoff, reliability
     schemas/                       — JSON Schemas for state + task board + scope
@@ -19,7 +19,7 @@ What it installs:
     agent_state.json (seeded)      — fresh state record at schema_version 1
     .workbench-version             — pinned pack version
 
-The pack source is read from this repo at:
+包的源文件读取自本仓库：
     phases/14-agent-engineering/42-agent-workbench-capstone/outputs/agent-workbench-pack/
 """
 
@@ -115,7 +115,7 @@ def apply_action(action: Action) -> None:
         version = action.source.read_text(encoding="utf-8").strip()
         action.target.write_text(version + "\n", encoding="utf-8")
         return
-    raise ValueError(f"unknown action kind: {action.kind}")
+    raise ValueError(f"未知 action 类型：{action.kind}")
 
 
 def seed_task_board(target: Path) -> bool:
@@ -179,14 +179,14 @@ def render_next_steps(target: Path, pack_version: str) -> str:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("target_dir", type=Path, help="directory to scaffold into")
-    parser.add_argument("--force", action="store_true", help="overwrite existing files")
-    parser.add_argument("--minimal", action="store_true", help="skip docs/")
-    parser.add_argument("--dry-run", action="store_true", help="preview without writing")
+    parser.add_argument("target_dir", type=Path, help="要创建脚手架的目标目录")
+    parser.add_argument("--force", action="store_true", help="覆盖现有文件")
+    parser.add_argument("--minimal", action="store_true", help="跳过 docs/")
+    parser.add_argument("--dry-run", action="store_true", help="仅预览，不写入")
     parser.add_argument(
         "--no-seed",
         action="store_true",
-        help="do not seed task_board.json / agent_state.json",
+        help="不初始化 task_board.json / agent_state.json",
     )
     args = parser.parse_args(argv)
 
