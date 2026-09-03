@@ -1,6 +1,5 @@
-# Support vector machines in Julia. Linear SVM trained by stochastic
-# sub-gradient descent on hinge loss with L2 regularization (soft margin),
-# plus polynomial and RBF kernel functions. Stdlib only. Sources:
+# Julia 版支持向量机。通过随机次梯度下降在合页损失上训练线性 SVM，
+# 并带 L2 正则化（软间隔），同时包含多项式核与 RBF 核函数。仅使用标准库。参考资料：
 #   https://docs.julialang.org/en/v1/manual/control-flow/
 #   https://docs.julialang.org/en/v1/stdlib/Random/
 #   https://docs.julialang.org/en/v1/manual/arrays/
@@ -203,11 +202,11 @@ end
 
 function demo_hinge_loss()
     println("=" ^ 65)
-    println("HINGE LOSS")
+    println("合页损失")
     println("=" ^ 65)
     println()
     margins = [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
-    @printf("  %10s  %12s  %14s\n", "y * f(x)", "Hinge loss", "Logistic loss")
+    @printf("  %10s  %12s  %14s\n", "y * f(x)", "合页损失", "对数损失")
     println("  " * "-" ^ 10 * "  " * "-" ^ 12 * "  " * "-" ^ 14)
     for m in margins
         h = max(0.0, 1.0 - m)
@@ -215,50 +214,50 @@ function demo_hinge_loss()
         @printf("  %10.1f  %12.3f  %14.3f\n", m, h, l)
     end
     println()
-    println("  Hinge loss is exactly zero when y*f(x) >= 1.")
-    println("  Logistic loss is never exactly zero. Hinge gives sparse models.")
+    println("  当 y*f(x) >= 1 时合页损失恰好为零。")
+    println("  对数损失永远不会恰好为零。合页损失能得到稀疏模型。")
     println()
 end
 
 
 function demo_linear_svm()
     println("=" ^ 65)
-    println("LINEAR SVM (SOFT MARGIN)")
+    println("线性 SVM（软间隔）")
     println("=" ^ 65)
     println()
     X, ys = generate_linear_data(n_samples=200, margin=1.0, seed=42)
     X_train, ys_train, X_test, ys_test = svm_train_test_split(X, ys)
 
-    @printf("  Dataset: %d samples, linearly separable\n", length(X))
-    @printf("  Train: %d   Test: %d\n", length(X_train), length(X_test))
+    @printf("  数据集：%d 个样本，线性可分\n", length(X))
+    @printf("  训练集：%d   测试集：%d\n", length(X_train), length(X_test))
 
     svm = LinearSVM(lr=0.001, lambda=0.01, n_epochs=500)
     fit_svm!(svm, X_train, ys_train; seed=1)
 
     train_acc = svm_accuracy(ys_train, predict_svm(svm, X_train))
     test_acc = svm_accuracy(ys_test, predict_svm(svm, X_test))
-    @printf("\n  Weights: [%.4f, %.4f]\n", svm.w[1], svm.w[2])
-    @printf("  Bias: %.4f\n", svm.b)
-    @printf("  Margin width: %.4f\n", margin_width(svm))
-    @printf("  Train accuracy: %.4f\n", train_acc)
-    @printf("  Test  accuracy: %.4f\n", test_acc)
+    @printf("\n  权重：[%.4f, %.4f]\n", svm.w[1], svm.w[2])
+    @printf("  偏置：%.4f\n", svm.b)
+    @printf("  间隔宽度：%.4f\n", margin_width(svm))
+    @printf("  训练集准确率：%.4f\n", train_acc)
+    @printf("  测试集准确率：%.4f\n", test_acc)
 
     svs = find_support_vectors(svm, X_train, ys_train; tol=0.3)
-    @printf("  Support vectors: %d / %d\n", length(svs), length(X_train))
+    @printf("  支持向量：%d / %d\n", length(svs), length(X_train))
     println()
 end
 
 
 function demo_c_parameter()
     println("=" ^ 65)
-    println("C PARAMETER (REGULARIZATION TRADE-OFF)")
+    println("C 参数（正则化权衡）")
     println("=" ^ 65)
     println()
     X, ys = generate_noisy_data(n_samples=300, noise=0.8, seed=42)
     X_train, ys_train, X_test, ys_test = svm_train_test_split(X, ys)
 
     @printf("  %8s  %8s  %10s  %10s  %8s  %6s\n",
-            "C", "lambda", "Train Acc", "Test Acc", "Margin", "SVs")
+            "C", "lambda", "训练准确率", "测试准确率", "间隔", "支持向量")
     println("  " * "-" ^ 8 * "  " * "-" ^ 8 * "  " * "-" ^ 10 * "  " *
             "-" ^ 10 * "  " * "-" ^ 8 * "  " * "-" ^ 6)
     for c in (0.001, 0.01, 0.1, 1.0, 10.0, 100.0)
@@ -273,29 +272,29 @@ function demo_c_parameter()
                 c, lam, train_acc, test_acc, mw, n_sv)
     end
     println()
-    println("  Small C (large lambda): wide margin, more slack, better generalization.")
-    println("  Large C (small lambda): narrow margin, fewer slack, risk of overfit.")
+    println("  小 C（大 lambda）：间隔宽，松弛多，泛化能力更好。")
+    println("  大 C（小 lambda）：间隔窄，松弛少，有过拟合风险。")
     println()
 end
 
 
 function demo_kernels()
     println("=" ^ 65)
-    println("KERNEL FUNCTIONS")
+    println("核函数")
     println("=" ^ 65)
     println()
     x = Float64[1.0, 0.0]
     cases = [
-        ("same direction", Float64[2.0, 0.0]),
-        ("perpendicular",  Float64[0.0, 1.0]),
-        ("close",          Float64[1.1, 0.1]),
-        ("far same dir",   Float64[5.0, 0.0]),
-        ("opposite",       Float64[-1.0, 0.0]),
+        ("同方向", Float64[2.0, 0.0]),
+        ("垂直",   Float64[0.0, 1.0]),
+        ("接近",   Float64[1.1, 0.1]),
+        ("同向较远", Float64[5.0, 0.0]),
+        ("相反",   Float64[-1.0, 0.0]),
     ]
-    @printf("  Reference: %s\n", x)
+    @printf("  参考点：%s\n", x)
     println()
     @printf("  %-20s  %8s  %10s  %10s  %10s\n",
-            "Point", "Linear", "Poly(d=2)", "Poly(d=3)", "RBF(g=0.5)")
+            "点", "线性", "多项式(d=2)", "多项式(d=3)", "RBF(g=0.5)")
     println("  " * "-" ^ 20 * "  " * "-" ^ 8 * "  " * "-" ^ 10 * "  " *
             "-" ^ 10 * "  " * "-" ^ 10)
     for (name, z) in cases
@@ -307,14 +306,14 @@ function demo_kernels()
                 name, k_l, k_p2, k_p3, k_rbf)
     end
     println()
-    println("  Linear kernel: raw dot product. RBF: locality-based.")
+    println("  线性核：原始点积。RBF：基于局部性。")
     println()
 end
 
 
 function demo_linear_vs_nonlinear()
     println("=" ^ 65)
-    println("LINEAR SVM vs POLYNOMIAL FEATURE MAP")
+    println("线性 SVM 与多项式特征映射的对比")
     println("=" ^ 65)
     println()
     X, ys = generate_circular_data(n_samples=200, seed=42)
@@ -324,7 +323,7 @@ function demo_linear_vs_nonlinear()
     fit_svm!(svm, X_train, ys_train; seed=3)
     train_acc = svm_accuracy(ys_train, predict_svm(svm, X_train))
     test_acc = svm_accuracy(ys_test, predict_svm(svm, X_test))
-    @printf("  Plain linear SVM on circular data: train=%.4f  test=%.4f\n",
+    @printf("  环形数据上的普通线性 SVM：训练=%.4f  测试=%.4f\n",
             train_acc, test_acc)
     println()
 
@@ -337,18 +336,18 @@ function demo_linear_vs_nonlinear()
     fit_svm!(svm_aug, X_train_aug, ys_train; seed=4)
     train_aug = svm_accuracy(ys_train, predict_svm(svm_aug, X_train_aug))
     test_aug = svm_accuracy(ys_test, predict_svm(svm_aug, X_test_aug))
-    println("  After polynomial feature map (x1, x2, x1^2, x2^2, x1*x2):")
-    @printf("  Linear SVM on augmented features: train=%.4f  test=%.4f\n",
+    println("  多项式特征映射后 (x1, x2, x1^2, x2^2, x1*x2)：")
+    @printf("  增广特征上的线性 SVM：训练=%.4f  测试=%.4f\n",
             train_aug, test_aug)
     println()
-    println("  The kernel trick performs this feature map implicitly.")
+    println("  核技巧隐式地完成了这一特征映射。")
     println()
 end
 
 
 function demo_support_vectors()
     println("=" ^ 65)
-    println("SUPPORT VECTORS")
+    println("支持向量")
     println("=" ^ 65)
     println()
     X, ys = generate_linear_data(n_samples=200, margin=1.5, seed=42)
@@ -360,30 +359,30 @@ function demo_support_vectors()
               for i in 1:length(X_train)]
     sort!(margins; by=t -> t[2])
 
-    @printf("  Trained on %d points.\n", length(X_train))
-    @printf("  Weights: [%.4f, %.4f]  bias: %.4f\n", svm.w[1], svm.w[2], svm.b)
+    @printf("  在 %d 个点上完成训练。\n", length(X_train))
+    @printf("  权重：[%.4f, %.4f]  偏置：%.4f\n", svm.w[1], svm.w[2], svm.b)
     println()
-    println("  Points sorted by margin (y * f(x)):")
-    @printf("  %6s  %4s  %8s  %s\n", "Index", "y", "Margin", "Role")
+    println("  按间隔 (y * f(x)) 排序的点：")
+    @printf("  %6s  %4s  %8s  %s\n", "索引", "y", "间隔", "角色")
     println("  " * "-" ^ 6 * "  " * "-" ^ 4 * "  " * "-" ^ 8 * "  " * "-" ^ 20)
     for (idx, m) in margins[1:8]
-        role = m < 0 ? "MISCLASSIFIED" :
-               m < 1.0 ? "inside margin" :
-               m < 1.2 ? "SUPPORT VECTOR" :
-                         "safely classified"
+        role = m < 0 ? "误分类" :
+               m < 1.0 ? "间隔内" :
+               m < 1.2 ? "支持向量" :
+                         "安全分类"
         @printf("  %6d  %4d  %8.4f  %s\n", idx, ys_train[idx], m, role)
     end
     println("  ...")
     for (idx, m) in margins[(end - 2):end]
-        @printf("  %6d  %4d  %8.4f  safely classified\n", idx, ys_train[idx], m)
+        @printf("  %6d  %4d  %8.4f  安全分类\n", idx, ys_train[idx], m)
     end
     n_sv = sum(1 for (_, m) in margins if 0.7 < m < 1.3)
     n_safe = sum(1 for (_, m) in margins if m >= 1.3)
     n_inside = sum(1 for (_, m) in margins if 0 < m < 0.7)
     println()
-    @printf("  Support vectors (margin ~ 1.0): %d\n", n_sv)
-    @printf("  Safely classified (margin >> 1): %d\n", n_safe)
-    @printf("  Inside margin (0 < margin < 1): %d\n", n_inside)
+    @printf("  支持向量（间隔 ~ 1.0）：%d\n", n_sv)
+    @printf("  安全分类（间隔 >> 1）：%d\n", n_safe)
+    @printf("  间隔内（0 < 间隔 < 1）：%d\n", n_inside)
     println()
 end
 
