@@ -1,14 +1,13 @@
 /**
- * LLM Observability Dashboard: capstone skeleton entry point (TypeScript).
+ * LLM 可观测性看板：综合项目骨架入口（TypeScript）。
  *
- * Implements the ingest plane from docs/en.md: a Hono server accepts OTel
- * GenAI-shaped spans on /trace, holds them in a 10k ring buffer, and renders
- * /dashboard plus /dashboard.json with p50/p95/p99 latency and cost per model.
- * Stands in for a real Langfuse/Phoenix backend, with the same span schema
- * so a real OTLP exporter could be pointed at it.
+ * 实现 docs/en.md 中的摄取平面：Hono 服务器在 /trace 接收 OTel GenAI 格式
+ * 的 span，将其保存在容量为 10k 的环形缓冲区中，并渲染 /dashboard 和
+ * /dashboard.json，其中包含 p50/p95/p99 延迟及每个模型的成本。它替代真实的
+ * Langfuse/Phoenix 后端，但采用相同的 span schema，因此可接入真实 OTLP exporter。
  *
- * Source: phases/19-capstone-projects/11-llm-observability-dashboard/docs/en.md
- * Schema: OpenTelemetry GenAI semantic conventions
+ * 来源：phases/19-capstone-projects/11-llm-observability-dashboard/docs/en.md
+ * Schema：OpenTelemetry GenAI 语义约定
  *   https://opentelemetry.io/docs/specs/semconv/gen-ai/
  */
 
@@ -26,7 +25,7 @@ type SyntheticConfig = {
 
 export function generateSyntheticSpans(cfg: SyntheticConfig): GenAISpan[] {
   if (cfg.models.length === 0) {
-    throw new Error("generateSyntheticSpans: cfg.models must not be empty");
+    throw new Error("generateSyntheticSpans：cfg.models 不能为空");
   }
   const now = Date.now() * 1e6;
   const out: GenAISpan[] = [];
@@ -64,7 +63,7 @@ export function generateSyntheticSpans(cfg: SyntheticConfig): GenAISpan[] {
 }
 
 function reportRollups(rollups: ModelRollup[]): void {
-  console.log("[obs] model roll-ups:");
+  console.log("[可观测性] 模型汇总：");
   console.log(
     "  " +
       ["model", "n", "err", "p50", "p95", "p99", "cost($)"]
@@ -90,7 +89,7 @@ function reportRollups(rollups: ModelRollup[]): void {
 }
 
 function main(): void {
-  console.log("[obs] generating 1200 synthetic OTel-GenAI spans...");
+  console.log("[可观测性] 正在生成 1200 个合成 OTel-GenAI span……");
   const store = new ObservabilityStore();
   const synthetic = generateSyntheticSpans({
     spans: 1200,
@@ -105,16 +104,16 @@ function main(): void {
   });
   store.ingest(synthetic);
   reportRollups(rollUpByModel(store.snapshot()));
-  console.log("[obs] counters:", store.counters());
+  console.log("[可观测性] 计数器：", store.counters());
   if (process.env["SERVE"] === "1") {
     const port = Number(process.env["PORT"] ?? 8011);
     const app = buildApp(store);
     serve({ fetch: app.fetch, port }, (info) => {
-      console.log(`[obs] ingest + dashboard on http://localhost:${info.port}`);
+      console.log(`[可观测性] 摄取 + 看板地址：http://localhost:${info.port}`);
     });
   } else {
     console.log(
-      "[obs] set SERVE=1 to start the HTTP server on PORT (default 8011)",
+      "[可观测性] 设置 SERVE=1 可在 PORT（默认 8011）上启动 HTTP 服务器",
     );
   }
 }

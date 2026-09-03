@@ -1,12 +1,10 @@
-"""LLM observability dashboard — span ingest + tail sampling + eval scaffold.
+"""LLM 可观测性看板——span 摄取 + 尾部采样 + 评测脚手架。
 
-The hard architectural primitive here is the tail-sampling collector plus
-evals-as-child-spans: errored traces are always kept, success traces are
-sampled, and every trace can be enriched with eval spans carrying scores.
-This scaffold implements the full pipeline in stdlib: span model, sampler,
-evals, drift detector, alerter.
+这里关键的架构原语是尾部采样收集器与“将评测表示为子 span”的设计：始终保留
+出错 trace，对成功 trace 进行采样，并可为每条 trace 补充携带分数的评测 span。
+此脚手架使用标准库实现完整流水线：span 模型、采样器、评测、漂移检测器和告警器。
 
-Run:  python main.py
+运行：python main.py
 """
 
 from __future__ import annotations
@@ -20,7 +18,7 @@ from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
-# span model  --  GenAI semantic convention fields
+# span 模型——GenAI 语义约定字段
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -40,7 +38,7 @@ class Span:
 
 
 # ---------------------------------------------------------------------------
-# tail sampler  --  keep errors, sample success
+# 尾部采样器——保留错误，对成功记录采样
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -51,7 +49,7 @@ class TailSampler:
     def decide(self, trace: list[Span]) -> bool:
         if any(s.status == "error" for s in trace):
             return True
-        # always keep any trace containing a high-toxicity or high-PII eval
+        # 始终保留包含高毒性或高 PII 评测的 trace
         for s in trace:
             if s.name == "eval" and (
                 s.attributes.get("toxicity", 0) > 0.5
@@ -62,7 +60,7 @@ class TailSampler:
 
 
 # ---------------------------------------------------------------------------
-# in-memory clickhouse stand-in
+# 内存版 ClickHouse 替代实现
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -84,11 +82,11 @@ class SpanStore:
 
 
 # ---------------------------------------------------------------------------
-# evals  --  faithfulness, toxicity, PII-leak (LLM-judge stubs)
+# 评测——忠实度、毒性、PII 泄露（LLM judge stub）
 # ---------------------------------------------------------------------------
 
 def eval_faithfulness(response: str, context: str) -> float:
-    # stand-in: overlap of response tokens with context tokens
+    # 替代实现：响应 token 与上下文 token 的重叠率
     r = set(response.lower().split())
     c = set(context.lower().split())
     if not r:
@@ -113,7 +111,7 @@ def eval_pii_leak(response: str) -> float:
 
 
 # ---------------------------------------------------------------------------
-# drift detector  --  PSI on pooled prompt fingerprints
+# 漂移检测器——对汇总后的 prompt 指纹计算 PSI
 # ---------------------------------------------------------------------------
 
 def prompt_fingerprint(prompt: str, n_bins: int = 8) -> int:
@@ -139,7 +137,7 @@ def psi(a: list[int], b: list[int], n_bins: int = 8) -> float:
 
 
 # ---------------------------------------------------------------------------
-# simulated ingest  --  realistic mix of SDKs + injected regression
+# 模拟摄取——符合实际的 SDK 混合 + 注入的回归
 # ---------------------------------------------------------------------------
 
 def synth_trace(trace_id: str, leak_pii: bool, rng: random.Random) -> list[Span]:
@@ -175,7 +173,7 @@ def synth_trace(trace_id: str, leak_pii: bool, rng: random.Random) -> list[Span]
 
 
 def enrich_with_evals(trace: list[Span]) -> list[Span]:
-    """Add eval child spans on each llm span."""
+    """为每个 LLM span 添加评测子 span。"""
     out = list(trace)
     for s in trace:
         if s.is_llm():
@@ -195,7 +193,7 @@ def enrich_with_evals(trace: list[Span]) -> list[Span]:
 
 
 # ---------------------------------------------------------------------------
-# alerter  --  fires on threshold breach
+# 告警器——超过阈值时触发
 # ---------------------------------------------------------------------------
 
 def alerter(store: SpanStore) -> list[str]:
@@ -203,17 +201,17 @@ def alerter(store: SpanStore) -> list[str]:
     pii_events = [s for s in store.spans
                   if s.name == "eval" and s.attributes.get("pii_leak", 0) > 0.8]
     if pii_events:
-        alerts.append(f"PII LEAK DETECTED: {len(pii_events)} events "
-                      f"(first trace: {pii_events[0].trace_id})")
+        alerts.append(f"检测到 PII 泄露：{len(pii_events)} 个事件"
+                      f"（首条 trace：{pii_events[0].trace_id}）")
     tox_events = [s for s in store.spans
                   if s.name == "eval" and s.attributes.get("toxicity", 0) > 0.5]
     if tox_events:
-        alerts.append(f"TOXICITY SURGE: {len(tox_events)} events")
+        alerts.append(f"毒性激增：{len(tox_events)} 个事件")
     return alerts
 
 
 # ---------------------------------------------------------------------------
-# demo  --  200 good traces + 1% injected PII regression
+# 演示——200 条正常 trace + 1% 注入的 PII 回归
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -230,27 +228,27 @@ def main() -> None:
         trace = enrich_with_evals(trace)
         if sampler.decide(trace):
             store.insert_trace(trace)
-        # track prompt fingerprints for drift (input distribution, not output)
+        # 追踪 prompt 指纹以检测漂移（输入分布，而非输出）
         llm_span = trace[1]
         fp = prompt_fingerprint(llm_span.attributes.get("prompt", ""))
         (current_fps if i > 150 else baseline_fps).append(fp)
 
-    print(f"ingested spans     : {len(store.spans)}")
-    print(f"spans by model     : {dict(store.by_model)}")
-    print(f"cost by user       : {dict((k, round(v, 4)) for k, v in store.cost_by_user.items())}")
+    print(f"已摄取 span 数：{len(store.spans)}")
+    print(f"按模型统计 span：{dict(store.by_model)}")
+    print(f"按用户统计成本：{dict((k, round(v, 4)) for k, v in store.cost_by_user.items())}")
 
     alerts = alerter(store)
     if alerts:
-        print("\nALERTS:")
+        print("\n告警：")
         for a in alerts:
             print(f"  - {a}")
     else:
-        print("\nno alerts")
+        print("\n无告警")
 
     psi_val = psi(baseline_fps, current_fps, n_bins=8)
-    print(f"\nPSI (current vs baseline): {psi_val:.3f}")
+    print(f"\nPSI（当前与基线）：{psi_val:.3f}")
     if psi_val > 0.2:
-        print("  drift alert (PSI > 0.2)")
+        print("  漂移告警（PSI > 0.2）")
 
 
 if __name__ == "__main__":
