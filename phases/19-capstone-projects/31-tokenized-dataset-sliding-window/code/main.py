@@ -1,12 +1,11 @@
-"""Tokenized dataset with sliding window for next-token training.
+"""用于下一 token 训练的滑动窗口分词数据集。
 
-Wraps a tokenizer-encoded id stream in a PyTorch Dataset and DataLoader so a
-training loop can pull (B, T) input and (B, T) target batches.
+把 tokenizer 编码后的 ID 流封装为 PyTorch Dataset 和 DataLoader，
+让训练循环能够取得形状为 (B, T) 的输入与目标批次。
 
-The tokenizer is the small byte-level BPE from lesson 30, inlined here so
-this lesson runs without inter-lesson imports.
+tokenizer 是第 30 课的小型字节级 BPE；这里将其内联，使本课无需跨课程导入即可运行。
 
-Run: python3 code/main.py
+运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -27,7 +26,7 @@ WORD_SPLIT_RE = re.compile(r"\S+|\s+")
 
 @dataclass
 class MiniBPE:
-    """Inline byte-level BPE tokenizer (same contract as lesson 30)."""
+    """内联的字节级 BPE tokenizer（契约与第 30 课相同）。"""
 
     vocab: dict[int, bytes] = field(default_factory=dict)
     inv_vocab: dict[bytes, int] = field(default_factory=dict)
@@ -149,10 +148,10 @@ def encode_text(tokenizer: MiniBPE, text: str) -> list[int]:
 
 
 class SlidingWindowDataset(Dataset):
-    """PyTorch Dataset over a flat id stream.
+    """基于扁平 ID 流的 PyTorch Dataset。
 
-    Each example is a window of size T+1. __getitem__ returns
-    (input_ids, target_ids) where target = input shifted left by one.
+    每个样本都是大小为 T+1 的窗口。__getitem__ 返回
+    (input_ids, target_ids)，其中 target 是左移一位的 input。
     """
 
     def __init__(
@@ -162,13 +161,13 @@ class SlidingWindowDataset(Dataset):
         stride: int | None = None,
     ) -> None:
         if context_length < 1:
-            raise ValueError(f"context_length must be >= 1, got {context_length}")
+            raise ValueError(f"context_length 必须 >= 1，实际为 {context_length}")
         if not ids:
-            raise ValueError("ids must be non-empty")
+            raise ValueError("ids 不能为空")
         if stride is None:
             stride = context_length
         if stride < 1:
-            raise ValueError(f"stride must be >= 1, got {stride}")
+            raise ValueError(f"stride 必须 >= 1，实际为 {stride}")
         self.ids = torch.tensor(ids, dtype=torch.long)
         self.context_length = context_length
         self.stride = stride
@@ -187,7 +186,7 @@ class SlidingWindowDataset(Dataset):
         if index < 0:
             index += len(self)
         if index < 0 or index >= len(self):
-            raise IndexError(f"window index {index} out of range")
+            raise IndexError(f"窗口索引 {index} 越界")
         start = index * self.stride
         end = start + self.context_length + 1
         window = self.ids[start:end]
@@ -202,7 +201,7 @@ def make_dataloader(
     epoch: int = 0,
     drop_last: bool = True,
 ) -> DataLoader:
-    """Build a DataLoader with a deterministic per-epoch shuffle."""
+    """构建每轮确定性打乱的 DataLoader。"""
     generator = torch.Generator()
     generator.manual_seed(base_seed + epoch)
     return DataLoader(
@@ -257,54 +256,54 @@ def main() -> int:
     tokenizer = MiniBPE()
     ids = _encode_corpus_to_ids(tokenizer, DEMO_CORPUS, target_vocab)
 
-    _print_section("Corpus and tokenizer")
-    print(f"corpus chars      : {len(DEMO_CORPUS)}")
-    print(f"vocab size        : {tokenizer.vocab_size}")
-    print(f"total ids         : {len(ids)}")
+    _print_section("语料库与分词器")
+    print(f"语料字符数        : {len(DEMO_CORPUS)}")
+    print(f"词表大小          : {tokenizer.vocab_size}")
+    print(f"ID 总数           : {len(ids)}")
 
     dataset = SlidingWindowDataset(ids, context_length=context_length, stride=stride)
-    print(f"context length    : {context_length}")
-    print(f"stride            : {stride}")
-    print(f"num windows       : {len(dataset)}")
+    print(f"上下文长度        : {context_length}")
+    print(f"步幅              : {stride}")
+    print(f"窗口数量          : {len(dataset)}")
     expected = SlidingWindowDataset.count_windows(len(ids), context_length, stride)
-    assert len(dataset) == expected, "len(dataset) must equal count_windows"
+    assert len(dataset) == expected, "len(dataset) 必须等于 count_windows"
 
-    _print_section("Inspect one example")
+    _print_section("检查单个样本")
     input_ids, target_ids = dataset[0]
-    print(f"input shape       : {tuple(input_ids.shape)}")
-    print(f"target shape      : {tuple(target_ids.shape)}")
-    assert input_ids.shape == target_ids.shape, "shapes must match"
-    assert torch.equal(input_ids[1:], target_ids[:-1]), "target must be input shifted by one"
+    print(f"输入形状          : {tuple(input_ids.shape)}")
+    print(f"目标形状          : {tuple(target_ids.shape)}")
+    assert input_ids.shape == target_ids.shape, "形状必须一致"
+    assert torch.equal(input_ids[1:], target_ids[:-1]), "目标必须是向后平移一位的输入"
 
-    _print_section("Pull a batch from the DataLoader")
+    _print_section("从 DataLoader 取出一个批次")
     loader = make_dataloader(dataset, batch_size=batch_size, base_seed=base_seed, epoch=0)
     inputs, targets = next(iter(loader))
-    print(f"inputs            : {tuple(inputs.shape)}")
-    print(f"targets           : {tuple(targets.shape)}")
-    print(f"first input row   : {inputs[0].tolist()}")
-    print(f"first target row  : {targets[0].tolist()}")
+    print(f"输入批次形状      : {tuple(inputs.shape)}")
+    print(f"目标批次形状      : {tuple(targets.shape)}")
+    print(f"首行输入          : {inputs[0].tolist()}")
+    print(f"首行目标          : {targets[0].tolist()}")
     assert inputs.shape == (batch_size, context_length)
     assert targets.shape == (batch_size, context_length)
 
-    _print_section("Shuffle is seeded")
+    _print_section("带种子的随机打乱")
     loader_a = make_dataloader(dataset, batch_size=batch_size, base_seed=base_seed, epoch=0)
     loader_b = make_dataloader(dataset, batch_size=batch_size, base_seed=base_seed, epoch=0)
     batch_a = next(iter(loader_a))
     batch_b = next(iter(loader_b))
-    assert torch.equal(batch_a[0], batch_b[0]), "same seed must produce same first batch"
-    print("same seed -> same first batch: OK")
+    assert torch.equal(batch_a[0], batch_b[0]), "相同种子必须产生相同的首批数据"
+    print("相同种子 -> 相同首批数据：成功")
 
     loader_c = make_dataloader(dataset, batch_size=batch_size, base_seed=base_seed, epoch=1)
     batch_c = next(iter(loader_c))
-    assert not torch.equal(batch_a[0], batch_c[0]), "different epoch must change order"
-    print("different epoch -> different order: OK")
+    assert not torch.equal(batch_a[0], batch_c[0]), "不同轮次必须改变顺序"
+    print("不同轮次 -> 不同顺序：成功")
 
-    _print_section("Stride trade-off")
+    _print_section("步幅权衡")
     for s in (4, 8, 16):
         ds = SlidingWindowDataset(ids, context_length=context_length, stride=s)
-        print(f"  stride {s:>2}: {len(ds):>4} windows")
+        print(f"  步幅 {s:>2}: {len(ds):>4} 个窗口")
 
-    print("\nDemo OK.")
+    print("\n演示成功。")
     return 0
 
 
