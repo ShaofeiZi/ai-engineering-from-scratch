@@ -1,8 +1,8 @@
-# From-scratch implementation for the lesson in ../docs/en.md.
-# Few-shot and CoT: Wei et al., 2022, https://arxiv.org/abs/2201.11903
-# Self-consistency: Wang et al., 2023, https://arxiv.org/abs/2203.11171
-# Tree of Thoughts: Yao et al., 2023, https://arxiv.org/abs/2305.10601
-# Provider calls stay injectable; importing or running this module is offline.
+# 在 ../docs/en.md. 中从执行中获取经验教训
+# 少射和CoT:Wei等人,2022年,https://arxiv.org/abs/2201.11903
+# 自我一致:王等,2023年,https://arxiv.org/abs/2203.11171
+# 思想之树:姚等人,2023年,https://arxiv.org/abs/2305.10601
+# 提供方呼叫保持可注射;导入或运行此模块是离线的.
 
 import re
 from collections import Counter
@@ -161,7 +161,7 @@ def extract_answer(text):
 
 
 def normalize_answer(answer):
-    """Return one canonical representation for a numeric answer."""
+    """返回一个犬科代表 一个数字答案。"""
     if answer is None:
         return None
 
@@ -191,7 +191,7 @@ def _content_tokens(text):
 
 
 def example_similarity(question, example_question):
-    """Score lexical coverage without embeddings or network access."""
+    """不包含embeddings 或网络访问的分数语法覆盖。"""
     target = _content_tokens(question)
     candidate = _content_tokens(example_question)
     if not target or not candidate:
@@ -200,7 +200,7 @@ def example_similarity(question, example_question):
 
 
 def select_examples(question, examples, num_examples=3):
-    """Select the most similar examples, preserving order for tied scores."""
+    """选择最相似的示例, 保留绑定分数的顺序 。"""
     if num_examples < 0:
         raise ValueError("num_examples must be non-negative")
 
@@ -213,7 +213,7 @@ def select_examples(question, examples, num_examples=3):
 
 
 def majority_vote(answers, total_samples=None):
-    """Vote over parsed answers; ties resolve to the earliest sampled answer."""
+    """对解析的答案进行投票;与最早的抽样答案挂钩。"""
     normalized_answers = []
     for answer in answers:
         normalized = normalize_answer(answer)
@@ -236,7 +236,7 @@ def majority_vote(answers, total_samples=None):
 
 
 def vote_reasoning_paths(reasonings):
-    """Extract final answers from reasoning paths and aggregate their votes."""
+    """从推理路径中提取最终答案并汇总他们的选票."""
     reasonings = list(reasonings)
     return majority_vote(
         (extract_answer(reasoning) for reasoning in reasonings),
@@ -518,7 +518,7 @@ def run_comparison(questions, expected_answers, examples, client, model):
             print(f"  {name:20s}: {status}")
 
     print("\n" + "=" * 50)
-    print("ACCURACY SUMMARY")
+    print("A. 结 论")
     print("=" * 50)
     for name, counts in results.items():
         acc = counts["correct"] / counts["total"] * 100 if counts["total"] > 0 else 0
@@ -637,4 +637,4 @@ TEST_QUESTIONS = [
 
 
 if __name__ == "__main__":
-    print("This module is offline-safe. Run `python3 main.py` for the demo.")
+    print("此模块离线安全. 为演示运行 `python3 main.py` 。")

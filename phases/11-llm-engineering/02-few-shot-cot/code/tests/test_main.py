@@ -1,7 +1,7 @@
-# Tests for the implementation described in ../../docs/en.md.
-# Few-shot and CoT: Wei et al., 2022, https://arxiv.org/abs/2201.11903
-# Self-consistency: Wang et al., 2023, https://arxiv.org/abs/2203.11171
-# These tests use deterministic local data and never call a provider.
+# 测试 ../../docs/en.md 中介绍的实现。
+# Few-shot 与 CoT：Wei 等，2022，https://arxiv.org/abs/2201.11903
+# Self-consistency：Wang 等，2023，https://arxiv.org/abs/2203.11171
+# 这些测试只使用确定性的本地数据，绝不会调用模型提供方。
 
 import io
 import sys
@@ -49,7 +49,7 @@ class ScriptedClient:
 
 
 class RedirectAttemptHandler(request.BaseHandler):
-    """Deterministic transport that records every attempted URL."""
+    """记录每个请求 URL 的确定性 transport。"""
 
     handler_order = 100
 
@@ -83,7 +83,7 @@ class RedirectAttemptHandler(request.BaseHandler):
 
 
 class FailingBodyResponse:
-    """Context-managed response whose body read raises a chosen error."""
+    """读取响应体时抛出指定异常的上下文管理响应。"""
 
     def __init__(self, failure):
         self.failure = failure
@@ -247,7 +247,7 @@ class OfflineDemoTests(unittest.TestCase):
             result = run_offline_demo(stream=output)
         urlopen.assert_not_called()
         self.assertEqual("24", result["answer"])
-        self.assertIn("No network request was made", output.getvalue())
+        self.assertIn("没有提出网络要求", output.getvalue())
 
     def test_online_mode_without_credentials_fails_before_network_access(self):
         with patch("urllib.request.urlopen") as urlopen:

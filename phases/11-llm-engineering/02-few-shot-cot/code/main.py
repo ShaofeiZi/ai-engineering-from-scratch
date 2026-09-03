@@ -1,8 +1,8 @@
-# Runnable demonstration for the lesson in ../docs/en.md.
-# Few-shot and CoT: Wei et al., 2022, https://arxiv.org/abs/2201.11903
-# Self-consistency: Wang et al., 2023, https://arxiv.org/abs/2203.11171
-# The default path is deterministic and performs no network requests.
-# Live chat-completions access is explicit and uses only Python's stdlib.
+# 在 ../docs/en.md. 中可运行的课程演示
+# 少射和CoT:Wei等人,2022年,https://arxiv.org/abs/2201.11903
+# 自我一致:王等,2023年,https://arxiv.org/abs/2203.11171
+# 默认路径是决定性的, 不执行网络请求 。
+# 直播聊天-完成访问是明确的,只使用Python的stdlib.
 
 import argparse
 import json
@@ -67,7 +67,7 @@ DEMO_REASONING_PATHS = [
 
 
 def positive_timeout(value):
-    """Parse a finite timeout greater than zero for argparse."""
+    """分析一个大于零的限时值 。"""
     try:
         timeout = float(value)
     except ValueError as exc:
@@ -82,7 +82,7 @@ def positive_timeout(value):
 
 
 class _RejectRedirectHandler(request.HTTPRedirectHandler):
-    """Stop redirects before urllib can copy request headers to a new URL."""
+    """在urlib将请求头复制到新的 URL 之前停止重定向 。"""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise error.HTTPError(
@@ -91,13 +91,13 @@ class _RejectRedirectHandler(request.HTTPRedirectHandler):
 
 
 class OpenAICompatibleHTTPClient:
-    """Minimal opt-in chat-completions client built from the stdlib."""
+    """从stdlib 创建的最小选择聊天- 补全客户端 。"""
 
     def __init__(self, api_key, base_url, timeout=30.0):
         try:
             parsed_base_url = parse.urlsplit(base_url)
             hostname = parsed_base_url.hostname
-            parsed_base_url.port  # Access validates textual and numeric port values.
+            parsed_base_url.port  # 访问可验证文本和数字端口值。
         except (TypeError, ValueError) as exc:
             raise ValueError("base_url must be an absolute HTTPS URL") from exc
         if parsed_base_url.scheme.lower() != "https" or not hostname:
@@ -127,8 +127,8 @@ class OpenAICompatibleHTTPClient:
             },
             method="POST",
         )
-        # urllib's stock redirect handler copies regular headers to the next URL.
-        # Keep the credential non-forwardable even though redirects are rejected.
+        # urlib的股票将处理器复制普通头到下一个URL 。
+        # 即使拒绝重定向,也要保留证书不可转发。
         http_request.add_unredirected_header(
             "Authorization", f"Bearer {self.api_key}"
         )
@@ -180,19 +180,19 @@ def build_offline_demo():
 def run_offline_demo(stream=None):
     stream = sys.stdout if stream is None else stream
     result = build_offline_demo()
-    print("Few-Shot + Chain-of-Thought: offline demonstration", file=stream)
-    print(f"Question: {result['question']}", file=stream)
-    print("Selected demonstrations:", file=stream)
+    print("Few-shot + 思维链：离线演示", file=stream)
+    print(f"问题：{result['question']}", file=stream)
+    print("选定的演示:", file=stream)
     for question in result["selected_questions"]:
         print(f"  - {question}", file=stream)
-    print("Prompt contract: reasoning followed by 'The answer is [number]'", file=stream)
-    print(f"Self-consistency votes: {result['votes']}", file=stream)
+    print("提示契约：先推理，再输出“The answer is <number>.”", file=stream)
+    print(f"自洽性投票：{result['votes']}", file=stream)
     print(
-        f"Winning answer: {result['answer']} "
-        f"(confidence {result['confidence']:.0%})",
+        f"获胜答案：{result['answer']} "
+        f"（置信度 {result['confidence']:.0%}）",
         file=stream,
     )
-    print("No network request was made. Use --online to opt in.", file=stream)
+    print("没有提出网络要求。 使用 -- 在线选择加入。", file=stream)
     return result
 
 
@@ -203,7 +203,7 @@ def run_online_demo(args, environ, stream=None, error_stream=None):
     model = args.model or environ.get("OPENAI_MODEL") or environ.get("LLM_MODEL")
     if not api_key or not model:
         print(
-            "Online mode requires OPENAI_API_KEY and --model (or OPENAI_MODEL).",
+            "在线模式需要 OPENAI_API_KEY 和 --model（或 OPENAI_MODEL）。",
             file=error_stream,
         )
         return 2
@@ -212,7 +212,7 @@ def run_online_demo(args, environ, stream=None, error_stream=None):
     try:
         client = OpenAICompatibleHTTPClient(api_key, base_url, timeout=args.timeout)
     except ValueError as exc:
-        print(f"Online configuration invalid: {exc}", file=error_stream)
+        print(f"在线配置无效：{exc}", file=error_stream)
         return 2
     selected = select_examples(DEMO_QUESTION, DEMO_EXAMPLES, num_examples=2)
     try:
@@ -220,17 +220,17 @@ def run_online_demo(args, environ, stream=None, error_stream=None):
             DEMO_QUESTION, selected, client, model, num_examples=2
         )
     except RuntimeError as exc:
-        print(f"Online request failed: {exc}", file=error_stream)
+        print(f"在线请求失败：{exc}", file=error_stream)
         return 1
     if answer is None:
         print(
-            "Online response did not contain a parseable numeric answer.",
+            "在线回复未包含 parseable numeric answer。",
             file=error_stream,
         )
         return 1
-    print(f"Model: {model}", file=stream)
+    print(f"模型：{model}", file=stream)
     print(reasoning, file=stream)
-    print(f"Parsed answer: {answer}", file=stream)
+    print(f"解析出的答案：{answer}", file=stream)
     return 0
 
 
