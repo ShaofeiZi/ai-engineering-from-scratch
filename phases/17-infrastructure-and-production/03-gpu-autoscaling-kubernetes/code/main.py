@@ -1,12 +1,12 @@
-"""Three-layer GPU autoscaling simulator — stdlib Python.
+"""三层 GPU 自动扩缩容模拟器，使用 Python stdlib。
 
-Compares three autoscaling strategies on the same bursty workload:
-  DUTY_CYCLE   : HPA on DCGM_FI_DEV_GPU_UTIL (the broken default)
-  QUEUE_DEPTH  : HPA on request queue depth (correct signal)
-  KAI_GANG     : Gang-scheduled with topology awareness (prevents partial alloc)
+在相同的突发型工作负载上比较三种自动扩缩容策略：
+  DUTY_CYCLE   ：基于 DCGM_FI_DEV_GPU_UTIL 的 HPA（有问题的默认方案）
+  QUEUE_DEPTH  ：基于请求队列深度的 HPA（正确的信号）
+  KAI_GANG     ：具备拓扑感知的 Gang 调度（防止部分分配）
 
-Reports dropped requests, idle GPU-minutes, and composite score.
-Pedagogical: latencies and provisioning times are illustrative.
+报告丢弃请求数、GPU 空闲分钟数和综合得分。
+用于教学：延迟和资源配置时间仅为示意。
 """
 
 from __future__ import annotations
@@ -15,16 +15,16 @@ from dataclasses import dataclass
 import random
 
 
-NODE_PROVISION_SEC = 50       # Karpenter ~45-60s
-CLUSTER_AUTOSCALER_SEC = 110  # slower comparison
-MODEL_LOAD_SEC = 45           # load 70B weights + engine init
+NODE_PROVISION_SEC = 50       # Karpenter 约 45-60 秒
+CLUSTER_AUTOSCALER_SEC = 110  # 用作较慢的对照
+MODEL_LOAD_SEC = 45           # 加载 70B 权重并初始化引擎
 REQUEST_PREFILL_SEC = 0.6
 REQUEST_DECODE_SEC = 1.8
 MIN_WARM_REPLICAS = 1
 MAX_REPLICAS = 16
 GPU_PER_REPLICA = 1
 HPA_TICK_SEC = 15
-TARGET_GPU_UTIL = 70          # duty-cycle target
+TARGET_GPU_UTIL = 70          # duty-cycle 目标值
 
 
 @dataclass
@@ -38,7 +38,7 @@ class Request:
 def make_workload(duration_sec: int = 3600, seed: int = 7) -> list[Request]:
     rng = random.Random(seed)
     reqs = []
-    # simulate a morning burst: quiet 0-600, spike 600-1800, tail 1800-3600
+    # 模拟早间突发：0-600 秒平静，600-1800 秒峰值，1800-3600 秒长尾
     for _ in range(int(duration_sec)):
         t = _
         if t < 600:
@@ -62,7 +62,7 @@ def simulate(strategy: str, reqs: list[Request]) -> dict:
     now = 0.0
     sim_end = max(r.arrived_at for r in reqs) + 60
     idle_gpu_sec = 0.0
-    pending_replicas: list[tuple[float, int]] = []  # (ready_at, replica_id)
+    pending_replicas: list[tuple[float, int]] = []  # (就绪时间, replica_id)
     next_replica_id = MIN_WARM_REPLICAS
     peak_replicas = replicas_ready
 
@@ -125,7 +125,7 @@ def simulate(strategy: str, reqs: list[Request]) -> dict:
                 replicas_ready -= 1
 
         for r in queue[:]:
-            if now - r.arrived_at > 30:  # SLA timeout
+            if now - r.arrived_at > 30:  # SLA 超时
                 r.dropped = True
                 queue.remove(r)
 
@@ -150,18 +150,18 @@ def simulate(strategy: str, reqs: list[Request]) -> dict:
 
 
 def report(row: dict) -> None:
-    print(f"{row['strategy']:14}  reqs={row['total']:4}  "
-          f"done={row['completed']:4}  dropped={row['dropped']:3}  "
-          f"mean_wait={row['mean_wait_s']:5.1f}s  "
-          f"idle_gpu={row['idle_gpu_min']:6.1f}min  peak={row['peak_replicas']:2}")
+    print(f"{row['strategy']:14}  请求={row['total']:4}  "
+          f"完成={row['completed']:4}  丢弃={row['dropped']:3}  "
+          f"平均等待={row['mean_wait_s']:5.1f}秒  "
+          f"GPU 空闲={row['idle_gpu_min']:6.1f}分钟  峰值={row['peak_replicas']:2}")
 
 
 def main() -> None:
     print("=" * 80)
-    print("GPU AUTOSCALING — three strategies on a bursty workload (1-hour sim)")
+    print("GPU 自动扩缩容 — 突发型工作负载上的三种策略（模拟 1 小时）")
     print("=" * 80)
     base = make_workload()
-    header = f"{'Strategy':14}  reqs       done  dropped  mean_wait  idle_gpu   peak"
+    header = f"{'策略':14}  请求       完成  丢弃  平均等待  GPU空闲   峰值"
     print(header)
     print("-" * len(header))
     for strategy in ("DUTY_CYCLE", "QUEUE_DEPTH", "KAI_GANG"):
@@ -169,9 +169,9 @@ def main() -> None:
         result = simulate(strategy, reqs)
         report(result)
 
-    print("\nRead: DUTY_CYCLE drops requests because DCGM_FI_DEV_GPU_UTIL")
-    print("is a duty-cycle metric. QUEUE_DEPTH reacts to the actual backlog.")
-    print("KAI_GANG scales more aggressively and avoids partial-alloc stalls.")
+    print("\n解读：DUTY_CYCLE 会丢弃请求，因为 DCGM_FI_DEV_GPU_UTIL")
+    print("是 duty-cycle 指标。QUEUE_DEPTH 会响应真实积压。")
+    print("KAI_GANG 扩容更激进，并避免部分分配导致的停滞。")
 
 
 if __name__ == "__main__":
