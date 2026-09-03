@@ -1,8 +1,8 @@
-"""Phase 13 Lesson 29: MCP reliability, cancellation, and flow control.
-Lesson: ../docs/en.md
-Cancellation: https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation
-Transport: https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
-This deterministic simulator uses only Python's standard library.
+"""第13阶段第29课：MCP 可靠性、取消与流控。
+课程：../docs/en.md
+取消：https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation
+传输：https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
+此确定性模拟器仅使用 Python 标准库。
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ CANCELLED = "cancelled"
 
 
 class ReliabilityError(ValueError):
-    """Raised when a reliability invariant is violated."""
+    """当可靠性不变量被违反时抛出。"""
 
 
 @dataclass
@@ -48,7 +48,7 @@ class InFlightRequest:
 
 
 class RequestCoordinator:
-    """Model request cancellation and completion races without wall-clock sleeps."""
+    """模型请求取消与完成竞争，无需 wall-clock 休眠。"""
 
     def __init__(self) -> None:
         self.requests: dict[int | str, InFlightRequest] = {}
@@ -155,7 +155,7 @@ class RequestCoordinator:
         }
 
     def receive_stdio_cancellation(self, notification: dict[str, Any]) -> None:
-        """Process the fire-and-forget notification and never return JSON-RPC."""
+        """处理 fire-and-forget 通知，且绝不返回 JSON-RPC."""
 
         if notification.get("method") != "notifications/cancelled":
             return None
@@ -260,7 +260,7 @@ def classify_retry(
 
 
 class MutationLedger:
-    """Commit a simulated mutation and its idempotency record atomically."""
+    """原子性地提交模拟变更及其幂等性记录。"""
 
     def __init__(self, database_path: str | Path) -> None:
         self.database_path = str(database_path)
@@ -401,7 +401,7 @@ class DurableTask:
 
 
 class DurableTaskService:
-    """Keep durable task cancellation separate from in-flight request cancellation."""
+    """将持久任务取消与 in-flight 请求取消分开。"""
 
     def __init__(self) -> None:
         self.tasks: dict[str, DurableTask] = {}
@@ -431,7 +431,7 @@ class DurableTaskService:
 
 
 class BoundedSseBuffer:
-    """Bound progress memory while preserving a final response."""
+    """限制进度内存，同时保留最终响应。"""
 
     def __init__(self, capacity: int) -> None:
         if capacity < 2:
@@ -566,14 +566,14 @@ def main() -> None:
     before_checkpoint = tasks.tasks["task-29"].status
     after_checkpoint = tasks.worker_checkpoint("task-29").status
 
-    print("cancel before completion returns:", cancelled_response)
-    print("complete before cancel keeps response:", completed_response is not None)
-    print("idempotent receipts equal:", first_charge["receipt"] == second_charge["receipt"])
-    print("mutation executions:", mutation_executions)
-    print("buffer size and dropped progress:", len(buffer.events), buffer.dropped_progress)
-    print("final response preserved:", any(event["kind"] == "final" for event in buffer.events))
-    print("task cancel acknowledgement:", task_ack["resultType"])
-    print("task status before and after worker checkpoint:", before_checkpoint, after_checkpoint)
+    print("完成前取消返回：", cancelled_response)
+    print("取消前完成保留响应：", completed_response is not None)
+    print("幂等回执相等：", first_charge["receipt"] == second_charge["receipt"])
+    print("变更执行次数：", mutation_executions)
+    print("缓冲区大小与丢弃的进度：", len(buffer.events), buffer.dropped_progress)
+    print("最终响应已保留：", any(event["kind"] == "final" for event in buffer.events))
+    print("任务取消确认：", task_ack["resultType"])
+    print("工作节点检查点前后的任务状态：", before_checkpoint, after_checkpoint)
 
 
 if __name__ == "__main__":

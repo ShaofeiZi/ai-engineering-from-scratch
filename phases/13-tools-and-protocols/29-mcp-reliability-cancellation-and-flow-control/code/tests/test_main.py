@@ -1,4 +1,4 @@
-"""Deterministic tests for MCP reliability and flow control."""
+"""MCP 可靠性与流量控制的确定性测试。"""
 
 from __future__ import annotations
 
