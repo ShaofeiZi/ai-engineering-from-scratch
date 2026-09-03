@@ -1,8 +1,7 @@
-"""Letta-shaped memory blocks with a sleep-time consolidation agent.
+"""仿 Letta 的记忆块与一个休眠时整合代理。
 
-Primary agent writes raw facts during turns. Sleep-time agent runs between
-turns, off the critical path, and consolidates blocks. Scripted so it runs
-offline.
+主代理在对话轮次中写入原始事实。Sleep-time 代理在轮次之间
+运行，脱离关键路径，负责整合记忆块。通过脚本化方式离线运行。
 """
 
 from __future__ import annotations
@@ -105,7 +104,7 @@ class Archival:
 
 
 class PrimaryAgent:
-    """Handles turns. Writes raw facts fast; never summarizes or consolidates."""
+    """处理对话轮次。快速写入原始事实；不进行总结或整合。"""
 
     def __init__(self, blocks: BlockStore, archival: Archival) -> None:
         self.blocks = blocks
@@ -128,8 +127,8 @@ class PrimaryAgent:
 
 
 class SleepTimeAgent:
-    """Off the critical path. Summarizes near-limit blocks, invalidates
-    contradicted archival records, no user latency cost.
+    """脱离关键路径。总结接近上限的记忆块，使被
+    矛盾覆盖的归档记录失效，不增加用户延迟成本。
     """
 
     def __init__(self, blocks: BlockStore, archival: Archival) -> None:
@@ -173,7 +172,7 @@ def _summarize(text: str, target_len: int) -> str:
 
 def main() -> None:
     print("=" * 70)
-    print("LETTA MEMORY BLOCKS + SLEEP-TIME COMPUTE — Phase 14, Lesson 08")
+    print("LETTA 记忆块 + 休眠时计算 — 第 14 阶段，第 08 课")
     print("=" * 70)
 
     blocks = BlockStore()
@@ -211,11 +210,11 @@ def main() -> None:
           "audience=senior+staff eng, cite arXiv and first-party framework docs")],
     )
 
-    print("\nprimary turns (writes are fast and raw)")
+    print("\n主轮次（写入快速且原始）")
     for line in primary.trace:
         print(f"  {line}")
 
-    print("\nblocks after primary phase (pre-consolidation)")
+    print("\n主阶段后的记忆块（pre-consolidation）")
     print(blocks.render())
 
     sleep.run(contradictions=[
@@ -223,21 +222,21 @@ def main() -> None:
          "human block updated city to Lisbon; Berlin archival claim is stale"),
     ])
 
-    print("\nsleep-time trace")
+    print("\nsleep-time 轨迹")
     for line in sleep.trace:
         print(f"  {line}")
 
-    print("\nblocks after sleep-time (consolidated)")
+    print("\nsleep-time 后的记忆块（已整合）")
     print(blocks.render())
 
-    print("\narchival state")
+    print("\n归档状态")
     for record in archival.all_records():
         status = "VALID  " if record.valid else "INVALID"
         print(f"  {record.rid} [{status}] {record.text}")
 
     print()
-    print("key property: primary-turn latency is unchanged by consolidation.")
-    print("sleep-time can run a stronger, slower model — it is off the path.")
+    print("关键特性：primary-turn 延迟不受整合影响。")
+    print("休眠时计算可运行能力更强但速度更慢的模型，因为它不在关键路径上。")
 
 
 if __name__ == "__main__":
