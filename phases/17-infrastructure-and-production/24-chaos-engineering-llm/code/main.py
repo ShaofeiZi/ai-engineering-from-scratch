@@ -1,6 +1,6 @@
-"""Chaos engineering runner with safety plane gates — stdlib Python.
+"""带安全平面门禁的混沌工程运行器——使用 Python 标准库。
 
-Runs three LLM-specific experiments and applies burn-rate + blast-radius safety gates.
+运行三个 LLM 专项实验，并应用错误预算消耗率与爆炸半径安全门禁。
 """
 
 from __future__ import annotations
@@ -21,9 +21,9 @@ class Experiment:
 
 
 EXPERIMENTS = [
-    Experiment("pod kill (1 decode replica)",     5, 0.002, 0.05),
-    Experiment("provider 429 fallback",           5, 0.015, 0.30),
-    Experiment("malformed prompt tokenizer stall",3, 0.040, 0.10),
+    Experiment("终止 Pod（1 个解码副本）",          5, 0.002, 0.05),
+    Experiment("提供商 429 回退",                  5, 0.015, 0.30),
+    Experiment("畸形提示词导致分词器停滞",          3, 0.040, 0.10),
 ]
 
 
@@ -37,19 +37,19 @@ def run_experiment(e: Experiment) -> dict:
         "burn_rate_x": burn_rate,
         "blast_radius": e.blast_radius_pct,
         "paused_by_safety_plane": paused,
-        "status": "ABORTED (burn-rate guard)" if paused else "COMPLETED",
+        "status": "已中止（消耗率防护）" if paused else "已完成",
     }
 
 
 def main() -> None:
     print("=" * 90)
-    print("CHAOS EXPERIMENT RUNNER — safety plane gates burn-rate × blast-radius")
+    print("混沌实验运行器——安全平面按消耗率 × 爆炸半径执行门禁")
     print("=" * 90)
-    print(f"SLO error budget: {ERROR_BUDGET_PER_DAY*100:.2f}%/day")
-    print(f"Expected baseline error rate: {EXPECTED_ERROR_RATE*100:.3f}%")
-    print(f"Burn-rate gate: > 2.0x expected AND blast radius > 20%\n")
+    print(f"SLO 错误预算：每天 {ERROR_BUDGET_PER_DAY*100:.2f}%")
+    print(f"预期基线错误率：{EXPECTED_ERROR_RATE*100:.3f}%")
+    print("消耗率门禁：高于预期 2.0 倍且爆炸半径大于 20%\n")
 
-    header = f"{'Experiment':38}  {'mins':>4}  {'err %':>6}  {'burn×':>6}  {'blast':>6}  Status"
+    header = f"{'实验':38}  {'分钟':>4}  {'错误 %':>6}  {'消耗×':>6}  {'爆炸半径':>6}  状态"
     print(header)
     print("-" * len(header))
     for e in EXPERIMENTS:
@@ -60,9 +60,9 @@ def main() -> None:
               f"{r['blast_radius']*100:>5.0f}%  "
               f"{r['status']}")
 
-    print("\nRead: small-blast-radius experiments run to completion even at high burn rate.")
-    print("Large-blast-radius + high burn → abort. Suppression windows + trace-ID tags")
-    print("required to dedupe alerts during experiments.")
+    print("\n解读：即使错误预算消耗率很高，爆炸半径较小的实验仍会运行完成。")
+    print("爆炸半径大且消耗率高时则中止。实验期间需要设置抑制窗口和 trace-ID 标签，")
+    print("以便对告警去重。")
 
 
 if __name__ == "__main__":
