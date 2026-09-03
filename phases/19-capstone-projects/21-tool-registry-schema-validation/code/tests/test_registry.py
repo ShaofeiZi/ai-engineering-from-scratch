@@ -1,4 +1,4 @@
-"""Tests for ToolRegistry and JSON Schema subset validator."""
+"""ToolRegistry 与 JSON Schema 子集校验器的测试。"""
 
 from __future__ import annotations
 

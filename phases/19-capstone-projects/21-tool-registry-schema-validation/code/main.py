@@ -1,12 +1,12 @@
-"""Tool registry with JSON Schema 2020-12 subset validation.
+"""支持 JSON Schema 2020-12 子集验证的工具注册表。
 
-Conceptual references:
-- ./docs/en.md (this lesson)
+概念参考：
+- ./docs/en.md（本课程）
 - IETF draft draft-bhutton-json-schema-2020-12 (subset: type, properties,
   required, enum, minLength, maxLength, pattern, items)
 - RFC 6901 (JSON Pointer for error paths)
 
-Stdlib only. Run: python3 code/main.py
+仅使用标准库。运行：python3 code/main.py
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ class ToolRecord:
 
 
 class ToolRegistry:
-    """Name-keyed table of tool records with schema validation."""
+    """以名称为键、支持 schema 验证的工具记录表。"""
 
     _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$")
 
@@ -109,9 +109,9 @@ class ToolRegistry:
 
 
 def validate_schema_shape(schema: dict) -> None:
-    """Reject schemas using keywords outside the supported subset."""
+    """拒绝使用受支持子集之外关键词的 schema。"""
     if not isinstance(schema, dict):
-        raise ValueError("schema must be a dict")
+        raise ValueError("schema 必须是 dict")
     unknown = set(schema.keys()) - ALLOWED_KEYWORDS
     if unknown:
         raise ValueError(f"unsupported schema keywords: {sorted(unknown)}")
@@ -120,27 +120,27 @@ def validate_schema_shape(schema: dict) -> None:
         raise ValueError(f"unsupported type: {t!r}")
     enum_vals = schema.get("enum")
     if enum_vals is not None and not isinstance(enum_vals, list):
-        raise ValueError("enum must be a list")
+        raise ValueError("enum 必须是 list")
     min_len = schema.get("minLength")
     if min_len is not None:
         if isinstance(min_len, bool) or not isinstance(min_len, int) or min_len < 0:
-            raise ValueError("minLength must be a non-negative integer")
+            raise ValueError("minLength 必须是非负整数")
     max_len = schema.get("maxLength")
     if max_len is not None:
         if isinstance(max_len, bool) or not isinstance(max_len, int) or max_len < 0:
-            raise ValueError("maxLength must be a non-negative integer")
+            raise ValueError("maxLength 必须是非负整数")
     if min_len is not None and max_len is not None and min_len > max_len:
-        raise ValueError("minLength cannot be greater than maxLength")
+        raise ValueError("minLength 不能大于 maxLength")
     pattern = schema.get("pattern")
     if pattern is not None and not isinstance(pattern, str):
-        raise ValueError("pattern must be a string")
+        raise ValueError("pattern 必须是字符串")
     props = schema.get("properties")
     if props is not None:
         if not isinstance(props, dict):
-            raise ValueError("properties must be a dict")
+            raise ValueError("properties 必须是 dict")
         for pname, psub in props.items():
             if not isinstance(pname, str):
-                raise ValueError("property names must be strings")
+                raise ValueError("属性名称必须是字符串")
             validate_schema_shape(psub)
     items = schema.get("items")
     if items is not None:
@@ -148,7 +148,7 @@ def validate_schema_shape(schema: dict) -> None:
     req = schema.get("required")
     if req is not None:
         if not isinstance(req, list) or not all(isinstance(x, str) for x in req):
-            raise ValueError("required must be list[str]")
+            raise ValueError("required 必须是 list[str]")
 
 
 def _path(prefix: str, segment: str | int) -> str:
