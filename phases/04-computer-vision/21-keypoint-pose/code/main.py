@@ -77,7 +77,7 @@ def main():
         loss = F.mse_loss(pred, hms)
         opt.zero_grad(); loss.backward(); opt.step()
         if step % 40 == 0:
-            print(f"step {step:3d}  mse {loss.item():.4f}")
+            print(f"步骤 {step:3d}  MSE {loss.item():.4f}")
 
     model.eval()
     with torch.no_grad():
@@ -90,8 +90,8 @@ def main():
         refined = subpixel_refine(pred)
         l2_int = (coords - gt).norm(dim=-1).mean().item()
         l2_sub = (refined - gt).norm(dim=-1).mean().item()
-        print(f"\nmean L2 error (argmax):    {l2_int:.3f} px")
-        print(f"mean L2 error (subpixel):  {l2_sub:.3f} px")
+        print(f"\n平均 L2 误差（argmax）：  {l2_int:.3f} px")
+        print(f"平均 L2 误差（亚像素）：  {l2_sub:.3f} px")
 
 
 if __name__ == "__main__":
