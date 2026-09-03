@@ -81,24 +81,24 @@ def main():
     pred = gt + 0.4 * torch.randn_like(gt)
     scaled_pred = 3.0 * pred + 0.7
 
-    print("[metrics]")
-    print(f"  pred        absRel={abs_rel_error(pred, gt):.3f}  delta<1.25={delta_accuracy(pred, gt):.3f}")
-    print(f"  scaled      absRel={abs_rel_error(scaled_pred, gt):.3f}  delta<1.25={delta_accuracy(scaled_pred, gt):.3f}")
+    print("[指标]")
+    print(f"  预测值      absRel={abs_rel_error(pred, gt):.3f}  delta<1.25={delta_accuracy(pred, gt):.3f}")
+    print(f"  缩放后      absRel={abs_rel_error(scaled_pred, gt):.3f}  delta<1.25={delta_accuracy(scaled_pred, gt):.3f}")
 
     aligned = align_scale_shift(scaled_pred, gt)
-    print(f"  aligned     absRel={abs_rel_error(aligned, gt):.3f}  delta<1.25={delta_accuracy(aligned, gt):.3f}")
+    print(f"  对齐后      absRel={abs_rel_error(aligned, gt):.3f}  delta<1.25={delta_accuracy(aligned, gt):.3f}")
 
-    print("\n[depth -> point cloud]")
+    print("\n[深度 -> 点云]")
     intr = (96.0, 96.0, 48.0, 48.0)
     pc = depth_to_point_cloud(gt_np, intr)
-    print(f"  point cloud shape: {pc.shape}")
-    print(f"  x range [{pc[..., 0].min():.2f}, {pc[..., 0].max():.2f}]")
-    print(f"  y range [{pc[..., 1].min():.2f}, {pc[..., 1].max():.2f}]")
-    print(f"  z range [{pc[..., 2].min():.2f}, {pc[..., 2].max():.2f}]")
+    print(f"  点云形状：{pc.shape}")
+    print(f"  x 范围 [{pc[..., 0].min():.2f}, {pc[..., 0].max():.2f}]")
+    print(f"  y 范围 [{pc[..., 1].min():.2f}, {pc[..., 1].max():.2f}]")
+    print(f"  z 范围 [{pc[..., 2].min():.2f}, {pc[..., 2].max():.2f}]")
 
     path = os.path.join(tempfile.gettempdir(), "depth_demo.ply")
     write_ply(path, pc)
-    print(f"  wrote {path}  ({pc.reshape(-1, 3).shape[0]} points)")
+    print(f"  已写入 {path}（{pc.reshape(-1, 3).shape[0]} 个点）")
 
 
 if __name__ == "__main__":
